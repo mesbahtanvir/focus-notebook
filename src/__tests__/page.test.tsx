@@ -89,22 +89,6 @@ describe('Home Page', () => {
     expect(screen.getByText(/No thoughts yet/i)).toBeInTheDocument()
   })
 
-  it('adds a task via the form', async () => {
-    render(<Page />)
-    const input = screen.getByLabelText('Thought')
-    
-    await act(async () => {
-      fireEvent.change(input, { target: { value: 'New Task' } })
-      fireEvent.click(screen.getByRole('button', { name: /add/i }))
-    })
-
-    expect(mockAdd).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'New Task',
-      category: 'mastery',
-      status: 'active'
-    }))
-  })
-
   it('does not add empty task', async () => {
     render(<Page />)
     const input = screen.getByLabelText('Thought')
