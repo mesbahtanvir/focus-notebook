@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Check } from 'lucide-react';
-import { useTasks, TaskCategory, TaskPriority } from '@/store/useTasks';
+import { Plus, Check, Repeat } from 'lucide-react';
+import { useTasks, TaskCategory, TaskPriority, RecurrenceType } from '@/store/useTasks';
 
 type TaskDestination = 'today' | 'backlog';
 
@@ -20,6 +20,8 @@ export function TaskInput({ onClose }: TaskInputProps = {}) {
   const [tags, setTags] = useState('');
   const [estimatedMinutes, setEstimatedMinutes] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>('none');
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const addTask = useTasks((state) => state.add);
@@ -34,6 +36,12 @@ export function TaskInput({ onClose }: TaskInputProps = {}) {
       .map(t => t.trim())
       .filter(t => t.length > 0);
 
+    // Prepare recurrence config
+    const recurrenceConfig = recurrenceType !== 'none' ? {
+      type: recurrenceType,
+      frequency: recurrenceFrequency ? parseInt(recurrenceFrequency) : undefined,
+    } : undefined;
+
     // Add task with metadata
     addTask({
       title: taskName.trim(),
@@ -45,6 +53,8 @@ export function TaskInput({ onClose }: TaskInputProps = {}) {
       notes: notes.trim() || undefined,
       tags: tagArray.length > 0 ? tagArray : undefined,
       estimatedMinutes: estimatedMinutes ? parseInt(estimatedMinutes) : undefined,
+      recurrence: recurrenceConfig,
+      completionCount: 0,
     });
 
     // Show success feedback
@@ -54,6 +64,8 @@ export function TaskInput({ onClose }: TaskInputProps = {}) {
     setTags('');
     setEstimatedMinutes('');
     setDueDate('');
+    setRecurrenceType('none');
+    setRecurrenceFrequency('');
     
     // Reset form
     setTimeout(() => {
@@ -235,6 +247,45 @@ export function TaskInput({ onClose }: TaskInputProps = {}) {
               placeholder="e.g., urgent, work"
               className="input w-full"
             />
+          </div>
+        </div>
+
+        {/* Recurrence */}
+        <div className="border-t pt-4">
+          <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+            <Repeat className="h-4 w-4" />
+            Recurrence
+          </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <select
+              value={recurrenceType}
+              onChange={(e) => setRecurrenceType(e.target.value as RecurrenceType)}
+              className="input w-full"
+            >
+              <option value="none">One-time task</option>
+              <option value="daily">Daily</option>
+              <option value="workweek">Work Week</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+            {recurrenceType !== 'none' && (
+              <div>
+                <input
+                  type="number"
+                  value={recurrenceFrequency}
+                  onChange={(e) => setRecurrenceFrequency(e.target.value)}
+                  placeholder={`Times per ${recurrenceType === 'weekly' ? 'week' : recurrenceType === 'monthly' ? 'month' : recurrenceType === 'workweek' ? 'work week' : 'day'}`}
+                  className="input w-full"
+                  min="1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {recurrenceType === 'daily' && 'Leave blank for every day'}
+                  {recurrenceType === 'workweek' && 'e.g., 5 for every workday (Mon-Fri)'}
+                  {recurrenceType === 'weekly' && 'e.g., 4 for 4 times per week'}
+                  {recurrenceType === 'monthly' && 'e.g., 3 for 3 times per month'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </form>

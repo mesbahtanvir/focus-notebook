@@ -4,6 +4,14 @@ import { db, toTask, toTaskRow } from '@/db'
 export type TaskStatus = 'active' | 'completed' | 'backlog'
 export type TaskCategory = 'mastery' | 'pleasure'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
+export type RecurrenceType = 'none' | 'daily' | 'workweek' | 'weekly' | 'monthly'
+
+export interface RecurrenceConfig {
+  type: RecurrenceType
+  frequency?: number // e.g., 4 times per week, 2-3 times per month
+  frequencyMax?: number // for ranges like 2-3 times
+  daysOfWeek?: number[] // 0-6 for Sunday-Saturday (for weekly tasks)
+}
 
 export interface Task {
   id: string
@@ -18,6 +26,92 @@ export interface Task {
   notes?: string
   tags?: string[]
   estimatedMinutes?: number
+  recurrence?: RecurrenceConfig
+  parentTaskId?: string // For tracking recurring task instances
+  completionCount?: number // Track how many times completed this period
+}
+
+// Helper functions for recurring tasks
+
+// Check if today is a workday (Monday-Friday)
+function isWorkday(date: Date = new Date()): boolean {
+  const day = date.getDay()
+  return day >= 1 && day <= 5 // Monday (1) to Friday (5)
+}
+
+// Get the date string in YYYY-MM-DD format
+function getDateString(date: Date): string {
+  return date.toISOString().split('T')[0]
+}
+
+// Check if we need to create a recurring task instance for today
+function shouldCreateTaskForToday(task: Task, existingTasks: Task[]): boolean {
+  if (!task.recurrence || task.recurrence.type === 'none') return false
+  
+  const today = getDateString(new Date())
+  const { type } = task.recurrence
+  
+  // For workweek tasks, only create on weekdays
+  if (type === 'workweek' && !isWorkday()) return false
+  
+  // Check if there's already a task for today (completed or active)
+  const hasTaskForToday = existingTasks.some(t => 
+    (t.id === task.id || t.parentTaskId === task.id || t.parentTaskId === task.parentTaskId) &&
+    t.dueDate === today
+  )
+  
+  if (hasTaskForToday) return false
+  
+  // Check if this task should have an instance for today
+  const taskDueDate = task.dueDate
+  if (!taskDueDate) return true // No due date, create for today
+  
+  const taskDate = new Date(taskDueDate)
+  const nowDate = new Date()
+  
+  // If task's due date is in the past or today, and it's completed, create new instance
+  if (task.done && taskDate <= nowDate) {
+    return true
+  }
+  
+  return false
+}
+
+// Create a task instance for today
+function createTaskForToday(task: Task): Task {
+  const today = getDateString(new Date())
+  
+  return {
+    ...task,
+    id: Date.now().toString() + Math.random().toString(36).substring(2),
+    done: false,
+    status: 'active',
+    completedAt: undefined,
+    completionCount: 0,
+    dueDate: today,
+    createdAt: new Date().toISOString(),
+    parentTaskId: task.parentTaskId || task.id,
+  }
+}
+
+// Generate missing recurring task instances
+async function generateMissingRecurringTasks(tasks: Task[]): Promise<Task[]> {
+  const newTasks: Task[] = []
+  
+  // Find all recurring task templates (original tasks with recurrence)
+  const recurringTemplates = tasks.filter(t => 
+    t.recurrence && 
+    t.recurrence.type !== 'none' &&
+    !t.parentTaskId // Only look at parent tasks, not instances
+  )
+  
+  for (const template of recurringTemplates) {
+    if (shouldCreateTaskForToday(template, tasks)) {
+      newTasks.push(createTaskForToday(template))
+    }
+  }
+  
+  return newTasks
 }
 
 type State = {
@@ -39,7 +133,22 @@ export const useTasks = create<State>((set, get) => ({
   loadTasks: async () => {
     try {
       const tasks = await db.tasks.toArray()
-      set({ tasks: tasks.map(toTask), isLoading: false })
+      const loadedTasks = tasks.map(toTask)
+      
+      // Generate missing recurring task instances for today
+      const newRecurringTasks = await generateMissingRecurringTasks(loadedTasks)
+      
+      // Add new recurring tasks to database
+      if (newRecurringTasks.length > 0) {
+        for (const newTask of newRecurringTasks) {
+          await db.tasks.add(toTaskRow(newTask))
+        }
+        
+        // Update state with all tasks including newly created ones
+        set({ tasks: [...loadedTasks, ...newRecurringTasks], isLoading: false })
+      } else {
+        set({ tasks: loadedTasks, isLoading: false })
+      }
     } catch (error) {
       console.error('Failed to load tasks:', error)
       set({ isLoading: false })
@@ -71,7 +180,10 @@ export const useTasks = create<State>((set, get) => ({
       ...task,
       done: !task.done,
       status: !task.done ? 'completed' : 'active' as TaskStatus,
-      completedAt: !task.done ? new Date().toISOString() : undefined
+      completedAt: !task.done ? new Date().toISOString() : undefined,
+      completionCount: !task.done && task.recurrence?.type !== 'none' 
+        ? (task.completionCount || 0) + 1 
+        : task.completionCount
     }
     
     try {
@@ -86,7 +198,10 @@ export const useTasks = create<State>((set, get) => ({
   
   updateTask: async (id, updates) => {
     try {
-      await db.tasks.update(id, updates)
+      const serializedUpdates = toTaskRow({ id, ...updates } as any)
+      const { id: _, ...updateData } = serializedUpdates
+      
+      await db.tasks.update(id, updateData)
       set((state) => ({
         tasks: state.tasks.map((task) =>
           task.id === id ? { ...task, ...updates } : task

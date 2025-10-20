@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useTasks, Task, TaskCategory, TaskPriority, TaskStatus } from "@/store/useTasks";
+import { useTasks, Task, TaskCategory, TaskPriority, TaskStatus, RecurrenceType } from "@/store/useTasks";
 import { 
   X, 
   Calendar, 
@@ -10,7 +10,8 @@ import {
   Tag, 
   Trash2,
   Save,
-  AlertCircle 
+  AlertCircle,
+  Repeat
 } from "lucide-react";
 
 interface TaskDetailModalProps {
@@ -28,6 +29,8 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
   const [dueDate, setDueDate] = useState(task.dueDate || '');
   const [estimatedMinutes, setEstimatedMinutes] = useState(task.estimatedMinutes || 0);
   const [tagsInput, setTagsInput] = useState(task.tags?.join(', ') || '');
+  const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>(task.recurrence?.type || 'none');
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState(task.recurrence?.frequency || 0);
 
   const updateTask = useTasks((s) => s.updateTask);
   const deleteTask = useTasks((s) => s.deleteTask);
@@ -39,6 +42,11 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
       .map(t => t.trim())
       .filter(t => t.length > 0);
 
+    const recurrenceConfig = recurrenceType !== 'none' ? {
+      type: recurrenceType,
+      frequency: recurrenceFrequency || undefined,
+    } : undefined;
+
     await updateTask(task.id, {
       title,
       notes,
@@ -48,6 +56,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
       dueDate: dueDate || undefined,
       estimatedMinutes: estimatedMinutes || undefined,
       tags: tags.length > 0 ? tags : undefined,
+      recurrence: recurrenceConfig,
     });
     setIsEditing(false);
   };
@@ -284,6 +293,60 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
               </div>
             ) : (
               <span className="text-muted-foreground">No tags</span>
+            )}
+          </div>
+
+          {/* Recurrence */}
+          <div>
+            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+              <Repeat className="h-4 w-4" />
+              Recurrence
+            </label>
+            {isEditing ? (
+              <div className="space-y-3">
+                <select
+                  value={recurrenceType}
+                  onChange={(e) => setRecurrenceType(e.target.value as RecurrenceType)}
+                  className="input w-full"
+                >
+                  <option value="none">One-time task</option>
+                  <option value="daily">Daily</option>
+                  <option value="workweek">Work Week</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+                {recurrenceType !== 'none' && (
+                  <div>
+                    <input
+                      type="number"
+                      value={recurrenceFrequency}
+                      onChange={(e) => setRecurrenceFrequency(parseInt(e.target.value) || 0)}
+                      placeholder={`Times per ${recurrenceType === 'weekly' ? 'week' : recurrenceType === 'monthly' ? 'month' : recurrenceType === 'workweek' ? 'work week' : 'day'}`}
+                      className="input w-full"
+                      min="1"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {recurrenceType === 'daily' && 'Leave blank for every day'}
+                      {recurrenceType === 'workweek' && 'e.g., 5 for every workday (Mon-Fri)'}
+                      {recurrenceType === 'weekly' && 'e.g., 4 for 4 times per week'}
+                      {recurrenceType === 'monthly' && 'e.g., 3 for 3 times per month'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : task.recurrence && task.recurrence.type !== 'none' ? (
+              <div className="space-y-2">
+                <span className="capitalize">{task.recurrence.type}</span>
+                {task.recurrence.frequency && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Progress: </span>
+                    <span className="font-medium">{task.completionCount || 0} / {task.recurrence.frequency}</span>
+                    <span className="text-muted-foreground"> times</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <span className="text-muted-foreground">One-time task</span>
             )}
           </div>
 

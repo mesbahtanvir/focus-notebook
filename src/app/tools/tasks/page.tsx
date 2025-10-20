@@ -13,7 +13,8 @@ import {
   Clock,
   AlertCircle,
   Tag,
-  ChevronDown
+  ChevronDown,
+  Repeat
 } from "lucide-react";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { TaskInput } from "@/components/TaskInput";
@@ -278,6 +279,13 @@ export default function TasksPage() {
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Tag className="h-3 w-3" />
                           {task.tags.join(', ')}
+                        </span>
+                      )}
+                      {task.recurrence && task.recurrence.type !== 'none' && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-900 flex items-center gap-1">
+                          <Repeat className="h-3 w-3" />
+                          {task.recurrence.type}
+                          {task.recurrence.frequency && ` (${task.completionCount || 0}/${task.recurrence.frequency})`}
                         </span>
                       )}
                     </div>

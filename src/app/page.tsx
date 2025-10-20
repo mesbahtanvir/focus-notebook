@@ -38,6 +38,7 @@ export default function Page() {
     if (!data.text?.trim()) return;
     await addThought({
       text: data.text.trim(),
+      type: 'neutral',
       createdAt: new Date().toISOString(),
     });
     reset();
@@ -115,19 +116,6 @@ export default function Page() {
           ))}
         </ul>
       </section>
-
-      <section className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Today</h2>
-          <button className="btn-primary" onClick={createNewTask}>New Task</button>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="card p-4">
-            <TaskList />
-          </div>
-        </div>
-      </section>
-
     </div>
   );
 }

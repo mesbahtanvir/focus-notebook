@@ -1,0 +1,422 @@
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { useThoughts, Thought, ThoughtType } from "@/store/useThoughts";
+import { 
+  X, 
+  Trash2,
+  Save,
+  Brain,
+  Tag,
+  Heart,
+  Calendar,
+  Lightbulb,
+  FileText,
+  TrendingUp
+} from "lucide-react";
+
+interface ThoughtDetailModalProps {
+  thought: Thought;
+  onClose: () => void;
+}
+
+export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps) {
+  const [activeTab, setActiveTab] = useState<'details' | 'cbt'>(
+    thought.type === 'feeling-bad' ? 'cbt' : 'details'
+  );
+  const [isEditing, setIsEditing] = useState(false);
+  const [text, setText] = useState(thought.text);
+  const [type, setType] = useState<ThoughtType>(thought.type);
+  const [intensity, setIntensity] = useState(thought.intensity || 5);
+  const [tagsInput, setTagsInput] = useState(thought.tags?.join(', ') || '');
+
+  // CBT Analysis fields
+  const [situation, setSituation] = useState(thought.cbtAnalysis?.situation || '');
+  const [automaticThought, setAutomaticThought] = useState(thought.cbtAnalysis?.automaticThought || '');
+  const [emotion, setEmotion] = useState(thought.cbtAnalysis?.emotion || '');
+  const [evidence, setEvidence] = useState(thought.cbtAnalysis?.evidence || '');
+  const [alternativeThought, setAlternativeThought] = useState(thought.cbtAnalysis?.alternativeThought || '');
+  const [outcome, setOutcome] = useState(thought.cbtAnalysis?.outcome || '');
+
+  const updateThought = useThoughts((s) => s.updateThought);
+  const deleteThought = useThoughts((s) => s.deleteThought);
+  const toggleThought = useThoughts((s) => s.toggle);
+
+  const handleSave = async () => {
+    const tags = tagsInput
+      .split(',')
+      .map(t => t.trim())
+      .filter(t => t.length > 0);
+
+    await updateThought(thought.id, {
+      text,
+      type,
+      intensity: type.includes('feeling') ? intensity : undefined,
+      tags: tags.length > 0 ? tags : undefined,
+    });
+    setIsEditing(false);
+  };
+
+  const handleSaveCBT = async () => {
+    await updateThought(thought.id, {
+      cbtAnalysis: {
+        situation,
+        automaticThought,
+        emotion,
+        evidence,
+        alternativeThought,
+        outcome,
+        analyzedAt: new Date().toISOString(),
+      },
+    });
+  };
+
+  const handleDelete = async () => {
+    if (confirm('Are you sure you want to delete this thought?')) {
+      await deleteThought(thought.id);
+      onClose();
+    }
+  };
+
+  const getTypeColor = (t: ThoughtType) => {
+    switch (t) {
+      case 'task': return 'bg-blue-500';
+      case 'feeling-good': return 'bg-green-500';
+      case 'feeling-bad': return 'bg-red-500';
+      case 'neutral': return 'bg-gray-500';
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-background rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-background border-b p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={thought.done}
+                onChange={() => toggleThought(thought.id)}
+                className="h-5 w-5 rounded"
+              />
+              <h2 className="text-xl font-bold">Thought Details</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDelete}
+                className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-accent rounded"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab('details')}
+              className={`px-4 py-2 text-sm font-medium rounded-t transition-colors ${
+                activeTab === 'details'
+                  ? 'bg-accent text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <FileText className="h-4 w-4 inline mr-2" />
+              Details
+            </button>
+            {thought.type === 'feeling-bad' && (
+              <button
+                onClick={() => setActiveTab('cbt')}
+                className={`px-4 py-2 text-sm font-medium rounded-t transition-colors ${
+                  activeTab === 'cbt'
+                    ? 'bg-accent text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Brain className="h-4 w-4 inline mr-2" />
+                CBT Analysis
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          {activeTab === 'details' ? (
+            <div className="space-y-6">
+              {/* Thought Text */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Thought</label>
+                {isEditing ? (
+                  <textarea
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    className="input w-full min-h-[100px]"
+                  />
+                ) : (
+                  <p className={`text-lg ${thought.done ? 'line-through text-muted-foreground' : ''}`}>
+                    {thought.text}
+                  </p>
+                )}
+              </div>
+
+              {/* Type */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Type</label>
+                {isEditing ? (
+                  <select
+                    value={type}
+                    onChange={(e) => setType(e.target.value as ThoughtType)}
+                    className="input w-full"
+                  >
+                    <option value="neutral">Neutral</option>
+                    <option value="task">Task</option>
+                    <option value="feeling-good">Good Feeling</option>
+                    <option value="feeling-bad">Bad Feeling</option>
+                  </select>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${getTypeColor(thought.type)}`} />
+                    <span className="capitalize">{thought.type.replace('-', ' ')}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Intensity */}
+              {(type.includes('feeling') || thought.intensity) && (
+                <div>
+                  <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                    <Heart className="h-4 w-4" />
+                    Intensity
+                  </label>
+                  {isEditing && type.includes('feeling') ? (
+                    <>
+                      <input
+                        type="range"
+                        min="1"
+                        max="10"
+                        value={intensity}
+                        onChange={(e) => setIntensity(parseInt(e.target.value))}
+                        className="w-full"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                        <span>1 (Low)</span>
+                        <span className="font-medium">{intensity}/10</span>
+                        <span>10 (High)</span>
+                      </div>
+                    </>
+                  ) : thought.intensity ? (
+                    <span>{thought.intensity}/10</span>
+                  ) : (
+                    <span className="text-muted-foreground">Not set</span>
+                  )}
+                </div>
+              )}
+
+              {/* Tags */}
+              <div>
+                <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                  <Tag className="h-4 w-4" />
+                  Tags
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={tagsInput}
+                    onChange={(e) => setTagsInput(e.target.value)}
+                    placeholder="Enter tags separated by commas"
+                    className="input w-full"
+                  />
+                ) : thought.tags && thought.tags.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {thought.tags.map((tag, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-1 bg-accent rounded text-sm"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground">No tags</span>
+                )}
+              </div>
+
+              {/* Metadata */}
+              <div className="pt-4 border-t space-y-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Created: {new Date(thought.createdAt).toLocaleString()}
+                </div>
+                {thought.cbtAnalysis?.analyzedAt && (
+                  <div className="flex items-center gap-2">
+                    <Brain className="h-4 w-4" />
+                    CBT Analyzed: {new Date(thought.cbtAnalysis.analyzedAt).toLocaleString()}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 justify-end pt-4 border-t">
+                {isEditing ? (
+                  <>
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      className="px-4 py-2 text-sm rounded hover:bg-accent"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      className="btn-primary flex items-center gap-2"
+                    >
+                      <Save className="h-4 w-4" />
+                      Save
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="px-4 py-2 text-sm rounded hover:bg-accent"
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            // CBT Analysis Tab
+            <div className="space-y-6">
+              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Lightbulb className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                  <div>
+                    <h3 className="font-medium text-blue-900 dark:text-blue-100">CBT Thought Analysis</h3>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                      Use this framework to challenge and reframe negative thoughts. Take your time and be honest with yourself.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  1. Situation
+                  <span className="text-muted-foreground font-normal ml-2">
+                    What triggered this feeling?
+                  </span>
+                </label>
+                <textarea
+                  value={situation}
+                  onChange={(e) => setSituation(e.target.value)}
+                  placeholder="Describe the situation objectively (who, what, when, where)..."
+                  className="input w-full min-h-[80px]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  2. Automatic Thought
+                  <span className="text-muted-foreground font-normal ml-2">
+                    What went through your mind?
+                  </span>
+                </label>
+                <textarea
+                  value={automaticThought}
+                  onChange={(e) => setAutomaticThought(e.target.value)}
+                  placeholder="What thoughts came up automatically? What did you tell yourself?"
+                  className="input w-full min-h-[80px]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  3. Emotion
+                  <span className="text-muted-foreground font-normal ml-2">
+                    How did it make you feel?
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  value={emotion}
+                  onChange={(e) => setEmotion(e.target.value)}
+                  placeholder="e.g., anxious, sad, angry, frustrated..."
+                  className="input w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  4. Evidence
+                  <span className="text-muted-foreground font-normal ml-2">
+                    What supports or contradicts this thought?
+                  </span>
+                </label>
+                <textarea
+                  value={evidence}
+                  onChange={(e) => setEvidence(e.target.value)}
+                  placeholder="List facts that support AND contradict your automatic thought..."
+                  className="input w-full min-h-[100px]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  5. Alternative Thought
+                  <span className="text-muted-foreground font-normal ml-2">
+                    What&apos;s a more balanced perspective?
+                  </span>
+                </label>
+                <textarea
+                  value={alternativeThought}
+                  onChange={(e) => setAlternativeThought(e.target.value)}
+                  placeholder="Based on the evidence, what is a more realistic and balanced way to think about this?"
+                  className="input w-full min-h-[100px]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  6. Outcome
+                  <span className="text-muted-foreground font-normal ml-2">
+                    How do you feel now?
+                  </span>
+                </label>
+                <textarea
+                  value={outcome}
+                  onChange={(e) => setOutcome(e.target.value)}
+                  placeholder="After this analysis, how has your emotional intensity changed? What will you do differently?"
+                  className="input w-full min-h-[80px]"
+                />
+              </div>
+
+              <div className="flex gap-2 justify-end pt-4 border-t">
+                <button
+                  onClick={handleSaveCBT}
+                  className="btn-primary flex items-center gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  Save CBT Analysis
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
