@@ -9,9 +9,11 @@ jest.mock('next/navigation', () => ({
 
 // Mock next/link
 jest.mock('next/link', () => {
-  return ({ children, href }: any) => {
+  const MockLink = ({ children, href }: any) => {
     return <a href={href}>{children}</a>;
   };
+  MockLink.displayName = 'MockLink';
+  return MockLink;
 });
 
 describe('Sidebar', () => {
