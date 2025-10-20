@@ -19,18 +19,36 @@ export default function FocusPage() {
   const [duration, setDuration] = useState(60); // default 60 minutes
   const [showSetup, setShowSetup] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
 
   const activeTasks = tasks.filter(t => !t.done && t.status === 'active');
-  const suggestedTasks = selectBalancedTasks(tasks, duration);
+  const autoSuggestedTasks = selectBalancedTasks(tasks, duration);
+
+  // Initialize selected tasks with auto-suggested tasks
+  useEffect(() => {
+    if (autoSuggestedTasks.length > 0 && selectedTaskIds.length === 0) {
+      setSelectedTaskIds(autoSuggestedTasks.map(t => t.id));
+    }
+  }, [autoSuggestedTasks, selectedTaskIds.length]);
 
   // Load sessions on mount
   useEffect(() => {
     loadSessions();
   }, [loadSessions]);
 
+  const toggleTaskSelection = (taskId: string) => {
+    setSelectedTaskIds(prev => 
+      prev.includes(taskId) 
+        ? prev.filter(id => id !== taskId)
+        : [...prev, taskId]
+    );
+  };
+
+  const selectedTasks = tasks.filter(t => selectedTaskIds.includes(t.id));
+
   const handleStartSession = () => {
-    if (suggestedTasks.length === 0) return;
-    startSession(suggestedTasks, duration);
+    if (selectedTasks.length === 0) return;
+    startSession(selectedTasks, duration);
     setShowSetup(false);
   };
 
@@ -118,64 +136,106 @@ export default function FocusPage() {
               </div>
             </div>
 
-            {/* Task Preview */}
-            <div className="card p-8 space-y-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm">
+            {/* Task Selection */}
+            <div className="card p-8 space-y-6 bg-gradient-to-br from-white to-purple-50 dark:from-gray-800 dark:to-purple-950/30 backdrop-blur-sm border-2 border-purple-200 dark:border-purple-800">
               <div className="space-y-3">
-                <label className="flex items-center gap-2 text-lg font-semibold text-foreground">
-                  <Target className="h-5 w-5 text-purple-500 dark:text-purple-400" />
-                  Selected Tasks
+                <label className="flex items-center gap-2 text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  <Target className="h-6 w-6 text-purple-500 dark:text-purple-400" />
+                  Select Tasks for Session
                 </label>
-                <p className="text-sm text-muted-foreground">
-                  Balanced selection of {suggestedTasks.length} tasks for your session
+                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                  ✨ Auto-selected {autoSuggestedTasks.length} balanced tasks • Click to add/remove tasks
                 </p>
               </div>
 
               {activeTasks.length === 0 ? (
-                <div className="text-center py-12 space-y-3">
-                  <div className="text-4xl">📝</div>
-                  <p className="text-muted-foreground">
-                    No active tasks available. Create some tasks first!
+                <div className="text-center py-12 space-y-3 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700">
+                  <div className="text-6xl mb-2">📝</div>
+                  <p className="text-lg font-medium text-gray-600 dark:text-gray-400">
+                    No active tasks available
                   </p>
+                  <p className="text-sm text-gray-500">Create some tasks first!</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {suggestedTasks.map((task, index) => (
-                    <motion.div
-                      key={task.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-accent/50 dark:bg-gray-700/50"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-foreground">{task.title}</div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-xs ${
-                              task.category === 'mastery'
-                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
-                                : 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300'
-                            }`}
-                          >
-                            {task.category}
-                          </span>
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-xs ${
-                              task.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300' :
-                              task.priority === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300' :
-                              task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300' :
-                              'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300'
-                            }`}
-                          >
-                            {task.priority}
-                          </span>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      {selectedTasks.length} tasks selected
+                    </span>
+                    {selectedTasks.length > 0 && (
+                      <button
+                        onClick={() => setSelectedTaskIds([])}
+                        className="text-xs font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 underline"
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </div>
+                  {activeTasks.map((task, index) => {
+                    const isSelected = selectedTaskIds.includes(task.id);
+                    return (
+                      <motion.button
+                        key={task.id}
+                        type="button"
+                        onClick={() => toggleTaskSelection(task.id)}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={`w-full flex items-center gap-3 p-4 rounded-xl transition-all ${
+                          isSelected
+                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg border-2 border-transparent'
+                            : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:border-purple-400 dark:hover:border-purple-600 border-2 border-gray-300 dark:border-gray-600'
+                        }`}
+                      >
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all ${
+                          isSelected 
+                            ? 'bg-white border-white' 
+                            : 'bg-transparent border-gray-400'
+                        }`}>
+                          {isSelected && (
+                            <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                        <div className="flex-1 text-left">
+                          <div className={`font-semibold ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                            {task.title}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                isSelected
+                                  ? 'bg-white/20 text-white'
+                                  : task.category === 'mastery'
+                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
+                                  : 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300'
+                              }`}
+                            >
+                              {task.category}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                isSelected
+                                  ? 'bg-white/20 text-white'
+                                  : task.priority === 'urgent' 
+                                  ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300'
+                                  : task.priority === 'high'
+                                  ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300'
+                                  : task.priority === 'medium'
+                                  ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300'
+                                  : 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300'
+                              }`}
+                            >
+                              {task.priority}
+                            </span>
+                          </div>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -185,11 +245,11 @@ export default function FocusPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleStartSession}
-              disabled={suggestedTasks.length === 0}
-              className="w-full py-4 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold text-lg flex items-center justify-center gap-3 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              disabled={selectedTasks.length === 0}
+              className="w-full py-4 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-lg flex items-center justify-center gap-3 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl transition-all"
             >
               <Play className="h-6 w-6" />
-              Start Focus Session
+              Start Focus Session ({selectedTasks.length} tasks)
             </motion.button>
 
             {/* Session History Button */}

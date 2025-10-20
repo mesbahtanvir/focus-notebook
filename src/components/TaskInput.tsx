@@ -79,8 +79,8 @@ export function TaskInput({ onClose }: TaskInputProps = {}) {
   };
 
   return (
-    <div className="space-y-4">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div className="relative">
           <div className="flex items-center">
             <input
@@ -88,14 +88,14 @@ export function TaskInput({ onClose }: TaskInputProps = {}) {
               type="text"
               value={taskName}
               onChange={(e) => setTaskName(e.target.value)}
-              placeholder="What do you want to accomplish?"
-              className="input flex-1 pr-12"
+              placeholder="What do you want to accomplish? ✨"
+              className="input flex-1 pr-12 text-lg font-medium border-2 focus:border-purple-500 dark:focus:border-purple-400"
               autoFocus
             />
             <button
               type="submit"
               disabled={!taskName.trim()}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-white bg-primary hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full text-white bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-500"
               aria-label="Add task"
             >
               <AnimatePresence mode="wait">
@@ -126,147 +126,150 @@ export function TaskInput({ onClose }: TaskInputProps = {}) {
         </div>
 
         {/* Notes */}
-        <div>
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700">
+          <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">📝 Notes</label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Add notes or description (optional)"
-            className="input w-full min-h-[80px] text-sm"
+            className="input w-full min-h-[80px] text-sm bg-white dark:bg-gray-800"
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Category */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Category</label>
-            <div className="inline-flex rounded-md shadow-sm w-full" role="group">
+          <div className="bg-gradient-to-br from-blue-50 to-pink-50 dark:from-blue-950/20 dark:to-pink-950/20 p-4 rounded-xl border-2 border-blue-200 dark:border-blue-800">
+            <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">🎯 Category</label>
+            <div className="inline-flex rounded-lg shadow-sm w-full" role="group">
               <button
                 type="button"
                 onClick={() => setCategory('mastery')}
-                className={`flex-1 px-3 py-2 text-sm font-medium rounded-l-lg border ${
+                className={`flex-1 px-4 py-3 text-sm font-bold rounded-l-lg border-2 transition-all ${
                   category === 'mastery'
-                    ? 'bg-primary/10 text-primary border-primary/20'
-                    : 'bg-background hover:bg-accent border-border'
+                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-500 shadow-lg scale-105'
+                    : 'bg-white dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 border-gray-300 dark:border-gray-600'
                 }`}
               >
-                Mastery
+                🎯 Mastery
               </button>
               <button
                 type="button"
                 onClick={() => setCategory('pleasure')}
-                className={`flex-1 px-3 py-2 text-sm font-medium rounded-r-lg border ${
+                className={`flex-1 px-4 py-3 text-sm font-bold rounded-r-lg border-2 transition-all ${
                   category === 'pleasure'
-                    ? 'bg-primary/10 text-primary border-primary/20'
-                    : 'bg-background hover:bg-accent border-border'
+                    ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white border-pink-500 shadow-lg scale-105'
+                    : 'bg-white dark:bg-gray-800 hover:bg-pink-50 dark:hover:bg-pink-950/50 border-gray-300 dark:border-gray-600'
                 }`}
               >
-                Pleasure
+                🎨 Pleasure
               </button>
             </div>
           </div>
 
           {/* Priority */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Priority</label>
+          <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 p-4 rounded-xl border-2 border-orange-200 dark:border-orange-800">
+            <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">🔥 Priority</label>
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value as TaskPriority)}
-              className="input w-full"
+              className="input w-full text-sm font-medium border-2 focus:border-orange-500"
             >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
+              <option value="low">🟢 Low</option>
+              <option value="medium">🟡 Medium</option>
+              <option value="high">🟠 High</option>
+              <option value="urgent">🔴 Urgent</option>
             </select>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Destination */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Add to</label>
-            <div className="inline-flex rounded-md shadow-sm w-full" role="group">
+          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20 p-4 rounded-xl border-2 border-purple-200 dark:border-purple-800">
+            <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">📅 Add to</label>
+            <div className="inline-flex rounded-lg shadow-sm w-full" role="group">
               <button
                 type="button"
                 onClick={() => setDestination('today')}
-                className={`flex-1 px-3 py-2 text-sm font-medium rounded-l-lg border ${
+                className={`flex-1 px-4 py-3 text-sm font-bold rounded-l-lg border-2 transition-all ${
                   destination === 'today'
-                    ? 'bg-primary/10 text-primary border-primary/20'
-                    : 'bg-background hover:bg-accent border-border'
+                    ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-purple-500 shadow-lg scale-105'
+                    : 'bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-purple-950/50 border-gray-300 dark:border-gray-600'
                 }`}
               >
-                Today
+                ☀️ Today
               </button>
               <button
                 type="button"
                 onClick={() => setDestination('backlog')}
-                className={`flex-1 px-3 py-2 text-sm font-medium rounded-r-lg border ${
+                className={`flex-1 px-4 py-3 text-sm font-bold rounded-r-lg border-2 transition-all ${
                   destination === 'backlog'
-                    ? 'bg-primary/10 text-primary border-primary/20'
-                    : 'bg-background hover:bg-accent border-border'
+                    ? 'bg-gradient-to-r from-indigo-500 to-blue-500 text-white border-indigo-500 shadow-lg scale-105'
+                    : 'bg-white dark:bg-gray-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 border-gray-300 dark:border-gray-600'
                 }`}
               >
-                Backlog
+                📋 Backlog
               </button>
             </div>
           </div>
 
           {/* Due Date */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Due Date (optional)</label>
+          <div className="bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-950/20 dark:to-blue-950/20 p-4 rounded-xl border-2 border-cyan-200 dark:border-cyan-800">
+            <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">⏰ Due Date</label>
             <input
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="input w-full"
+              className="input w-full border-2 focus:border-cyan-500"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Estimated Time */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Estimated Time (minutes)</label>
+          <div className="bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-950/20 dark:to-emerald-950/20 p-4 rounded-xl border-2 border-teal-200 dark:border-teal-800">
+            <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">⏱️ Estimated Time</label>
             <input
               type="number"
               value={estimatedMinutes}
               onChange={(e) => setEstimatedMinutes(e.target.value)}
               placeholder="e.g., 30"
-              className="input w-full"
+              className="input w-full border-2 focus:border-teal-500"
               min="0"
             />
+            <p className="text-xs text-gray-500 mt-1">In minutes</p>
           </div>
 
           {/* Tags */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Tags (comma-separated)</label>
+          <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 p-4 rounded-xl border-2 border-amber-200 dark:border-amber-800">
+            <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">🏷️ Tags</label>
             <input
               type="text"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               placeholder="e.g., urgent, work"
-              className="input w-full"
+              className="input w-full border-2 focus:border-amber-500"
             />
+            <p className="text-xs text-gray-500 mt-1">Comma-separated</p>
           </div>
         </div>
 
         {/* Recurrence */}
-        <div className="border-t pt-4">
-          <label className="block text-sm font-medium mb-2 flex items-center gap-2">
-            <Repeat className="h-4 w-4" />
-            Recurrence
+        <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20 p-4 rounded-xl border-2 border-violet-200 dark:border-violet-800">
+          <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+            <Repeat className="h-5 w-5 text-violet-500" />
+            🔁 Recurrence
           </label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <select
               value={recurrenceType}
               onChange={(e) => setRecurrenceType(e.target.value as RecurrenceType)}
-              className="input w-full"
+              className="input w-full border-2 focus:border-violet-500 font-medium"
             >
-              <option value="none">One-time task</option>
-              <option value="daily">Daily</option>
-              <option value="workweek">Work Week</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
+              <option value="none">⚡ One-time task</option>
+              <option value="daily">📆 Daily</option>
+              <option value="workweek">💼 Work Week</option>
+              <option value="weekly">📅 Weekly</option>
+              <option value="monthly">🗓️ Monthly</option>
             </select>
             {recurrenceType !== 'none' && (
               <div>
@@ -275,14 +278,14 @@ export function TaskInput({ onClose }: TaskInputProps = {}) {
                   value={recurrenceFrequency}
                   onChange={(e) => setRecurrenceFrequency(e.target.value)}
                   placeholder={`Times per ${recurrenceType === 'weekly' ? 'week' : recurrenceType === 'monthly' ? 'month' : recurrenceType === 'workweek' ? 'work week' : 'day'}`}
-                  className="input w-full"
+                  className="input w-full border-2 focus:border-violet-500"
                   min="1"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {recurrenceType === 'daily' && 'Leave blank for every day'}
-                  {recurrenceType === 'workweek' && 'e.g., 5 for every workday (Mon-Fri)'}
-                  {recurrenceType === 'weekly' && 'e.g., 4 for 4 times per week'}
-                  {recurrenceType === 'monthly' && 'e.g., 3 for 3 times per month'}
+                <p className="text-xs text-gray-500 mt-1">
+                  {recurrenceType === 'daily' && '💡 Leave blank for every day'}
+                  {recurrenceType === 'workweek' && '💡 e.g., 5 for every workday (Mon-Fri)'}
+                  {recurrenceType === 'weekly' && '💡 e.g., 4 for 4 times per week'}
+                  {recurrenceType === 'monthly' && '💡 e.g., 3 for 3 times per month'}
                 </p>
               </div>
             )}
