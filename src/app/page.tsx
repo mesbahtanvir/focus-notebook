@@ -8,7 +8,7 @@ import { useState, useMemo } from "react";
 import TaskList from "@/components/TaskList";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { Sparkles, Lock } from "lucide-react";
+import { Sparkles, Lock, MessageSquare, Lightbulb, Trash2, CheckCircle } from "lucide-react";
 
 // Disable static generation for now
 export const dynamic = 'force-dynamic';
@@ -99,61 +99,101 @@ export default function Page() {
         </motion.div>
       )}
 
-      <section className="card p-4 space-y-4">
-        <h2 className="text-xl font-semibold">What&apos;s on your mind?</h2>
-        <form onSubmit={handleSubmit(onSubmit)} className="flex gap-2">
-          <input
-            aria-label="Thought"
-            className="input flex-1"
-            placeholder="What's on your mind?"
-            {...register('text', { required: true })}
-          />
-          <button className="btn-primary" type="submit">Add</button>
-        </form>
+      <section className="rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 border-4 border-purple-200 shadow-lg overflow-hidden">
+        <div className="bg-gradient-to-r from-purple-100 via-pink-100 to-blue-100 px-6 py-4 border-b-4 border-purple-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg shadow-md">
+              <MessageSquare className="h-5 w-5 text-white" />
+            </div>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              💭 What&apos;s on your mind?
+            </h2>
+          </div>
+        </div>
+        <div className="p-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="flex gap-3">
+            <input
+              aria-label="Thought"
+              className="flex-1 px-4 py-3 rounded-xl border-2 border-purple-200 focus:border-purple-400 focus:ring-4 focus:ring-purple-100 outline-none transition-all bg-white"
+              placeholder="Share your thoughts..."
+              {...register('text', { required: true })}
+            />
+            <button 
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105" 
+              type="submit"
+            >
+              ✨ Add
+            </button>
+          </form>
+        </div>
       </section>
 
-      <section className="card p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Thoughts</h2>
-          {thoughts.length > 3 && (
-            <button
-              className="text-sm underline text-muted-foreground hover:text-foreground"
-              onClick={() => setShowAll((v) => !v)}
-            >
-              {showAll ? 'Show less' : 'Show all'}
-            </button>
-          )}
-        </div>
-        <ul className="space-y-2">
-          {(showAll ? thoughts : recentThoughts).length === 0 && (
-            <li className="text-muted-foreground">No thoughts yet</li>
-          )}
-          {(showAll ? thoughts : recentThoughts).map((t) => (
-            <motion.li
-              key={t.id}
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-3"
-            >
-              <input
-                id={`task-${t.id}`}
-                type="checkbox"
-                checked={t.done}
-                onChange={() => toggleThought(t.id)}
-              />
-              <label htmlFor={`task-${t.id}`} className={t.done ? "line-through text-muted-foreground" : ""}>
-                {t.text}
-              </label>
+      <section className="rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50 border-4 border-blue-200 shadow-lg overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-100 via-cyan-100 to-teal-100 px-6 py-4 border-b-4 border-blue-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg shadow-md">
+                <Lightbulb className="h-5 w-5 text-white" />
+              </div>
+              <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                💡 Your Thoughts
+              </h2>
+            </div>
+            {thoughts.length > 3 && (
               <button
-                className="ml-auto text-xs underline text-red-600 hover:text-red-700"
-                onClick={() => deleteThought(t.id)}
-                aria-label={`Delete ${t.text}`}
+                className="px-4 py-2 rounded-full text-sm font-semibold bg-white/50 hover:bg-white transition-all text-blue-700 hover:scale-105"
+                onClick={() => setShowAll((v) => !v)}
               >
-                Delete
+                {showAll ? '📖 Show less' : '📚 Show all'}
               </button>
-            </motion.li>
-          ))}
-        </ul>
+            )}
+          </div>
+        </div>
+        <div className="p-6">
+          <ul className="space-y-3">
+            {(showAll ? thoughts : recentThoughts).length === 0 && (
+              <li className="text-center py-8 text-gray-500">
+                <Lightbulb className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                <p>No thoughts yet. Start sharing what&apos;s on your mind! 💭</p>
+              </li>
+            )}
+            {(showAll ? thoughts : recentThoughts).map((t) => (
+              <motion.li
+                key={t.id}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex items-center gap-3 p-4 rounded-xl bg-white border-2 transition-all hover:shadow-md ${
+                  t.done ? 'border-green-200 bg-green-50' : 'border-blue-200'
+                }`}
+              >
+                <input
+                  id={`task-${t.id}`}
+                  type="checkbox"
+                  checked={t.done}
+                  onChange={() => toggleThought(t.id)}
+                  className="w-5 h-5 rounded border-2 border-blue-300 text-blue-600 focus:ring-2 focus:ring-blue-200 cursor-pointer"
+                />
+                <label 
+                  htmlFor={`task-${t.id}`} 
+                  className={`flex-1 cursor-pointer ${
+                    t.done ? 'line-through text-gray-400' : 'text-gray-800 font-medium'
+                  }`}
+                >
+                  {t.done && <CheckCircle className="inline h-4 w-4 mr-2 text-green-500" />}
+                  {t.text}
+                </label>
+                <button
+                  className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-all transform hover:scale-110"
+                  onClick={() => deleteThought(t.id)}
+                  aria-label={`Delete ${t.text}`}
+                  title="Delete"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </motion.li>
+            ))}
+          </ul>
+        </div>
       </section>
     </div>
   );

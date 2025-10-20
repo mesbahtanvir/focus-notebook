@@ -10,6 +10,7 @@ import {
   query,
   where
 } from 'firebase/firestore'
+import { useRequestLog } from '@/store/useRequestLog'
 
 interface SyncResult {
   success: boolean
@@ -18,12 +19,52 @@ interface SyncResult {
 }
 
 /**
+ * Remove undefined values from an object recursively
+ * Firebase doesn't allow undefined values
+ */
+function cleanUndefined(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return null
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(cleanUndefined).filter(item => item !== null && item !== undefined)
+  }
+  
+  if (typeof obj === 'object') {
+    const cleaned: any = {}
+    Object.keys(obj).forEach(key => {
+      const value = obj[key]
+      if (value !== undefined) {
+        cleaned[key] = cleanUndefined(value)
+      }
+    })
+    return cleaned
+  }
+  
+  return obj
+}
+
+/**
  * Syncs local data to Firebase Firestore
  */
 export async function syncToCloud(): Promise<SyncResult> {
+  const startTime = Date.now()
+  
+  // Add to queue
+  const requestId = useRequestLog.getState().addToQueue({
+    type: 'sync',
+    method: 'syncToCloud',
+    url: 'Firebase Firestore',
+  })
+  
   try {
     const user = auth.currentUser
     if (!user) {
+      useRequestLog.getState().updateRequestStatus(requestId, 'failed', {
+        error: 'User not authenticated',
+        status: 401
+      })
       return {
         success: false,
         error: 'User not authenticated',
@@ -32,6 +73,11 @@ export async function syncToCloud(): Promise<SyncResult> {
     }
 
     const userId = user.uid
+    
+    // Update to in-progress
+    useRequestLog.getState().updateRequestStatus(requestId, 'in-progress', {
+      url: `Firebase Firestore - users/${userId}`
+    })
 
     // Get all data from IndexedDB
     const [tasks, thoughts, moods, focusSessions] = await Promise.all([
@@ -41,34 +87,53 @@ export async function syncToCloud(): Promise<SyncResult> {
       localDb.focusSessions.toArray(),
     ])
 
+    const requestData = {
+      tasks: tasks.length,
+      thoughts: thoughts.length,
+      moods: moods.length,
+      focusSessions: focusSessions.length,
+      userId
+    }
+
     // Use batch writes for better performance
     const batch = writeBatch(firestore)
 
-    // Sync tasks
+    // Sync tasks - clean undefined values
     tasks.forEach((task) => {
       const taskRef = doc(firestore, `users/${userId}/tasks`, task.id)
-      batch.set(taskRef, { ...task, updatedAt: Date.now() })
+      const cleanedTask = cleanUndefined({ ...task, updatedAt: Date.now() })
+      batch.set(taskRef, cleanedTask)
     })
 
-    // Sync thoughts
+    // Sync thoughts - clean undefined values
     thoughts.forEach((thought) => {
       const thoughtRef = doc(firestore, `users/${userId}/thoughts`, thought.id)
-      batch.set(thoughtRef, { ...thought, updatedAt: Date.now() })
+      const cleanedThought = cleanUndefined({ ...thought, updatedAt: Date.now() })
+      batch.set(thoughtRef, cleanedThought)
     })
 
-    // Sync moods
+    // Sync moods - clean undefined values
     moods.forEach((mood) => {
       const moodRef = doc(firestore, `users/${userId}/moods`, mood.id)
-      batch.set(moodRef, { ...mood, updatedAt: Date.now() })
+      const cleanedMood = cleanUndefined({ ...mood, updatedAt: Date.now() })
+      batch.set(moodRef, cleanedMood)
     })
 
-    // Sync focus sessions
+    // Sync focus sessions - clean undefined values
     focusSessions.forEach((session) => {
       const sessionRef = doc(firestore, `users/${userId}/focusSessions`, session.id)
-      batch.set(sessionRef, { ...session, updatedAt: Date.now() })
+      const cleanedSession = cleanUndefined({ ...session, updatedAt: Date.now() })
+      batch.set(sessionRef, cleanedSession)
     })
 
     await batch.commit()
+
+    // Update to completed
+    useRequestLog.getState().updateRequestStatus(requestId, 'completed', {
+      request: requestData,
+      response: { success: true, itemsCount: requestData },
+      status: 200
+    })
 
     return {
       success: true,
@@ -76,6 +141,13 @@ export async function syncToCloud(): Promise<SyncResult> {
     }
   } catch (error) {
     console.error('Cloud sync error:', error)
+    
+    // Update to failed
+    useRequestLog.getState().updateRequestStatus(requestId, 'failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      status: 500
+    })
+    
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

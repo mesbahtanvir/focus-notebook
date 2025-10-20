@@ -197,69 +197,72 @@ export default function SettingsPage() {
           <CardDescription className="text-gray-600 font-medium">Manage your application preferences</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-6">
-            {/* Background Processing */}
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="allowBackgroundProcessing">Background Processing</Label>
-                <p className="text-sm text-muted-foreground">
-                  Enable to allow the app to process data in the background
+          <CardContent className="p-8 space-y-8">
+            {/* General Settings Section */}
+            <div className="space-y-6">
+              {/* Background Processing */}
+              <div className="flex items-center justify-between py-4">
+                <div className="space-y-1 flex-1">
+                  <Label htmlFor="allowBackgroundProcessing" className="text-base font-semibold text-gray-800">Background Processing</Label>
+                  <p className="text-sm text-gray-600">
+                    Enable to allow the app to process data in the background
+                  </p>
+                </div>
+                <Switch
+                  id="allowBackgroundProcessing"
+                  checked={allowBackgroundProcessing}
+                  onCheckedChange={(checked) => setValue('allowBackgroundProcessing', checked)}
+                />
+              </div>
+
+              {/* Notifications */}
+              <div className="flex items-center justify-between py-4">
+                <div className="space-y-1 flex-1">
+                  <Label htmlFor="notificationEnabled" className="text-base font-semibold text-gray-800">Enable Notifications</Label>
+                  <p className="text-sm text-gray-600">
+                    Receive notifications for important updates
+                  </p>
+                </div>
+                <Switch
+                  id="notificationEnabled"
+                  checked={notificationEnabled}
+                  onCheckedChange={(checked) => setValue('notificationEnabled', checked)}
+                />
+              </div>
+
+              {/* Auto Save */}
+              <div className="flex items-center justify-between py-4">
+                <div className="space-y-1 flex-1">
+                  <Label htmlFor="autoSave" className="text-base font-semibold text-gray-800">Auto Save</Label>
+                  <p className="text-sm text-gray-600">
+                    Automatically save changes
+                  </p>
+                </div>
+                <Switch
+                  id="autoSave"
+                  checked={autoSave}
+                  onCheckedChange={(checked) => setValue('autoSave', checked)}
+                />
+              </div>
+
+              {/* OpenAI API Key */}
+              <div className="space-y-3 py-4">
+                <Label htmlFor="openaiApiKey" className="text-base font-semibold text-gray-800">OpenAI API Key</Label>
+                <Input
+                  id="openaiApiKey"
+                  type="password"
+                  placeholder="sk-..."
+                  {...register('openaiApiKey')}
+                  className="max-w-md"
+                />
+                <p className="text-sm text-gray-600">
+                  Your API key is stored locally and never sent to our servers
                 </p>
               </div>
-              <Switch
-                id="allowBackgroundProcessing"
-                checked={allowBackgroundProcessing}
-                onCheckedChange={(checked) => setValue('allowBackgroundProcessing', checked)}
-              />
             </div>
 
-            {/* OpenAI API Key */}
-            <div className="space-y-2">
-              <Label htmlFor="openaiApiKey">OpenAI API Key</Label>
-              <Input
-                id="openaiApiKey"
-                type="password"
-                placeholder="sk-..."
-                {...register('openaiApiKey')}
-                className="max-w-md"
-              />
-              <p className="text-sm text-muted-foreground">
-                Your API key is stored locally and never sent to our servers
-              </p>
-            </div>
-
-            {/* Notifications */}
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="notificationEnabled">Enable Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receive notifications for important updates
-                </p>
-              </div>
-              <Switch
-                id="notificationEnabled"
-                checked={notificationEnabled}
-                onCheckedChange={(checked) => setValue('notificationEnabled', checked)}
-              />
-            </div>
-
-            {/* Auto Save */}
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="autoSave">Auto Save</Label>
-                <p className="text-sm text-muted-foreground">
-                  Automatically save changes
-                </p>
-              </div>
-              <Switch
-                id="autoSave"
-                checked={autoSave}
-                onCheckedChange={(checked) => setValue('autoSave', checked)}
-              />
-            </div>
-
-            {/* Cloud Sync Section */}
-            <div className="pt-6 space-y-4 border-t-4 border-blue-200">
+            {/* Cloud Sync Info */}
+            <div className="pt-8 space-y-6 border-t-4 border-blue-200">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full">
                   <Cloud className="h-5 w-5 text-white" />
@@ -270,81 +273,23 @@ export default function SettingsPage() {
               {!user ? (
                 <div className="rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 p-6 border-2 border-blue-200">
                   <p className="text-sm text-gray-700 font-medium">
-                    🔐 Sign in to enable cloud sync and access your data across multiple devices.
+                    🔐 Sign in to enable automatic cloud sync and access your data across multiple devices.
                   </p>
                 </div>
               ) : (
-                <>
-                  {/* Enable Cloud Sync */}
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="cloudSync">Enable Cloud Sync</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Automatically sync your data to the cloud for multi-device access
+                <div className="rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 p-6 border-2 border-green-200">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">✨</span>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-800 font-bold mb-2">
+                        Cloud Sync is Always Active
+                      </p>
+                      <p className="text-sm text-gray-700">
+                        Your data automatically syncs to the cloud every 5 minutes. You can access it from any device by signing in with the same account. No configuration needed!
                       </p>
                     </div>
-                    <Switch
-                      id="cloudSync"
-                      checked={cloudSyncEnabled}
-                      onCheckedChange={(checked) => {
-                        setCloudSyncEnabled(checked);
-                        if (checked) {
-                          handleCloudSync();
-                        }
-                      }}
-                    />
                   </div>
-
-                  {/* Sync Interval */}
-                  {cloudSyncEnabled && (
-                    <div className="space-y-2">
-                      <Label htmlFor="syncInterval">Sync Interval (minutes)</Label>
-                      <div className="flex items-center gap-4">
-                        <Input
-                          id="syncInterval"
-                          type="number"
-                          min="1"
-                          max="60"
-                          value={syncInterval}
-                          onChange={(e) => setSyncInterval(Number(e.target.value))}
-                          className="max-w-[120px]"
-                        />
-                        <p className="text-sm text-muted-foreground">
-                          Data will sync every {syncInterval} minute{syncInterval !== 1 ? 's' : ''}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Last Sync Time */}
-                  {lastSyncTime && (
-                    <p className="text-sm text-muted-foreground">
-                      Last synced: {new Date(lastSyncTime).toLocaleString()}
-                    </p>
-                  )}
-
-                  {/* Manual Sync Button */}
-                  <div className="flex gap-2">
-                    <button
-                      type="button" 
-                      onClick={handleCloudSync}
-                      disabled={syncing}
-                      className="flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Upload className={`h-5 w-5 ${syncing ? 'animate-pulse' : ''}`} />
-                      {syncing ? '🔄 Uploading...' : '☁️ Upload to Cloud'}
-                    </button>
-                  </div>
-
-                  {cloudSyncEnabled && (
-                    <div className="rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 p-6 border-2 border-green-200">
-                      <p className="text-sm text-gray-800 font-medium flex items-center gap-2">
-                        <span className="text-2xl">✨</span>
-                        Your data is being synced to the cloud. You can access it from any device by signing in with the same account.
-                      </p>
-                    </div>
-                  )}
-                </>
+                </div>
               )}
             </div>
           </CardContent>

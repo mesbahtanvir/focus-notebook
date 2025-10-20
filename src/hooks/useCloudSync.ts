@@ -1,19 +1,16 @@
 import { useEffect, useRef } from 'react'
-import { useSettingsStore } from '@/store/useSettingsStore'
 import { useAuth } from '@/contexts/AuthContext'
 import { performFullSync } from '@/lib/cloudSync'
 
+// Fixed sync interval: 5 minutes
+const SYNC_INTERVAL_MINUTES = 5
+
 /**
  * Hook to handle automatic periodic cloud sync
- * This will sync data to the cloud at the specified interval when enabled
+ * Cloud sync is ALWAYS enabled for authenticated users
  */
 export function useCloudSync() {
   const { user } = useAuth()
-  const { 
-    cloudSyncEnabled, 
-    syncInterval, 
-    updateLastSyncTime 
-  } = useSettingsStore()
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const isSyncingRef = useRef(false)
@@ -25,11 +22,8 @@ export function useCloudSync() {
       intervalRef.current = null
     }
 
-    // Only set up sync if:
-    // 1. User is authenticated
-    // 2. Cloud sync is enabled
-    // 3. Sync interval is valid
-    if (!user || !cloudSyncEnabled || syncInterval < 1) {
+    // Only set up sync if user is authenticated
+    if (!user) {
       return
     }
 
@@ -48,8 +42,7 @@ export function useCloudSync() {
         const result = await performFullSync()
         
         if (result.success) {
-          updateLastSyncTime(result.timestamp)
-          console.log('Automatic cloud sync completed successfully')
+          console.log('Automatic cloud sync completed successfully at', new Date().toISOString())
         } else {
           console.error('Automatic cloud sync failed:', result.error)
         }
@@ -61,7 +54,7 @@ export function useCloudSync() {
     }
 
     // Set up periodic sync
-    const intervalMs = syncInterval * 60 * 1000 // Convert minutes to milliseconds
+    const intervalMs = SYNC_INTERVAL_MINUTES * 60 * 1000 // Convert minutes to milliseconds
     intervalRef.current = setInterval(doSync, intervalMs)
 
     // Do an initial sync when the hook is first set up
@@ -74,5 +67,5 @@ export function useCloudSync() {
         intervalRef.current = null
       }
     }
-  }, [user, cloudSyncEnabled, syncInterval, updateLastSyncTime])
+  }, [user])
 }

@@ -26,37 +26,37 @@ export default function LoginPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-gray-900 dark:via-purple-900/30 dark:to-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-gray-900 dark:via-purple-900/30 dark:to-gray-900">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full space-y-8"
+        className="max-w-md w-full space-y-6 md:space-y-8"
       >
         {/* Logo/Header */}
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-3 md:space-y-4">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", delay: 0.1 }}
-            className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 text-white shadow-xl"
+            className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 text-white shadow-xl"
           >
-            <Zap className="h-10 w-10" />
+            <Zap className="h-8 w-8 md:h-10 md:w-10" />
           </motion.div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
-            Focus Notebook
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
+            ✨ Focus Notebook
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 text-lg">
-            Your personal productivity companion
+          <p className="text-gray-600 text-base md:text-lg px-4">
+            Your personal companion for growth and productivity
           </p>
         </div>
 
@@ -65,14 +65,14 @@ export default function LoginPage() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 }}
-          className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 space-y-6"
+          className="bg-white backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 space-y-6 border-4 border-purple-200"
         >
           <div className="space-y-3 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Welcome Back
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+              👋 Welcome Back!
             </h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Sign in to sync your tasks, thoughts, and focus sessions across devices
+            <p className="text-gray-600 text-sm md:text-base">
+              Sign in to sync your tasks, thoughts, and focus sessions across all your devices
             </p>
           </div>
 
@@ -81,7 +81,7 @@ export default function LoginPage() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleGoogleSignIn}
-            className="w-full py-4 px-6 rounded-xl bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-semibold flex items-center justify-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors shadow-lg"
+            className="w-full py-3 md:py-4 px-4 md:px-6 rounded-xl bg-white border-2 border-gray-300 text-gray-700 font-semibold flex items-center justify-center gap-3 hover:bg-gray-50 hover:border-purple-300 transition-all shadow-md hover:shadow-lg"
           >
             <svg className="h-6 w-6" viewBox="0 0 24 24">
               <path
@@ -105,35 +105,39 @@ export default function LoginPage() {
           </motion.button>
 
           {/* Features */}
-          <div className="pt-6 border-t border-gray-200 dark:border-gray-700 space-y-3">
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          <div className="pt-6 border-t-2 border-purple-100 space-y-3">
+            <p className="text-sm font-bold text-gray-800 flex items-center gap-2">
+              <span className="text-lg">🎁</span>
               What you&apos;ll get:
             </p>
-            <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                Sync across all your devices
+            <ul className="space-y-3 text-sm text-gray-700">
+              <li className="flex items-center gap-3 p-2 rounded-lg bg-green-50 border border-green-200">
+                <span className="text-green-600 font-bold text-lg">✓</span>
+                <span className="font-medium">Sync across all your devices</span>
               </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                Secure cloud backup
+              <li className="flex items-center gap-3 p-2 rounded-lg bg-blue-50 border border-blue-200">
+                <span className="text-blue-600 font-bold text-lg">✓</span>
+                <span className="font-medium">Secure cloud backup</span>
               </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                Access from anywhere
+              <li className="flex items-center gap-3 p-2 rounded-lg bg-purple-50 border border-purple-200">
+                <span className="text-purple-600 font-bold text-lg">✓</span>
+                <span className="font-medium">Access from anywhere</span>
               </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                Never lose your data
+              <li className="flex items-center gap-3 p-2 rounded-lg bg-pink-50 border border-pink-200">
+                <span className="text-pink-600 font-bold text-lg">✓</span>
+                <span className="font-medium">Never lose your data</span>
               </li>
             </ul>
           </div>
         </motion.div>
 
         {/* Privacy Note */}
-        <p className="text-center text-sm text-gray-500 dark:text-gray-500">
-          We respect your privacy. Your data is encrypted and secure.
-        </p>
+        <div className="text-center space-y-2">
+          <p className="text-sm text-gray-600 flex items-center justify-center gap-2">
+            <span className="text-lg">🔐</span>
+            We respect your privacy. Your data is encrypted and secure.
+          </p>
+        </div>
       </motion.div>
     </div>
   );

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, LayoutDashboard, Settings, User, Wrench, Menu, X } from 'lucide-react';
+import { Home, LayoutDashboard, Settings, User, Wrench, Menu, X, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Sidebar() {
@@ -33,7 +33,6 @@ export default function Sidebar() {
     { href: '/tools', icon: Wrench, label: 'Tools', color: 'from-green-500 to-emerald-500' },
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: 'from-blue-500 to-cyan-500' },
     { href: '/settings', icon: Settings, label: 'Settings', color: 'from-orange-500 to-yellow-500' },
-    { href: '/profile', icon: User, label: 'Profile', color: 'from-pink-500 to-rose-500' },
   ];
 
   const closeSidebar = () => setIsOpen(false);
@@ -154,33 +153,64 @@ export default function Sidebar() {
               </Link>
             );
           })}
+          
+          {/* Debug Link - Visible for all users */}
+          <Link
+            href="/admin"
+            onClick={closeSidebar}
+            aria-current={pathname === '/admin' ? 'page' : undefined}
+            className={`
+              group relative flex items-center gap-3 p-3 rounded-xl
+              transition-all duration-200 transform
+              focus:outline-none focus:ring-4 focus:ring-blue-300
+              ${pathname === '/admin'
+                ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md scale-105'
+                : 'text-gray-700 hover:bg-gradient-to-r hover:from-blue-100 hover:to-cyan-100 hover:scale-105'
+              }
+              lg:justify-center xl:justify-start
+            `}
+            title="Debug"
+          >
+            <Shield className={`h-5 w-5 ${pathname === '/admin' ? 'text-white' : 'text-blue-600'}`} />
+            <span className="font-medium lg:hidden xl:inline">Debug</span>
+            
+            {/* Tooltip for tablet view */}
+            <span className="hidden lg:block xl:hidden absolute left-full ml-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+              Debug
+            </span>
+          </Link>
         </nav>
 
         {/* User Info or Login Button */}
         <div className="p-4 border-t-4 border-purple-200 bg-gradient-to-r from-purple-100 to-pink-100">
           {user ? (
-            <div className="flex items-center gap-3 lg:justify-center xl:justify-start">
+            <Link
+              href="/profile"
+              onClick={closeSidebar}
+              className="flex items-center gap-3 lg:justify-center xl:justify-start p-2 rounded-xl hover:bg-white/50 transition-all transform hover:scale-105 cursor-pointer group"
+              title="Go to Profile"
+            >
               {user.photoURL ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={user.photoURL}
                   alt={user.displayName || 'User'}
-                  className="h-10 w-10 rounded-full ring-2 ring-purple-400 flex-shrink-0"
+                  className="h-10 w-10 rounded-full ring-2 ring-purple-400 flex-shrink-0 group-hover:ring-4 transition-all"
                 />
               ) : (
-                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white flex-shrink-0">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white flex-shrink-0 group-hover:shadow-lg transition-all">
                   <User className="h-6 w-6" />
                 </div>
               )}
               <div className="truncate lg:hidden xl:block">
-                <p className="text-sm font-semibold text-gray-800 truncate">
+                <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-purple-600 transition-colors">
                   {user.displayName || 'User'}
                 </p>
                 <p className="text-xs text-gray-600 truncate">
                   {user.email}
                 </p>
               </div>
-            </div>
+            </Link>
           ) : (
             <Link
               href="/login"

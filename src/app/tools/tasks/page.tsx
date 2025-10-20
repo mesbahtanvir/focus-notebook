@@ -84,10 +84,10 @@ export default function TasksPage() {
 
   const getPriorityColor = (priority: TaskPriority) => {
     switch (priority) {
-      case 'urgent': return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900';
-      case 'high': return 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-900';
-      case 'medium': return 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950/40 border-yellow-200 dark:border-yellow-900';
-      case 'low': return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-900';
+      case 'urgent': return 'text-red-600 bg-red-50 border-red-200';
+      case 'high': return 'text-orange-600 bg-orange-50 border-orange-200';
+      case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+      case 'low': return 'text-green-600 bg-green-50 border-green-200';
     }
   };
 
@@ -101,16 +101,18 @@ export default function TasksPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-6">
+    <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-2xl border-4 border-green-200 shadow-lg">
         <div>
-          <h1 className="text-3xl font-bold">Task Manager</h1>
-          <p className="text-muted-foreground mt-1">Organize and track your tasks</p>
+          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+            ✅ Task Manager
+          </h1>
+          <p className="text-gray-600 mt-1 text-sm md:text-base">Organize and track your tasks</p>
         </div>
         <button
           onClick={() => setShowNewTask(true)}
-          className="btn-primary flex items-center gap-2"
+          className="flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105 whitespace-nowrap"
         >
           <Plus className="h-5 w-5" />
           New Task
