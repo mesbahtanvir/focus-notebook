@@ -156,9 +156,9 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* User Info */}
-        {user && (
-          <div className="p-4 border-t-4 border-purple-200 bg-gradient-to-r from-purple-100 to-pink-100">
+        {/* User Info or Login Button */}
+        <div className="p-4 border-t-4 border-purple-200 bg-gradient-to-r from-purple-100 to-pink-100">
+          {user ? (
             <div className="flex items-center gap-3 lg:justify-center xl:justify-start">
               {user.photoURL ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -181,8 +181,17 @@ export default function Sidebar() {
                 </p>
               </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <Link
+              href="/login"
+              onClick={closeSidebar}
+              className="flex items-center justify-center gap-2 w-full px-6 py-3 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300"
+            >
+              <User className="h-5 w-5" />
+              <span className="lg:hidden xl:inline">Sign In</span>
+            </Link>
+          )}
+        </div>
       </aside>
     </>
   );

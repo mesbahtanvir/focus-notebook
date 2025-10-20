@@ -107,12 +107,19 @@ export function Navbar() {
                 </button>
               </div>
             ) : (
-              <Link
-                href="/login"
-                className="px-6 py-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105 shadow-md"
-              >
-                Sign In
-              </Link>
+              <div className="flex items-center gap-3">
+                <div className="hidden md:flex items-center gap-2 text-sm text-gray-600 font-medium">
+                  <span>👋</span>
+                  <span>Welcome! Please sign in</span>
+                </div>
+                <Link
+                  href="/login"
+                  className="flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl animate-pulse"
+                >
+                  <User className="h-5 w-5" />
+                  <span>Sign In</span>
+                </Link>
+              </div>
             )}
           </div>
         </div>

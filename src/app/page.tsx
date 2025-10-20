@@ -6,6 +6,9 @@ import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import { useState, useMemo } from "react";
 import TaskList from "@/components/TaskList";
+import { useAuth } from "@/contexts/AuthContext";
+import Link from "next/link";
+import { Sparkles, Lock } from "lucide-react";
 
 // Disable static generation for now
 export const dynamic = 'force-dynamic';
@@ -13,6 +16,7 @@ export const dynamic = 'force-dynamic';
 type FormValues = { text: string };
 
 export default function Page() {
+  const { user } = useAuth();
   const { register, handleSubmit, reset } = useForm<FormValues>();
   // Thoughts store
   const thoughts = useThoughts((s) => s.thoughts);
@@ -60,6 +64,41 @@ export default function Page() {
 
   return (
     <div className="space-y-6">
+      {/* Welcome Banner for Non-Logged-In Users */}
+      {!user && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 p-1 shadow-2xl"
+        >
+          <div className="bg-white rounded-xl p-8 text-center space-y-4">
+            <div className="flex justify-center">
+              <div className="p-4 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full">
+                <Sparkles className="h-12 w-12 text-purple-600" />
+              </div>
+            </div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
+              Welcome to Focus Notebook! ✨
+            </h2>
+            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+              Your personal productivity companion. Track thoughts, manage tasks, and achieve your goals with a beautiful, intuitive interface.
+            </p>
+            <div className="flex items-center justify-center gap-4 pt-4">
+              <Link
+                href="/login"
+                className="flex items-center gap-2 px-8 py-4 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+              >
+                <Lock className="h-5 w-5" />
+                Sign In to Get Started
+              </Link>
+            </div>
+            <p className="text-sm text-gray-500 pt-2">
+              🔐 Secure • ☁️ Cloud Sync • 📱 Multi-Device
+            </p>
+          </div>
+        </motion.div>
+      )}
+
       <section className="card p-4 space-y-4">
         <h2 className="text-xl font-semibold">What&apos;s on your mind?</h2>
         <form onSubmit={handleSubmit(onSubmit)} className="flex gap-2">
