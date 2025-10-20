@@ -11,10 +11,15 @@ out/
 # Testing
 coverage/
 
-# Env
+# Environment variables
+.env*.local
 .env
-.env.local
-.env.*.local
+!.env.example
+!.env.local.example
+
+# Firebase
+firebase-debug.log
+firebase-debug.*.log
 
 # Logs
 npm-debug.log*
