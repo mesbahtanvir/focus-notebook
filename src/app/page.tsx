@@ -13,7 +13,7 @@ import SummaryPanel from "@/components/SummaryPanel";
 // Disable static generation for now
 export const dynamic = 'force-dynamic';
 
-type FormValues = { title: string };
+type FormValues = { text: string };
 
 export default function Page() {
   const { register, handleSubmit, reset } = useForm<FormValues>();
@@ -37,14 +37,12 @@ export default function Page() {
     return sorted.slice(0, 3);
   }, [thoughts]);
 
-  const onSubmit = (data: FormValues) => {
-    if (!data.title?.trim()) return;
-    addTask({
-      title: data.title.trim(),
-      category: 'mastery',
-      status: 'active',
+  const onSubmit = async (data: FormValues) => {
+    if (!data.text?.trim()) return;
+    await addThought({
+      text: data.text.trim(),
       createdAt: new Date().toISOString(),
-    } as any);
+    });
     reset();
   };
 
@@ -73,8 +71,8 @@ export default function Page() {
           <input
             aria-label="Thought"
             className="input flex-1"
-            placeholder="Capture a quick thought..."
-            {...register("title")}
+            placeholder="What's on your mind?"
+            {...register('text', { required: true })}
           />
           <button className="btn-primary" type="submit">Add</button>
         </form>
@@ -110,12 +108,12 @@ export default function Page() {
                 onChange={() => toggleThought(t.id)}
               />
               <label htmlFor={`task-${t.id}`} className={t.done ? "line-through text-muted-foreground" : ""}>
-                {t.title}
+                {t.text}
               </label>
               <button
                 className="ml-auto text-xs underline text-red-600 hover:text-red-700"
                 onClick={() => deleteThought(t.id)}
-                aria-label={`Delete ${t.title}`}
+                aria-label={`Delete ${t.text}`}
               >
                 Delete
               </button>

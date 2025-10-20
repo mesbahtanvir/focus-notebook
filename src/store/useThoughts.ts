@@ -3,7 +3,7 @@ import { db, type ThoughtRow } from '@/db'
 
 export interface Thought {
   id: string
-  title: string
+  text: string
   done: boolean
   createdAt: string
 }
@@ -38,7 +38,7 @@ export const useThoughts = create<State>((set, get) => ({
   add: async (data) => {
     const newThought: Thought = {
       id: Date.now().toString(),
-      title: data.title,
+      text: data.text,
       createdAt: data.createdAt,
       done: false,
     }

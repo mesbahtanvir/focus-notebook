@@ -6,7 +6,7 @@ export type TaskRow = Omit<Task, 'id'> & { id: string }
 // Thoughts table row type
 export type ThoughtRow = {
   id: string
-  title: string
+  text: string
   done: boolean
   createdAt: string
 }
