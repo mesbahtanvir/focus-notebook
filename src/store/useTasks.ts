@@ -120,7 +120,7 @@ type State = {
   tasks: Task[]
   isLoading: boolean
   loadTasks: () => Promise<void>
-  add: (task: Omit<Task, 'id' | 'done'>) => Promise<void>
+  add: (task: Omit<Task, 'id' | 'done'>) => Promise<string>
   toggle: (id: string) => Promise<void>
   updateTask: (id: string, updates: Partial<Omit<Task, 'id'>>) => Promise<void>
   deleteTask: (id: string) => Promise<void>
@@ -177,8 +177,11 @@ export const useTasks = create<State>((set, get) => ({
           console.error('Failed to push new task to cloud:', err)
         )
       }
+      
+      return newTask.id
     } catch (error) {
       console.error('Failed to add task:', error)
+      return ''
     }
   },
   

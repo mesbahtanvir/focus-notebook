@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles } from "lucide-react";
+import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText } from "lucide-react";
 
 const TOOLS = [
   {
@@ -64,6 +64,16 @@ const TOOLS = [
     gradient: "from-indigo-400 to-purple-500",
     bgGradient: "from-indigo-50 to-purple-50",
     borderColor: "border-indigo-300",
+  },
+  {
+    key: "documents",
+    title: "Documents",
+    description: "View all notes and documentation from your tasks.",
+    icon: FileText,
+    emoji: "📚",
+    gradient: "from-violet-400 to-fuchsia-500",
+    bgGradient: "from-violet-50 to-fuchsia-50",
+    borderColor: "border-violet-300",
   },
 ];
 

@@ -69,6 +69,28 @@ export default function TasksPage() {
     return filtered;
   }, [tasks, filterStatus, filterCategory, filterPriority, sortBy]);
 
+  // Group tasks by frequency
+  const groupedTasks = useMemo(() => {
+    const groups: Record<string, Task[]> = {
+      'one-time': [],
+      'daily': [],
+      'workweek': [],
+      'weekly': [],
+      'monthly': []
+    };
+
+    filteredAndSortedTasks.forEach(task => {
+      const recurrenceType = task.recurrence?.type || 'none';
+      if (recurrenceType === 'none') {
+        groups['one-time'].push(task);
+      } else if (groups[recurrenceType]) {
+        groups[recurrenceType].push(task);
+      }
+    });
+
+    return groups;
+  }, [filteredAndSortedTasks]);
+
   const taskStats = useMemo(() => {
     const total = tasks.length;
     const completed = tasks.filter(t => t.done).length;
@@ -219,84 +241,11 @@ export default function TasksPage() {
         )}
       </div>
 
-      {/* Task List */}
-      <div className="space-y-3">
+      {/* Task List - Grouped by Frequency */}
+      <div className="space-y-6">
         <div className="text-sm text-muted-foreground">
           Showing {filteredAndSortedTasks.length} of {tasks.length} tasks
         </div>
-        <AnimatePresence>
-          {filteredAndSortedTasks.map((task) => (
-            <motion.div
-              key={task.id}
-              layout
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="card p-4 cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => setSelectedTask(task)}
-            >
-              <div className="flex items-start gap-4">
-                <div className="flex items-center gap-3 flex-1">
-                  <input
-                    type="checkbox"
-                    checked={task.done}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      useTasks.getState().toggle(task.id);
-                    }}
-                    className="h-5 w-5 rounded"
-                  />
-                  <div className="flex-1">
-                    <h3 className={`font-medium ${task.done ? 'line-through text-muted-foreground' : ''}`}>
-                      {task.title}
-                    </h3>
-                    {task.notes && (
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.notes}</p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-2 mt-2">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium border flex items-center gap-1 ${getPriorityColor(task.priority)}`}>
-                        {getPriorityIcon(task.priority)}
-                        {task.priority}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
-                        task.category === "mastery"
-                          ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900"
-                          : "bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-900"
-                      }`}>
-                        {task.category}
-                      </span>
-                      {task.dueDate && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(task.dueDate).toLocaleDateString()}
-                        </span>
-                      )}
-                      {task.estimatedMinutes && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {task.estimatedMinutes}m
-                        </span>
-                      )}
-                      {task.tags && task.tags.length > 0 && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Tag className="h-3 w-3" />
-                          {task.tags.join(', ')}
-                        </span>
-                      )}
-                      {task.recurrence && task.recurrence.type !== 'none' && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-900 flex items-center gap-1">
-                          <Repeat className="h-3 w-3" />
-                          {task.recurrence.type}
-                          {task.recurrence.frequency && ` (${task.completionCount || 0}/${task.recurrence.frequency})`}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
 
         {filteredAndSortedTasks.length === 0 && (
           <div className="card p-12 text-center">
@@ -318,6 +267,114 @@ export default function TasksPage() {
             )}
           </div>
         )}
+
+        {/* Render each frequency group */}
+        {Object.entries(groupedTasks).map(([frequency, groupTasks]) => {
+          if (groupTasks.length === 0) return null;
+
+          const groupTitles: Record<string, string> = {
+            'one-time': '📋 One-Time Tasks',
+            'daily': '🌅 Daily Tasks',
+            'workweek': '💼 Workweek Tasks (Mon-Fri)',
+            'weekly': '📅 Weekly Tasks',
+            'monthly': '📆 Monthly Tasks'
+          };
+
+          const groupColors: Record<string, string> = {
+            'one-time': 'from-gray-500 to-slate-600',
+            'daily': 'from-orange-500 to-amber-600',
+            'workweek': 'from-blue-500 to-indigo-600',
+            'weekly': 'from-green-500 to-emerald-600',
+            'monthly': 'from-purple-500 to-violet-600'
+          };
+
+          return (
+            <div key={frequency} className="space-y-3">
+              <div className="flex items-center gap-3">
+                <h2 className={`text-lg font-bold bg-gradient-to-r ${groupColors[frequency]} bg-clip-text text-transparent`}>
+                  {groupTitles[frequency]}
+                </h2>
+                <span className="text-sm text-muted-foreground">
+                  ({groupTasks.length})
+                </span>
+              </div>
+
+              <AnimatePresence>
+                {groupTasks.map((task) => (
+                  <motion.div
+                    key={task.id}
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="card p-4 cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => setSelectedTask(task)}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex items-center gap-3 flex-1">
+                        <input
+                          type="checkbox"
+                          checked={task.done}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            useTasks.getState().toggle(task.id);
+                          }}
+                          className="h-5 w-5 rounded"
+                        />
+                        <div className="flex-1">
+                          <h3 className={`font-medium ${task.done ? 'line-through text-muted-foreground' : ''}`}>
+                            {task.title}
+                          </h3>
+                          {task.notes && (
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.notes}</p>
+                          )}
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium border flex items-center gap-1 ${getPriorityColor(task.priority)}`}>
+                              {getPriorityIcon(task.priority)}
+                              {task.priority}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
+                              task.category === "mastery"
+                                ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900"
+                                : "bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-900"
+                            }`}>
+                              {task.category}
+                            </span>
+                            {task.dueDate && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {new Date(task.dueDate).toLocaleDateString()}
+                              </span>
+                            )}
+                            {task.estimatedMinutes && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {task.estimatedMinutes}m
+                              </span>
+                            )}
+                            {task.tags && task.tags.length > 0 && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Tag className="h-3 w-3" />
+                                {task.tags.join(', ')}
+                              </span>
+                            )}
+                            {task.recurrence && task.recurrence.type !== 'none' && (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-900 flex items-center gap-1">
+                                <Repeat className="h-3 w-3" />
+                                {task.recurrence.type}
+                                {task.recurrence.frequency && ` (${task.completionCount || 0}/${task.recurrence.frequency})`}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          );
+        })}
       </div>
 
       {/* New Task Modal */}

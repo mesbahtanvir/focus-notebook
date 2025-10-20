@@ -9,9 +9,10 @@ type TaskDestination = 'today' | 'backlog';
 
 interface TaskInputProps {
   onClose?: () => void;
+  onTaskCreated?: (taskId: string) => void;
 }
 
-export function TaskInput({ onClose }: TaskInputProps = {}) {
+export function TaskInput({ onClose, onTaskCreated }: TaskInputProps = {}) {
   const [taskName, setTaskName] = useState('');
   const [category, setCategory] = useState<TaskCategory>('mastery');
   const [destination, setDestination] = useState<TaskDestination>('today');
@@ -26,7 +27,7 @@ export function TaskInput({ onClose }: TaskInputProps = {}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const addTask = useTasks((state) => state.add);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!taskName.trim()) return;
@@ -43,7 +44,7 @@ export function TaskInput({ onClose }: TaskInputProps = {}) {
     } : undefined;
 
     // Add task with metadata
-    addTask({
+    const taskId = await addTask({
       title: taskName.trim(),
       category,
       priority,
@@ -56,6 +57,11 @@ export function TaskInput({ onClose }: TaskInputProps = {}) {
       recurrence: recurrenceConfig,
       completionCount: 0,
     });
+
+    // Call onTaskCreated callback if provided
+    if (onTaskCreated && taskId) {
+      onTaskCreated(taskId);
+    }
 
     // Show success feedback
     setShowSuccess(true);

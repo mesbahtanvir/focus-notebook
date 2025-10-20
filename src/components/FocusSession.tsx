@@ -12,9 +12,13 @@ import {
   ChevronLeft, 
   ChevronRight,
   Clock,
-  Target
+  Target,
+  FileText,
+  Plus,
+  ListPlus
 } from "lucide-react";
 import { ConfirmModal } from "./ConfirmModal";
+import { TaskInput } from "./TaskInput";
 
 // Gentle timer - only show minutes, not seconds
 function formatTimeGentle(seconds: number): string {
@@ -40,12 +44,17 @@ export function FocusSession() {
   const switchToTask = useFocus((s) => s.switchToTask);
   const markTaskComplete = useFocus((s) => s.markTaskComplete);
   const updateTaskTime = useFocus ((s) => s.updateTaskTime);
+  const updateTaskNotes = useFocus((s) => s.updateTaskNotes);
+  const addFollowUpTask = useFocus((s) => s.addFollowUpTask);
   const pauseSession = useFocus((s) => s.pauseSession);
   const resumeSession = useFocus((s) => s.resumeSession);
   const toggleTask = useTasks((s) => s.toggle);
 
   const [currentTime, setCurrentTime] = useState(0);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [showCreateTask, setShowCreateTask] = useState(false);
+  const [localNotes, setLocalNotes] = useState("");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Timer effect
@@ -84,6 +93,14 @@ export function FocusSession() {
       return () => clearTimeout(timer);
     }
   }, [currentSession, endSession]);
+
+  // Load notes for current task
+  useEffect(() => {
+    if (currentSession) {
+      const currentTask = currentSession.tasks[currentSession.currentTaskIndex];
+      setLocalNotes(currentTask.notes || "");
+    }
+  }, [currentSession?.currentTaskIndex, currentSession]);
 
   if (!currentSession) return null;
 
@@ -133,56 +150,76 @@ export function FocusSession() {
 
   const confirmEndSession = async () => {
     setShowExitConfirm(false);
+    // Save current notes before ending
+    if (localNotes) {
+      updateTaskNotes(currentTaskIndex, localNotes);
+    }
     await endSession();
+  };
+
+  const handleSaveNotes = async () => {
+    // Save to focus session
+    updateTaskNotes(currentTaskIndex, localNotes);
+    
+    // Also save to the actual task
+    const taskId = currentFocusTask.task.id;
+    const currentTaskNotes = currentFocusTask.task.notes || '';
+    const sessionNotes = localNotes.trim();
+    
+    if (sessionNotes) {
+      // Append session notes to task notes with timestamp
+      const timestamp = new Date().toLocaleString();
+      const updatedNotes = currentTaskNotes 
+        ? `${currentTaskNotes}\n\n---\n**Focus Session Notes (${timestamp})**\n${sessionNotes}`
+        : `**Focus Session Notes (${timestamp})**\n${sessionNotes}`;
+      
+      await useTasks.getState().updateTask(taskId, { notes: updatedNotes });
+    }
+    
+    setShowNotes(false);
+  };
+
+  const handleTaskCreated = (taskId: string) => {
+    addFollowUpTask(currentTaskIndex, taskId);
+    setShowCreateTask(false);
   };
 
   const progressPercentage = (completedTasks / totalTasks) * 100;
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-gray-900 dark:via-purple-900/30 dark:to-gray-900 z-50 overflow-hidden">
-      {/* Header with controls */}
-      <div className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between">
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-4"
-        >
-          <button
-            onClick={handlePause}
-            className="p-3 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-lg hover:bg-white dark:hover:bg-gray-700 transition-colors"
-          >
-            {currentSession.isActive ? (
-              <Pause className="h-5 w-5 text-gray-700 dark:text-gray-200" />
-            ) : (
-              <Play className="h-5 w-5 text-gray-700 dark:text-gray-200" />
-            )}
-          </button>
-          <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
-            {currentSession.isActive ? 'Focus Mode Active' : 'Paused'}
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 z-50 overflow-auto">
+      {/* Simplified Header */}
+      <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handlePause}
+              className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            >
+              {currentSession.isActive ? (
+                <Pause className="h-5 w-5" />
+              ) : (
+                <Play className="h-5 w-5" />
+              )}
+            </button>
+            <div>
+              <div className="text-sm font-semibold">Focus Session</div>
+              <div className="text-xs text-muted-foreground">
+                {completedTasks}/{totalTasks} completed • {Math.round(progressPercentage)}%
+              </div>
+            </div>
           </div>
-        </motion.div>
 
-        <motion.button
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          onClick={handleEndSession}
-          className="p-3 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-lg hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
-        >
-          <X className="h-5 w-5 text-gray-700 dark:text-gray-200" />
-        </motion.button>
-      </div>
-
-      {/* Progress bar */}
-      <div className="absolute top-20 left-6 right-6">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {completedTasks} of {totalTasks} tasks completed
-          </span>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {Math.round(progressPercentage)}%
-          </span>
+          <button
+            onClick={handleEndSession}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
+          >
+            End Session
+          </button>
         </div>
-        <div className="h-2 bg-white/60 dark:bg-gray-700/60 rounded-full overflow-hidden">
+        
+        {/* Progress bar */}
+        <div className="h-1 bg-gray-200 dark:bg-gray-700">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${progressPercentage}%` }}
@@ -192,160 +229,204 @@ export function FocusSession() {
       </div>
 
       {/* Main content - Current Task */}
-      <div className="flex items-center justify-center min-h-screen px-6 pb-24">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentTaskIndex}
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            transition={{ type: "spring", duration: 0.5 }}
-            className="max-w-3xl w-full space-y-8"
-          >
-            {/* Task number indicator */}
-            <div className="text-center">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-lg"
-              >
-                <Target className="h-4 w-4 text-purple-500 dark:text-purple-400" />
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                  Task {currentTaskIndex + 1} of {totalTasks}
-                </span>
-              </motion.div>
-            </div>
-
-            {/* Task title */}
-            <motion.h1
-              className={`text-5xl md:text-6xl font-bold text-center leading-tight ${
-                currentFocusTask.completed
-                  ? 'line-through text-gray-400 dark:text-gray-500'
-                  : 'text-gray-900 dark:text-gray-100'
-              }`}
-            >
-              {currentFocusTask.task.title}
-            </motion.h1>
-
-            {/* Task details */}
-            <div className="flex items-center justify-center gap-4">
-              <span
-                className={`px-4 py-2 rounded-full text-sm font-medium ${
-                  currentFocusTask.task.category === 'mastery'
-                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
-                    : 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300'
-                }`}
-              >
-                {currentFocusTask.task.category}
-              </span>
-              <span
-                className={`px-4 py-2 rounded-full text-sm font-medium ${
-                  currentFocusTask.task.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300' :
-                  currentFocusTask.task.priority === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300' :
-                  currentFocusTask.task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300' :
-                  'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300'
-                }`}
-              >
-                {currentFocusTask.task.priority}
-              </span>
-            </div>
-
-            {/* Timer */}
+      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+        {/* Task Card */}
+        <div className="card p-8 space-y-6">
+          <AnimatePresence mode="wait">
             <motion.div
-              animate={{ scale: [1, 1.02, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="text-center"
-            >
-              <div 
-                className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl">
-                <Clock className="h-6 w-6 text-purple-500 dark:text-purple-400" />
-                <span className="text-4xl font-mono font-bold text-foreground">
-                  {formatTimeGentle(currentFocusTask.timeSpent)}
-                </span>
-              </div>
-            </motion.div>
-
-            {/* Task notes if available */}
-            {currentFocusTask.task.notes && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center max-w-2xl mx-auto"
-              >
-                <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                  {currentFocusTask.task.notes}
-                </p>
-              </motion.div>
-            )}
-
-            {/* Action buttons */}
-            <div className="flex items-center justify-center gap-4">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handlePrevious}
-                disabled={currentTaskIndex === 0}
-                className="p-4 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-lg hover:bg-white dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="h-6 w-6 text-gray-700 dark:text-gray-200" />
-              </motion.button>
-
-              {!currentFocusTask.completed && (
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleMarkComplete}
-                  className="px-8 py-4 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold flex items-center gap-3 shadow-xl hover:from-green-600 hover:to-emerald-600"
-                >
-                  <Check className="h-6 w-6" />
-                  Complete Task
-                </motion.button>
-              )}
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleNext}
-                disabled={currentTaskIndex === totalTasks - 1}
-                className="p-4 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-lg hover:bg-white dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="h-6 w-6 text-gray-700 dark:text-gray-200" />
-              </motion.button>
-            </div>
-          </motion.div>
-        </AnimatePresence>
-      </div>
-
-      {/* Task list at bottom */}
-      <div className="absolute bottom-6 left-6 right-6">
-        <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2">
-          {currentSession.tasks.map((focusTask, index) => (
-            <motion.button
-              key={index}
+              key={currentTaskIndex}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              onClick={() => {
-                switchToTask(index);
-                setCurrentTime(focusTask.timeSpent);
-              }}
-              className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all ${
-                index === currentTaskIndex
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white scale-110 shadow-lg'
-                  : focusTask.completed
-                  ? 'bg-green-500 text-white'
-                  : 'bg-white/90 dark:bg-gray-800/90 text-gray-800 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
-              }`}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
             >
-              {focusTask.completed ? (
-                <Check className="h-5 w-5" />
-              ) : (
-                index + 1
+              {/* Task Header */}
+              <div className="flex items-start justify-between">
+                <div className="flex-1 space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Target className="h-4 w-4" />
+                    <span>Task {currentTaskIndex + 1} of {totalTasks}</span>
+                  </div>
+                  <h1 className={`text-3xl font-bold ${currentFocusTask.completed ? 'line-through text-muted-foreground' : ''}`}>
+                    {currentFocusTask.task.title}
+                  </h1>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      currentFocusTask.task.category === 'mastery'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
+                        : 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300'
+                    }`}>
+                      {currentFocusTask.task.category}
+                    </span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      currentFocusTask.task.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                      currentFocusTask.task.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                      currentFocusTask.task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-green-100 text-green-700'
+                    }`}>
+                      {currentFocusTask.task.priority}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 px-6 py-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
+                  <Clock className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  <span className="text-2xl font-mono font-bold">{formatTimeGentle(currentFocusTask.timeSpent)}</span>
+                </div>
+              </div>
+
+              {/* Task Notes from original task */}
+              {currentFocusTask.task.notes && (
+                <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                  <div className="text-sm font-medium mb-2">Task Description:</div>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{currentFocusTask.task.notes}</p>
+                </div>
               )}
-            </motion.button>
-          ))}
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handlePrevious}
+                  disabled={currentTaskIndex === 0}
+                  className="btn-secondary disabled:opacity-50"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </button>
+                
+                {!currentFocusTask.completed && (
+                  <button
+                    onClick={handleMarkComplete}
+                    className="btn-primary flex-1"
+                  >
+                    <Check className="h-5 w-5" />
+                    Complete Task
+                  </button>
+                )}
+                
+                <button
+                  onClick={handleNext}
+                  disabled={currentTaskIndex === totalTasks - 1}
+                  className="btn-secondary disabled:opacity-50"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Utility Buttons */}
+              <div className="flex items-center gap-3 pt-4 border-t">
+                <button
+                  onClick={() => setShowNotes(!showNotes)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors"
+                >
+                  <FileText className="h-4 w-4" />
+                  {currentFocusTask.notes ? 'Edit Notes' : 'Add Notes'}
+                </button>
+                <button
+                  onClick={() => setShowCreateTask(true)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-950/50 transition-colors"
+                >
+                  <ListPlus className="h-4 w-4" />
+                  Create Follow-up
+                </button>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Task Navigation */}
+        <div className="card p-6">
+          <h3 className="text-sm font-semibold mb-3">All Tasks</h3>
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            {currentSession.tasks.map((focusTask, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  switchToTask(index);
+                  setCurrentTime(focusTask.timeSpent);
+                }}
+                className={`flex-shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                  index === currentTaskIndex
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md'
+                    : focusTask.completed
+                    ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300'
+                    : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                {focusTask.completed && <Check className="h-4 w-4 inline mr-1" />}
+                {index + 1}. {focusTask.task.title.substring(0, 30)}{focusTask.task.title.length > 30 ? '...' : ''}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+
+      {/* Notes Modal */}
+      {showNotes && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-background rounded-lg shadow-xl max-w-2xl w-full p-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Session Notes</h2>
+              <button
+                onClick={() => setShowNotes(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Document your findings, insights, or any information gathered while working on this task.
+            </p>
+            <textarea
+              value={localNotes}
+              onChange={(e) => setLocalNotes(e.target.value)}
+              placeholder="Add notes about this task..."
+              className="input w-full min-h-[200px] resize-y"
+            />
+            <div className="flex gap-3 mt-4">
+              <button onClick={() => setShowNotes(false)} className="btn-secondary flex-1">
+                Cancel
+              </button>
+              <button onClick={handleSaveNotes} className="btn-primary flex-1">
+                <Check className="h-4 w-4" />
+                Save Notes
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Create Follow-up Task Modal */}
+      {showCreateTask && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-background rounded-lg shadow-xl max-w-2xl w-full p-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Create Follow-up Task</h2>
+              <button
+                onClick={() => setShowCreateTask(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Create a new task based on outcomes or next steps from &quot;{currentFocusTask.task.title}&quot;
+            </p>
+            <TaskInput 
+              onClose={() => setShowCreateTask(false)}
+              onTaskCreated={handleTaskCreated}
+            />
+          </motion.div>
+        </div>
+      )}
 
       {/* Exit Confirmation Modal */}
       <ConfirmModal

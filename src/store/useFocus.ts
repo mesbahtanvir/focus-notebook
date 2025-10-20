@@ -6,6 +6,8 @@ export interface FocusTask {
   task: Task
   timeSpent: number // in seconds
   completed: boolean
+  notes?: string // Session notes for this task
+  followUpTaskIds?: string[] // IDs of follow-up tasks created
 }
 
 export interface FocusSession {
@@ -32,6 +34,8 @@ type State = {
   switchToTask: (index: number) => void
   markTaskComplete: (index: number) => void
   updateTaskTime: (index: number, seconds: number) => void
+  updateTaskNotes: (index: number, notes: string) => void
+  addFollowUpTask: (index: number, taskId: string) => void
   pauseSession: () => void
   resumeSession: () => void
 }
@@ -224,6 +228,45 @@ export const useFocus = create<State>((set, get) => ({
       updatedTasks[index] = {
         ...updatedTasks[index],
         timeSpent: seconds,
+      }
+      
+      return {
+        currentSession: {
+          ...state.currentSession,
+          tasks: updatedTasks,
+        },
+      }
+    })
+  },
+  
+  updateTaskNotes: (index, notes) => {
+    set((state) => {
+      if (!state.currentSession) return state
+      
+      const updatedTasks = [...state.currentSession.tasks]
+      updatedTasks[index] = {
+        ...updatedTasks[index],
+        notes,
+      }
+      
+      return {
+        currentSession: {
+          ...state.currentSession,
+          tasks: updatedTasks,
+        },
+      }
+    })
+  },
+  
+  addFollowUpTask: (index, taskId) => {
+    set((state) => {
+      if (!state.currentSession) return state
+      
+      const updatedTasks = [...state.currentSession.tasks]
+      const followUpTaskIds = updatedTasks[index].followUpTaskIds || []
+      updatedTasks[index] = {
+        ...updatedTasks[index],
+        followUpTaskIds: [...followUpTaskIds, taskId],
       }
       
       return {
