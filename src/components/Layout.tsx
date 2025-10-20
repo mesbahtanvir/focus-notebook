@@ -19,8 +19,8 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="flex h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 text-gray-800">
       <OfflineBanner />
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-6" role="main" aria-label="Main content area">
-        <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-card text-card-foreground rounded px-3 py-1">Skip to content</a>
+      <main className="flex-1 overflow-y-auto p-6 lg:p-8 pt-20 lg:pt-6" role="main" aria-label="Main content area">
+        <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-white text-gray-900 rounded px-3 py-1 shadow-lg">Skip to content</a>
         <AnimatePresence mode="wait">
           <motion.div
             key={pathname}
