@@ -8,6 +8,9 @@ import {
   onAuthStateChanged 
 } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
+import { smartSync } from '@/lib/syncEngine';
+import { useTasks } from '@/store/useTasks';
+import { useThoughts } from '@/store/useThoughts';
 
 interface AuthContextType {
   user: User | null;
@@ -36,9 +39,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       setLoading(false);
+      
+      // Automatically sync data when user logs in (smart merge)
+      if (user) {
+        try {
+          console.log('🔄 User logged in, performing smart sync...');
+          const result = await smartSync();
+          if (result.success) {
+            console.log(`✅ Login sync: ${result.mergedItems} items synced, ${result.conflicts} conflicts resolved`);
+            
+            // Reload all stores to reflect merged data
+            await Promise.all([
+              useTasks.getState().loadTasks(),
+              useThoughts.getState().loadThoughts(),
+            ]);
+            console.log('✅ All stores reloaded with merged data');
+          } else {
+            console.error('❌ Failed to sync data:', result.error);
+          }
+        } catch (error) {
+          console.error('❌ Error syncing data on login:', error);
+        }
+      }
     });
 
     return unsubscribe;

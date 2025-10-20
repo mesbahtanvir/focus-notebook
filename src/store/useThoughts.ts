@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { db, toThought, toThoughtRow } from '@/db'
+import { pushItemToCloud, deleteItemFromCloud } from '@/lib/syncEngine'
+import { auth } from '@/lib/firebase'
 
 export type ThoughtType = 'task' | 'feeling-good' | 'feeling-bad' | 'neutral'
 
@@ -60,12 +62,20 @@ export const useThoughts = create<State>((set, get) => ({
       tags: data.tags,
       intensity: data.intensity,
       cbtAnalysis: data.cbtAnalysis,
-    }
+      updatedAt: Date.now(),
+    } as any
     try {
       if ((db as any)?.thoughts && typeof window !== 'undefined' && (window as any).indexedDB) {
         await db.thoughts.add(toThoughtRow(newThought))
       }
       set((s) => ({ thoughts: [...s.thoughts, newThought] }))
+      
+      // Push to cloud immediately if user is authenticated
+      if (auth.currentUser) {
+        pushItemToCloud('thoughts', newThought).catch(err => 
+          console.error('Failed to push new thought to cloud:', err)
+        )
+      }
     } catch (e) {
       console.error('Failed to add thought:', e)
     }
@@ -74,12 +84,19 @@ export const useThoughts = create<State>((set, get) => ({
   toggle: async (id) => {
     const t = get().thoughts.find((x) => x.id === id)
     if (!t) return
-    const updated: Thought = { ...t, done: !t.done }
+    const updated: Thought = { ...t, done: !t.done, updatedAt: Date.now() } as any
     try {
       if ((db as any)?.thoughts && typeof window !== 'undefined' && (window as any).indexedDB) {
         await db.thoughts.update(id, toThoughtRow(updated))
       }
       set((s) => ({ thoughts: s.thoughts.map((x) => (x.id === id ? updated : x)) }))
+      
+      // Push to cloud immediately if user is authenticated
+      if (auth.currentUser) {
+        pushItemToCloud('thoughts', updated).catch(err => 
+          console.error('Failed to push thought update to cloud:', err)
+        )
+      }
     } catch (e) {
       console.error('Failed to toggle thought:', e)
     }
@@ -87,17 +104,29 @@ export const useThoughts = create<State>((set, get) => ({
 
   updateThought: async (id, updates) => {
     try {
-      const serializedUpdates = toThoughtRow({ id, ...updates } as any)
+      const updatesWithTimestamp = { ...updates, updatedAt: Date.now() }
+      const serializedUpdates = toThoughtRow({ id, ...updatesWithTimestamp } as any)
       const { id: _, ...updateData } = serializedUpdates
       
       if ((db as any)?.thoughts && typeof window !== 'undefined' && (window as any).indexedDB) {
         await db.thoughts.update(id, updateData)
       }
+      
+      const updatedThought = get().thoughts.find(t => t.id === id)
+      const finalThought = updatedThought ? { ...updatedThought, ...updatesWithTimestamp } : null
+      
       set((s) => ({
         thoughts: s.thoughts.map((thought) =>
-          thought.id === id ? { ...thought, ...updates } : thought
+          thought.id === id ? { ...thought, ...updatesWithTimestamp } : thought
         ),
       }))
+      
+      // Push to cloud immediately if user is authenticated
+      if (auth.currentUser && finalThought) {
+        pushItemToCloud('thoughts', finalThought).catch(err => 
+          console.error('Failed to push thought update to cloud:', err)
+        )
+      }
     } catch (e) {
       console.error('Failed to update thought:', e)
     }
@@ -109,6 +138,13 @@ export const useThoughts = create<State>((set, get) => ({
         await db.thoughts.delete(id)
       }
       set((s) => ({ thoughts: s.thoughts.filter((x) => x.id !== id) }))
+      
+      // Delete from cloud immediately if user is authenticated
+      if (auth.currentUser) {
+        deleteItemFromCloud('thoughts', id).catch(err => 
+          console.error('Failed to delete thought from cloud:', err)
+        )
+      }
     } catch (e) {
       console.error('Failed to delete thought:', e)
     }

@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 import Layout from '@/components/Layout'
+import { AutoSync } from '@/components/AutoSync'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -27,6 +28,7 @@ export default function RootLayout({
     <html lang="en" className="light">
       <body className={inter.className}>
         <AuthProvider>
+          <AutoSync />
           <Layout>
             {children}
           </Layout>

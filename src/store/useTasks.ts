@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { db, toTask, toTaskRow } from '@/db'
+import { pushItemToCloud, deleteItemFromCloud } from '@/lib/syncEngine'
+import { auth } from '@/lib/firebase'
 
 export type TaskStatus = 'active' | 'completed' | 'backlog'
 export type TaskCategory = 'mastery' | 'pleasure'
@@ -160,6 +162,7 @@ export const useTasks = create<State>((set, get) => ({
       ...task,
       id: Date.now().toString(),
       done: false,
+      updatedAt: Date.now(),
     }
     
     try {
@@ -167,6 +170,13 @@ export const useTasks = create<State>((set, get) => ({
       set((state) => ({
         tasks: [...state.tasks, newTask]
       }))
+      
+      // Push to cloud immediately if user is authenticated
+      if (auth.currentUser) {
+        pushItemToCloud('tasks', newTask).catch(err => 
+          console.error('Failed to push new task to cloud:', err)
+        )
+      }
     } catch (error) {
       console.error('Failed to add task:', error)
     }
@@ -183,7 +193,8 @@ export const useTasks = create<State>((set, get) => ({
       completedAt: !task.done ? new Date().toISOString() : undefined,
       completionCount: !task.done && task.recurrence?.type !== 'none' 
         ? (task.completionCount || 0) + 1 
-        : task.completionCount
+        : task.completionCount,
+      updatedAt: Date.now(),
     }
     
     try {
@@ -191,6 +202,13 @@ export const useTasks = create<State>((set, get) => ({
       set((state) => ({
         tasks: state.tasks.map(t => t.id === id ? updatedTask : t)
       }))
+      
+      // Push to cloud immediately if user is authenticated
+      if (auth.currentUser) {
+        pushItemToCloud('tasks', updatedTask).catch(err => 
+          console.error('Failed to push task update to cloud:', err)
+        )
+      }
     } catch (error) {
       console.error('Failed to toggle task:', error)
     }
@@ -198,15 +216,27 @@ export const useTasks = create<State>((set, get) => ({
   
   updateTask: async (id, updates) => {
     try {
-      const serializedUpdates = toTaskRow({ id, ...updates } as any)
+      const updatesWithTimestamp = { ...updates, updatedAt: Date.now() }
+      const serializedUpdates = toTaskRow({ id, ...updatesWithTimestamp } as any)
       const { id: _, ...updateData } = serializedUpdates
       
       await db.tasks.update(id, updateData)
+      
+      const updatedTask = get().tasks.find(t => t.id === id)
+      const finalTask = updatedTask ? { ...updatedTask, ...updatesWithTimestamp } : null
+      
       set((state) => ({
         tasks: state.tasks.map((task) =>
-          task.id === id ? { ...task, ...updates } : task
+          task.id === id ? { ...task, ...updatesWithTimestamp } : task
         ),
       }))
+      
+      // Push to cloud immediately if user is authenticated
+      if (auth.currentUser && finalTask) {
+        pushItemToCloud('tasks', finalTask).catch(err => 
+          console.error('Failed to push task update to cloud:', err)
+        )
+      }
     } catch (error) {
       console.error('Failed to update task:', error)
     }
@@ -218,6 +248,13 @@ export const useTasks = create<State>((set, get) => ({
       set((state) => ({
         tasks: state.tasks.filter((task) => task.id !== id),
       }))
+      
+      // Delete from cloud immediately if user is authenticated
+      if (auth.currentUser) {
+        deleteItemFromCloud('tasks', id).catch(err => 
+          console.error('Failed to delete task from cloud:', err)
+        )
+      }
     } catch (error) {
       console.error('Failed to delete task:', error)
     }
