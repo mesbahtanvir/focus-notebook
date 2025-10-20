@@ -6,9 +6,6 @@ import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import { useState, useMemo } from "react";
 import TaskList from "@/components/TaskList";
-import BacklogList from "@/components/BacklogList";
-import MoodTracker from "@/components/MoodTracker";
-import SummaryPanel from "@/components/SummaryPanel";
 
 // Disable static generation for now
 export const dynamic = 'force-dynamic';
@@ -54,9 +51,10 @@ export default function Page() {
     await addTask({
       title,
       category,
+      priority: 'medium',
       status: 'active',
       createdAt: new Date().toISOString(),
-    } as any);
+    });
   };
 
   return (

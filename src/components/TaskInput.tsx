@@ -3,15 +3,23 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Check } from 'lucide-react';
-import { useTasks } from '@/store/useTasks';
+import { useTasks, TaskCategory, TaskPriority } from '@/store/useTasks';
 
-type TaskCategory = 'mastery' | 'pleasure';
 type TaskDestination = 'today' | 'backlog';
 
-export function TaskInput() {
+interface TaskInputProps {
+  onClose?: () => void;
+}
+
+export function TaskInput({ onClose }: TaskInputProps = {}) {
   const [taskName, setTaskName] = useState('');
   const [category, setCategory] = useState<TaskCategory>('mastery');
   const [destination, setDestination] = useState<TaskDestination>('today');
+  const [priority, setPriority] = useState<TaskPriority>('medium');
+  const [notes, setNotes] = useState('');
+  const [tags, setTags] = useState('');
+  const [estimatedMinutes, setEstimatedMinutes] = useState('');
+  const [dueDate, setDueDate] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const addTask = useTasks((state) => state.add);
@@ -21,23 +29,40 @@ export function TaskInput() {
     
     if (!taskName.trim()) return;
 
+    const tagArray = tags
+      .split(',')
+      .map(t => t.trim())
+      .filter(t => t.length > 0);
+
     // Add task with metadata
     addTask({
       title: taskName.trim(),
       category,
+      priority,
       createdAt: new Date().toISOString(),
-      dueDate: destination === 'today' ? new Date().toISOString().split('T')[0] : undefined,
-      status: destination === 'today' ? 'active' : 'backlog'
+      dueDate: dueDate || (destination === 'today' ? new Date().toISOString().split('T')[0] : undefined),
+      status: destination === 'today' ? 'active' : 'backlog',
+      notes: notes.trim() || undefined,
+      tags: tagArray.length > 0 ? tagArray : undefined,
+      estimatedMinutes: estimatedMinutes ? parseInt(estimatedMinutes) : undefined,
     });
 
     // Show success feedback
     setShowSuccess(true);
     setTaskName('');
+    setNotes('');
+    setTags('');
+    setEstimatedMinutes('');
+    setDueDate('');
     
     // Reset form
     setTimeout(() => {
       setShowSuccess(false);
-      inputRef.current?.focus();
+      if (onClose) {
+        onClose();
+      } else {
+        inputRef.current?.focus();
+      }
     }, 1500);
   };
 
@@ -88,14 +113,25 @@ export function TaskInput() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-4">
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-muted-foreground">Category:</span>
-            <div className="inline-flex rounded-md shadow-sm" role="group">
+        {/* Notes */}
+        <div>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Add notes or description (optional)"
+            className="input w-full min-h-[80px] text-sm"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Category */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Category</label>
+            <div className="inline-flex rounded-md shadow-sm w-full" role="group">
               <button
                 type="button"
                 onClick={() => setCategory('mastery')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-l-lg border ${
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-l-lg border ${
                   category === 'mastery'
                     ? 'bg-primary/10 text-primary border-primary/20'
                     : 'bg-background hover:bg-accent border-border'
@@ -106,7 +142,7 @@ export function TaskInput() {
               <button
                 type="button"
                 onClick={() => setCategory('pleasure')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-r-lg border ${
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-r-lg border ${
                   category === 'pleasure'
                     ? 'bg-primary/10 text-primary border-primary/20'
                     : 'bg-background hover:bg-accent border-border'
@@ -117,13 +153,31 @@ export function TaskInput() {
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-muted-foreground">Add to:</span>
-            <div className="inline-flex rounded-md shadow-sm" role="group">
+          {/* Priority */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Priority</label>
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as TaskPriority)}
+              className="input w-full"
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Destination */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Add to</label>
+            <div className="inline-flex rounded-md shadow-sm w-full" role="group">
               <button
                 type="button"
                 onClick={() => setDestination('today')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-l-lg border ${
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-l-lg border ${
                   destination === 'today'
                     ? 'bg-primary/10 text-primary border-primary/20'
                     : 'bg-background hover:bg-accent border-border'
@@ -134,7 +188,7 @@ export function TaskInput() {
               <button
                 type="button"
                 onClick={() => setDestination('backlog')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-r-lg border ${
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-r-lg border ${
                   destination === 'backlog'
                     ? 'bg-primary/10 text-primary border-primary/20'
                     : 'bg-background hover:bg-accent border-border'
@@ -143,6 +197,44 @@ export function TaskInput() {
                 Backlog
               </button>
             </div>
+          </div>
+
+          {/* Due Date */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Due Date (optional)</label>
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="input w-full"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Estimated Time */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Estimated Time (minutes)</label>
+            <input
+              type="number"
+              value={estimatedMinutes}
+              onChange={(e) => setEstimatedMinutes(e.target.value)}
+              placeholder="e.g., 30"
+              className="input w-full"
+              min="0"
+            />
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Tags (comma-separated)</label>
+            <input
+              type="text"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="e.g., urgent, work"
+              className="input w-full"
+            />
           </div>
         </div>
       </form>

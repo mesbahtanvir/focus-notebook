@@ -3,6 +3,7 @@ import { db, toTask, toTaskRow } from '@/db'
 
 export type TaskStatus = 'active' | 'completed' | 'backlog'
 export type TaskCategory = 'mastery' | 'pleasure'
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 
 export interface Task {
   id: string
@@ -10,9 +11,13 @@ export interface Task {
   done: boolean
   category: TaskCategory
   status: TaskStatus
+  priority: TaskPriority
   createdAt: string
   dueDate?: string
   completedAt?: string
+  notes?: string
+  tags?: string[]
+  estimatedMinutes?: number
 }
 
 type State = {

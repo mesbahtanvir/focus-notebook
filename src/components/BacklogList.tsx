@@ -43,7 +43,19 @@ export default function BacklogList() {
                       <div className={`font-medium ${t.done ? "line-through text-muted-foreground" : ""}`}>
                         {t.title}
                       </div>
-                      <div className="mt-2 inline-flex items-center gap-2">
+                      <div className="mt-2 inline-flex items-center gap-2 flex-wrap">
+                        {t.priority && (
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
+                              t.priority === 'urgent' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900' :
+                              t.priority === 'high' ? 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-900' :
+                              t.priority === 'medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/40 dark:text-yellow-300 dark:border-yellow-900' :
+                              'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-900'
+                            }`}
+                          >
+                            {t.priority}
+                          </span>
+                        )}
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
                             t.category === "mastery"

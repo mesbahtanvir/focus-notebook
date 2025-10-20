@@ -20,6 +20,11 @@ const TOOLS = [
     title: "Mood Tracker",
     description: "Track your mood (1–10) with optional notes and history.",
   },
+    {
+    key: "tasks",
+    title: "Tasks",
+    description: "Manage all the tasks",
+  },
 ];
 
 export default function ToolsPage() {

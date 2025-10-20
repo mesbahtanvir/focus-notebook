@@ -38,6 +38,11 @@ class AppDB extends Dexie {
       thoughts: '&id, title, done, createdAt',
       moods: '&id, value, createdAt',
     })
+    this.version(5).stores({
+      tasks: '&id, title, done, category, status, priority, createdAt, dueDate, completedAt',
+      thoughts: '&id, title, done, createdAt',
+      moods: '&id, value, createdAt',
+    })
   }
 }
 
