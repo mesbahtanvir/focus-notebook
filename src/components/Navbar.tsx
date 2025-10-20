@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ThemeToggle } from './ThemeToggle'
-import { CheckSquare, Home, LogOut, User } from 'lucide-react'
+import { CheckSquare, Home, LogOut, User, Settings } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useState } from 'react'
 
@@ -27,7 +27,7 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
-          {/* App Title & Navigation */}
+          {/* Left side: App Title & Navigation */}
           <div className="flex items-center space-x-6">
             <h1 className="text-xl font-bold text-foreground">
               Focus Notebook
@@ -55,19 +55,28 @@ export function Navbar() {
                 <CheckSquare className="h-4 w-4" />
                 Tasks
               </Link>
+              <Link
+                href="/settings"
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  pathname === '/settings' 
+                    ? 'bg-primary/10 text-primary' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                }`}
+              >
+                <Settings className="h-4 w-4" />
+                Settings
+              </Link>
             </div>
           </div>
 
-          {/* Right side: Theme + User */}
-          <div className="flex items-center gap-3">
+          {/* Right side: Theme + User Info */}
+          <div className="flex items-center gap-4">
             <ThemeToggle />
             
             {user ? (
-              <div className="relative">
-                <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent transition-colors"
-                >
+              <div className="flex items-center gap-3">
+                {/* User Info */}
+                <div className="hidden md:flex items-center gap-3">
                   {user.photoURL ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -80,32 +89,25 @@ export function Navbar() {
                       <User className="h-5 w-5" />
                     </div>
                   )}
-                  <span className="text-sm font-medium hidden md:inline">
-                    {user.displayName || 'User'}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-foreground">
+                      {user.displayName || 'User'}
+                    </span>
+                    <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                      {user.email}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Logout Button */}
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950"
+                  title="Sign Out"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden lg:inline">Sign Out</span>
                 </button>
-
-                {showUserMenu && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setShowUserMenu(false)}
-                    />
-                    <div className="absolute right-0 mt-2 w-64 bg-background border border-border rounded-lg shadow-lg z-50 overflow-hidden">
-                      <div className="p-4 border-b border-border">
-                        <p className="font-medium text-foreground">{user.displayName}</p>
-                        <p className="text-sm text-muted-foreground truncate">{user.email}</p>
-                      </div>
-                      <button
-                        onClick={handleSignOut}
-                        className="w-full px-4 py-3 text-left flex items-center gap-2 hover:bg-accent transition-colors text-red-600 dark:text-red-400"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        Sign Out
-                      </button>
-                    </div>
-                  </>
-                )}
               </div>
             ) : (
               <Link

@@ -6,10 +6,15 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import Onboarding from './Onboarding';
 import OfflineBanner from './OfflineBanner';
+import { useCloudSync } from '@/hooks/useCloudSync';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const prefersReducedMotion = useReducedMotion();
+  
+  // Enable automatic cloud sync when configured
+  useCloudSync();
+  
   return (
     <div className="flex h-screen bg-background text-foreground">
       <OfflineBanner />

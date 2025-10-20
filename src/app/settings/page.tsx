@@ -10,6 +10,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/hooks/use-toast"
 import { useTheme } from 'next-themes'
 import { db, type TaskRow, type MoodRow } from '@/db'
+import { useSettingsStore } from '@/store/useSettingsStore'
+import { syncToCloud, syncFromCloud, performFullSync } from '@/lib/cloudSync'
+import { useAuth } from '@/contexts/AuthContext'
+import { Cloud, CloudOff, RefreshCw } from 'lucide-react'
 
 type SettingsFormValues = {
   allowBackgroundProcessing: boolean;
@@ -23,6 +27,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const { setTheme } = useTheme();
+  const { user } = useAuth();
   const { register, handleSubmit, setValue, watch } = useForm<SettingsFormValues>({
     defaultValues: {
       allowBackgroundProcessing: false,
@@ -36,6 +41,16 @@ export default function SettingsPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  
+  // Cloud sync settings
+  const { 
+    cloudSyncEnabled, 
+    syncInterval, 
+    lastSyncTime,
+    setCloudSyncEnabled,
+    setSyncInterval,
+    updateLastSyncTime 
+  } = useSettingsStore();
 
   // Load saved settings from localStorage on component mount
   useEffect(() => {
@@ -128,17 +143,33 @@ export default function SettingsPage() {
 
   const handleCloudSync = async () => {
     if (syncing) return;
+    
+    if (!user) {
+      toast({
+        title: 'Not authenticated',
+        description: 'Please sign in to sync your data.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setSyncing(true);
     try {
-      await new Promise((r) => setTimeout(r, 1200));
-      toast({
-        title: 'Cloud sync complete',
-        description: 'Your Focus Notebook is up to date.',
-      });
+      const result = await performFullSync();
+      
+      if (result.success) {
+        updateLastSyncTime(result.timestamp);
+        toast({
+          title: 'Cloud sync complete',
+          description: 'Your Focus Notebook is up to date.',
+        });
+      } else {
+        throw new Error(result.error || 'Unknown error');
+      }
     } catch (e) {
       toast({
         title: 'Cloud sync failed',
-        description: 'Please try again.',
+        description: e instanceof Error ? e.message : 'Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -255,6 +286,94 @@ export default function SettingsPage() {
                 onCheckedChange={(checked) => setValue('autoSave', checked)}
               />
             </div>
+
+            {/* Cloud Sync Section */}
+            <div className="pt-6 space-y-4 border-t">
+              <div className="flex items-center gap-2">
+                <Cloud className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold">Cloud Sync</h3>
+              </div>
+              
+              {!user ? (
+                <div className="rounded-lg bg-muted p-4">
+                  <p className="text-sm text-muted-foreground">
+                    Sign in to enable cloud sync and access your data across multiple devices.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Enable Cloud Sync */}
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="cloudSync">Enable Cloud Sync</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Automatically sync your data to the cloud for multi-device access
+                      </p>
+                    </div>
+                    <Switch
+                      id="cloudSync"
+                      checked={cloudSyncEnabled}
+                      onCheckedChange={(checked) => {
+                        setCloudSyncEnabled(checked);
+                        if (checked) {
+                          handleCloudSync();
+                        }
+                      }}
+                    />
+                  </div>
+
+                  {/* Sync Interval */}
+                  {cloudSyncEnabled && (
+                    <div className="space-y-2">
+                      <Label htmlFor="syncInterval">Sync Interval (minutes)</Label>
+                      <div className="flex items-center gap-4">
+                        <Input
+                          id="syncInterval"
+                          type="number"
+                          min="1"
+                          max="60"
+                          value={syncInterval}
+                          onChange={(e) => setSyncInterval(Number(e.target.value))}
+                          className="max-w-[120px]"
+                        />
+                        <p className="text-sm text-muted-foreground">
+                          Data will sync every {syncInterval} minute{syncInterval !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Last Sync Time */}
+                  {lastSyncTime && (
+                    <p className="text-sm text-muted-foreground">
+                      Last synced: {new Date(lastSyncTime).toLocaleString()}
+                    </p>
+                  )}
+
+                  {/* Manual Sync Button */}
+                  <div className="flex gap-2">
+                    <Button 
+                      type="button" 
+                      onClick={handleCloudSync}
+                      disabled={syncing}
+                      variant="outline"
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                      {syncing ? 'Syncing...' : 'Sync Now'}
+                    </Button>
+                  </div>
+
+                  {cloudSyncEnabled && (
+                    <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-4">
+                      <p className="text-sm text-blue-900 dark:text-blue-100">
+                        <CloudOff className="inline h-4 w-4 mr-1" />
+                        Your data is being synced to the cloud. You can access it from any device by signing in with the same account.
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </CardContent>
           
           <CardFooter className="border-t px-6 py-4">
@@ -294,6 +413,15 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      {/* Hidden file input for import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json"
+        onChange={handleFileChosen}
+        className="hidden"
+      />
     </div>
   );
 }

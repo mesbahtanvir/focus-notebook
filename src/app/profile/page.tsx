@@ -11,6 +11,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import Image from "next/image";
 import { UserIcon } from "lucide-react";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 type ProfileForm = {
   fullName: string;
@@ -106,11 +108,13 @@ export default function ProfilePage() {
             size="sm" 
             onClick={async () => {
               try {
-                await signOut();
+                await signOut(auth);
                 toast({
                   title: "Signed out",
                   description: "You have been signed out successfully.",
                 });
+                // Redirect to login after sign out
+                window.location.href = '/login';
               } catch (error) {
                 console.error("Error signing out:", error);
                 toast({
