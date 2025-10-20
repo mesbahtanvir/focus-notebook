@@ -8,17 +8,15 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
-import { useTheme } from 'next-themes'
 import { db, type TaskRow, type MoodRow } from '@/db'
 import { useSettingsStore } from '@/store/useSettingsStore'
-import { syncToCloud, syncFromCloud, performFullSync } from '@/lib/cloudSync'
+import { syncToCloud, syncFromCloud } from '@/lib/cloudSync'
 import { useAuth } from '@/contexts/AuthContext'
-import { Cloud, CloudOff, RefreshCw } from 'lucide-react'
+import { Cloud, CloudOff, RefreshCw, Upload } from 'lucide-react'
 
 type SettingsFormValues = {
   allowBackgroundProcessing: boolean;
   openaiApiKey: string;
-  theme: 'light' | 'dark' | 'system';
   notificationEnabled: boolean;
   autoSave: boolean;
 };
@@ -26,13 +24,11 @@ type SettingsFormValues = {
 export default function SettingsPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
-  const { setTheme } = useTheme();
   const { user } = useAuth();
   const { register, handleSubmit, setValue, watch } = useForm<SettingsFormValues>({
     defaultValues: {
       allowBackgroundProcessing: false,
       openaiApiKey: '',
-      theme: 'system',
       notificationEnabled: true,
       autoSave: true,
     },
@@ -61,24 +57,18 @@ export default function SettingsPage() {
         Object.entries(parsedSettings).forEach(([key, value]) => {
           setValue(key as keyof SettingsFormValues, value as any);
         });
-        if (parsedSettings.theme) {
-          setTheme(parsedSettings.theme);
-        }
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [setValue, setTheme]);
+  }, [setValue]);
 
   const onSubmit = (data: SettingsFormValues) => {
     try {
       // Save to localStorage
       localStorage.setItem('appSettings', JSON.stringify(data));
-      
-      // Apply settings
-      setTheme(data.theme);
 
       toast({
         title: 'Settings saved',
@@ -155,13 +145,14 @@ export default function SettingsPage() {
     
     setSyncing(true);
     try {
-      const result = await performFullSync();
+      // Upload local data to Firebase
+      const result = await syncToCloud();
       
       if (result.success) {
         updateLastSyncTime(result.timestamp);
         toast({
           title: 'Cloud sync complete',
-          description: 'Your Focus Notebook is up to date.',
+          description: 'Your data has been uploaded to Firebase successfully.',
         });
       } else {
         throw new Error(result.error || 'Unknown error');
@@ -180,21 +171,17 @@ export default function SettingsPage() {
   const allowBackgroundProcessing = watch('allowBackgroundProcessing');
   const notificationEnabled = watch('notificationEnabled');
   const autoSave = watch('autoSave');
-  const theme = watch('theme');
 
   useEffect(() => {
     const subscription = watch((value) => {
       try {
         localStorage.setItem('appSettings', JSON.stringify(value as SettingsFormValues));
-        if (value && typeof value === 'object' && 'theme' in (value as any)) {
-          setTheme((value as SettingsFormValues).theme);
-        }
       } catch (e) {
         console.error('Failed to auto-save settings:', e);
       }
     });
     return () => subscription.unsubscribe();
-  }, [watch, setTheme]);
+  }, [watch]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64">Loading settings...</div>;
@@ -202,10 +189,12 @@ export default function SettingsPage() {
 
   return (
     <div className="container mx-auto py-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Settings</CardTitle>
-          <CardDescription>Manage your application preferences</CardDescription>
+      <Card className="border-4 border-purple-200 shadow-xl bg-gradient-to-br from-white to-purple-50">
+        <CardHeader className="bg-gradient-to-r from-purple-100 to-pink-100 border-b-4 border-purple-200">
+          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            ⚙️ Settings
+          </CardTitle>
+          <CardDescription className="text-gray-600 font-medium">Manage your application preferences</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-6">
@@ -239,24 +228,6 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            {/* Theme Selection */}
-            <div className="space-y-2">
-              <Label>Theme</Label>
-              <div className="flex space-x-4">
-                {(['light', 'dark', 'system'] as const).map((option) => (
-                  <label key={option} className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      className="h-4 w-4"
-                      checked={theme === option}
-                      onChange={() => setValue('theme', option)}
-                    />
-                    <span className="capitalize">{option}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
             {/* Notifications */}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
@@ -288,16 +259,18 @@ export default function SettingsPage() {
             </div>
 
             {/* Cloud Sync Section */}
-            <div className="pt-6 space-y-4 border-t">
+            <div className="pt-6 space-y-4 border-t-4 border-blue-200">
               <div className="flex items-center gap-2">
-                <Cloud className="h-5 w-5 text-primary" />
-                <h3 className="text-lg font-semibold">Cloud Sync</h3>
+                <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full">
+                  <Cloud className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">Cloud Sync</h3>
               </div>
               
               {!user ? (
-                <div className="rounded-lg bg-muted p-4">
-                  <p className="text-sm text-muted-foreground">
-                    Sign in to enable cloud sync and access your data across multiple devices.
+                <div className="rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 p-6 border-2 border-blue-200">
+                  <p className="text-sm text-gray-700 font-medium">
+                    🔐 Sign in to enable cloud sync and access your data across multiple devices.
                   </p>
                 </div>
               ) : (
@@ -352,21 +325,21 @@ export default function SettingsPage() {
 
                   {/* Manual Sync Button */}
                   <div className="flex gap-2">
-                    <Button 
+                    <button
                       type="button" 
                       onClick={handleCloudSync}
                       disabled={syncing}
-                      variant="outline"
+                      className="flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-                      {syncing ? 'Syncing...' : 'Sync Now'}
-                    </Button>
+                      <Upload className={`h-5 w-5 ${syncing ? 'animate-pulse' : ''}`} />
+                      {syncing ? '🔄 Uploading...' : '☁️ Upload to Cloud'}
+                    </button>
                   </div>
 
                   {cloudSyncEnabled && (
-                    <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-4">
-                      <p className="text-sm text-blue-900 dark:text-blue-100">
-                        <CloudOff className="inline h-4 w-4 mr-1" />
+                    <div className="rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 p-6 border-2 border-green-200">
+                      <p className="text-sm text-gray-800 font-medium flex items-center gap-2">
+                        <span className="text-2xl">✨</span>
                         Your data is being synced to the cloud. You can access it from any device by signing in with the same account.
                       </p>
                     </div>
@@ -376,8 +349,13 @@ export default function SettingsPage() {
             </div>
           </CardContent>
           
-          <CardFooter className="border-t px-6 py-4">
-            <Button type="submit">Save Changes</Button>
+          <CardFooter className="border-t-4 border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 px-6 py-4">
+            <button 
+              type="submit"
+              className="px-8 py-3 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+            >
+              💾 Save Changes
+            </button>
           </CardFooter>
         </form>
       </Card>
