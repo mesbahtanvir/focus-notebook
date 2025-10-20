@@ -39,10 +39,22 @@ export type MoodRow = {
   createdAt: string
 }
 
+// Focus session table row type
+export type FocusSessionRow = {
+  id: string
+  duration: number // planned duration in minutes
+  startTime: string
+  endTime: string
+  tasksData: string // JSON serialized FocusTask[]
+  feedback?: string
+  rating?: number // 1-5
+}
+
 class AppDB extends Dexie {
   tasks!: Table<TaskRow, string>
   thoughts!: Table<ThoughtRow, string>
   moods!: Table<MoodRow, string>
+  focusSessions!: Table<FocusSessionRow, string>
 
   constructor() {
     super('personal-notebook')
@@ -72,6 +84,12 @@ class AppDB extends Dexie {
       tasks: '&id, title, done, category, status, priority, createdAt, dueDate, completedAt, parentTaskId',
       thoughts: '&id, text, type, done, createdAt',
       moods: '&id, value, createdAt',
+    })
+    this.version(8).stores({
+      tasks: '&id, title, done, category, status, priority, createdAt, dueDate, completedAt, parentTaskId',
+      thoughts: '&id, text, type, done, createdAt',
+      moods: '&id, value, createdAt',
+      focusSessions: '&id, startTime, endTime',
     })
   }
 }

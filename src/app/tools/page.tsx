@@ -16,6 +16,11 @@ const TOOLS = [
     description: "Cognitive Behavioral Therapy worksheets and prompts.",
   },
   {
+    key: "focus",
+    title: "Focus",
+    description: "Deep work sessions with balanced task selection and timer.",
+  },
+  {
     key: "moodtracker",
     title: "Mood Tracker",
     description: "Track your mood (1–10) with optional notes and history.",
