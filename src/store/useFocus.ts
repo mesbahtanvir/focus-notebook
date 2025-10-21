@@ -20,24 +20,28 @@ export interface FocusSession {
   isActive: boolean
   feedback?: string
   rating?: number
+  pausedAt?: string // timestamp when paused
+  totalPausedTime?: number // total time paused in milliseconds
 }
 
 type State = {
   currentSession: FocusSession | null
   completedSession: FocusSession | null
   sessions: FocusSession[]
-  startSession: (tasks: Task[], duration: number) => void
+  startSession: (tasks: Task[], duration: number) => Promise<void>
   endSession: () => Promise<void>
   saveSessionFeedback: (feedback: string, rating: number) => Promise<void>
   clearCompletedSession: () => void
   loadSessions: () => Promise<void>
-  switchToTask: (index: number) => void
-  markTaskComplete: (index: number) => void
-  updateTaskTime: (index: number, seconds: number) => void
-  updateTaskNotes: (index: number, notes: string) => void
-  addFollowUpTask: (index: number, taskId: string) => void
-  pauseSession: () => void
-  resumeSession: () => void
+  loadActiveSession: () => Promise<void>
+  switchToTask: (index: number) => Promise<void>
+  markTaskComplete: (index: number) => Promise<void>
+  updateTaskTime: (index: number, seconds: number) => Promise<void>
+  updateTaskNotes: (index: number, notes: string) => Promise<void>
+  addFollowUpTask: (index: number, taskId: string) => Promise<void>
+  pauseSession: () => Promise<void>
+  resumeSession: () => Promise<void>
+  persistActiveSession: () => Promise<void>
 }
 
 // Balance tasks between mastery and pleasure
@@ -91,7 +95,7 @@ export const useFocus = create<State>((set, get) => ({
   completedSession: null,
   sessions: [],
   
-  startSession: (tasks, duration) => {
+  startSession: async (tasks, duration) => {
     const newSession: FocusSession = {
       id: Date.now().toString(),
       duration,
@@ -103,9 +107,26 @@ export const useFocus = create<State>((set, get) => ({
       startTime: new Date().toISOString(),
       currentTaskIndex: 0,
       isActive: true,
+      totalPausedTime: 0,
     }
     
     set({ currentSession: newSession })
+    
+    // Persist to database immediately
+    try {
+      const sessionRow: FocusSessionRow = {
+        id: newSession.id,
+        duration: newSession.duration,
+        startTime: newSession.startTime,
+        tasksData: JSON.stringify(newSession.tasks),
+        isActive: true,
+        currentTaskIndex: 0,
+        totalPausedTime: 0,
+      }
+      await db.focusSessions.add(sessionRow)
+    } catch (error) {
+      console.error('Failed to persist focus session:', error)
+    }
   },
   
   endSession: async () => {
@@ -118,16 +139,13 @@ export const useFocus = create<State>((set, get) => ({
       isActive: false,
     }
     
-    // Save to database
+    // Update database - mark as completed
     try {
-      const sessionRow: FocusSessionRow = {
-        id: completedSession.id,
-        duration: completedSession.duration,
-        startTime: completedSession.startTime,
-        endTime: completedSession.endTime || new Date().toISOString(),
+      await db.focusSessions.update(completedSession.id, {
+        endTime: completedSession.endTime,
+        isActive: false,
         tasksData: JSON.stringify(completedSession.tasks),
-      }
-      await db.focusSessions.add(sessionRow)
+      })
     } catch (error) {
       console.error('Failed to save focus session:', error)
     }
@@ -171,16 +189,19 @@ export const useFocus = create<State>((set, get) => ({
   loadSessions: async () => {
     try {
       const rows = await db.focusSessions.orderBy('startTime').reverse().toArray()
-      const sessions: FocusSession[] = rows.map(row => ({
+      // Filter out active sessions
+      const completedRows = rows.filter(row => !row.isActive)
+      const sessions: FocusSession[] = completedRows.map(row => ({
         id: row.id,
         duration: row.duration,
         startTime: row.startTime,
         endTime: row.endTime,
         tasks: JSON.parse(row.tasksData),
-        currentTaskIndex: 0,
+        currentTaskIndex: row.currentTaskIndex || 0,
         isActive: false,
         feedback: row.feedback,
         rating: row.rating,
+        totalPausedTime: row.totalPausedTime || 0,
       }))
       set({ sessions })
     } catch (error) {
@@ -188,7 +209,65 @@ export const useFocus = create<State>((set, get) => ({
     }
   },
   
-  switchToTask: (index) => {
+  loadActiveSession: async () => {
+    try {
+      const allSessions = await db.focusSessions.toArray()
+      const activeSessions = allSessions.filter(s => s.isActive === true)
+      if (activeSessions.length > 0) {
+        const row = activeSessions[0]
+        const session: FocusSession = {
+          id: row.id,
+          duration: row.duration,
+          startTime: row.startTime,
+          endTime: row.endTime,
+          tasks: JSON.parse(row.tasksData),
+          currentTaskIndex: row.currentTaskIndex || 0,
+          isActive: false, // Will be paused when reloaded
+          feedback: row.feedback,
+          rating: row.rating,
+          pausedAt: row.pausedAt,
+          totalPausedTime: row.totalPausedTime || 0,
+        }
+        
+        // Calculate additional paused time if session was left active
+        if (row.pausedAt) {
+          const now = new Date().getTime()
+          const pausedTime = new Date(row.pausedAt).getTime()
+          const additionalPause = now - pausedTime
+          session.totalPausedTime = (session.totalPausedTime || 0) + additionalPause
+        }
+        
+        set({ currentSession: session })
+        
+        // Update database with new pause time
+        await db.focusSessions.update(session.id, {
+          pausedAt: new Date().toISOString(),
+          totalPausedTime: session.totalPausedTime,
+        })
+      }
+    } catch (error) {
+      console.error('Failed to load active session:', error)
+    }
+  },
+  
+  persistActiveSession: async () => {
+    const current = get().currentSession
+    if (!current) return
+    
+    try {
+      await db.focusSessions.update(current.id, {
+        tasksData: JSON.stringify(current.tasks),
+        currentTaskIndex: current.currentTaskIndex,
+        isActive: current.isActive,
+        pausedAt: current.pausedAt,
+        totalPausedTime: current.totalPausedTime,
+      })
+    } catch (error) {
+      console.error('Failed to persist active session:', error)
+    }
+  },
+  
+  switchToTask: async (index) => {
     set((state) => {
       if (!state.currentSession) return state
       
@@ -199,9 +278,10 @@ export const useFocus = create<State>((set, get) => ({
         },
       }
     })
+    await get().persistActiveSession()
   },
   
-  markTaskComplete: (index) => {
+  markTaskComplete: async (index) => {
     set((state) => {
       if (!state.currentSession) return state
       
@@ -218,9 +298,10 @@ export const useFocus = create<State>((set, get) => ({
         },
       }
     })
+    await get().persistActiveSession()
   },
   
-  updateTaskTime: (index, seconds) => {
+  updateTaskTime: async (index, seconds) => {
     set((state) => {
       if (!state.currentSession) return state
       
@@ -237,9 +318,10 @@ export const useFocus = create<State>((set, get) => ({
         },
       }
     })
+    await get().persistActiveSession()
   },
   
-  updateTaskNotes: (index, notes) => {
+  updateTaskNotes: async (index, notes) => {
     set((state) => {
       if (!state.currentSession) return state
       
@@ -256,9 +338,10 @@ export const useFocus = create<State>((set, get) => ({
         },
       }
     })
+    await get().persistActiveSession()
   },
   
-  addFollowUpTask: (index, taskId) => {
+  addFollowUpTask: async (index, taskId) => {
     set((state) => {
       if (!state.currentSession) return state
       
@@ -276,9 +359,10 @@ export const useFocus = create<State>((set, get) => ({
         },
       }
     })
+    await get().persistActiveSession()
   },
   
-  pauseSession: () => {
+  pauseSession: async () => {
     set((state) => {
       if (!state.currentSession) return state
       
@@ -286,12 +370,34 @@ export const useFocus = create<State>((set, get) => ({
         currentSession: {
           ...state.currentSession,
           isActive: false,
+          pausedAt: new Date().toISOString(),
         },
       }
     })
+    await get().persistActiveSession()
   },
   
-  resumeSession: () => {
+  resumeSession: async () => {
+    const current = get().currentSession
+    if (!current || !current.pausedAt) {
+      set((state) => {
+        if (!state.currentSession) return state
+        return {
+          currentSession: {
+            ...state.currentSession,
+            isActive: true,
+          },
+        }
+      })
+      await get().persistActiveSession()
+      return
+    }
+    
+    // Calculate pause duration
+    const now = new Date().getTime()
+    const pausedTime = new Date(current.pausedAt).getTime()
+    const pauseDuration = now - pausedTime
+    
     set((state) => {
       if (!state.currentSession) return state
       
@@ -299,8 +405,16 @@ export const useFocus = create<State>((set, get) => ({
         currentSession: {
           ...state.currentSession,
           isActive: true,
+          pausedAt: undefined,
+          totalPausedTime: (state.currentSession.totalPausedTime || 0) + pauseDuration,
         },
       }
     })
+    await get().persistActiveSession()
   },
 }))
+
+// Load active session on app startup (client-side only)
+if (typeof window !== 'undefined') {
+  useFocus.getState().loadActiveSession()
+}

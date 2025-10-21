@@ -143,31 +143,31 @@ export function FocusSession() {
   const totalTasks = currentSession.tasks.length;
   const completedTasks = currentSession.tasks.filter(t => t.completed).length;
 
-  const handlePause = () => {
+  const handlePause = async () => {
     if (currentSession.isActive) {
-      pauseSession();
+      await pauseSession();
     } else {
-      resumeSession();
+      await resumeSession();
     }
   };
 
-  const handlePrevious = () => {
+  const handlePrevious = async () => {
     if (currentTaskIndex > 0) {
-      switchToTask(currentTaskIndex - 1);
+      await switchToTask(currentTaskIndex - 1);
       setCurrentTime(currentSession.tasks[currentTaskIndex - 1].timeSpent);
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentTaskIndex < totalTasks - 1) {
-      switchToTask(currentTaskIndex + 1);
+      await switchToTask(currentTaskIndex + 1);
       setCurrentTime(currentSession.tasks[currentTaskIndex + 1].timeSpent);
     }
   };
 
   const handleMarkComplete = async () => {
     // Mark complete in focus session
-    markTaskComplete(currentTaskIndex);
+    await markTaskComplete(currentTaskIndex);
     
     // Also mark in main task list
     await toggleTask(currentFocusTask.task.id);
@@ -359,8 +359,8 @@ export function FocusSession() {
                   {currentSession.tasks.map((focusTask, index) => (
                     <button
                       key={index}
-                      onClick={() => {
-                        switchToTask(index);
+                      onClick={async () => {
+                        await switchToTask(index);
                         setCurrentTime(focusTask.timeSpent);
                       }}
                       className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all ${

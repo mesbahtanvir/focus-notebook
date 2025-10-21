@@ -46,10 +46,14 @@ export type FocusSessionRow = {
   id: string
   duration: number // planned duration in minutes
   startTime: string
-  endTime: string
+  endTime?: string
   tasksData: string // JSON serialized FocusTask[]
   feedback?: string
   rating?: number // 1-5
+  isActive?: boolean // true if session is ongoing
+  currentTaskIndex?: number
+  pausedAt?: string // timestamp when session was paused
+  totalPausedTime?: number // total paused time in milliseconds
 }
 
 class AppDB extends Dexie {
@@ -98,6 +102,12 @@ class AppDB extends Dexie {
       thoughts: '&id, text, type, done, createdAt',
       moods: '&id, value, createdAt',
       focusSessions: '&id, startTime, endTime',
+    })
+    this.version(10).stores({
+      tasks: '&id, title, done, category, status, priority, createdAt, dueDate, completedAt, parentTaskId, focusEligible',
+      thoughts: '&id, text, type, done, createdAt',
+      moods: '&id, value, createdAt',
+      focusSessions: '&id, startTime, endTime, isActive',
     })
   }
 }

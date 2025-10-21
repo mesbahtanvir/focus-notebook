@@ -54,9 +54,9 @@ function FocusPageContent() {
 
   const selectedTasks = tasks.filter(t => selectedTaskIds.includes(t.id));
 
-  const handleStartSession = () => {
+  const handleStartSession = async () => {
     if (selectedTasks.length === 0) return;
-    startSession(selectedTasks, duration);
+    await startSession(selectedTasks, duration);
     setShowSetup(false);
   };
 
