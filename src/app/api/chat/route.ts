@@ -29,6 +29,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Call OpenAI API
+    console.log('🤖 Calling OpenAI API at https://api.openai.com/v1/chat/completions');
+    console.log('📝 Using model: gpt-3.5-turbo');
+    console.log('💬 Message count:', messages.length);
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -42,15 +46,34 @@ export async function POST(request: NextRequest) {
         max_tokens: 500,
       }),
     });
+    
+    console.log('✅ OpenAI API response status:', response.status);
 
     if (!response.ok) {
       const error = await response.json();
-      console.error('OpenAI API error:', error);
+      console.error('❌ OpenAI API Error Details:');
+      console.error('Status:', response.status);
+      console.error('Error:', JSON.stringify(error, null, 2));
+      
+      // Provide more specific error messages
+      let userMessage = "I'm having trouble connecting to the AI service.";
+      
+      if (response.status === 401) {
+        userMessage = "Your API key appears to be invalid. Please check your Settings and make sure you've entered the correct OpenAI API key.";
+      } else if (response.status === 429) {
+        userMessage = "You've hit the rate limit or your OpenAI account is out of credits. Please check your OpenAI dashboard.";
+      } else if (response.status === 400) {
+        userMessage = `There's an issue with the request: ${error.error?.message || 'Invalid request format'}`;
+      } else if (error.error?.message) {
+        userMessage = `OpenAI Error: ${error.error.message}`;
+      }
       
       return NextResponse.json(
         { 
           error: 'Failed to get AI response',
-          message: "I'm having trouble connecting to the AI service. Please try again in a moment!"
+          message: userMessage,
+          details: error.error?.message || 'Unknown error',
+          statusCode: response.status
         },
         { status: 200 }
       );
@@ -59,6 +82,9 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     const assistantMessage = data.choices[0]?.message?.content || "I'm not sure how to respond to that. Can you rephrase?";
 
+    console.log('💡 OpenAI response received successfully');
+    console.log('📊 Tokens used:', data.usage);
+    
     return NextResponse.json({ message: assistantMessage });
 
   } catch (error) {

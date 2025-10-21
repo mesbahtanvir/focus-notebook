@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useThoughts } from "@/store/useThoughts";
 import { useSettings } from "@/store/useSettings";
+import { useRequestLog } from "@/store/useRequestLog";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { 
@@ -141,6 +142,18 @@ export default function BrainstormingPage() {
           timestamp: new Date()
         };
         setMessages(prev => [...prev, warningMessage]);
+        return;
+      }
+      
+      // Check if there's an error
+      if (data.error) {
+        console.error('API Error:', data);
+        const errorMessage: Message = {
+          role: 'assistant',
+          content: data.message || "I'm having trouble connecting right now. Please try again!",
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, errorMessage]);
         return;
       }
       
