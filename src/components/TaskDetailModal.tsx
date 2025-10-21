@@ -23,7 +23,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [notes, setNotes] = useState(task.notes || '');
-  const [category, setCategory] = useState<TaskCategory>(task.category);
+  const [category, setCategory] = useState<TaskCategory>(task.category || 'mastery');
   const [priority, setPriority] = useState<TaskPriority>(task.priority);
   const [status, setStatus] = useState<TaskStatus>(task.status);
   const [dueDate, setDueDate] = useState(task.dueDate || '');
@@ -197,11 +197,11 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                 </select>
               ) : (
                 <span className={`px-3 py-1 rounded-full text-sm font-medium border inline-block ${
-                  task.category === "mastery"
+                  (task.category || 'mastery') === "mastery"
                     ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900"
                     : "bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-900"
                 }`}>
-                  {task.category}
+                  {task.category || 'mastery'}
                 </span>
               )}
             </div>

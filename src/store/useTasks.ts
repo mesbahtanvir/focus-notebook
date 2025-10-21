@@ -4,8 +4,8 @@ import { pushItemToCloud, deleteItemFromCloud } from '@/lib/syncEngine'
 import { auth } from '@/lib/firebase'
 
 export type TaskStatus = 'active' | 'completed' | 'backlog'
-export type TaskCategory = 'mastery' | 'pleasure'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
+export type TaskCategory = 'mastery' | 'pleasure'
 export type RecurrenceType = 'none' | 'daily' | 'workweek' | 'weekly' | 'monthly'
 
 export interface RecurrenceConfig {
@@ -19,9 +19,9 @@ export interface Task {
   id: string
   title: string
   done: boolean
-  category: TaskCategory
   status: TaskStatus
   priority: TaskPriority
+  category?: TaskCategory
   createdAt: string
   dueDate?: string
   completedAt?: string
@@ -32,6 +32,7 @@ export interface Task {
   parentTaskId?: string // For tracking recurring task instances
   completionCount?: number // Track how many times completed this period
   projectId?: string // Link to project
+  focusEligible?: boolean // Can be done during a focus session (laptop/notebook work)
 }
 
 // Helper functions for recurring tasks
@@ -126,7 +127,6 @@ type State = {
   updateTask: (id: string, updates: Partial<Omit<Task, 'id'>>) => Promise<void>
   deleteTask: (id: string) => Promise<void>
   getTasksByStatus: (status: TaskStatus) => Task[]
-  getTasksByCategory: (category: TaskCategory) => Task[]
 }
 
 export const useTasks = create<State>((set, get) => ({
@@ -266,10 +266,6 @@ export const useTasks = create<State>((set, get) => ({
   
   getTasksByStatus: (status) => {
     return get().tasks.filter((task) => task.status === status)
-  },
-  
-  getTasksByCategory: (category) => {
-    return get().tasks.filter((task) => task.category === category)
   },
 }))
 

@@ -507,18 +507,18 @@ function MoodDetailModal({ mood, onClose }: { mood: MoodEntry; onClose: () => vo
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t">
+          <div className="flex gap-3 pt-4 border-t-4 border-gray-200 dark:border-gray-700">
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-bold rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-5 w-5" />
               {deleting ? 'Deleting...' : 'Delete Entry'}
             </button>
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 font-semibold rounded-lg transition-colors"
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 hover:from-gray-300 hover:to-gray-400 dark:hover:from-gray-600 dark:hover:to-gray-500 text-gray-900 dark:text-gray-100 font-bold rounded-xl shadow-lg transition-all transform hover:scale-105 active:scale-95"
             >
               Close
             </button>

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Check, Repeat } from 'lucide-react';
-import { useTasks, TaskCategory, TaskPriority, RecurrenceType } from '@/store/useTasks';
+import { useTasks, TaskPriority, RecurrenceType } from '@/store/useTasks';
 
 type TaskDestination = 'today' | 'backlog';
 
@@ -14,7 +14,6 @@ interface TaskInputProps {
 
 export function TaskInput({ onClose, onTaskCreated }: TaskInputProps = {}) {
   const [taskName, setTaskName] = useState('');
-  const [category, setCategory] = useState<TaskCategory>('mastery');
   const [destination, setDestination] = useState<TaskDestination>('today');
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [notes, setNotes] = useState('');
@@ -23,6 +22,7 @@ export function TaskInput({ onClose, onTaskCreated }: TaskInputProps = {}) {
   const [dueDate, setDueDate] = useState('');
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>('none');
   const [recurrenceFrequency, setRecurrenceFrequency] = useState('');
+  const [focusEligible, setFocusEligible] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const addTask = useTasks((state) => state.add);
@@ -46,7 +46,6 @@ export function TaskInput({ onClose, onTaskCreated }: TaskInputProps = {}) {
     // Add task with metadata
     const taskId = await addTask({
       title: taskName.trim(),
-      category,
       priority,
       createdAt: new Date().toISOString(),
       dueDate: dueDate || (destination === 'today' ? new Date().toISOString().split('T')[0] : undefined),
@@ -56,6 +55,7 @@ export function TaskInput({ onClose, onTaskCreated }: TaskInputProps = {}) {
       estimatedMinutes: estimatedMinutes ? parseInt(estimatedMinutes) : undefined,
       recurrence: recurrenceConfig,
       completionCount: 0,
+      focusEligible,
     });
 
     // Call onTaskCreated callback if provided
@@ -72,6 +72,7 @@ export function TaskInput({ onClose, onTaskCreated }: TaskInputProps = {}) {
     setDueDate('');
     setRecurrenceType('none');
     setRecurrenceFrequency('');
+    setFocusEligible(true);
     
     // Reset form
     setTimeout(() => {
@@ -143,35 +144,6 @@ export function TaskInput({ onClose, onTaskCreated }: TaskInputProps = {}) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Category */}
-          <div className="bg-gradient-to-br from-blue-50 to-pink-50 dark:from-blue-950/20 dark:to-pink-950/20 p-4 rounded-xl border-2 border-blue-200 dark:border-blue-800">
-            <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">🎯 Category</label>
-            <div className="inline-flex rounded-lg shadow-sm w-full" role="group">
-              <button
-                type="button"
-                onClick={() => setCategory('mastery')}
-                className={`flex-1 px-4 py-3 text-sm font-bold rounded-l-lg border-2 transition-all ${
-                  category === 'mastery'
-                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-500 shadow-lg scale-105'
-                    : 'bg-white dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 border-gray-300 dark:border-gray-600'
-                }`}
-              >
-                🎯 Mastery
-              </button>
-              <button
-                type="button"
-                onClick={() => setCategory('pleasure')}
-                className={`flex-1 px-4 py-3 text-sm font-bold rounded-r-lg border-2 transition-all ${
-                  category === 'pleasure'
-                    ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white border-pink-500 shadow-lg scale-105'
-                    : 'bg-white dark:bg-gray-800 hover:bg-pink-50 dark:hover:bg-pink-950/50 border-gray-300 dark:border-gray-600'
-                }`}
-              >
-                🎨 Pleasure
-              </button>
-            </div>
-          </div>
-
           {/* Priority */}
           <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 p-4 rounded-xl border-2 border-orange-200 dark:border-orange-800">
             <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">🔥 Priority</label>
@@ -296,6 +268,35 @@ export function TaskInput({ onClose, onTaskCreated }: TaskInputProps = {}) {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Focus Eligible Toggle */}
+        <div className="bg-gradient-to-br from-green-50 to-teal-50 dark:from-green-950/20 dark:to-teal-950/20 p-4 rounded-xl border-2 border-green-200 dark:border-green-800">
+          <label className="flex items-center justify-between cursor-pointer">
+            <div>
+              <div className="text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">💻 Focus Session Eligible</div>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Can this task be done on your laptop/notebook while sitting at a desk or cafe? 
+                Turn off for errands, shopping, or tasks requiring you to leave your workspace.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFocusEligible(!focusEligible)}
+              className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+                focusEligible ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
+              }`}
+              role="switch"
+              aria-checked={focusEligible}
+            >
+              <span
+                aria-hidden="true"
+                className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  focusEligible ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </label>
         </div>
       </form>
 

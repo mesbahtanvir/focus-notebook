@@ -17,6 +17,7 @@ export type TaskRow = {
   recurrence?: string
   parentTaskId?: string
   completionCount?: number
+  focusEligible?: boolean
 }
 
 // Thoughts table row type
@@ -92,6 +93,12 @@ class AppDB extends Dexie {
       moods: '&id, value, createdAt',
       focusSessions: '&id, startTime, endTime',
     })
+    this.version(9).stores({
+      tasks: '&id, title, done, category, status, priority, createdAt, dueDate, completedAt, parentTaskId, focusEligible',
+      thoughts: '&id, text, type, done, createdAt',
+      moods: '&id, value, createdAt',
+      focusSessions: '&id, startTime, endTime',
+    })
   }
 }
 
@@ -115,6 +122,7 @@ export function toTaskRow(task: any): TaskRow {
     recurrence: task.recurrence ? JSON.stringify(task.recurrence) : undefined,
     parentTaskId: task.parentTaskId,
     completionCount: task.completionCount,
+    focusEligible: task.focusEligible,
   }
 }
 
@@ -136,6 +144,7 @@ export function toTask(row: TaskRow): any {
     recurrence: row.recurrence ? JSON.parse(row.recurrence) : undefined,
     parentTaskId: row.parentTaskId,
     completionCount: row.completionCount,
+    focusEligible: row.focusEligible,
   }
 }
 

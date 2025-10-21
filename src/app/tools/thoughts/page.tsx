@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useThoughts, Thought, ThoughtType } from "@/store/useThoughts";
+import { useThoughts, Thought } from "@/store/useThoughts";
 import { useProcessQueue } from "@/store/useProcessQueue";
 import { manualProcessor } from "@/lib/thoughtProcessor/manualProcessor";
 import { approvalHandler } from "@/lib/thoughtProcessor/approvalHandler";
@@ -37,7 +37,6 @@ export default function ThoughtsPage() {
   const queue = useProcessQueue((s) => s.queue);
   const [showNewThought, setShowNewThought] = useState(false);
   const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
-  const [filterType, setFilterType] = useState<ThoughtType | 'all'>('all');
   const [showCompleted, setShowCompleted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingThoughtId, setProcessingThoughtId] = useState<string | null>(null);
@@ -60,7 +59,6 @@ export default function ThoughtsPage() {
 
   const filteredThoughts = useMemo(() => {
     let filtered = thoughts.filter(thought => {
-      if (filterType !== 'all' && thought.type !== filterType) return false;
       if (!showCompleted && thought.done) return false;
       return true;
     });
@@ -71,17 +69,15 @@ export default function ThoughtsPage() {
     );
 
     return filtered;
-  }, [thoughts, filterType, showCompleted]);
+  }, [thoughts, showCompleted]);
 
   const thoughtStats = useMemo(() => {
     const total = thoughts.length;
     const completed = thoughts.filter(t => t.done).length;
-    const tasks = thoughts.filter(t => t.type === 'task' && !t.done).length;
-    const feelingBad = thoughts.filter(t => t.type === 'feeling-bad' && !t.done).length;
     const analyzed = thoughts.filter(t => t.cbtAnalysis).length;
     const unprocessed = thoughts.filter(t => !t.tags?.includes('processed')).length;
 
-    return { total, completed, tasks, feelingBad, analyzed, unprocessed };
+    return { total, completed, analyzed, unprocessed };
   }, [thoughts]);
 
   const handleProcessThought = async (thoughtId: string) => {
@@ -164,23 +160,6 @@ export default function ThoughtsPage() {
     }, 100);
   };
 
-  const getTypeIcon = (type: ThoughtType) => {
-    switch (type) {
-      case 'task': return <CheckCircle2 className="h-4 w-4" />;
-      case 'feeling-good': return <Smile className="h-4 w-4" />;
-      case 'feeling-bad': return <Frown className="h-4 w-4" />;
-      case 'neutral': return <Brain className="h-4 w-4" />;
-    }
-  };
-
-  const getTypeColor = (type: ThoughtType) => {
-    switch (type) {
-      case 'task': return 'text-blue-700 bg-blue-100 border border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800';
-      case 'feeling-good': return 'text-green-700 bg-green-100 border border-green-200 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800';
-      case 'feeling-bad': return 'text-red-700 bg-red-100 border border-red-200 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800';
-      case 'neutral': return 'text-gray-700 bg-gray-100 border border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700';
-    }
-  };
 
   return (
     <ToolPageLayout>
@@ -189,7 +168,6 @@ export default function ThoughtsPage() {
         stats={[
           { label: 'total', value: thoughtStats.total },
           { label: 'unprocessed', value: thoughtStats.unprocessed, variant: 'warning' },
-          { label: 'tasks', value: thoughtStats.tasks, variant: 'info' },
           { label: 'analyzed', value: thoughtStats.analyzed },
           { label: 'done', value: thoughtStats.completed, variant: 'success' }
         ]}
@@ -237,17 +215,6 @@ export default function ThoughtsPage() {
       )}
 
       <ToolFilters>
-        <FilterSelect
-          value={filterType}
-          onChange={(value) => setFilterType(value as ThoughtType | 'all')}
-          options={[
-            { value: 'all', label: 'All Types' },
-            { value: 'task', label: 'Tasks' },
-            { value: 'feeling-good', label: 'Good Feelings' },
-            { value: 'feeling-bad', label: 'Bad Feelings' },
-            { value: 'neutral', label: 'Neutral' }
-          ]}
-        />
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
             type="checkbox"
@@ -297,10 +264,6 @@ export default function ThoughtsPage() {
                           {thought.text}
                         </p>
                         <div className="flex flex-wrap items-center gap-2 mt-3">
-                          <span className={`px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 ${getTypeColor(thought.type)}`}>
-                            {getTypeIcon(thought.type)}
-                            {thought.type.replace('-', ' ')}
-                          </span>
                           {thought.intensity && (
                             <span className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800">
                               <Heart className="h-3 w-3" />
@@ -386,9 +349,10 @@ export default function ThoughtsPage() {
 function NewThoughtModal({ onClose }: { onClose: () => void }) {
   const addThought = useThoughts((s) => s.add);
   const [text, setText] = useState("");
-  const [type, setType] = useState<ThoughtType>('neutral');
+  const [type, setType] = useState<'neutral' | 'task' | 'feeling-good' | 'feeling-bad'>('neutral');
   const [intensity, setIntensity] = useState<number>(5);
   const [tags, setTags] = useState("");
+  const [showIntensity, setShowIntensity] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -403,7 +367,7 @@ function NewThoughtModal({ onClose }: { onClose: () => void }) {
       text: text.trim(),
       type,
       createdAt: new Date().toISOString(),
-      intensity: type.includes('feeling') ? intensity : undefined,
+      intensity: showIntensity ? intensity : undefined,
       tags: tagsList.length > 0 ? tagsList : undefined,
     });
 
@@ -444,17 +408,29 @@ function NewThoughtModal({ onClose }: { onClose: () => void }) {
             <label className="block text-sm font-medium mb-2">Type</label>
             <select
               value={type}
-              onChange={(e) => setType(e.target.value as ThoughtType)}
+              onChange={(e) => setType(e.target.value as any)}
               className="input w-full"
             >
-              <option value="neutral">Neutral</option>
-              <option value="task">Task (something I need to do)</option>
-              <option value="feeling-good">Good Feeling</option>
-              <option value="feeling-bad">Bad Feeling (needs processing)</option>
+              <option value="neutral">💭 Neutral</option>
+              <option value="task">✅ Task</option>
+              <option value="feeling-good">😊 Good Feeling</option>
+              <option value="feeling-bad">😔 Bad Feeling</option>
             </select>
           </div>
 
-          {type.includes('feeling') && (
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium mb-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showIntensity}
+                onChange={(e) => setShowIntensity(e.target.checked)}
+                className="h-4 w-4 rounded"
+              />
+              Track intensity (for feelings/emotions)
+            </label>
+          </div>
+
+          {showIntensity && (
             <div>
               <label className="block text-sm font-medium mb-2">
                 Intensity: {intensity}/10

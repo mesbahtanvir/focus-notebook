@@ -275,13 +275,15 @@ export function FocusSession() {
                       {currentFocusTask.task.title}
                     </h1>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`px-2.5 py-1 rounded-md text-xs font-medium ${
-                        currentFocusTask.task.category === 'mastery'
-                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
-                          : 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300'
-                      }`}>
-                        {currentFocusTask.task.category}
-                      </span>
+                      {currentFocusTask.task.category && (
+                        <span className={`px-2.5 py-1 rounded-md text-xs font-medium ${
+                          currentFocusTask.task.category === 'mastery'
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
+                            : 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300'
+                        }`}>
+                          {currentFocusTask.task.category}
+                        </span>
+                      )}
                       <span className={`px-2.5 py-1 rounded-md text-xs font-medium ${
                         currentFocusTask.task.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300' :
                         currentFocusTask.task.priority === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300' :

@@ -194,15 +194,17 @@ export function FocusStatistics() {
                     <span className={`font-medium ${focusTask.completed ? 'text-foreground' : 'text-muted-foreground'}`}>
                       {focusTask.task.title}
                     </span>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        focusTask.task.category === 'mastery'
-                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
-                          : 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300'
-                      }`}
-                    >
-                      {focusTask.task.category}
-                    </span>
+                    {focusTask.task.category && (
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          focusTask.task.category === 'mastery'
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
+                            : 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300'
+                        }`}
+                      >
+                        {focusTask.task.category}
+                      </span>
+                    )}
                   </div>
                   <div className="text-sm font-mono text-muted-foreground">
                     {formatDuration(focusTask.timeSpent)}

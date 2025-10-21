@@ -14,6 +14,7 @@ export function ThoughtProcessorDaemon() {
   const updateThought = useThoughts(s => s.updateThought);
   const settings = useSettings(s => s.settings);
   const hasApiKey = useSettings(s => s.hasApiKey);
+  const [isBackgroundProcessingEnabled, setIsBackgroundProcessingEnabled] = useState(false);
   const addToQueue = useProcessQueue(s => s.addToQueue);
   const updateQueueItem = useProcessQueue(s => s.updateQueueItem);
   const addAction = useProcessQueue(s => s.addAction);
@@ -31,6 +32,43 @@ export function ThoughtProcessorDaemon() {
       addToLog(log);
     });
   }, [addToLog]);
+
+  // Load background processing setting from localStorage
+  useEffect(() => {
+    try {
+      const savedSettings = localStorage.getItem('appSettings');
+      if (savedSettings) {
+        const parsed = JSON.parse(savedSettings);
+        setIsBackgroundProcessingEnabled(parsed.allowBackgroundProcessing === true);
+      }
+    } catch (error) {
+      console.error('Failed to load background processing setting:', error);
+    }
+  }, []);
+
+  // Listen for changes to background processing setting
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const savedSettings = localStorage.getItem('appSettings');
+        if (savedSettings) {
+          const parsed = JSON.parse(savedSettings);
+          setIsBackgroundProcessingEnabled(parsed.allowBackgroundProcessing === true);
+        }
+      } catch (error) {
+        console.error('Failed to reload background processing setting:', error);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    // Also listen to custom event for same-tab updates
+    window.addEventListener('settingsChanged', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('settingsChanged', handleStorageChange);
+    };
+  }, []);
 
   // Get processing candidates (thoughts without 'processed' tag)
   const getProcessingCandidates = () => {
@@ -211,6 +249,11 @@ export function ThoughtProcessorDaemon() {
     const runDaemon = async () => {
       if (isProcessing) return;
 
+      // Check if background processing is enabled
+      if (!isBackgroundProcessingEnabled) {
+        return;
+      }
+
       const candidates = getProcessingCandidates();
       if (candidates.length > 0) {
         console.log(`🤖 Found ${candidates.length} thought(s) to process`);
@@ -232,7 +275,7 @@ export function ThoughtProcessorDaemon() {
       }
       clearTimeout(initialTimeout);
     };
-  }, [thoughts, isProcessing]);
+  }, [thoughts, isProcessing, isBackgroundProcessingEnabled]);
 
   // Show processing indicator
   if (isProcessing) {

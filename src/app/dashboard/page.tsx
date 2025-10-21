@@ -68,9 +68,7 @@ export default function DashboardPage() {
         const taskDate = new Date(t.completedAt);
         return taskDate.toDateString() === date.toDateString();
       });
-      const mastery = completedTasks.filter(t => t.category === 'mastery').length;
-      const pleasure = completedTasks.filter(t => t.category === 'pleasure').length;
-      taskData.push({ date, mastery, pleasure, total: mastery + pleasure });
+      taskData.push({ date, total: completedTasks.length });
     }
 
     // Overall statistics
@@ -79,8 +77,6 @@ export default function DashboardPage() {
     }, 0);
 
     const completedTasks = tasks.filter(t => t.completedAt && new Date(t.completedAt) >= startDate);
-    const masteryTasks = completedTasks.filter(t => t.category === 'mastery');
-    const pleasureTasks = completedTasks.filter(t => t.category === 'pleasure');
 
     const avgMood = moods.filter(m => new Date(m.createdAt) >= startDate)
       .reduce((sum, m, i, arr) => sum + m.value / arr.length, 0);
@@ -127,8 +123,6 @@ export default function DashboardPage() {
         totalFocusTime: Math.round(totalFocusTime / 60),
         totalSessions: sessions.filter(s => new Date(s.startTime) >= startDate).length,
         completedTasks: completedTasks.length,
-        masteryTasks: masteryTasks.length,
-        pleasureTasks: pleasureTasks.length,
         avgMood: avgMood || 0,
         totalTaskTime,
       }
@@ -204,7 +198,7 @@ export default function DashboardPage() {
           icon={<Target className="h-6 w-6" />}
           title="Tasks Completed"
           value={analytics.stats.completedTasks.toString()}
-          subtitle={`${analytics.stats.masteryTasks}M / ${analytics.stats.pleasureTasks}P`}
+          subtitle={`Last ${days} days`}
           gradient="from-green-500 to-emerald-500"
         />
         <StatsCard
@@ -257,10 +251,10 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-green-500" />
-              Task Completion by Category
+              <TrendingUp className="h-5 w-5 text-green-500" />
+              Task Completion Trend
             </CardTitle>
-            <CardDescription>Daily tasks completed (Mastery vs Pleasure)</CardDescription>
+            <CardDescription>Daily tasks completed over time</CardDescription>
           </CardHeader>
           <CardContent>
             <StackedAreaChart data={analytics.taskData} />
@@ -292,10 +286,9 @@ export default function DashboardPage() {
           <CardDescription>Time distribution across task categories</CardDescription>
         </CardHeader>
         <CardContent>
-          <CategoryBreakdown
-            mastery={analytics.stats.masteryTasks}
-            pleasure={analytics.stats.pleasureTasks}
-          />
+          <div className="text-center py-8 text-muted-foreground">
+            <p>Task categories removed - use tags instead</p>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -410,7 +403,7 @@ function LineChart({ data, color, maxValue }: {
 }
 
 function StackedAreaChart({ data }: {
-  data: { date: Date; mastery: number; pleasure: number; total: number }[];
+  data: { date: Date; total: number }[];
 }) {
   const width = 800;
   const height = 200;
@@ -429,23 +422,11 @@ function StackedAreaChart({ data }: {
   const xScale = (index: number) => padding + (index / (data.length - 1)) * (width - 2 * padding);
   const yScale = (value: number) => height - padding - (value / max) * (height - 2 * padding);
 
-  // Create path for mastery area
-  const masteryPath = [
+  // Create path for total area
+  const totalPath = [
     `M ${xScale(0)} ${height - padding}`,
-    ...data.map((d, i) => `L ${xScale(i)} ${yScale(d.mastery)}`),
+    ...data.map((d, i) => `L ${xScale(i)} ${yScale(d.total)}`),
     `L ${xScale(data.length - 1)} ${height - padding}`,
-    'Z'
-  ].join(' ');
-
-  // Create path for pleasure area (stacked on top)
-  const pleasurePath = [
-    `M ${xScale(0)} ${yScale(data[0].mastery)}`,
-    ...data.map((d, i) => `L ${xScale(i)} ${yScale(d.mastery + d.pleasure)}`),
-    `L ${xScale(data.length - 1)} ${yScale(data[data.length - 1].mastery)}`,
-    ...data.slice().reverse().map((d, i) => {
-      const index = data.length - 1 - i;
-      return `L ${xScale(index)} ${yScale(d.mastery)}`;
-    }),
     'Z'
   ].join(' ');
 
@@ -478,22 +459,9 @@ function StackedAreaChart({ data }: {
           );
         })}
 
-        {/* Areas */}
-        <path d={masteryPath} fill="#3b82f6" opacity="0.6" />
-        <path d={pleasurePath} fill="#ec4899" opacity="0.6" />
+        {/* Area */}
+        <path d={totalPath} fill="#3b82f6" opacity="0.6" />
       </svg>
-
-      {/* Legend */}
-      <div className="flex items-center justify-center gap-6 mt-4">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-blue-500" />
-          <span className="text-sm">Mastery</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-pink-500" />
-          <span className="text-sm">Pleasure</span>
-        </div>
-      </div>
     </div>
   );
 }

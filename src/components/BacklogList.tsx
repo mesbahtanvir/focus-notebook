@@ -56,15 +56,17 @@ export default function BacklogList() {
                             {t.priority}
                           </span>
                         )}
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
-                            t.category === "mastery"
-                              ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900"
-                              : "bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-900"
-                          }`}
-                        >
-                          {t.category}
-                        </span>
+                        {t.category && (
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
+                              t.category === "mastery"
+                                ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900"
+                                : "bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-900"
+                            }`}
+                          >
+                            {t.category}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

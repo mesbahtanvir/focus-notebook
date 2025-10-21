@@ -17,9 +17,7 @@ import {
   Save,
   Check
 } from "lucide-react";
-import { TaskCategory } from "@/store/useTasks";
-
-type FilterType = 'all' | TaskCategory;
+type FilterType = 'all';
 
 export default function DocumentsPage() {
   const tasks = useTasks((s) => s.tasks);
@@ -40,7 +38,6 @@ export default function DocumentsPage() {
         id: task.id,
         title: task.title,
         notes: task.notes!,
-        category: task.category,
         createdAt: task.createdAt,
         dueDate: task.dueDate,
         tags: task.tags,
@@ -53,10 +50,7 @@ export default function DocumentsPage() {
   const filteredDocuments = useMemo(() => {
     let filtered = tasksWithNotes;
 
-    // Filter by category
-    if (filterCategory !== 'all') {
-      filtered = filtered.filter(doc => doc.category === filterCategory);
-    }
+    // Category filtering removed
 
     // Search in title and notes
     if (searchQuery.trim()) {
@@ -75,13 +69,11 @@ export default function DocumentsPage() {
 
   const stats = useMemo(() => {
     const total = tasksWithNotes.length;
-    const mastery = tasksWithNotes.filter(d => d.category === 'mastery').length;
-    const pleasure = tasksWithNotes.filter(d => d.category === 'pleasure').length;
     const totalWords = tasksWithNotes.reduce((sum, doc) => 
       sum + doc.notes.split(/\s+/).length, 0
     );
 
-    return { total, mastery, pleasure, totalWords };
+    return { total, totalWords };
   }, [tasksWithNotes]);
 
   // Auto-save handler with debouncing
@@ -147,18 +139,10 @@ export default function DocumentsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-2">
         <div className="card p-4">
           <div className="text-sm text-muted-foreground">Total Documents</div>
           <div className="text-2xl font-bold mt-1">{stats.total}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-sm text-muted-foreground">Mastery</div>
-          <div className="text-2xl font-bold mt-1 text-blue-600 dark:text-blue-400">{stats.mastery}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-sm text-muted-foreground">Pleasure</div>
-          <div className="text-2xl font-bold mt-1 text-pink-600 dark:text-pink-400">{stats.pleasure}</div>
         </div>
         <div className="card p-4">
           <div className="text-sm text-muted-foreground">Total Words</div>
@@ -261,13 +245,6 @@ export default function DocumentsPage() {
                   </div>
                   
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      doc.category === 'mastery'
-                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
-                        : 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300'
-                    }`}>
-                      {doc.category}
-                    </span>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                       doc.priority === 'urgent' ? 'bg-red-100 text-red-700' :
                       doc.priority === 'high' ? 'bg-orange-100 text-orange-700' :

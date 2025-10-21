@@ -29,7 +29,7 @@ function FocusPageContent() {
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [selectedSession, setSelectedSession] = useState<FocusSessionType | null>(null);
 
-  const activeTasks = tasks.filter(t => !t.done && t.status === 'active');
+  const activeTasks = tasks.filter(t => !t.done && t.status === 'active' && (t.focusEligible === true || t.focusEligible === undefined));
   const autoSuggestedTasks = selectBalancedTasks(tasks, duration);
 
   // Initialize selected tasks with auto-suggested tasks

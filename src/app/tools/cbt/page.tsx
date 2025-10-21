@@ -133,9 +133,9 @@ export default function CBTPage() {
                         {thought.text}
                       </p>
                       <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-gray-600">
-                        {thought.type === 'feeling-bad' && (
-                          <span className="px-2 py-1 rounded-full bg-red-50 text-red-600 border border-red-200">
-                            😔 Difficult Feeling
+                        {thought.intensity && (
+                          <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
+                            Intensity: {thought.intensity}/10
                           </span>
                         )}
                         {thought.intensity && (

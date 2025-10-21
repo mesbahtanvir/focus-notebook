@@ -15,7 +15,7 @@ describe('Integration Tests', () => {
           text: 'I feel overwhelmed with work',
           type: 'feeling-bad',
           createdAt: new Date().toISOString(),
-          tags: ['cbt'],
+          tags: ['cbt', 'feeling-bad'],
           intensity: 7,
         });
       });

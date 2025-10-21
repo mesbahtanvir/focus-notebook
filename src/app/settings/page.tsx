@@ -231,13 +231,20 @@ export default function SettingsPage() {
                 <div className="space-y-1 flex-1">
                   <Label htmlFor="allowBackgroundProcessing" className="text-base font-semibold text-gray-800">Background Processing</Label>
                   <p className="text-sm text-gray-600">
-                    Enable to allow the app to process data in the background
+                    When enabled, the app will automatically analyze your thoughts using AI and suggest actions in the background. Requires an OpenAI API key.
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    <strong>Off by default.</strong> Toggle this on to enable automatic LLM-powered thought analysis every 2 minutes.
                   </p>
                 </div>
                 <Switch
                   id="allowBackgroundProcessing"
                   checked={allowBackgroundProcessing}
-                  onCheckedChange={(checked) => setValue('allowBackgroundProcessing', checked)}
+                  onCheckedChange={(checked) => {
+                    setValue('allowBackgroundProcessing', checked);
+                    // Dispatch custom event so daemon can react immediately
+                    window.dispatchEvent(new Event('settingsChanged'));
+                  }}
                 />
               </div>
 
