@@ -8,7 +8,7 @@ import { useState, useMemo } from "react";
 import TaskList from "@/components/TaskList";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { Sparkles, Lock, MessageSquare, Lightbulb, Trash2, CheckCircle } from "lucide-react";
+import { Sparkles, Lock, MessageSquare, Lightbulb, Trash2, Timer, Play, Coffee } from "lucide-react";
 import { ThoughtDetailModal } from "@/components/ThoughtDetailModal";
 
 // Disable static generation for now
@@ -22,7 +22,6 @@ export default function Page() {
   // Thoughts store
   const thoughts = useThoughts((s) => s.thoughts);
   const addThought = useThoughts((s) => s.add);
-  const toggleThought = useThoughts((s) => s.toggle);
   const deleteThought = useThoughts((s) => s.deleteThought);
   // Tasks store (for New Task button only; TaskList handles its own reads)
   const addTask = useTasks((s) => s.add);
@@ -50,19 +49,6 @@ export default function Page() {
     reset();
   };
 
-  const createNewTask = async () => {
-    const title = window.prompt('New task title?')?.trim();
-    if (!title) return;
-    const categoryInput = window.prompt("Category? (mastery/pleasure)")?.trim().toLowerCase();
-    const category = categoryInput === 'pleasure' ? 'pleasure' : 'mastery';
-    await addTask({
-      title,
-      category,
-      priority: 'medium',
-      status: 'active',
-      createdAt: new Date().toISOString(),
-    });
-  };
 
   return (
     <div className="space-y-6">
@@ -164,28 +150,11 @@ export default function Page() {
                 key={t.id}
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`flex items-center gap-3 p-4 rounded-xl bg-white border-2 transition-all hover:shadow-md cursor-pointer ${
-                  t.done ? 'border-green-200 bg-green-50' : 'border-blue-200'
-                }`}
+                onClick={() => setSelectedThought(t)}
+                className="flex items-center gap-3 p-4 rounded-xl bg-white border-2 border-blue-200 transition-all hover:shadow-md hover:border-blue-300 cursor-pointer"
               >
-                <input
-                  id={`thought-${t.id}`}
-                  type="checkbox"
-                  checked={t.done}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    toggleThought(t.id);
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-5 h-5 rounded border-2 border-blue-300 text-blue-600 focus:ring-2 focus:ring-blue-200 cursor-pointer"
-                />
-                <div 
-                  onClick={() => setSelectedThought(t)}
-                  className={`flex-1 ${
-                    t.done ? 'line-through text-gray-400' : 'text-gray-800 font-medium'
-                  }`}
-                >
-                  {t.done && <CheckCircle className="inline h-4 w-4 mr-2 text-green-500" />}
+                <Lightbulb className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                <div className="flex-1 text-gray-800 font-medium">
                   {t.text}
                 </div>
                 <button
@@ -202,6 +171,55 @@ export default function Page() {
               </motion.li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      {/* Quick Focus Section */}
+      <section className="rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 border-4 border-green-200 shadow-lg overflow-hidden">
+        <div className="bg-gradient-to-r from-green-100 via-emerald-100 to-teal-100 px-6 py-4 border-b-4 border-green-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg shadow-md">
+              <Timer className="h-5 w-5 text-white" />
+            </div>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+              ⏱️ Quick Focus Session
+            </h2>
+          </div>
+        </div>
+        <div className="p-6">
+          <p className="text-gray-600 mb-4">Start a focused work session and boost your productivity!</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Link
+              href="/tools/focus?duration=25"
+              className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105"
+            >
+              <Play className="h-5 w-5" />
+              <div className="text-left">
+                <div className="text-sm opacity-90">Pomodoro</div>
+                <div className="text-lg font-bold">25 min</div>
+              </div>
+            </Link>
+            <Link
+              href="/tools/focus?duration=50"
+              className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105"
+            >
+              <Timer className="h-5 w-5" />
+              <div className="text-left">
+                <div className="text-sm opacity-90">Deep Work</div>
+                <div className="text-lg font-bold">50 min</div>
+              </div>
+            </Link>
+            <Link
+              href="/tools/focus?duration=5"
+              className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105"
+            >
+              <Coffee className="h-5 w-5" />
+              <div className="text-left">
+                <div className="text-sm opacity-90">Quick Break</div>
+                <div className="text-lg font-bold">5 min</div>
+              </div>
+            </Link>
+          </div>
         </div>
       </section>
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTasks } from "@/store/useTasks";
 import { useFocus, selectBalancedTasks } from "@/store/useFocus";
 import { motion, AnimatePresence } from "framer-motion";
@@ -8,7 +9,8 @@ import { Play, Zap, Clock, Target, History, Star, TrendingUp } from "lucide-reac
 import { FocusSession } from "@/components/FocusSession";
 import { FocusStatistics } from "@/components/FocusStatistics";
 
-export default function FocusPage() {
+function FocusPageContent() {
+  const searchParams = useSearchParams();
   const tasks = useTasks((s) => s.tasks);
   const currentSession = useFocus((s) => s.currentSession);
   const completedSession = useFocus((s) => s.completedSession);
@@ -16,7 +18,9 @@ export default function FocusPage() {
   const startSession = useFocus((s) => s.startSession);
   const loadSessions = useFocus((s) => s.loadSessions);
   
-  const [duration, setDuration] = useState(60); // default 60 minutes
+  // Get duration from URL or default to 60 minutes
+  const urlDuration = searchParams.get('duration');
+  const [duration, setDuration] = useState(urlDuration ? parseInt(urlDuration) : 60);
   const [showSetup, setShowSetup] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
@@ -336,5 +340,20 @@ export default function FocusPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function FocusPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Loading...</p>
+        </div>
+      </div>
+    }>
+      <FocusPageContent />
+    </Suspense>
   );
 }
