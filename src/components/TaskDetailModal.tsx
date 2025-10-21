@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useTasks, Task, TaskCategory, TaskPriority, TaskStatus, RecurrenceType } from "@/store/useTasks";
+import { FormattedNotes } from "@/lib/formatNotes";
 import { 
   X, 
   Calendar, 
@@ -361,7 +362,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                 className="input w-full min-h-[120px]"
               />
             ) : task.notes ? (
-              <p className="text-sm whitespace-pre-wrap">{task.notes}</p>
+              <FormattedNotes notes={task.notes} className="text-gray-700 dark:text-gray-300" />
             ) : (
               <p className="text-sm text-muted-foreground">No notes</p>
             )}

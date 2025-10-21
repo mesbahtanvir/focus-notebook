@@ -1,8 +1,59 @@
 # Testing Guide
 
-## Overview
+This document outlines the comprehensive testing strategy and practices for the Personal Notebook application.
 
-This project uses Jest and React Testing Library for unit and integration testing. All components and stores are designed to be testable with proper mocking of external dependencies.
+## Table of Contents
+- [Testing Philosophy](#testing-philosophy)
+- [Testing Stack](#testing-stack)
+- [Test Organization](#test-organization)
+- [Running Tests](#running-tests)
+- [Writing Tests](#writing-tests)
+- [Coverage Requirements](#coverage-requirements)
+- [Best Practices](#best-practices)
+
+## Testing Philosophy
+
+Our testing approach follows these principles:
+
+1. **Test Behavior, Not Implementation**: Focus on what the code does, not how it does it
+2. **Write Tests First**: Consider TDD for critical features
+3. **Maintain High Coverage**: Aim for >80% coverage on core functionality
+4. **Fast Feedback Loop**: Tests should run quickly
+5. **Clear Test Names**: Test names should describe the behavior being tested
+
+## Testing Stack
+
+- **Jest**: Test runner and assertion library
+- **React Testing Library**: Component testing (user-centric)
+- **@testing-library/react-hooks**: Hook testing
+- **@testing-library/user-event**: User interaction simulation
+- **MSW (Mock Service Worker)**: API mocking (when needed)
+
+## Test Organization
+
+```
+src/
+├── __tests__/
+│   ├── integration/          # Integration tests
+│   │   ├── task-workflow.test.tsx
+│   │   ├── focus-session-workflow.test.tsx
+│   │   └── sync-workflow.test.tsx
+│   └── e2e/                  # End-to-end tests (future)
+├── store/
+│   └── __tests__/            # Store unit tests
+│       ├── useTasks.test.ts
+│       ├── useFocus.test.ts
+│       ├── useThoughts.test.ts
+│       └── useMoods.test.ts
+├── lib/
+│   └── __tests__/            # Utility function tests
+│       ├── syncEngine.test.ts
+│       └── formatDateTime.test.ts
+└── components/
+    └── __tests__/            # Component tests
+        ├── FocusSession.test.tsx
+        └── TaskList.test.tsx
+```
 
 ## Running Tests
 
@@ -10,17 +61,29 @@ This project uses Jest and React Testing Library for unit and integration testin
 # Run all tests
 npm test
 
-# Run tests in watch mode
+# Run tests in watch mode (recommended during development)
 npm test -- --watch
 
-# Run tests with coverage
+# Run tests with coverage report
 npm test -- --coverage
 
-# Run a specific test file
-npm test Sidebar.test
+# Run specific test file
+npm test src/store/__tests__/useTasks.test.ts
+
+# Run tests matching a pattern
+npm test -- --testNamePattern="Task Creation"
+
+# Run tests for changed files only
+npm test -- --onlyChanged
+
+# Update snapshots (use carefully)
+npm test -- -u
+
+# Run tests in debug mode
+node --inspect-brk node_modules/.bin/jest --runInBand
 ```
 
-## Test Structure
+## Writing Tests
 
 ### Unit Tests
 

@@ -230,10 +230,10 @@ function FocusPageContent() {
                   <p className="text-sm text-gray-500">Create some tasks first!</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      {selectedTasks.length} tasks selected
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                      {selectedTasks.length} selected
                     </span>
                     {selectedTasks.length > 0 && (
                       <button
@@ -244,42 +244,44 @@ function FocusPageContent() {
                       </button>
                     )}
                   </div>
-                  {activeTasks.map((task, index) => {
-                    const isSelected = selectedTaskIds.includes(task.id);
-                    return (
-                      <motion.button
-                        key={task.id}
-                        type="button"
-                        onClick={() => toggleTaskSelection(task.id)}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.03 }}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className={`w-full flex items-center gap-3 p-4 rounded-xl transition-all ${
-                          isSelected
-                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg border-2 border-transparent'
-                            : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:border-purple-400 dark:hover:border-purple-600 border-2 border-gray-300 dark:border-gray-600'
-                        }`}
-                      >
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all ${
-                          isSelected 
-                            ? 'bg-white border-white' 
-                            : 'bg-transparent border-gray-400'
-                        }`}>
-                          {isSelected && (
-                            <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
-                        </div>
-                        <div className="flex-1 text-left">
-                          <div className={`font-semibold ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
-                            {task.title}
+                  <div className="max-h-[400px] overflow-y-auto space-y-1.5 pr-1">
+                    {activeTasks.map((task, index) => {
+                      const isSelected = selectedTaskIds.includes(task.id);
+                      return (
+                        <motion.button
+                          key={task.id}
+                          type="button"
+                          onClick={() => toggleTaskSelection(task.id)}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.02 }}
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
+                          className={`w-full flex items-center gap-2 p-2.5 rounded-lg transition-all ${
+                            isSelected
+                              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md border border-transparent'
+                              : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:border-purple-300 dark:hover:border-purple-700 border border-gray-200 dark:border-gray-700'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${
+                            isSelected 
+                              ? 'bg-white' 
+                              : 'bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600'
+                          }`}>
+                            {isSelected && (
+                              <svg className="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
                           </div>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex-1 text-left min-w-0">
+                            <div className={`text-sm font-medium truncate ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                              {task.title}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
                             <span
-                              className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${
                                 isSelected
                                   ? 'bg-white/20 text-white'
                                   : task.category === 'mastery'
@@ -287,28 +289,18 @@ function FocusPageContent() {
                                   : 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300'
                               }`}
                             >
-                              {task.category}
+                              {task.category?.[0] || 'T'}
                             </span>
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                isSelected
-                                  ? 'bg-white/20 text-white'
-                                  : task.priority === 'urgent' 
-                                  ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300'
-                                  : task.priority === 'high'
-                                  ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300'
-                                  : task.priority === 'medium'
-                                  ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300'
-                                  : 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300'
-                              }`}
-                            >
-                              {task.priority}
-                            </span>
+                            {task.estimatedMinutes && (
+                              <span className={`text-[10px] font-medium ${isSelected ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                                {task.estimatedMinutes}m
+                              </span>
+                            )}
                           </div>
-                        </div>
-                      </motion.button>
-                    );
-                  })}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

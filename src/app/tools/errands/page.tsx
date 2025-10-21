@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { ShoppingBag, MapPin, Car, Package, CheckCircle2, Circle, Trash2, Plus } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
+import { getNotesPreview } from "@/lib/formatNotes";
 
 export default function ErrandsPage() {
   const tasks = useTasks((s) => s.tasks);
@@ -114,8 +115,8 @@ export default function ErrandsPage() {
                           {task.title}
                         </h3>
                         {task.notes && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            {task.notes}
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                            {getNotesPreview(task.notes, 100)}
                           </p>
                         )}
                         <div className="flex items-center gap-2 mt-2">

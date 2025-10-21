@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useFocus } from "@/store/useFocus";
-import { useTasks } from "@/store/useTasks";
-import { motion, AnimatePresence } from "framer-motion";
+import { useFocus } from '@/store/useFocus';
+import { useTasks } from '@/store/useTasks';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Pause, 
   Play, 
@@ -17,6 +17,7 @@ import {
   Plus,
   ListPlus
 } from "lucide-react";
+import { FormattedNotes } from '@/lib/formatNotes';
 import { ConfirmModal } from "./ConfirmModal";
 import { TaskInput } from "./TaskInput";
 
@@ -299,9 +300,7 @@ export function FocusSession() {
                   {currentFocusTask.task.notes && (
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg space-y-2">
                       <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Description</div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-                        {currentFocusTask.task.notes}
-                      </p>
+                      <FormattedNotes notes={currentFocusTask.task.notes} className="text-gray-700 dark:text-gray-300" />
                     </div>
                   )}
 

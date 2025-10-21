@@ -16,6 +16,7 @@ import {
   ChevronDown,
   Repeat
 } from "lucide-react";
+import { getNotesPreview } from "@/lib/formatNotes";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { TaskInput } from "@/components/TaskInput";
 
@@ -343,7 +344,7 @@ export default function TasksPage() {
                             )}
                           </div>
                           {task.notes && (
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.notes}</p>
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{getNotesPreview(task.notes, 80)}</p>
                           )}
                           <div className="flex flex-wrap items-center gap-2 mt-2">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium border flex items-center gap-1 ${getPriorityColor(task.priority)}`}>

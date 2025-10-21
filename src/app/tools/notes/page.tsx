@@ -17,6 +17,8 @@ import {
   Save,
   Check
 } from "lucide-react";
+import { FormattedNotes, getNotesPreview } from "@/lib/formatNotes";
+
 type FilterType = 'all';
 
 export default function DocumentsPage() {
@@ -318,8 +320,8 @@ export default function DocumentsPage() {
                     autoSaveStatus={autoSaveStatus[doc.id]}
                   />
                 ) : (
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg whitespace-pre-wrap prose prose-sm dark:prose-invert max-w-none">
-                    {doc.notes}
+                  <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                    <FormattedNotes notes={doc.notes} className="prose prose-sm dark:prose-invert max-w-none" />
                   </div>
                 )}
               </div>
