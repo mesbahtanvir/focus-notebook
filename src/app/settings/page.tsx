@@ -18,20 +18,16 @@ import { Cloud, CloudOff, RefreshCw, Upload, Key, Eye, EyeOff, Check, X } from '
 type SettingsFormValues = {
   allowBackgroundProcessing: boolean;
   openaiApiKey: string;
-  notificationEnabled: boolean;
-  autoSave: boolean;
 };
 
 export default function SettingsPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
-  const { register, handleSubmit, setValue, watch } = useForm<SettingsFormValues>({
+  const { register, setValue, watch } = useForm<SettingsFormValues>({
     defaultValues: {
       allowBackgroundProcessing: false,
       openaiApiKey: '',
-      notificationEnabled: true,
-      autoSave: true,
     },
   });
   const [syncing, setSyncing] = useState(false);
@@ -113,25 +109,6 @@ export default function SettingsPage() {
       title: 'API Key Removed',
       description: 'Your API key has been cleared from settings.',
     });
-  };
-
-  const onSubmit = (data: SettingsFormValues) => {
-    try {
-      // Save to localStorage
-      localStorage.setItem('appSettings', JSON.stringify(data));
-
-      toast({
-        title: 'Settings saved',
-        description: 'Your settings have been saved successfully.',
-      });
-    } catch (error) {
-      console.error('Failed to save settings:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save settings. Please try again.',
-        variant: 'destructive',
-      });
-    }
   };
 
   const doExport = async () => {
@@ -219,8 +196,6 @@ export default function SettingsPage() {
   };
 
   const allowBackgroundProcessing = watch('allowBackgroundProcessing');
-  const notificationEnabled = watch('notificationEnabled');
-  const autoSave = watch('autoSave');
 
   useEffect(() => {
     const subscription = watch((value) => {
@@ -244,10 +219,11 @@ export default function SettingsPage() {
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             ⚙️ Settings
           </CardTitle>
-          <CardDescription className="text-gray-600 font-medium">Manage your application preferences</CardDescription>
+          <CardDescription className="text-gray-600 font-medium">
+            Manage your application preferences • Settings auto-save
+          </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="p-8 space-y-8">
+        <CardContent className="p-8 space-y-8">
             {/* General Settings Section */}
             <div className="space-y-6">
               {/* Background Processing */}
@@ -262,36 +238,6 @@ export default function SettingsPage() {
                   id="allowBackgroundProcessing"
                   checked={allowBackgroundProcessing}
                   onCheckedChange={(checked) => setValue('allowBackgroundProcessing', checked)}
-                />
-              </div>
-
-              {/* Notifications */}
-              <div className="flex items-center justify-between py-4">
-                <div className="space-y-1 flex-1">
-                  <Label htmlFor="notificationEnabled" className="text-base font-semibold text-gray-800">Enable Notifications</Label>
-                  <p className="text-sm text-gray-600">
-                    Receive notifications for important updates
-                  </p>
-                </div>
-                <Switch
-                  id="notificationEnabled"
-                  checked={notificationEnabled}
-                  onCheckedChange={(checked) => setValue('notificationEnabled', checked)}
-                />
-              </div>
-
-              {/* Auto Save */}
-              <div className="flex items-center justify-between py-4">
-                <div className="space-y-1 flex-1">
-                  <Label htmlFor="autoSave" className="text-base font-semibold text-gray-800">Auto Save</Label>
-                  <p className="text-sm text-gray-600">
-                    Automatically save changes
-                  </p>
-                </div>
-                <Switch
-                  id="autoSave"
-                  checked={autoSave}
-                  onCheckedChange={(checked) => setValue('autoSave', checked)}
                 />
               </div>
 
@@ -431,16 +377,6 @@ export default function SettingsPage() {
               )}
             </div>
           </CardContent>
-          
-          <CardFooter className="border-t-4 border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 px-6 py-4">
-            <button 
-              type="submit"
-              className="px-8 py-3 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-            >
-              💾 Save Changes
-            </button>
-          </CardFooter>
-        </form>
       </Card>
 
       {exportOpen && (

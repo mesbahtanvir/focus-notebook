@@ -4,7 +4,6 @@ import { persist } from 'zustand/middleware';
 export interface UserSettings {
   openaiApiKey?: string;
   theme?: 'light' | 'dark' | 'system';
-  notifications?: boolean;
 }
 
 type SettingsState = {
@@ -19,7 +18,6 @@ export const useSettings = create<SettingsState>()(
     (set, get) => ({
       settings: {
         theme: 'system',
-        notifications: true,
       },
 
       updateSettings: (updates) => {
