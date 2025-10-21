@@ -31,6 +31,8 @@ export default function BrainstormingPage() {
   const updateThought = useThoughts((s) => s.updateThought);
   const settings = useSettings((s) => s.settings);
   const hasApiKey = useSettings((s) => s.hasApiKey);
+  const addToQueue = useRequestLog((s) => s.addToQueue);
+  const updateRequestStatus = useRequestLog((s) => s.updateRequestStatus);
   const router = useRouter();
   const [selectedThought, setSelectedThought] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -101,7 +103,22 @@ export default function BrainstormingPage() {
     setInput("");
     setIsLoading(true);
 
+    // Log request to queue for debug dashboard
+    const requestId = addToQueue({
+      type: 'api',
+      method: 'POST /api/chat',
+      url: 'OpenAI Chat Completions',
+      request: {
+        model: 'gpt-3.5-turbo',
+        messageCount: messages.length + 2,
+        thought: currentThought.text,
+      },
+    });
+
     try {
+      // Update status to in-progress
+      updateRequestStatus(requestId, 'in-progress');
+
       // Call OpenAI API with user's API key
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -136,6 +153,10 @@ export default function BrainstormingPage() {
       // Check if setup is needed
       if (data.needsSetup) {
         setShowApiKeyWarning(true);
+        updateRequestStatus(requestId, 'failed', {
+          error: 'API key not configured',
+          response: data,
+        });
         const warningMessage: Message = {
           role: 'assistant',
           content: data.message,
@@ -148,6 +169,11 @@ export default function BrainstormingPage() {
       // Check if there's an error
       if (data.error) {
         console.error('API Error:', data);
+        updateRequestStatus(requestId, 'failed', {
+          error: data.message,
+          response: data,
+          status: data.statusCode,
+        });
         const errorMessage: Message = {
           role: 'assistant',
           content: data.message || "I'm having trouble connecting right now. Please try again!",
@@ -165,11 +191,26 @@ export default function BrainstormingPage() {
 
       setMessages(prev => [...prev, assistantMessage]);
 
+      // Mark request as completed
+      updateRequestStatus(requestId, 'completed', {
+        response: {
+          message: data.message,
+          messageLength: data.message?.length || 0,
+        },
+        status: 200,
+      });
+
       // Save conversation to thought notes
       await saveConversation([...messages, userMessage, assistantMessage]);
 
     } catch (error) {
       console.error('Error getting AI response:', error);
+      
+      // Mark request as failed
+      updateRequestStatus(requestId, 'failed', {
+        error: error instanceof Error ? error.message : 'Network error',
+        status: 0,
+      });
       
       // Fallback response
       const fallbackMessage: Message = {
