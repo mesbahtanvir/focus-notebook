@@ -1,4 +1,4 @@
-import { db as localDb } from '@/db'
+import { db as localDb, SyncHistoryRow } from '@/db'
 import { db as firestore, auth } from '@/lib/firebase'
 import { 
   collection, 
@@ -12,6 +12,21 @@ import {
   serverTimestamp
 } from 'firebase/firestore'
 import { useRequestLog } from '@/store/useRequestLog'
+
+/**
+ * Log sync operation to local database
+ */
+async function logSyncOperation(entry: Omit<SyncHistoryRow, 'id' | 'timestamp'>) {
+  try {
+    await localDb.syncHistory.add({
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      timestamp: new Date().toISOString(),
+      ...entry,
+    })
+  } catch (error) {
+    console.error('Failed to log sync operation:', error)
+  }
+}
 
 interface SyncResult {
   success: boolean
@@ -309,9 +324,29 @@ export async function pushItemToCloud(
     
     await setDoc(itemRef, cleanedItem)
     console.log(`✅ Pushed ${collection}/${item.id} to cloud`)
+    
+    // Log successful push
+    await logSyncOperation({
+      operation: 'push',
+      collection,
+      itemId: item.id,
+      status: 'success',
+      itemsAffected: 1,
+    })
+    
     return true
   } catch (error) {
     console.error(`Failed to push ${collection} item:`, error)
+    
+    // Log failed push
+    await logSyncOperation({
+      operation: 'push',
+      collection,
+      itemId: item.id,
+      status: 'failed',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+    })
+    
     return false
   }
 }
@@ -332,6 +367,15 @@ export async function deleteItemFromCloud(
     
     await deleteDoc(itemRef)
     console.log(`✅ Deleted ${collection}/${itemId} from cloud`)
+    
+    // Log successful delete
+    await logSyncOperation({
+      operation: 'push',
+      collection,
+      itemId,
+      status: 'success',
+      details: 'Item deleted from cloud',
+    })
     return true
   } catch (error) {
     console.error(`Failed to delete ${collection} item:`, error)

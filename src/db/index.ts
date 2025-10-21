@@ -41,6 +41,20 @@ export type MoodRow = {
   createdAt: string
 }
 
+// Sync history table row type
+export type SyncHistoryRow = {
+  id: string
+  timestamp: string
+  operation: 'push' | 'pull' | 'conflict' | 'merge' | 'error'
+  collection?: string // tasks, thoughts, moods, etc.
+  itemId?: string
+  status: 'success' | 'failed' | 'pending'
+  details?: string // JSON with more info
+  errorMessage?: string
+  conflictResolution?: 'local' | 'remote' | 'merged'
+  itemsAffected?: number
+}
+
 // Focus session table row type
 export type FocusSessionRow = {
   id: string
@@ -61,6 +75,7 @@ class AppDB extends Dexie {
   thoughts!: Table<ThoughtRow, string>
   moods!: Table<MoodRow, string>
   focusSessions!: Table<FocusSessionRow, string>
+  syncHistory!: Table<SyncHistoryRow, string>
 
   constructor() {
     super('personal-notebook')
@@ -108,6 +123,13 @@ class AppDB extends Dexie {
       thoughts: '&id, text, type, done, createdAt',
       moods: '&id, value, createdAt',
       focusSessions: '&id, startTime, endTime, isActive',
+    })
+    this.version(11).stores({
+      tasks: '&id, title, done, category, status, priority, createdAt, dueDate, completedAt, parentTaskId, focusEligible',
+      thoughts: '&id, text, type, done, createdAt',
+      moods: '&id, value, createdAt',
+      focusSessions: '&id, startTime, endTime, isActive',
+      syncHistory: '&id, timestamp, operation, status',
     })
   }
 }

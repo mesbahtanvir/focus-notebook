@@ -8,7 +8,8 @@ import { useThoughts } from "@/store/useThoughts";
 import { useMoods } from "@/store/useMoods";
 import { useProjects } from "@/store/useProjects";
 import { useFocus } from "@/store/useFocus";
-import { Shield, RefreshCw, Trash2, Search, Filter, ChevronDown, ChevronUp, Database } from "lucide-react";
+import { Shield, RefreshCw, Trash2, Search, Filter, ChevronDown, ChevronUp, Database, Cloud } from "lucide-react";
+import Link from "next/link";
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
@@ -103,13 +104,20 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-4 border-2 border-blue-200">
+        <div className="bg-white rounded-xl p-4 border-2 border-blue-200 space-y-3">
           <p className="text-sm text-gray-700">
             <strong className="text-blue-600">👤 Logged in as:</strong> {user?.email || "Guest"}
           </p>
-          <p className="text-xs text-gray-600 mt-2">
+          <p className="text-xs text-gray-600">
             💡 This page shows all your Firebase sync operations for debugging purposes
           </p>
+          <Link
+            href="/admin/sync-monitor"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold rounded-lg shadow-lg transition-all transform hover:scale-105"
+          >
+            <Cloud className="h-4 w-4" />
+            Cloud Sync Monitor
+          </Link>
         </div>
       </div>
 

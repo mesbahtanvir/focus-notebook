@@ -131,32 +131,30 @@ export default function TasksPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
       {/* Header with inline stats */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-        <div className="flex-1">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Tasks</h1>
-          <div className="flex items-center gap-4 mt-1 text-xs text-gray-500 dark:text-gray-400">
-            <span>{taskStats.active} active</span>
-            <span>•</span>
-            <span>{taskStats.completed} done</span>
-            {taskStats.overdue > 0 && (
-              <>
-                <span>•</span>
-                <span className="text-red-600 dark:text-red-400">{taskStats.overdue} overdue</span>
-              </>
-            )}
+      <div className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-4 border-purple-200 dark:border-purple-800 shadow-xl p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">📋 Tasks</h1>
+            <div className="flex items-center gap-4 mt-2 text-sm font-medium">
+              <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">{taskStats.active} active</span>
+              <span className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300">{taskStats.completed} done</span>
+              {taskStats.overdue > 0 && (
+                <span className="px-3 py-1 rounded-full bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300">{taskStats.overdue} overdue</span>
+              )}
+            </div>
           </div>
+          <button
+            onClick={() => setShowNewTask(true)}
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold shadow-lg transition-all transform hover:scale-105 active:scale-95"
+          >
+            <Plus className="h-5 w-5" />
+            New Task
+          </button>
         </div>
-        <button
-          onClick={() => setShowNewTask(true)}
-          className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          New Task
-        </button>
       </div>
 
       {/* Filters & Sort */}
-      <div className="card p-4 space-y-4">
+      <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
