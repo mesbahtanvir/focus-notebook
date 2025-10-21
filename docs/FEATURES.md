@@ -201,7 +201,7 @@ Complete guide to all features in Personal Notebook.
 
 ---
 
-### 7. Documents/Notes
+### 7. Notes
 
 **Purpose**: Rich note-taking and organization.
 
@@ -213,11 +213,11 @@ Complete guide to all features in Personal Notebook.
 - 💾 **Auto-Save**: Never lose your work
 
 **How to Use**:
-1. Go to `/tools/documents`
-2. Click "New Document"
-3. Add title and content
-4. Select category
-5. Add tags (optional)
+1. Go to `/tools/notes`
+2. Add notes to tasks to create documentation
+3. View and edit all notes in one place
+4. Search across all notes
+5. Filter by category
 6. Auto-saves as you type
 
 ---

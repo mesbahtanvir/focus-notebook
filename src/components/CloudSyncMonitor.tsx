@@ -17,6 +17,8 @@ import {
   TrendingUp,
   Activity,
   Database,
+  ChevronDown,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -32,6 +34,7 @@ export function CloudSyncMonitor() {
   });
   const [filter, setFilter] = useState<"all" | "success" | "failed" | "conflict">("all");
   const [loading, setLoading] = useState(true);
+  const [showSyncData, setShowSyncData] = useState(false);
 
   useEffect(() => {
     loadSyncHistory();
@@ -126,54 +129,49 @@ export function CloudSyncMonitor() {
 
   if (!user) {
     return (
-      <div className="text-center py-12">
-        <CloudOff className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
-          Not Connected
-        </h3>
-        <p className="text-gray-500 dark:text-gray-400">
-          Sign in to view cloud sync activity
-        </p>
+      <div className="bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl p-4 md:p-6 border-4 border-gray-300 shadow-lg">
+        <div className="text-center py-8">
+          <CloudOff className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">
+            Not Connected
+          </h3>
+          <p className="text-sm text-gray-500">
+            Sign in to view cloud sync activity
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-blue-900 dark:to-cyan-900 rounded-xl">
-            <Cloud className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
-              ☁️ Cloud Sync Monitor
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Track all synchronization activity
-            </p>
-          </div>
-        </div>
+    <div className="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl p-4 md:p-6 border-4 border-cyan-300 shadow-lg">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent flex items-center gap-2">
+          <Cloud className="h-6 w-6 text-cyan-600" />
+          ☁️ Cloud Sync History
+        </h2>
         <div className="flex gap-2">
           <button
-            onClick={loadSyncHistory}
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2"
+            onClick={() => setShowSyncData(!showSyncData)}
+            className="px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-cyan-600 text-white hover:bg-cyan-700 shadow-md flex items-center gap-2"
           >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
+            <Database className="h-4 w-4" />
+            {showSyncData ? "Hide" : "Show"} Sync Data
+            <ChevronDown className={`h-4 w-4 transition-transform ${showSyncData ? 'rotate-180' : ''}`} />
           </button>
           <button
             onClick={clearHistory}
-            className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+            className="px-4 py-2 rounded-lg font-semibold text-sm bg-red-600 text-white hover:bg-red-700 transition-colors shadow-md"
           >
-            Clear History
+            <Trash2 className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-5">
+      {showSyncData && (
+        <div className="space-y-4">
+          {/* Stats Cards */}
+          <div className="grid gap-3 md:grid-cols-5">
         <StatsCard
           icon={<Activity className="h-5 w-5" />}
           title="Total Syncs"
@@ -207,15 +205,15 @@ export function CloudSyncMonitor() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {["all", "success", "failed", "conflict"].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f as any)}
-            className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
               filter === f
-                ? "bg-blue-600 text-white shadow-lg"
-                : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                ? "bg-cyan-600 text-white shadow-md"
+                : "bg-white text-gray-700 hover:bg-cyan-50 border-2 border-cyan-300"
             }`}
           >
             {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -224,14 +222,11 @@ export function CloudSyncMonitor() {
       </div>
 
       {/* Sync History List */}
-      <div className="rounded-xl bg-white dark:bg-gray-900 border-4 border-gray-200 dark:border-gray-800 shadow-xl overflow-hidden">
-        <div className="px-6 py-4 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 border-b-4 border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            <Database className="h-5 w-5 inline mr-2" />
-            Sync History
-          </h3>
-        </div>
-        <div className="p-6">
+      <div className="bg-white rounded-lg p-4 border-2 border-cyan-300 max-h-[600px] overflow-auto">
+        <h3 className="text-sm font-bold text-cyan-600 mb-3">
+          Sync History ({filteredHistory.length})
+        </h3>
+        <div className="space-y-2">
           {loading ? (
             <div className="text-center py-8">
               <RefreshCw className="h-8 w-8 mx-auto text-gray-400 animate-spin mb-2" />
@@ -243,16 +238,15 @@ export function CloudSyncMonitor() {
               <p className="text-gray-500">No sync activity yet</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <>
               <AnimatePresence>
                 {filteredHistory.map((entry, index) => (
                   <motion.div
                     key={entry.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ delay: index * 0.02 }}
-                    className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="p-2 rounded bg-gray-50 border border-gray-200 text-xs"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3 flex-1">
@@ -323,10 +317,12 @@ export function CloudSyncMonitor() {
                   </motion.div>
                 ))}
               </AnimatePresence>
-            </div>
+            </>
           )}
         </div>
       </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -343,16 +339,9 @@ function StatsCard({
   gradient: string;
 }) {
   return (
-    <div className="rounded-xl bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border-2 border-gray-200 dark:border-gray-700 shadow-lg p-4">
-      <div
-        className={`inline-flex p-2 rounded-lg bg-gradient-to-r ${gradient} bg-opacity-10 mb-2`}
-      >
-        <div className="text-white">{icon}</div>
-      </div>
-      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-        {value}
-      </div>
-      <div className="text-sm text-gray-600 dark:text-gray-400">{title}</div>
+    <div className="bg-white rounded-lg p-3 border-2 border-cyan-300 text-center">
+      <div className="text-2xl font-bold text-cyan-600">{value}</div>
+      <div className="text-xs text-gray-600">{title}</div>
     </div>
   );
 }

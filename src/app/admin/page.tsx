@@ -9,7 +9,9 @@ import { useMoods } from "@/store/useMoods";
 import { useProjects } from "@/store/useProjects";
 import { useFocus } from "@/store/useFocus";
 import { Shield, RefreshCw, Trash2, Search, Filter, ChevronDown, ChevronUp, Database, Cloud } from "lucide-react";
-import Link from "next/link";
+import { CloudSyncMonitor } from "@/components/CloudSyncMonitor";
+import { db as firestore, auth } from "@/lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
@@ -20,6 +22,15 @@ export default function AdminPage() {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [showLocalData, setShowLocalData] = useState(false);
   const [selectedDataType, setSelectedDataType] = useState<string>('tasks');
+  const [showCloudData, setShowCloudData] = useState(false);
+  const [selectedCloudDataType, setSelectedCloudDataType] = useState<string>('tasks');
+  const [cloudData, setCloudData] = useState<any>({
+    tasks: [],
+    thoughts: [],
+    moods: [],
+    focusSessions: []
+  });
+  const [loadingCloudData, setLoadingCloudData] = useState(false);
   
   // Get all local data
   const tasks = useTasks((s) => s.tasks);
@@ -39,6 +50,34 @@ export default function AdminPage() {
     }, 2000);
     return () => clearInterval(interval);
   }, [autoRefresh]);
+
+  const loadCloudData = async () => {
+    if (!user) return;
+    setLoadingCloudData(true);
+    try {
+      const userId = user.uid;
+      const collections = ['tasks', 'thoughts', 'moods', 'focusSessions'];
+      const data: any = {};
+
+      for (const collectionName of collections) {
+        const collectionRef = collection(firestore, `users/${userId}/${collectionName}`);
+        const snapshot = await getDocs(collectionRef);
+        data[collectionName] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      }
+
+      setCloudData(data);
+    } catch (error) {
+      console.error('Failed to load cloud data:', error);
+    } finally {
+      setLoadingCloudData(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showCloudData && user) {
+      loadCloudData();
+    }
+  }, [showCloudData, user]);
 
   if (loading) {
     return (
@@ -104,20 +143,13 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-4 border-2 border-blue-200 space-y-3">
+        <div className="bg-white rounded-xl p-4 border-2 border-blue-200">
           <p className="text-sm text-gray-700">
             <strong className="text-blue-600">👤 Logged in as:</strong> {user?.email || "Guest"}
           </p>
-          <p className="text-xs text-gray-600">
-            💡 This page shows all your Firebase sync operations for debugging purposes
+          <p className="text-xs text-gray-600 mt-2">
+            💡 This page shows all your Firebase sync operations and local data for debugging purposes
           </p>
-          <Link
-            href="/admin/sync-monitor"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold rounded-lg shadow-lg transition-all transform hover:scale-105"
-          >
-            <Cloud className="h-4 w-4" />
-            Cloud Sync Monitor
-          </Link>
         </div>
       </div>
 
@@ -374,6 +406,127 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {/* Cloud Database (Firebase) */}
+      <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl p-4 md:p-6 border-4 border-orange-300 shadow-lg">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent flex items-center gap-2">
+            <Cloud className="h-6 w-6 text-orange-600" />
+            ☁️ Cloud Database (Firebase)
+          </h2>
+          <button
+            onClick={() => setShowCloudData(!showCloudData)}
+            className="px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-orange-600 text-white hover:bg-orange-700 shadow-md flex items-center gap-2"
+          >
+            <Database className="h-4 w-4" />
+            {showCloudData ? "Hide" : "Show"} Cloud Data
+            <ChevronDown className={`h-4 w-4 transition-transform ${showCloudData ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+
+        {showCloudData && (
+          <div className="space-y-4">
+            {!user ? (
+              <div className="bg-white rounded-lg p-8 border-2 border-orange-300 text-center">
+                <Cloud className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+                <p className="text-gray-600">Sign in to view cloud database</p>
+              </div>
+            ) : loadingCloudData ? (
+              <div className="bg-white rounded-lg p-8 border-2 border-orange-300 text-center">
+                <RefreshCw className="h-8 w-8 mx-auto text-orange-600 animate-spin mb-3" />
+                <p className="text-gray-600">Loading cloud data...</p>
+              </div>
+            ) : (
+              <>
+                {/* Data Type Selector */}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setSelectedCloudDataType('tasks')}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                      selectedCloudDataType === 'tasks'
+                        ? "bg-orange-600 text-white shadow-md"
+                        : "bg-white text-gray-700 hover:bg-orange-50 border-2 border-orange-300"
+                    }`}
+                  >
+                    Tasks ({cloudData.tasks?.length || 0})
+                  </button>
+                  <button
+                    onClick={() => setSelectedCloudDataType('thoughts')}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                      selectedCloudDataType === 'thoughts'
+                        ? "bg-orange-600 text-white shadow-md"
+                        : "bg-white text-gray-700 hover:bg-orange-50 border-2 border-orange-300"
+                    }`}
+                  >
+                    Thoughts ({cloudData.thoughts?.length || 0})
+                  </button>
+                  <button
+                    onClick={() => setSelectedCloudDataType('moods')}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                      selectedCloudDataType === 'moods'
+                        ? "bg-orange-600 text-white shadow-md"
+                        : "bg-white text-gray-700 hover:bg-orange-50 border-2 border-orange-300"
+                    }`}
+                  >
+                    Moods ({cloudData.moods?.length || 0})
+                  </button>
+                  <button
+                    onClick={() => setSelectedCloudDataType('focusSessions')}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                      selectedCloudDataType === 'focusSessions'
+                        ? "bg-orange-600 text-white shadow-md"
+                        : "bg-white text-gray-700 hover:bg-orange-50 border-2 border-orange-300"
+                    }`}
+                  >
+                    Focus Sessions ({cloudData.focusSessions?.length || 0})
+                  </button>
+                  <button
+                    onClick={loadCloudData}
+                    className="px-4 py-2 rounded-lg font-semibold text-sm bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-md flex items-center gap-2"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Refresh
+                  </button>
+                </div>
+
+                {/* Data Display */}
+                <div className="bg-white rounded-lg p-4 border-2 border-orange-300 max-h-[600px] overflow-auto">
+                  <pre className="text-xs font-mono">
+                    {JSON.stringify(
+                      cloudData[selectedCloudDataType] || [],
+                      null,
+                      2
+                    )}
+                  </pre>
+                </div>
+
+                {/* Summary Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-white rounded-lg p-3 border-2 border-orange-300 text-center">
+                    <div className="text-2xl font-bold text-orange-600">{cloudData.tasks?.length || 0}</div>
+                    <div className="text-xs text-gray-600">Tasks</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border-2 border-orange-300 text-center">
+                    <div className="text-2xl font-bold text-purple-600">{cloudData.thoughts?.length || 0}</div>
+                    <div className="text-xs text-gray-600">Thoughts</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border-2 border-orange-300 text-center">
+                    <div className="text-2xl font-bold text-yellow-600">{cloudData.moods?.length || 0}</div>
+                    <div className="text-xs text-gray-600">Moods</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border-2 border-orange-300 text-center">
+                    <div className="text-2xl font-bold text-indigo-600">{cloudData.focusSessions?.length || 0}</div>
+                    <div className="text-xs text-gray-600">Sessions</div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Cloud Sync Monitor */}
+      <CloudSyncMonitor />
 
       {/* Logs List */}
       <div className="space-y-3">
