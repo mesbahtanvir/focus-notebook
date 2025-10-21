@@ -76,6 +76,22 @@ export function ProcessingApprovalDialog({ queueItem, onApprove, onReject }: Pro
             <div><strong>Category:</strong> {action.data.category}</div>
             <div><strong>Estimated Time:</strong> {action.data.estimatedTime} minutes</div>
             <div><strong>Priority:</strong> {action.data.priority}</div>
+            {action.data.recurrence && action.data.recurrence.type !== 'none' && (
+              <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+                <strong className="text-blue-700">🔄 Recurring Task:</strong>
+                <div className="text-blue-600 mt-1">
+                  {action.data.recurrence.type === 'daily' && '📅 Daily'}
+                  {action.data.recurrence.type === 'weekly' && '📅 Weekly'}
+                  {action.data.recurrence.type === 'workweek' && '📅 Workdays (Mon-Fri)'}
+                  {action.data.recurrence.type === 'monthly' && '📅 Monthly'}
+                </div>
+                {action.data.recurrence.reasoning && (
+                  <div className="text-xs text-blue-500 mt-1">
+                    {action.data.recurrence.reasoning}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         );
       case 'enhanceThought':

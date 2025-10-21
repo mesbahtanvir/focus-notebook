@@ -72,6 +72,20 @@ export class ActionExecutor {
       processedAt: new Date().toISOString(),
     };
 
+    // Build recurrence config if provided
+    let recurrence = undefined;
+    if (action.data.recurrence && action.data.recurrence.type !== 'none') {
+      recurrence = {
+        type: action.data.recurrence.type,
+        frequency: action.data.recurrence.frequency || 1
+      };
+      
+      // Add recurrence reasoning to metadata
+      if (action.data.recurrence.reasoning) {
+        metadata.aiReasoning = `${metadata.aiReasoning}\nRecurrence: ${action.data.recurrence.reasoning}`;
+      }
+    }
+
     const taskId = await addTask({
       title: action.data.title,
       category: action.data.category || 'mastery',
@@ -79,6 +93,7 @@ export class ActionExecutor {
       priority: action.data.priority || 'medium',
       status: 'active',
       createdAt: new Date().toISOString(),
+      recurrence,
       notes: JSON.stringify(metadata), // Store metadata in notes field
     });
 
@@ -89,7 +104,11 @@ export class ActionExecutor {
     action.createdItems.taskIds = [taskId];
     queueItem.revertData.createdItems.taskIds.push(taskId);
 
-    this.log('Task created', { taskId, title: action.data.title });
+    this.log('Task created', { 
+      taskId, 
+      title: action.data.title, 
+      recurrence: recurrence ? recurrence.type : 'none' 
+    });
   }
 
   private async addTag(action: ProcessAction, queueItem: ProcessQueueItem) {

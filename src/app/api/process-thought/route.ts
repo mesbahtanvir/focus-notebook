@@ -44,7 +44,8 @@ Analyze this thought and suggest helpful actions. Consider:
 1. **Thought Enhancement**: Can the text be improved for clarity or grammar?
 2. **Relevant Tools**: Which tools would help process this thought?
 3. **Specific Actions**: What should be created or updated?
-4. **Reasoning**: Why are these suggestions appropriate?
+4. **Task Frequency**: If creating a task, should it recur? (daily, weekly, monthly, workweek, none)
+5. **Reasoning**: Why are these suggestions appropriate?
 
 Respond ONLY with valid JSON (no markdown, no code blocks):
 {
@@ -62,7 +63,12 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
         "title": "specific task title",
         "category": "health | wealth | mastery | connection",
         "estimatedTime": 30,
-        "priority": "medium"
+        "priority": "medium",
+        "recurrence": {
+          "type": "none | daily | weekly | workweek | monthly",
+          "frequency": 1,
+          "reasoning": "why this frequency makes sense"
+        }
       },
       "reasoning": "why this task should be created"
     },
@@ -81,6 +87,9 @@ Rules:
 - Only suggest actions that are truly helpful
 - Don't create tasks for vague thoughts
 - Use appropriate categories: health, wealth, mastery, connection
+- For recurring tasks: daily (every day), workweek (Mon-Fri), weekly (once per week), monthly
+- Examples: "exercise daily" → daily, "weekly review" → weekly, "check email" → workweek
+- One-time tasks should have recurrence.type = "none"
 - Be conservative with task creation
 - Enhance text only if there are clear improvements
 - Consider the thought type and existing tags`;

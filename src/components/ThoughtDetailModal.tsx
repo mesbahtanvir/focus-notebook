@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useThoughts, Thought, ThoughtType } from "@/store/useThoughts";
 import { useProcessQueue } from "@/store/useProcessQueue";
 import { actionExecutor } from "@/lib/thoughtProcessor/actionExecutor";
+import { cascadingDelete } from "@/lib/thoughtProcessor/cascadingDelete";
 import { RevertProcessingDialog } from "./RevertProcessingDialog";
 import { 
   X, 
@@ -28,7 +29,7 @@ interface ThoughtDetailModalProps {
 }
 
 export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps) {
-  const [activeTab, setActiveTab] = useState<'details' | 'cbt'>(
+  const [activeTab, setActiveTab] = useState<'details' | 'cbt' | 'history'>(
     thought.type === 'feeling-bad' ? 'cbt' : 'details'
   );
   const [isEditing, setIsEditing] = useState(false);
@@ -89,8 +90,23 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   };
 
   const handleDelete = async () => {
-    if (confirm('Are you sure you want to delete this thought?')) {
-      await deleteThought(thought.id);
+    // Count related items
+    const relatedItems = queue
+      .filter(q => q.thoughtId === thought.id && (q.status === 'completed' || q.status === 'processing'))
+      .reduce((acc, q) => {
+        const taskIds = q.revertData?.createdItems?.taskIds || [];
+        return acc + taskIds.length;
+      }, 0);
+
+    const message = relatedItems > 0
+      ? `Are you sure you want to delete this thought?\n\nThis will also delete:\n• ${relatedItems} related task(s)\n• All processing history\n\nThis cannot be undone.`
+      : 'Are you sure you want to delete this thought?\n\nThis cannot be undone.';
+
+    if (confirm(message)) {
+      const result = await cascadingDelete.deleteThoughtWithRelated(thought.id);
+      if (result.success) {
+        console.log(`Deleted: ${result.deleted.tasks} tasks, ${result.deleted.thoughts} thought(s)`);
+      }
       onClose();
     }
   };
@@ -193,6 +209,19 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
               >
                 <Brain className="h-4 w-4 inline mr-2" />
                 CBT Analysis
+              </button>
+            )}
+            {isProcessed && queueItem && (
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`px-4 py-2 text-sm font-medium rounded-t transition-colors ${
+                  activeTab === 'history'
+                    ? 'bg-accent text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <TrendingUp className="h-4 w-4 inline mr-2" />
+                Processing History
               </button>
             )}
           </div>
@@ -343,7 +372,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                 )}
               </div>
             </div>
-          ) : (
+          ) : activeTab === 'cbt' ? (
             // CBT Analysis Tab
             <div className="space-y-6">
               <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-4">
@@ -459,7 +488,126 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                 </button>
               </div>
             </div>
-          )}
+          ) : activeTab === 'history' && isProcessed && queueItem ? (
+            <div className="space-y-6">
+              {/* Processing Summary */}
+              <div className="rounded-lg p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200">
+                <h3 className="font-semibold text-purple-900 mb-2">✅ Processing Summary</h3>
+                <div className="space-y-1 text-sm text-purple-700">
+                  <div><strong>Processed:</strong> {new Date(queueItem.timestamp).toLocaleString()}</div>
+                  <div><strong>Mode:</strong> {queueItem.mode}</div>
+                  <div><strong>Status:</strong> {queueItem.status}</div>
+                  {queueItem.aiResponse?.confidence && (
+                    <div><strong>AI Confidence:</strong> {Math.round(queueItem.aiResponse.confidence * 100)}%</div>
+                  )}
+                  {queueItem.aiResponse?.suggestedTools && (
+                    <div><strong>Tools Used:</strong> {queueItem.aiResponse.suggestedTools.join(', ')}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions Taken */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Actions Taken ({queueItem.executedActions.length}/{queueItem.actions.length})</h3>
+                <div className="space-y-3">
+                  {queueItem.actions.map((action) => {
+                    const isExecuted = action.status === 'executed';
+                    const isFailed = action.status === 'failed';
+                    
+                    return (
+                      <div
+                        key={action.id}
+                        className={`rounded-lg p-4 border-2 ${
+                          isExecuted ? 'bg-green-50 border-green-200' : 
+                          isFailed ? 'bg-red-50 border-red-200' : 
+                          'bg-gray-50 border-gray-200'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2 rounded-lg ${
+                            isExecuted ? 'bg-green-500' : 
+                            isFailed ? 'bg-red-500' : 
+                            'bg-gray-500'
+                          } text-white`}>
+                            {isExecuted && <CheckCircle2 className="h-5 w-5" />}
+                            {isFailed && <X className="h-5 w-5" />}
+                            {!isExecuted && !isFailed && <TrendingUp className="h-5 w-5" />}
+                          </div>
+                          
+                          <div className="flex-1">
+                            <div className="font-semibold text-gray-900">
+                              {action.type === 'createTask' && `Created Task: "${action.data.title}"`}
+                              {action.type === 'addTag' && `Added Tag: "${action.data.tag}"`}
+                              {action.type === 'enhanceThought' && 'Enhanced Thought Text'}
+                              {action.type === 'changeType' && `Changed Type to: ${action.data.type}`}
+                              {action.type === 'setIntensity' && `Set Intensity: ${action.data.intensity}/10`}
+                            </div>
+                            
+                            {action.aiReasoning && (
+                              <p className="text-sm text-gray-600 mt-1">
+                                <strong>Why:</strong> {action.aiReasoning}
+                              </p>
+                            )}
+                            
+                            {/* Task Details */}
+                            {action.type === 'createTask' && (
+                              <div className="mt-2 text-sm text-gray-600">
+                                <div>Category: {action.data.category}</div>
+                                <div>Time: {action.data.estimatedTime} minutes</div>
+                                <div>Priority: {action.data.priority}</div>
+                                {action.data.recurrence && action.data.recurrence.type !== 'none' && (
+                                  <div className="mt-1 text-blue-600 font-medium">
+                                    🔄 Recurring: {action.data.recurrence.type}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* Enhancement Details */}
+                            {action.type === 'enhanceThought' && (
+                              <div className="mt-2 text-sm">
+                                <div className="text-gray-500">
+                                  <strong>Before:</strong> {queueItem.revertData.originalThought.text}
+                                </div>
+                                <div className="text-emerald-600 mt-1">
+                                  <strong>After:</strong> {action.data.improvedText}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Changes: {action.data.changes}
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div className={`text-xs mt-2 font-medium ${
+                              isExecuted ? 'text-green-600' : 
+                              isFailed ? 'text-red-600' : 
+                              'text-gray-600'
+                            }`}>
+                              Status: {action.status}
+                              {action.error && ` - ${action.error}`}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Created Items Links */}
+              {queueItem.revertData.createdItems.taskIds.length > 0 && (
+                <div className="rounded-lg p-4 bg-blue-50 border-2 border-blue-200">
+                  <h3 className="font-semibold text-blue-900 mb-2">🔗 Created Items</h3>
+                  <div className="text-sm text-blue-700">
+                    <div>{queueItem.revertData.createdItems.taskIds.length} task(s) created from this thought</div>
+                    <div className="text-xs text-blue-600 mt-1">
+                      View these tasks in the Tasks tool
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
       </motion.div>
 
