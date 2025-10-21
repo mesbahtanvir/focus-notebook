@@ -31,6 +31,7 @@ export interface Task {
   recurrence?: RecurrenceConfig
   parentTaskId?: string // For tracking recurring task instances
   completionCount?: number // Track how many times completed this period
+  projectId?: string // Link to project
 }
 
 // Helper functions for recurring tasks

@@ -67,52 +67,32 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 p-6 rounded-2xl border-2 border-blue-200 dark:border-blue-800 shadow-lg">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
-            🎯 Goals & Projects
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm md:text-base">
-            Plan and track your long-term and short-term goals
-          </p>
+    <div className="space-y-4 max-w-7xl mx-auto p-4 md:p-6">
+      {/* Compact Header with inline stats */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div className="flex-1">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Projects</h1>
+          <div className="flex items-center gap-4 mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <span>{stats.active} active</span>
+            <span>•</span>
+            <span>{stats.completed} done</span>
+            <span>•</span>
+            <span>{stats.shortTerm} short-term</span>
+            <span>•</span>
+            <span>{stats.longTerm} long-term</span>
+          </div>
         </div>
         <button
           onClick={() => setShowNewProject(true)}
-          className="flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105"
+          className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
         >
-          <Plus className="h-5 w-5" />
+          <Plus className="h-4 w-4" />
           New Project
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-5">
-        <div className="card p-4">
-          <div className="text-sm text-muted-foreground">Total</div>
-          <div className="text-2xl font-bold mt-1">{stats.total}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-sm text-muted-foreground">Active</div>
-          <div className="text-2xl font-bold mt-1 text-blue-600">{stats.active}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-sm text-muted-foreground">Completed</div>
-          <div className="text-2xl font-bold mt-1 text-green-600">{stats.completed}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-sm text-muted-foreground">Short-term</div>
-          <div className="text-2xl font-bold mt-1 text-orange-600">{stats.shortTerm}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-sm text-muted-foreground">Long-term</div>
-          <div className="text-2xl font-bold mt-1 text-purple-600">{stats.longTerm}</div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="card p-4 flex flex-wrap gap-3">
+      {/* Compact Filters */}
+      <div className="flex flex-wrap gap-2">
         <select
           value={filterTimeframe}
           onChange={(e) => setFilterTimeframe(e.target.value as any)}

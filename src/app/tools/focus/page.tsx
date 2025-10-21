@@ -8,6 +8,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Play, Zap, Clock, Target, History, Star, TrendingUp } from "lucide-react";
 import { FocusSession } from "@/components/FocusSession";
 import { FocusStatistics } from "@/components/FocusStatistics";
+import { FocusSessionDetailModal } from "@/components/FocusSessionDetailModal";
+import { FocusSession as FocusSessionType } from "@/store/useFocus";
+import { formatDateTime } from "@/lib/formatDateTime";
 
 function FocusPageContent() {
   const searchParams = useSearchParams();
@@ -24,6 +27,7 @@ function FocusPageContent() {
   const [showSetup, setShowSetup] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+  const [selectedSession, setSelectedSession] = useState<FocusSessionType | null>(null);
 
   const activeTasks = tasks.filter(t => !t.done && t.status === 'active');
   const autoSuggestedTasks = selectBalancedTasks(tasks, duration);
@@ -289,20 +293,20 @@ function FocusPageContent() {
                       const completionRate = (completed / session.tasks.length) * 100;
                       
                       return (
-                        <motion.div
+                        <motion.button
                           key={session.id}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
-                          className="p-4 rounded-lg bg-accent/50 dark:bg-gray-700/50 space-y-2"
+                          onClick={() => setSelectedSession(session)}
+                          className="w-full text-left p-4 rounded-lg bg-accent/50 dark:bg-gray-700/50 hover:bg-accent dark:hover:bg-gray-700 transition-colors space-y-2 cursor-pointer"
                         >
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-muted-foreground">
-                              {new Date(session.startTime).toLocaleDateString()} at{' '}
-                              {new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {formatDateTime(session.startTime)}
                             </span>
                             {session.rating && (
                               <div className="flex items-center gap-1">
-                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                <Star className="h-4 w-4 fill-gray-700 text-gray-700 dark:fill-gray-300 dark:text-gray-300" />
                                 <span className="text-sm font-medium text-foreground">{session.rating}/5</span>
                               </div>
                             )}
@@ -329,7 +333,7 @@ function FocusPageContent() {
                               &quot;{session.feedback}&quot;
                             </p>
                           )}
-                        </motion.div>
+                        </motion.button>
                       );
                     })}
                   </div>
@@ -339,6 +343,14 @@ function FocusPageContent() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Session Detail Modal */}
+      {selectedSession && (
+        <FocusSessionDetailModal
+          session={selectedSession}
+          onClose={() => setSelectedSession(null)}
+        />
+      )}
     </div>
   );
 }

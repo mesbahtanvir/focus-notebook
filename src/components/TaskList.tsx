@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useTasks, Task } from "@/store/useTasks";
 
@@ -18,17 +18,29 @@ export default function TaskList() {
   const tasks = useTasks((s) => s.tasks);
   const toggle = useTasks((s) => s.toggle);
   const prefersReducedMotion = useReducedMotion();
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const todays = useMemo(() => {
-    const list = tasks.filter((t) => isTodayISO(t.dueDate) || isTodayISO(t.createdAt));
-    // Sort: active first, then by createdAt desc
+    const list = tasks.filter((t) => {
+      // Show tasks for today
+      const isToday = isTodayISO(t.dueDate) || isTodayISO(t.createdAt);
+      if (!isToday) return false;
+      
+      // If showCompleted is true, show all tasks
+      if (showCompleted) return true;
+      
+      // Hide completed one-time tasks, but show completed recurring tasks
+      if (t.done && (!t.recurrence || t.recurrence.type === 'none')) return false;
+      
+      return true;
+    });
+    // Sort by createdAt desc
     return list.sort((a, b) => {
-      if (a.done !== b.done) return a.done ? 1 : -1;
       const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return bd - ad;
     });
-  }, [tasks]);
+  }, [tasks, showCompleted]);
 
   // Get card styling based on category and priority
   const getCardStyle = (task: Task) => {
@@ -53,104 +65,70 @@ export default function TaskList() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg shadow-lg">
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-          </svg>
-        </div>
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 bg-clip-text text-transparent">
-          Today&apos;s Tasks
-        </h2>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between px-1">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Today</h2>
+        <button
+          onClick={() => setShowCompleted(!showCompleted)}
+          className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+        >
+          {showCompleted ? 'Hide' : 'Show'} completed
+        </button>
       </div>
       {todays.length === 0 ? (
-        <div className="text-center py-12 px-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700">
-          <div className="text-6xl mb-3">📝</div>
-          <div className="text-lg font-medium text-gray-600 dark:text-gray-400">No tasks for today</div>
-          <div className="text-sm text-gray-500 dark:text-gray-500 mt-1">Start your day by adding a new task!</div>
+        <div className="text-center py-8 px-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-300 dark:border-gray-700">
+          <div className="text-sm text-gray-400">No tasks</div>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence>
             {todays.map((t: Task) => (
               <motion.div
                 key={t.id}
                 layout
-                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 10 }}
-                animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
-                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: -10 }}
-                whileHover={prefersReducedMotion ? undefined : { y: -4, scale: 1.02 }}
-                transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                className={`relative overflow-hidden rounded-2xl p-5 transition-all duration-300 ${getCardStyle(t)} ${t.done ? "opacity-60" : ""}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className={`group relative overflow-hidden rounded-lg p-3 transition-all duration-300 border ${t.done ? "opacity-50 bg-gray-50 dark:bg-gray-800/30 border-gray-300 dark:border-gray-700" : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"}`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <motion.input
-                      type="checkbox"
-                      checked={t.done}
-                      onChange={() => toggle(t.id)}
-                      whileTap={{ scale: 0.9 }}
-                      className="w-5 h-5 mt-0.5 rounded-md border-2 border-gray-400 dark:border-gray-600 checked:bg-gradient-to-br checked:from-purple-500 checked:to-pink-500 checked:border-transparent focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 cursor-pointer transition-all"
-                      aria-label={`Mark ${t.title} as ${t.done ? 'incomplete' : 'complete'}`}
-                    />
-                    <div className="flex-1">
-                      <div className={`font-semibold text-lg ${t.done ? "line-through text-gray-500 dark:text-gray-400" : "text-gray-900 dark:text-white"}`}>
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={t.done}
+                    onChange={() => toggle(t.id)}
+                    className="w-4 h-4 mt-0.5 rounded border-2 border-gray-400 dark:border-gray-600 checked:bg-purple-600 checked:border-transparent cursor-pointer transition-all"
+                    aria-label={`Mark ${t.title} as ${t.done ? 'incomplete' : 'complete'}`}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className={`text-sm font-medium ${t.done && !t.recurrence ? "line-through text-gray-400 dark:text-gray-500" : "text-gray-900 dark:text-gray-100"}`}>
                         {t.title}
                       </div>
-                      <div className="mt-3 flex items-center gap-2 flex-wrap">
-                        {t.priority && (
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
-                              t.priority === 'urgent' 
-                                ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white' 
-                                : t.priority === 'high' 
-                                ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white' 
-                                : t.priority === 'medium' 
-                                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900' 
-                                : 'bg-gradient-to-r from-green-400 to-emerald-500 text-white'
-                            }`}
-                          >
-                            🔥 {t.priority.toUpperCase()}
-                          </span>
-                        )}
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
-                            t.category === "mastery"
-                              ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
-                              : "bg-gradient-to-r from-pink-500 to-rose-500 text-white"
-                          }`}
-                        >
-                          {t.category === "mastery" ? "🎯 Mastery" : "🎨 Pleasure"}
+                      {t.done && t.recurrence && t.recurrence.type !== 'none' && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400">
+                          ✓ Done for today
                         </span>
-                        {t.dueDate && (
-                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-white/50 dark:bg-black/30 backdrop-blur-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">
-                            ⏰ {new Date(t.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        )}
-                      </div>
+                      )}
+                    </div>
+                    {/* Tags - Hidden by default, shown on hover */}
+                    <div className="mt-1.5 flex items-center gap-1.5 flex-wrap opacity-0 group-hover:opacity-100 transition-opacity">
+                      {t.priority && (
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${
+                          t.priority === 'urgent' ? 'bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-400' :
+                          t.priority === 'high' ? 'bg-orange-100 text-orange-600 dark:bg-orange-950/40 dark:text-orange-400' :
+                          t.priority === 'medium' ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-950/40 dark:text-yellow-400' :
+                          'bg-green-100 text-green-600 dark:bg-green-950/40 dark:text-green-400'
+                        }`}>
+                          {t.priority}
+                        </span>
+                      )}
+                      {t.dueDate && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                          {new Date(t.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <motion.div
-                    initial={false}
-                    animate={t.done ? { 
-                      scale: [1, 1.3, 1], 
-                      rotate: [0, 180, 360],
-                      opacity: [0.8, 1, 0.8] 
-                    } : {}}
-                    transition={{ duration: 0.6, ease: "easeInOut" }}
-                    className={`flex items-center justify-center w-8 h-8 rounded-full shadow-lg ${
-                      t.done 
-                        ? 'bg-gradient-to-br from-green-400 to-emerald-500' 
-                        : 'bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-700'
-                    }`}
-                  >
-                    {t.done && (
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </motion.div>
                 </div>
               </motion.div>
             ))}

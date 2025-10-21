@@ -51,122 +51,82 @@ export default function Page() {
 
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Banner for Non-Logged-In Users */}
+    <div className="space-y-4">
+      {/* Minimal Login Prompt */}
       {!user && (
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 p-1 shadow-2xl"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center justify-between p-3 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800"
         >
-          <div className="bg-white rounded-xl p-8 text-center space-y-4">
-            <div className="flex justify-center">
-              <div className="p-4 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full">
-                <Sparkles className="h-12 w-12 text-purple-600" />
-              </div>
-            </div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
-              Welcome to Focus Notebook! ✨
-            </h2>
-            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-              Your personal productivity companion. Track thoughts, manage tasks, and achieve your goals with a beautiful, intuitive interface.
-            </p>
-            <div className="flex items-center justify-center gap-4 pt-4">
-              <Link
-                href="/login"
-                className="flex items-center gap-2 px-8 py-4 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-              >
-                <Lock className="h-5 w-5" />
-                Sign In to Get Started
-              </Link>
-            </div>
-            <p className="text-sm text-gray-500 pt-2">
-              🔐 Secure • ☁️ Cloud Sync • 📱 Multi-Device
-            </p>
-          </div>
+          <span className="text-sm text-gray-600 dark:text-gray-400">Not syncing</span>
+          <Link
+            href="/login"
+            className="text-sm font-medium px-4 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+          >
+            Sign In
+          </Link>
         </motion.div>
       )}
 
-      <section className="rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 border-4 border-purple-200 shadow-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-purple-100 via-pink-100 to-blue-100 px-6 py-4 border-b-4 border-purple-200">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg shadow-md">
-              <MessageSquare className="h-5 w-5 text-white" />
-            </div>
-            <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              💭 What&apos;s on your mind?
-            </h2>
-          </div>
-        </div>
-        <div className="p-6">
-          <form onSubmit={handleSubmit(onSubmit)} className="flex gap-3">
+      <section className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+        <div className="p-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="flex gap-2">
             <input
               aria-label="Thought"
-              className="flex-1 px-4 py-3 rounded-xl border-2 border-purple-200 focus:border-purple-400 focus:ring-4 focus:ring-purple-100 outline-none transition-all bg-white"
-              placeholder="Share your thoughts..."
+              className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 outline-none transition-all bg-white dark:bg-gray-800 text-sm"
+              placeholder="What's on your mind?"
               {...register('text', { required: true })}
             />
             <button 
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105" 
+              className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 transition-colors" 
               type="submit"
             >
-              ✨ Add
+              Add
             </button>
           </form>
         </div>
       </section>
 
-      <section className="rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50 border-4 border-blue-200 shadow-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-100 via-cyan-100 to-teal-100 px-6 py-4 border-b-4 border-blue-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg shadow-md">
-                <Lightbulb className="h-5 w-5 text-white" />
-              </div>
-              <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                💡 Your Thoughts
-              </h2>
-            </div>
-            {thoughts.length > 3 && (
-              <button
-                className="px-4 py-2 rounded-full text-sm font-semibold bg-white/50 hover:bg-white transition-all text-blue-700 hover:scale-105"
-                onClick={() => setShowAll((v) => !v)}
-              >
-                {showAll ? '📖 Show less' : '📚 Show all'}
-              </button>
-            )}
-          </div>
+      <section className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Thoughts</h2>
+          {thoughts.length > 3 && (
+            <button
+              className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              onClick={() => setShowAll((v) => !v)}
+            >
+              {showAll ? 'Less' : 'All'}
+            </button>
+          )}
         </div>
-        <div className="p-6">
-          <ul className="space-y-3">
+        <div className="p-4">
+          <ul className="space-y-2">
             {(showAll ? thoughts : recentThoughts).length === 0 && (
-              <li className="text-center py-8 text-gray-500">
-                <Lightbulb className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                <p>No thoughts yet. Start sharing what&apos;s on your mind! 💭</p>
+              <li className="text-center py-8 text-sm text-gray-400">
+                No thoughts yet
               </li>
             )}
             {(showAll ? thoughts : recentThoughts).map((t) => (
               <motion.li
                 key={t.id}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 onClick={() => setSelectedThought(t)}
-                className="flex items-center gap-3 p-4 rounded-xl bg-white border-2 border-blue-200 transition-all hover:shadow-md hover:border-blue-300 cursor-pointer"
+                className="flex items-center gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer group"
               >
-                <Lightbulb className="h-5 w-5 text-blue-500 flex-shrink-0" />
-                <div className="flex-1 text-gray-800 font-medium">
+                <div className="flex-1 text-sm text-gray-700 dark:text-gray-300">
                   {t.text}
                 </div>
                 <button
-                  className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-all transform hover:scale-110"
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600 transition-all"
                   onClick={(e) => {
                     e.stopPropagation();
                     deleteThought(t.id);
                   }}
-                  aria-label={`Delete ${t.text}`}
-                  title="Delete"
+                  aria-label="Delete"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </motion.li>
             ))}
@@ -175,49 +135,32 @@ export default function Page() {
       </section>
 
       {/* Quick Focus Section */}
-      <section className="rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 border-4 border-green-200 shadow-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-green-100 via-emerald-100 to-teal-100 px-6 py-4 border-b-4 border-green-200">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg shadow-md">
-              <Timer className="h-5 w-5 text-white" />
-            </div>
-            <h2 className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-              ⏱️ Quick Focus Session
-            </h2>
-          </div>
+      <section className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Quick Focus</h2>
         </div>
-        <div className="p-6">
-          <p className="text-gray-600 mb-4">Start a focused work session and boost your productivity!</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="p-4">
+          <div className="grid grid-cols-3 gap-2">
             <Link
               href="/tools/focus?duration=25"
-              className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105"
+              className="flex flex-col items-center gap-1 px-3 py-3 rounded-lg bg-green-50 dark:bg-green-950/20 hover:bg-green-100 dark:hover:bg-green-950/30 border border-green-200 dark:border-green-800 transition-colors"
             >
-              <Play className="h-5 w-5" />
-              <div className="text-left">
-                <div className="text-sm opacity-90">Pomodoro</div>
-                <div className="text-lg font-bold">25 min</div>
-              </div>
+              <span className="text-lg font-bold text-green-600 dark:text-green-400">25m</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400">Pomodoro</span>
             </Link>
             <Link
               href="/tools/focus?duration=50"
-              className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105"
+              className="flex flex-col items-center gap-1 px-3 py-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 hover:bg-blue-100 dark:hover:bg-blue-950/30 border border-blue-200 dark:border-blue-800 transition-colors"
             >
-              <Timer className="h-5 w-5" />
-              <div className="text-left">
-                <div className="text-sm opacity-90">Deep Work</div>
-                <div className="text-lg font-bold">50 min</div>
-              </div>
+              <span className="text-lg font-bold text-blue-600 dark:text-blue-400">50m</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400">Deep Work</span>
             </Link>
             <Link
               href="/tools/focus?duration=5"
-              className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105"
+              className="flex flex-col items-center gap-1 px-3 py-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 hover:bg-amber-100 dark:hover:bg-amber-950/30 border border-amber-200 dark:border-amber-800 transition-colors"
             >
-              <Coffee className="h-5 w-5" />
-              <div className="text-left">
-                <div className="text-sm opacity-90">Quick Break</div>
-                <div className="text-lg font-bold">5 min</div>
-              </div>
+              <span className="text-lg font-bold text-amber-600 dark:text-amber-400">5m</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400">Break</span>
             </Link>
           </div>
         </div>

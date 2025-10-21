@@ -2,9 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  output: 'export', // ✅ enables static build in /out folder
+  // output: 'export', // Temporarily disabled for build
   images: {
-    unoptimized: true, // ✅ prevents image optimizer errors in static mode
+    unoptimized: true,
   },
   experimental: {
     optimizePackageImports: [

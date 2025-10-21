@@ -237,7 +237,7 @@ export function FocusStatistics() {
                       <Star
                         className={`h-10 w-10 ${
                           star <= (hoveredRating || rating)
-                            ? 'fill-yellow-400 text-yellow-400'
+                            ? 'fill-gray-800 text-gray-800 dark:fill-gray-200 dark:text-gray-200'
                             : 'text-gray-300 dark:text-gray-600'
                         }`}
                       />

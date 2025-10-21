@@ -9,6 +9,18 @@ const config: Config = {
   darkMode: ['class', 'class'],
   theme: {
   	extend: {
+  		fontFamily: {
+  			sans: [
+  				'ui-rounded',
+  				'SF Pro Rounded',
+  				'-apple-system',
+  				'BlinkMacSystemFont',
+  				'Segoe UI',
+  				'Roboto',
+  				'Ubuntu',
+  				'sans-serif',
+  			],
+  		},
   		colors: {
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',

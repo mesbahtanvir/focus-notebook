@@ -9,20 +9,28 @@ import { ProcessingApprovalDialog } from "@/components/ProcessingApprovalDialog"
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, 
-  Filter, 
   Brain,
   Heart,
   Frown,
   Smile,
   CheckCircle2,
   Tag,
-  TrendingUp,
   Calendar,
   Sparkles,
   Loader2,
   Bell
 } from "lucide-react";
 import { ThoughtDetailModal } from "@/components/ThoughtDetailModal";
+import {
+  ToolPageLayout,
+  ToolHeader,
+  ToolFilters,
+  FilterSelect,
+  ToolContent,
+  ToolList,
+  ToolCard,
+  EmptyState
+} from "@/components/tools";
 
 export default function ThoughtsPage() {
   const thoughts = useThoughts((s) => s.thoughts);
@@ -167,38 +175,42 @@ export default function ThoughtsPage() {
 
   const getTypeColor = (type: ThoughtType) => {
     switch (type) {
-      case 'task': return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'feeling-good': return 'text-green-600 bg-green-50 border-green-200';
-      case 'feeling-bad': return 'text-red-600 bg-red-50 border-red-200';
-      case 'neutral': return 'text-gray-600 bg-gray-50 border-gray-200';
+      case 'task': return 'text-blue-700 bg-blue-100 border border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800';
+      case 'feeling-good': return 'text-green-700 bg-green-100 border border-green-200 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800';
+      case 'feeling-bad': return 'text-red-700 bg-red-100 border border-red-200 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800';
+      case 'neutral': return 'text-gray-700 bg-gray-100 border border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700';
     }
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 p-6 rounded-2xl border-4 border-indigo-200 shadow-lg">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-            💭 Thoughts
-          </h1>
-          <p className="text-gray-600 mt-1 text-sm md:text-base">Capture and analyze what&apos;s on your mind</p>
-          {thoughtStats.unprocessed > 0 && (
-            <p className="text-amber-600 mt-1 text-xs font-medium">
-              {thoughtStats.unprocessed} unprocessed thought(s)
-            </p>
-          )}
-        </div>
-        <div className="flex gap-2">
+    <ToolPageLayout>
+      <ToolHeader
+        title="Thoughts"
+        stats={[
+          { label: 'total', value: thoughtStats.total },
+          { label: 'unprocessed', value: thoughtStats.unprocessed, variant: 'warning' },
+          { label: 'tasks', value: thoughtStats.tasks, variant: 'info' },
+          { label: 'analyzed', value: thoughtStats.analyzed },
+          { label: 'done', value: thoughtStats.completed, variant: 'success' }
+        ]}
+        action={{
+          label: 'New Thought',
+          icon: Plus,
+          onClick: () => setShowNewThought(true)
+        }}
+      />
+
+      {(awaitingApproval.length > 0 || thoughtStats.unprocessed > 0) && (
+        <div className="flex flex-wrap items-center gap-2">
           {awaitingApproval.length > 0 && (
             <button
               onClick={() => {
                 setCurrentApprovalItem(awaitingApproval[0].id);
                 setShowApprovalDialog(true);
               }}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-orange-600 to-amber-600 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105 whitespace-nowrap animate-pulse"
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 text-white text-sm font-semibold hover:from-orange-600 hover:to-amber-600 transition-all flex items-center gap-2 shadow-sm hover:shadow-md hover:-translate-y-0.5 animate-pulse"
             >
-              <Bell className="h-5 w-5" />
+              <Bell className="h-4 w-4" />
               Review ({awaitingApproval.length})
             </button>
           )}
@@ -206,196 +218,145 @@ export default function ThoughtsPage() {
             <button
               onClick={handleProcessAll}
               disabled={isProcessing}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold hover:from-emerald-600 hover:to-teal-600 transition-all flex items-center gap-2 shadow-sm hover:shadow-md hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isProcessing ? (
                 <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Processing...
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-5 w-5" />
+                  <Sparkles className="h-4 w-4" />
                   Process All ({thoughtStats.unprocessed})
                 </>
               )}
             </button>
           )}
-          <button
-            onClick={() => setShowNewThought(true)}
-            className="flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105 whitespace-nowrap"
-          >
-            <Plus className="h-5 w-5" />
-            New Thought
-          </button>
         </div>
-      </div>
+      )}
 
-      {/* Stats */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-5">
-        <div className="rounded-xl p-4 bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 shadow-md">
-          <div className="text-xs md:text-sm text-gray-600 font-medium">📊 Total</div>
-          <div className="text-xl md:text-2xl font-bold mt-1 text-gray-800">{thoughtStats.total}</div>
-        </div>
-        <div className="rounded-xl p-4 bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-200 shadow-md">
-          <div className="text-xs md:text-sm text-amber-600 font-medium">⏳ Unprocessed</div>
-          <div className="text-xl md:text-2xl font-bold mt-1 text-amber-600">{thoughtStats.unprocessed}</div>
-        </div>
-        <div className="rounded-xl p-4 bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 shadow-md">
-          <div className="text-xs md:text-sm text-blue-600 font-medium">✅ Tasks</div>
-          <div className="text-xl md:text-2xl font-bold mt-1 text-blue-600">{thoughtStats.tasks}</div>
-        </div>
-        <div className="rounded-xl p-4 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 shadow-md">
-          <div className="text-xs md:text-sm text-purple-600 font-medium">🧠 Analyzed</div>
-          <div className="text-xl md:text-2xl font-bold mt-1 text-purple-600">{thoughtStats.analyzed}</div>
-        </div>
-        <div className="rounded-xl p-4 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 shadow-md col-span-2 md:col-span-1">
-          <div className="text-xs md:text-sm text-green-600 font-medium">✓ Completed</div>
-          <div className="text-xl md:text-2xl font-bold mt-1 text-green-600">{thoughtStats.completed}</div>
-        </div>
-      </div>
+      <ToolFilters>
+        <FilterSelect
+          value={filterType}
+          onChange={(value) => setFilterType(value as ThoughtType | 'all')}
+          options={[
+            { value: 'all', label: 'All Types' },
+            { value: 'task', label: 'Tasks' },
+            { value: 'feeling-good', label: 'Good Feelings' },
+            { value: 'feeling-bad', label: 'Bad Feelings' },
+            { value: 'neutral', label: 'Neutral' }
+          ]}
+        />
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showCompleted}
+            onChange={(e) => setShowCompleted(e.target.checked)}
+            className="h-4 w-4 rounded"
+          />
+          <span className="text-gray-600 dark:text-gray-400">Show completed</span>
+        </label>
+      </ToolFilters>
 
-      {/* Filters */}
-      <div className="rounded-xl p-4 md:p-6 bg-gradient-to-r from-purple-100 to-pink-100 border-2 border-purple-200 shadow-md">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
-              <Filter className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-sm font-bold text-gray-800">Filters</span>
-          </div>
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value as ThoughtType | 'all')}
-            className="px-4 py-2 rounded-lg border-2 border-purple-200 bg-white text-sm font-medium focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none"
-          >
-            <option value="all">All Types</option>
-            <option value="task">Tasks</option>
-            <option value="feeling-good">Good Feelings</option>
-            <option value="feeling-bad">Bad Feelings</option>
-            <option value="neutral">Neutral</option>
-          </select>
-          <label className="flex items-center gap-2 text-sm font-medium cursor-pointer bg-white px-4 py-2 rounded-lg border-2 border-purple-200 hover:bg-purple-50 transition-colors">
-            <input
-              type="checkbox"
-              checked={showCompleted}
-              onChange={(e) => setShowCompleted(e.target.checked)}
-              className="h-4 w-4 rounded border-2 border-purple-300 text-purple-600 focus:ring-2 focus:ring-purple-200"
-            />
-            Show completed
-          </label>
-        </div>
-      </div>
-
-      {/* Thoughts List */}
-      <div className="space-y-3">
-        <div className="text-sm font-medium text-gray-600 bg-white px-4 py-2 rounded-lg border-2 border-gray-200 inline-block">
-          📝 Showing {filteredThoughts.length} of {thoughts.length} thoughts
-        </div>
-        <AnimatePresence>
-          {filteredThoughts.map((thought) => (
-            <motion.div
-              key={thought.id}
-              layout
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="rounded-xl p-4 md:p-6 bg-white border-2 border-purple-200 cursor-pointer hover:shadow-lg hover:border-purple-300 transition-all transform hover:scale-[1.01]"
-              onClick={() => setSelectedThought(thought)}
-            >
-              <div className="flex items-start gap-4">
-                <input
-                  type="checkbox"
-                  checked={thought.done}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    useThoughts.getState().toggle(thought.id);
-                  }}
-                  className="h-5 w-5 rounded mt-0.5"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className={`font-medium text-gray-800 ${thought.done ? 'line-through text-gray-400' : ''}`}>
-                    {thought.text}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2 mt-2">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium border flex items-center gap-1 ${getTypeColor(thought.type)}`}>
-                      {getTypeIcon(thought.type)}
-                      {thought.type.replace('-', ' ')}
-                    </span>
-                    {thought.intensity && (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                        <Heart className="h-3 w-3 inline mr-1" />
-                        Intensity: {thought.intensity}/10
-                      </span>
-                    )}
-                    {thought.cbtAnalysis && (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
-                        <Brain className="h-3 w-3 inline mr-1" />
-                        CBT Analyzed
-                      </span>
-                    )}
-                    {thought.tags && thought.tags.length > 0 && (
-                      <span className="text-xs text-gray-600 flex items-center gap-1">
-                        <Tag className="h-3 w-3" />
-                        {thought.tags.join(', ')}
-                      </span>
-                    )}
-                    <span className="text-xs text-gray-600 flex items-center gap-1 ml-auto">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(thought.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  
-                  {/* Process Now Button for unprocessed thoughts */}
-                  {!thought.tags?.includes('processed') && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleProcessThought(thought.id);
-                      }}
-                      disabled={isProcessing && processingThoughtId === thought.id}
-                      className="mt-3 px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-medium rounded-lg hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isProcessing && processingThoughtId === thought.id ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-4 w-4" />
-                          Process Now
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-
-        {filteredThoughts.length === 0 && (
-          <div className="rounded-2xl p-12 text-center bg-gradient-to-br from-purple-50 to-pink-50 border-4 border-purple-200 shadow-lg">
-            <Brain className="h-16 w-16 mx-auto text-purple-400 mb-4" />
-            <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-2">No thoughts found</h3>
-            <p className="text-gray-600 mb-6">
-              {thoughts.length === 0 
-                ? "💭 Capture your first thought to get started"
-                : "🔍 Try adjusting your filters"
-              }
-            </p>
-            {thoughts.length === 0 && (
-              <button
-                onClick={() => setShowNewThought(true)}
-                className="px-8 py-3 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105"
-              >
-                ✨ Create Thought
-              </button>
-            )}
-          </div>
+      <ToolContent>
+        {filteredThoughts.length === 0 ? (
+          <EmptyState
+            icon={<Brain className="h-12 w-12" />}
+            title="No thoughts found"
+            description={thoughts.length === 0 ? "Capture your first thought to get started" : "Try adjusting your filters"}
+            action={thoughts.length === 0 ? {
+              label: 'Create Thought',
+              onClick: () => setShowNewThought(true)
+            } : undefined}
+          />
+        ) : (
+          <ToolList>
+            <AnimatePresence>
+              {filteredThoughts.map((thought) => (
+                <motion.div
+                  key={thought.id}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <ToolCard onClick={() => setSelectedThought(thought)}>
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={thought.done}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          useThoughts.getState().toggle(thought.id);
+                        }}
+                        className="h-4 w-4 rounded mt-0.5"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium ${thought.done ? 'line-through text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                          {thought.text}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2 mt-3">
+                          <span className={`px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 ${getTypeColor(thought.type)}`}>
+                            {getTypeIcon(thought.type)}
+                            {thought.type.replace('-', ' ')}
+                          </span>
+                          {thought.intensity && (
+                            <span className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800">
+                              <Heart className="h-3 w-3" />
+                              {thought.intensity}/10
+                            </span>
+                          )}
+                          {thought.cbtAnalysis && (
+                            <span className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800">
+                              <Brain className="h-3 w-3" />
+                              Analyzed
+                            </span>
+                          )}
+                          {thought.tags && thought.tags.length > 0 && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800">
+                              <Tag className="h-3 w-3" />
+                              {thought.tags.join(', ')}
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(thought.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        
+                        {/* Process Now Button for unprocessed thoughts */}
+                        {!thought.tags?.includes('processed') && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleProcessThought(thought.id);
+                            }}
+                            disabled={isProcessing && processingThoughtId === thought.id}
+                            className="mt-3 px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-semibold rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all flex items-center gap-1.5 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isProcessing && processingThoughtId === thought.id ? (
+                              <>
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="h-3 w-3" />
+                                Process Now
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </ToolCard>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </ToolList>
         )}
-      </div>
+      </ToolContent>
 
       {/* New Thought Modal */}
       {showNewThought && (
@@ -418,7 +379,7 @@ export default function ThoughtsPage() {
           onReject={handleReject}
         />
       )}
-    </div>
+    </ToolPageLayout>
   );
 }
 

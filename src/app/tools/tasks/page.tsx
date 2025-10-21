@@ -32,9 +32,15 @@ export default function TasksPage() {
   const [sortBy, setSortBy] = useState<SortOption>('priority');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showFilters, setShowFilters] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const filteredAndSortedTasks = useMemo(() => {
     let filtered = tasks.filter(task => {
+      // If showCompleted is true, show all tasks
+      if (!showCompleted) {
+        // Hide completed one-time tasks, but show completed recurring tasks (they're "done for today")
+        if (task.done && (!task.recurrence || task.recurrence.type === 'none')) return false;
+      }
       if (filterStatus !== 'all' && task.status !== filterStatus) return false;
       if (filterCategory !== 'all' && task.category !== filterCategory) return false;
       if (filterPriority !== 'all' && task.priority !== filterPriority) return false;
@@ -67,7 +73,7 @@ export default function TasksPage() {
     });
 
     return filtered;
-  }, [tasks, filterStatus, filterCategory, filterPriority, sortBy]);
+  }, [tasks, filterStatus, filterCategory, filterPriority, sortBy, showCompleted]);
 
   // Group tasks by frequency
   const groupedTasks = useMemo(() => {
@@ -124,58 +130,50 @@ export default function TasksPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-2xl border-4 border-green-200 shadow-lg">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-            ✅ Task Manager
-          </h1>
-          <p className="text-gray-600 mt-1 text-sm md:text-base">Organize and track your tasks</p>
+      {/* Header with inline stats */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div className="flex-1">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Tasks</h1>
+          <div className="flex items-center gap-4 mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <span>{taskStats.active} active</span>
+            <span>•</span>
+            <span>{taskStats.completed} done</span>
+            {taskStats.overdue > 0 && (
+              <>
+                <span>•</span>
+                <span className="text-red-600 dark:text-red-400">{taskStats.overdue} overdue</span>
+              </>
+            )}
+          </div>
         </div>
         <button
           onClick={() => setShowNewTask(true)}
-          className="flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105 whitespace-nowrap"
+          className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
         >
-          <Plus className="h-5 w-5" />
+          <Plus className="h-4 w-4" />
           New Task
         </button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <div className="card p-4">
-          <div className="text-sm text-muted-foreground">Total</div>
-          <div className="text-2xl font-bold mt-1">{taskStats.total}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-sm text-muted-foreground">Active</div>
-          <div className="text-2xl font-bold mt-1 text-blue-600 dark:text-blue-400">{taskStats.active}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-sm text-muted-foreground">Completed</div>
-          <div className="text-2xl font-bold mt-1 text-green-600 dark:text-green-400">{taskStats.completed}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-sm text-muted-foreground">Backlog</div>
-          <div className="text-2xl font-bold mt-1 text-gray-600 dark:text-gray-400">{taskStats.backlog}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-sm text-muted-foreground">Overdue</div>
-          <div className="text-2xl font-bold mt-1 text-red-600 dark:text-red-400">{taskStats.overdue}</div>
-        </div>
       </div>
 
       {/* Filters & Sort */}
       <div className="card p-4 space-y-4">
         <div className="flex items-center justify-between">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 text-sm font-medium"
-          >
-            <Filter className="h-4 w-4" />
-            Filters
-            <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 text-sm font-medium"
+            >
+              <Filter className="h-4 w-4" />
+              Filters
+              <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            </button>
+            <button
+              onClick={() => setShowCompleted(!showCompleted)}
+              className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+            >
+              {showCompleted ? 'Hide' : 'Show'} completed
+            </button>
+          </div>
           <div className="flex items-center gap-2">
             <SortAsc className="h-4 w-4 text-muted-foreground" />
             <select
@@ -322,9 +320,16 @@ export default function TasksPage() {
                           className="h-5 w-5 rounded"
                         />
                         <div className="flex-1">
-                          <h3 className={`font-medium ${task.done ? 'line-through text-muted-foreground' : ''}`}>
-                            {task.title}
-                          </h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className={`font-medium ${task.done && !task.recurrence ? 'line-through text-muted-foreground' : ''}`}>
+                              {task.title}
+                            </h3>
+                            {task.done && task.recurrence && task.recurrence.type !== 'none' && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400">
+                                ✓ Done for today
+                              </span>
+                            )}
+                          </div>
                           {task.notes && (
                             <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.notes}</p>
                           )}
