@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useThoughts, Thought, ThoughtType } from "@/store/useThoughts";
+import { manualProcessor } from "@/lib/thoughtProcessor/manualProcessor";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, 
@@ -13,7 +14,9 @@ import {
   CheckCircle2,
   Tag,
   TrendingUp,
-  Calendar
+  Calendar,
+  Sparkles,
+  Loader2
 } from "lucide-react";
 import { ThoughtDetailModal } from "@/components/ThoughtDetailModal";
 
@@ -23,6 +26,8 @@ export default function ThoughtsPage() {
   const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
   const [filterType, setFilterType] = useState<ThoughtType | 'all'>('all');
   const [showCompleted, setShowCompleted] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingThoughtId, setProcessingThoughtId] = useState<string | null>(null);
 
   const filteredThoughts = useMemo(() => {
     let filtered = thoughts.filter(thought => {
@@ -45,9 +50,49 @@ export default function ThoughtsPage() {
     const tasks = thoughts.filter(t => t.type === 'task' && !t.done).length;
     const feelingBad = thoughts.filter(t => t.type === 'feeling-bad' && !t.done).length;
     const analyzed = thoughts.filter(t => t.cbtAnalysis).length;
+    const unprocessed = thoughts.filter(t => !t.tags?.includes('processed')).length;
 
-    return { total, completed, tasks, feelingBad, analyzed };
+    return { total, completed, tasks, feelingBad, analyzed, unprocessed };
   }, [thoughts]);
+
+  const handleProcessThought = async (thoughtId: string) => {
+    setIsProcessing(true);
+    setProcessingThoughtId(thoughtId);
+    
+    const result = await manualProcessor.processThought(thoughtId);
+    
+    if (result.success) {
+      // Success - thought will be updated by the processor
+    } else {
+      alert(`Failed to process: ${result.error}`);
+    }
+    
+    setIsProcessing(false);
+    setProcessingThoughtId(null);
+  };
+
+  const handleProcessAll = async () => {
+    const unprocessedThoughts = thoughts.filter(t => !t.tags?.includes('processed'));
+    
+    if (unprocessedThoughts.length === 0) {
+      alert('No unprocessed thoughts found');
+      return;
+    }
+
+    if (!confirm(`Process ${unprocessedThoughts.length} unprocessed thought(s)?`)) {
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    const result = await manualProcessor.processMultiple(
+      unprocessedThoughts.map(t => t.id)
+    );
+    
+    alert(`Processing complete!\n✓ Successful: ${result.successful}\n✗ Failed: ${result.failed}`);
+    
+    setIsProcessing(false);
+  };
 
   const getTypeIcon = (type: ThoughtType) => {
     switch (type) {
@@ -76,14 +121,40 @@ export default function ThoughtsPage() {
             💭 Thoughts
           </h1>
           <p className="text-gray-600 mt-1 text-sm md:text-base">Capture and analyze what&apos;s on your mind</p>
+          {thoughtStats.unprocessed > 0 && (
+            <p className="text-amber-600 mt-1 text-xs font-medium">
+              {thoughtStats.unprocessed} unprocessed thought(s)
+            </p>
+          )}
         </div>
-        <button
-          onClick={() => setShowNewThought(true)}
-          className="flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105 whitespace-nowrap"
-        >
-          <Plus className="h-5 w-5" />
-          New Thought
-        </button>
+        <div className="flex gap-2">
+          {thoughtStats.unprocessed > 0 && (
+            <button
+              onClick={handleProcessAll}
+              disabled={isProcessing}
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-5 w-5" />
+                  Process All ({thoughtStats.unprocessed})
+                </>
+              )}
+            </button>
+          )}
+          <button
+            onClick={() => setShowNewThought(true)}
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105 whitespace-nowrap"
+          >
+            <Plus className="h-5 w-5" />
+            New Thought
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -92,13 +163,13 @@ export default function ThoughtsPage() {
           <div className="text-xs md:text-sm text-gray-600 font-medium">📊 Total</div>
           <div className="text-xl md:text-2xl font-bold mt-1 text-gray-800">{thoughtStats.total}</div>
         </div>
+        <div className="rounded-xl p-4 bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-200 shadow-md">
+          <div className="text-xs md:text-sm text-amber-600 font-medium">⏳ Unprocessed</div>
+          <div className="text-xl md:text-2xl font-bold mt-1 text-amber-600">{thoughtStats.unprocessed}</div>
+        </div>
         <div className="rounded-xl p-4 bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 shadow-md">
           <div className="text-xs md:text-sm text-blue-600 font-medium">✅ Tasks</div>
           <div className="text-xl md:text-2xl font-bold mt-1 text-blue-600">{thoughtStats.tasks}</div>
-        </div>
-        <div className="rounded-xl p-4 bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-200 shadow-md">
-          <div className="text-xs md:text-sm text-red-600 font-medium">🤔 Need Processing</div>
-          <div className="text-xl md:text-2xl font-bold mt-1 text-red-600">{thoughtStats.feelingBad}</div>
         </div>
         <div className="rounded-xl p-4 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 shadow-md">
           <div className="text-xs md:text-sm text-purple-600 font-medium">🧠 Analyzed</div>
@@ -200,6 +271,30 @@ export default function ThoughtsPage() {
                       {new Date(thought.createdAt).toLocaleDateString()}
                     </span>
                   </div>
+                  
+                  {/* Process Now Button for unprocessed thoughts */}
+                  {!thought.tags?.includes('processed') && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleProcessThought(thought.id);
+                      }}
+                      disabled={isProcessing && processingThoughtId === thought.id}
+                      className="mt-3 px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-medium rounded-lg hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isProcessing && processingThoughtId === thought.id ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          Process Now
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.div>

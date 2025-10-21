@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useThoughts, Thought, ThoughtType } from "@/store/useThoughts";
+import { useProcessQueue } from "@/store/useProcessQueue";
+import { actionExecutor } from "@/lib/thoughtProcessor/actionExecutor";
+import { RevertProcessingDialog } from "./RevertProcessingDialog";
 import { 
   X, 
   Trash2,
@@ -13,7 +16,10 @@ import {
   Calendar,
   Lightbulb,
   FileText,
-  TrendingUp
+  TrendingUp,
+  RotateCcw,
+  CheckCircle2,
+  Sparkles
 } from "lucide-react";
 
 interface ThoughtDetailModalProps {
@@ -30,6 +36,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const [type, setType] = useState<ThoughtType>(thought.type);
   const [intensity, setIntensity] = useState(thought.intensity || 5);
   const [tagsInput, setTagsInput] = useState(thought.tags?.join(', ') || '');
+  const [showRevertDialog, setShowRevertDialog] = useState(false);
 
   // CBT Analysis fields
   const [situation, setSituation] = useState(thought.cbtAnalysis?.situation || '');
@@ -42,6 +49,15 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const updateThought = useThoughts((s) => s.updateThought);
   const deleteThought = useThoughts((s) => s.deleteThought);
   const toggleThought = useThoughts((s) => s.toggle);
+  
+  // Processing queue
+  const queue = useProcessQueue((s) => s.queue);
+  const isProcessed = thought.tags?.includes('processed');
+  
+  // Find the queue item for this thought (most recent completed)
+  const queueItem = queue
+    .filter(q => q.thoughtId === thought.id && q.status === 'completed')
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
 
   const handleSave = async () => {
     const tags = tagsInput
@@ -79,6 +95,19 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
     }
   };
 
+  const handleRevert = async () => {
+    if (!queueItem) return;
+    
+    const result = await actionExecutor.revertProcessing(queueItem.id);
+    if (result.success) {
+      setShowRevertDialog(false);
+      // Refresh to show updated state
+      onClose();
+    } else {
+      alert(`Failed to revert: ${result.error}`);
+    }
+  };
+
   const getTypeColor = (t: ThoughtType) => {
     switch (t) {
       case 'task': return 'bg-blue-500';
@@ -107,8 +136,24 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                 className="h-5 w-5 rounded"
               />
               <h2 className="text-xl font-bold">Thought Details</h2>
+              {isProcessed && (
+                <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Processed
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
+              {isProcessed && queueItem && (
+                <button
+                  onClick={() => setShowRevertDialog(true)}
+                  className="px-3 py-2 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/20 rounded flex items-center gap-2 text-sm font-medium"
+                  title="Revert processing"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Revert
+                </button>
+              )}
               <button
                 onClick={handleDelete}
                 className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded"
@@ -417,6 +462,15 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
           )}
         </div>
       </motion.div>
+
+      {/* Revert Dialog */}
+      {showRevertDialog && queueItem && (
+        <RevertProcessingDialog
+          queueItem={queueItem}
+          onConfirm={handleRevert}
+          onCancel={() => setShowRevertDialog(false)}
+        />
+      )}
     </div>
   );
 }
