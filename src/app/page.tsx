@@ -76,8 +76,8 @@ export default function Page() {
         </motion.div>
       )}
 
-      <section className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-        <div className="p-4">
+      <section className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-4 border-purple-200 dark:border-purple-800 shadow-xl overflow-hidden">
+        <div className="p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="flex gap-2">
             <input
               aria-label="Thought"
@@ -86,7 +86,7 @@ export default function Page() {
               {...register('text', { required: true })}
             />
             <button 
-              className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 transition-colors" 
+              className="px-6 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold shadow-lg transition-all transform hover:scale-105 active:scale-95" 
               type="submit"
             >
               Add
@@ -95,19 +95,19 @@ export default function Page() {
         </div>
       </section>
 
-      <section className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Thoughts</h2>
+      <section className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl overflow-hidden">
+        <div className="px-6 py-4 bg-gradient-to-r from-blue-100 via-cyan-100 to-teal-100 dark:from-blue-900 dark:via-cyan-900 dark:to-teal-900 border-b-4 border-blue-200 dark:border-blue-800 flex items-center justify-between">
+          <h2 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">💭 Thoughts</h2>
           {thoughts.length > 3 && (
             <button
-              className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              className="text-sm font-medium px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-md"
               onClick={() => setShowAll((v) => !v)}
             >
               {showAll ? 'Less' : 'All'}
             </button>
           )}
         </div>
-        <div className="p-4">
+        <div className="p-6">
           <ul className="space-y-2">
             {(showAll ? thoughts : recentThoughts).length === 0 && (
               <li className="text-center py-8 text-sm text-gray-400">
@@ -142,52 +142,55 @@ export default function Page() {
       </section>
 
       {/* Quick Focus Section */}
-      <section className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Quick Focus</h2>
+      <section className="rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-4 border-green-200 dark:border-green-800 shadow-xl overflow-hidden">
+        <div className="px-6 py-4 bg-gradient-to-r from-green-100 via-emerald-100 to-teal-100 dark:from-green-900 dark:via-emerald-900 dark:to-teal-900 border-b-4 border-green-200 dark:border-green-800">
+          <h2 className="text-lg font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">⚡ Quick Focus</h2>
         </div>
-        <div className="p-4">
+        <div className="p-6">
           <div className="grid grid-cols-3 gap-2">
             <Link
               href="/tools/focus?duration=25"
-              className="flex flex-col items-center gap-1 px-3 py-3 rounded-lg bg-green-50 dark:bg-green-950/20 hover:bg-green-100 dark:hover:bg-green-950/30 border border-green-200 dark:border-green-800 transition-colors"
+              className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900 dark:to-emerald-900 border-2 border-green-300 dark:border-green-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
             >
-              <span className="text-lg font-bold text-green-600 dark:text-green-400">25m</span>
-              <span className="text-xs text-gray-600 dark:text-gray-400">Pomodoro</span>
+              <Timer className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <span className="text-xl font-bold text-green-600 dark:text-green-400">25m</span>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Pomodoro</span>
             </Link>
             <Link
               href="/tools/focus?duration=50"
-              className="flex flex-col items-center gap-1 px-3 py-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 hover:bg-blue-100 dark:hover:bg-blue-950/30 border border-blue-200 dark:border-blue-800 transition-colors"
+              className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900 dark:to-cyan-900 border-2 border-blue-300 dark:border-blue-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
             >
-              <span className="text-lg font-bold text-blue-600 dark:text-blue-400">50m</span>
-              <span className="text-xs text-gray-600 dark:text-gray-400">Deep Work</span>
+              <Play className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <span className="text-xl font-bold text-blue-600 dark:text-blue-400">50m</span>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Deep Work</span>
             </Link>
             <Link
               href="/tools/focus?duration=5"
-              className="flex flex-col items-center gap-1 px-3 py-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 hover:bg-amber-100 dark:hover:bg-amber-950/30 border border-amber-200 dark:border-amber-800 transition-colors"
+              className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900 dark:to-orange-900 border-2 border-amber-300 dark:border-amber-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
             >
-              <span className="text-lg font-bold text-amber-600 dark:text-amber-400">5m</span>
-              <span className="text-xs text-gray-600 dark:text-gray-400">Break</span>
+              <Coffee className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              <span className="text-xl font-bold text-amber-600 dark:text-amber-400">5m</span>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Break</span>
             </Link>
           </div>
         </div>
       </section>
 
       {/* Errands Preview Section */}
-      <section className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-            <ShoppingBag className="h-4 w-4" />
+      <section className="rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border-4 border-orange-200 dark:border-orange-800 shadow-xl overflow-hidden">
+        <div className="px-6 py-4 bg-gradient-to-r from-orange-100 via-amber-100 to-yellow-100 dark:from-orange-900 dark:via-amber-900 dark:to-yellow-900 border-b-4 border-orange-200 dark:border-orange-800 flex items-center justify-between">
+          <h2 className="text-lg font-bold bg-gradient-to-r from-orange-600 to-amber-600 dark:from-orange-400 dark:to-amber-400 bg-clip-text text-transparent flex items-center gap-2">
+            <ShoppingBag className="h-5 w-5 text-orange-600 dark:text-orange-400" />
             Errands & Out-of-Office
           </h2>
           <Link
             href="/tools/errands"
-            className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+            className="text-sm font-medium px-3 py-1 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-colors shadow-md"
           >
             View All
           </Link>
         </div>
-        <div className="p-4">
+        <div className="p-6">
           {activeErrands.length === 0 ? (
             <div className="text-center py-6 space-y-2">
               <div className="text-3xl">✅</div>
