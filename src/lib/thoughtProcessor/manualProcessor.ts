@@ -141,41 +141,9 @@ export class ManualProcessor {
         });
       }
 
-      // Execute actions
-      const queueItem = getQueueItem(queueId);
-      if (!queueItem) return { success: false, error: 'Queue item not found' };
-
-      for (const action of queueItem.actions) {
-        const executionResult = await actionExecutor.executeAction(action, queueItem);
-        
-        if (executionResult.success) {
-          updateAction(queueId, action.id, {
-            status: 'executed'
-          });
-          updateQueueItem(queueId, {
-            executedActions: [...queueItem.executedActions, action.id]
-          });
-        } else {
-          updateAction(queueId, action.id, {
-            status: 'failed',
-            error: executionResult.error
-          });
-        }
-      }
-
-      // Mark thought as processed
-      const processingNote = `[Processed: ${new Date().toISOString()} by manual trigger - Queue: ${queueId}]`;
-      const existingNotes = thought.notes || '';
-      
-      updateThought(thought.id, {
-        tags: [...(thought.tags || []), 'processed'],
-        notes: existingNotes ? `${existingNotes}\n\n${processingNote}` : processingNote
-      });
-
-      // Mark queue item as completed
+      // Set status to awaiting approval (Safe Mode)
       updateQueueItem(queueId, {
-        status: 'completed',
-        completedAt: new Date().toISOString()
+        status: 'awaiting-approval'
       });
 
       // Update request log

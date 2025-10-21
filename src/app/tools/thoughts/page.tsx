@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useThoughts, Thought, ThoughtType } from "@/store/useThoughts";
+import { useProcessQueue } from "@/store/useProcessQueue";
 import { manualProcessor } from "@/lib/thoughtProcessor/manualProcessor";
+import { approvalHandler } from "@/lib/thoughtProcessor/approvalHandler";
+import { ProcessingApprovalDialog } from "@/components/ProcessingApprovalDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, 
@@ -16,18 +19,36 @@ import {
   TrendingUp,
   Calendar,
   Sparkles,
-  Loader2
+  Loader2,
+  Bell
 } from "lucide-react";
 import { ThoughtDetailModal } from "@/components/ThoughtDetailModal";
 
 export default function ThoughtsPage() {
   const thoughts = useThoughts((s) => s.thoughts);
+  const queue = useProcessQueue((s) => s.queue);
   const [showNewThought, setShowNewThought] = useState(false);
   const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
   const [filterType, setFilterType] = useState<ThoughtType | 'all'>('all');
   const [showCompleted, setShowCompleted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingThoughtId, setProcessingThoughtId] = useState<string | null>(null);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [currentApprovalItem, setCurrentApprovalItem] = useState<string | null>(null);
+
+  // Get awaiting approval items
+  const awaitingApproval = useMemo(() => {
+    return queue.filter(q => q.status === 'awaiting-approval');
+  }, [queue]);
+
+  // Auto-show approval dialog when new items need approval
+  useEffect(() => {
+    if (awaitingApproval.length > 0 && !showApprovalDialog && !currentApprovalItem) {
+      const firstItem = awaitingApproval[0];
+      setCurrentApprovalItem(firstItem.id);
+      setShowApprovalDialog(true);
+    }
+  }, [awaitingApproval, showApprovalDialog, currentApprovalItem]);
 
   const filteredThoughts = useMemo(() => {
     let filtered = thoughts.filter(thought => {
@@ -79,7 +100,7 @@ export default function ThoughtsPage() {
       return;
     }
 
-    if (!confirm(`Process ${unprocessedThoughts.length} unprocessed thought(s)?`)) {
+    if (!confirm(`Process ${unprocessedThoughts.length} unprocessed thought(s)?\n\nYou'll need to approve each one.`)) {
       return;
     }
 
@@ -89,9 +110,50 @@ export default function ThoughtsPage() {
       unprocessedThoughts.map(t => t.id)
     );
     
-    alert(`Processing complete!\n✓ Successful: ${result.successful}\n✗ Failed: ${result.failed}`);
+    alert(`Analysis complete!\n${result.successful} thought(s) ready for approval\n${result.failed} failed`);
     
     setIsProcessing(false);
+  };
+
+  const handleApprove = async (approvedActionIds: string[]) => {
+    if (!currentApprovalItem) return;
+    
+    const result = await approvalHandler.approveAndExecute(currentApprovalItem, approvedActionIds);
+    
+    if (result.success) {
+      setShowApprovalDialog(false);
+      setCurrentApprovalItem(null);
+      
+      // Show next approval if any
+      setTimeout(() => {
+        if (awaitingApproval.length > 1) {
+          const nextItem = awaitingApproval.find(q => q.id !== currentApprovalItem);
+          if (nextItem) {
+            setCurrentApprovalItem(nextItem.id);
+            setShowApprovalDialog(true);
+          }
+        }
+      }, 100);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!currentApprovalItem) return;
+    
+    await approvalHandler.rejectProcessing(currentApprovalItem);
+    setShowApprovalDialog(false);
+    setCurrentApprovalItem(null);
+    
+    // Show next approval if any
+    setTimeout(() => {
+      if (awaitingApproval.length > 1) {
+        const nextItem = awaitingApproval.find(q => q.id !== currentApprovalItem);
+        if (nextItem) {
+          setCurrentApprovalItem(nextItem.id);
+          setShowApprovalDialog(true);
+        }
+      }
+    }, 100);
   };
 
   const getTypeIcon = (type: ThoughtType) => {
@@ -128,6 +190,18 @@ export default function ThoughtsPage() {
           )}
         </div>
         <div className="flex gap-2">
+          {awaitingApproval.length > 0 && (
+            <button
+              onClick={() => {
+                setCurrentApprovalItem(awaitingApproval[0].id);
+                setShowApprovalDialog(true);
+              }}
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-orange-600 to-amber-600 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105 whitespace-nowrap animate-pulse"
+            >
+              <Bell className="h-5 w-5" />
+              Review ({awaitingApproval.length})
+            </button>
+          )}
           {thoughtStats.unprocessed > 0 && (
             <button
               onClick={handleProcessAll}
@@ -333,6 +407,15 @@ export default function ThoughtsPage() {
         <ThoughtDetailModal
           thought={selectedThought}
           onClose={() => setSelectedThought(null)}
+        />
+      )}
+
+      {/* Approval Dialog */}
+      {showApprovalDialog && currentApprovalItem && (
+        <ProcessingApprovalDialog
+          queueItem={queue.find(q => q.id === currentApprovalItem)!}
+          onApprove={handleApprove}
+          onReject={handleReject}
         />
       )}
     </div>
