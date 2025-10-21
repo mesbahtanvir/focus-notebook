@@ -228,10 +228,10 @@ export class ActionExecutor {
   }
 
   private async createMoodEntry(action: ProcessAction, queueItem: ProcessQueueItem) {
-    // For now, we'll log mood entries as thoughts with specific types
-    // In the future, this could create a separate mood tracker entry
     const { useThoughts } = await import('@/store/useThoughts');
+    const { useMoods } = await import('@/store/useMoods');
     const updateThought = useThoughts.getState().updateThought;
+    const addMood = useMoods.getState().add;
     const thought = useThoughts.getState().thoughts.find(t => t.id === action.thoughtId);
     
     if (!thought) {
@@ -270,6 +270,17 @@ export class ActionExecutor {
 
     // Track tag for revert
     queueItem.revertData.addedTags.push('mood');
+
+    // Create mood tracker entry
+    await addMood({
+      value: Math.round(action.data.intensity / 10), // Convert 0-100 to 1-10
+      note: action.data.notes || `${action.data.mood} (from thought)`,
+      createdAt: new Date().toISOString(),
+      metadata: {
+        sourceThoughtId: action.thoughtId,
+        createdBy: 'thought-processor',
+      }
+    });
 
     this.log('Mood entry created', { 
       mood: action.data.mood, 

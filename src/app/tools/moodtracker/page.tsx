@@ -4,7 +4,9 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useMoods } from "@/store/useMoods";
+import { useMoods, type MoodEntry } from "@/store/useMoods";
+import { useThoughts } from "@/store/useThoughts";
+import { X, Trash2, ExternalLink } from "lucide-react";
 
 // Emotion definitions with categories
 type Emotion = {
@@ -76,6 +78,7 @@ export default function MoodTrackerPage() {
   const [showAllEmotions, setShowAllEmotions] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedPulse, setSavedPulse] = useState(false);
+  const [selectedMood, setSelectedMood] = useState<MoodEntry | null>(null);
 
   const displayedEmotions = showAllEmotions ? ALL_EMOTIONS : COMMON_EMOTIONS;
 
@@ -111,10 +114,19 @@ export default function MoodTrackerPage() {
       ? `Emotions:\n${activeEmotions.join('\n')}\n\n${note}`.trim()
       : note;
     
+    // Get non-zero emotion dimensions
+    const dimensions = Object.fromEntries(
+      Object.entries(emotionLevels).filter(([_, level]) => level > 0)
+    );
+    
     await addMood({ 
       value: avgValue, 
       note: emotionsSummary, 
-      createdAt: new Date().toISOString() 
+      createdAt: new Date().toISOString(),
+      metadata: {
+        createdBy: 'manual',
+        dimensions: Object.keys(dimensions).length > 0 ? dimensions : undefined
+      }
     });
     
     setSaving(false);
@@ -273,7 +285,8 @@ export default function MoodTrackerPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-800 dark:to-purple-950/30 p-4 rounded-xl border-2 border-purple-200 dark:border-purple-800 shadow-md hover:shadow-lg transition-shadow"
+                  onClick={() => setSelectedMood(m)}
+                  className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-800 dark:to-purple-950/30 p-4 rounded-xl border-2 border-purple-200 dark:border-purple-800 shadow-md hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02]"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="font-bold text-lg text-purple-600 dark:text-purple-400">
@@ -284,12 +297,17 @@ export default function MoodTrackerPage() {
                     </div>
                   </div>
                   {m.note && (
-                    <div className="text-sm text-gray-700 dark:text-gray-300 mt-2 p-2 bg-white/50 dark:bg-gray-900/50 rounded-lg">
+                    <div className="text-sm text-gray-700 dark:text-gray-300 mt-2 p-2 bg-white/50 dark:bg-gray-900/50 rounded-lg line-clamp-2">
                       {m.note}
                     </div>
                   )}
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    {new Date(m.createdAt).toLocaleTimeString()}
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {new Date(m.createdAt).toLocaleTimeString()}
+                    </div>
+                    <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                      Click for details →
+                    </div>
                   </div>
                 </motion.div>
               ))}
@@ -297,6 +315,216 @@ export default function MoodTrackerPage() {
           )}
         </div>
       </CardContent>
+      
+      {/* Mood Detail Modal */}
+      {selectedMood && (
+        <MoodDetailModal
+          mood={selectedMood}
+          onClose={() => setSelectedMood(null)}
+        />
+      )}
     </Card>
+  );
+}
+
+// Mood Detail Modal Component
+function MoodDetailModal({ mood, onClose }: { mood: MoodEntry; onClose: () => void }) {
+  const deleteMood = useMoods((s) => s.delete);
+  const thoughts = useThoughts((s) => s.thoughts);
+  const [deleting, setDeleting] = useState(false);
+
+  const sourceThought = mood.metadata?.sourceThoughtId
+    ? thoughts.find(t => t.id === mood.metadata?.sourceThoughtId)
+    : null;
+
+  const handleDelete = async () => {
+    if (!confirm('Delete this mood entry? This cannot be undone.')) return;
+    
+    setDeleting(true);
+    await deleteMood(mood.id);
+    onClose();
+  };
+
+  // Parse dimensions from note if available
+  const dimensions: { emotionId: string; label: string; emoji: string; value: number }[] = [];
+  
+  if (mood.metadata?.dimensions) {
+    // Use stored dimensions
+    Object.entries(mood.metadata.dimensions).forEach(([emotionId, value]) => {
+      const emotion = EMOTIONS.find(e => e.id === emotionId);
+      if (emotion && value > 0) {
+        dimensions.push({
+          emotionId,
+          label: emotion.label,
+          emoji: emotion.emoji,
+          value
+        });
+      }
+    });
+  } else if (mood.note) {
+    // Try to parse from note format "😰 Anxious: 80%"
+    const lines = mood.note.split('\n');
+    for (const line of lines) {
+      const match = line.match(/([^:]+):\s*(\d+)%/);
+      if (match) {
+        const label = match[1].trim().split(' ').pop() || '';
+        const value = parseInt(match[2]);
+        const emotion = EMOTIONS.find(e => e.label.toLowerCase() === label.toLowerCase());
+        if (emotion) {
+          dimensions.push({
+            emotionId: emotion.id,
+            label: emotion.label,
+            emoji: emotion.emoji,
+            value
+          });
+        }
+      }
+    }
+  }
+
+  // Extract clean note (without emotion data)
+  const cleanNote = mood.note
+    ? mood.note.split('\n\n').slice(1).join('\n\n').trim() ||
+      mood.note.split('\n').filter(line => !line.match(/([^:]+):\s*(\d+)%/)).join('\n').trim()
+    : '';
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="p-6 border-b bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Mood Entry Details
+            </h2>
+            <button 
+              onClick={onClose}
+              className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/50 rounded-lg transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Overall Mood Score */}
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 p-6 rounded-xl border-2 border-purple-200 dark:border-purple-800">
+            <div className="text-center">
+              <div className="text-6xl font-bold text-purple-600 dark:text-purple-400 mb-2">
+                {mood.value}/10
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                {new Date(mood.createdAt).toLocaleString()}
+              </div>
+            </div>
+          </div>
+
+          {/* Source Information */}
+          {mood.metadata?.sourceThoughtId && (
+            <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-xl border border-blue-200 dark:border-blue-800">
+              <div className="flex items-start gap-3">
+                <ExternalLink className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                    Created from Thought
+                  </div>
+                  {sourceThought ? (
+                    <div className="text-sm text-blue-700 dark:text-blue-300 p-2 bg-white/50 dark:bg-blue-900/20 rounded">
+                      {sourceThought.text}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-blue-600 dark:text-blue-400">
+                      Thought ID: {mood.metadata.sourceThoughtId}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {mood.metadata?.createdBy && (
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              <strong>Source:</strong> {mood.metadata.createdBy === 'manual' ? '✋ Manual Entry' : '🤖 AI Processing'}
+            </div>
+          )}
+
+          {/* Emotion Dimensions */}
+          {dimensions.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
+                🎭 Emotion Breakdown
+              </h3>
+              <div className="space-y-2">
+                {dimensions
+                  .sort((a, b) => b.value - a.value)
+                  .map(({ emotionId, label, emoji, value }) => (
+                    <div
+                      key={emotionId}
+                      className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                    >
+                      <span className="text-2xl">{emoji}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-gray-900 dark:text-gray-100">
+                            {label}
+                          </span>
+                          <span className="font-bold text-purple-600 dark:text-purple-400">
+                            {value}%
+                          </span>
+                        </div>
+                        <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+                            style={{ width: `${value}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Additional Notes */}
+          {cleanNote && (
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
+                📝 Additional Notes
+              </h3>
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+                {cleanNote}
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-4 border-t">
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deleting ? 'Deleting...' : 'Delete Entry'}
+            </button>
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 font-semibold rounded-lg transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
   );
 }
