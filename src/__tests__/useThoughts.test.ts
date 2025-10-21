@@ -1,14 +1,16 @@
 import { renderHook, act } from '@testing-library/react';
 import { useThoughts } from '@/store/useThoughts';
+import { db } from '@/db';
 
 describe('useThoughts', () => {
-  beforeEach(() => {
-    // Clear thoughts before each test
+  beforeEach(async () => {
+    // Clear the mock database
+    await (db.thoughts as any).clear();
+    
+    // Reset the zustand store
     const { result } = renderHook(() => useThoughts());
     act(() => {
-      result.current.thoughts.forEach(thought => {
-        result.current.deleteThought(thought.id);
-      });
+      result.current.thoughts.length = 0;
     });
   });
 
@@ -28,6 +30,8 @@ describe('useThoughts', () => {
         type: 'neutral',
         createdAt: new Date().toISOString(),
       });
+      // Wait for state update
+      await new Promise(resolve => setTimeout(resolve, 100));
     });
 
     expect(result.current.thoughts.length).toBe(1);
@@ -46,6 +50,7 @@ describe('useThoughts', () => {
         createdAt: new Date().toISOString(),
         tags: ['cbt', 'anxiety'],
       });
+      await new Promise(resolve => setTimeout(resolve, 100));
     });
 
     expect(result.current.thoughts[0].tags).toEqual(['cbt', 'anxiety']);
@@ -56,11 +61,12 @@ describe('useThoughts', () => {
     
     await act(async () => {
       await result.current.add({
-        text: 'Intense feeling',
+        text: 'Intense thought',
         type: 'feeling-bad',
         createdAt: new Date().toISOString(),
         intensity: 8,
       });
+      await new Promise(resolve => setTimeout(resolve, 100));
     });
 
     expect(result.current.thoughts[0].intensity).toBe(8);
@@ -68,14 +74,15 @@ describe('useThoughts', () => {
 
   it('toggles thought done status', async () => {
     const { result } = renderHook(() => useThoughts());
-    
     let thoughtId: string;
+    
     await act(async () => {
       await result.current.add({
         text: 'Toggle test',
-        type: 'task',
+        type: 'neutral',
         createdAt: new Date().toISOString(),
       });
+      await new Promise(resolve => setTimeout(resolve, 100));
     });
 
     thoughtId = result.current.thoughts[0].id;
@@ -83,12 +90,14 @@ describe('useThoughts', () => {
 
     await act(async () => {
       await result.current.toggle(thoughtId);
+      await new Promise(resolve => setTimeout(resolve, 100));
     });
 
     expect(result.current.thoughts[0].done).toBe(true);
 
     await act(async () => {
       await result.current.toggle(thoughtId);
+      await new Promise(resolve => setTimeout(resolve, 100));
     });
 
     expect(result.current.thoughts[0].done).toBe(false);
@@ -96,15 +105,15 @@ describe('useThoughts', () => {
 
   it('updates thought with CBT analysis', async () => {
     const { result } = renderHook(() => useThoughts());
-    
     let thoughtId: string;
+    
     await act(async () => {
       await result.current.add({
-        text: 'Thought to analyze',
+        text: 'CBT test',
         type: 'feeling-bad',
         createdAt: new Date().toISOString(),
-        tags: ['cbt'],
       });
+      await new Promise(resolve => setTimeout(resolve, 100));
     });
 
     thoughtId = result.current.thoughts[0].id;
@@ -121,6 +130,7 @@ describe('useThoughts', () => {
         cbtAnalysis,
         tags: ['cbt', 'cbt-processed'],
       });
+      await new Promise(resolve => setTimeout(resolve, 100));
     });
 
     expect(result.current.thoughts[0].cbtAnalysis).toEqual(cbtAnalysis);
@@ -129,14 +139,15 @@ describe('useThoughts', () => {
 
   it('deletes a thought', async () => {
     const { result } = renderHook(() => useThoughts());
-    
     let thoughtId: string;
+    
     await act(async () => {
       await result.current.add({
-        text: 'Delete me',
+        text: 'Delete test',
         type: 'neutral',
         createdAt: new Date().toISOString(),
       });
+      await new Promise(resolve => setTimeout(resolve, 100));
     });
 
     thoughtId = result.current.thoughts[0].id;
@@ -166,6 +177,7 @@ describe('useThoughts', () => {
           type,
           createdAt: new Date().toISOString(),
         });
+        await new Promise(resolve => setTimeout(resolve, 100));
       });
     }
 
@@ -182,11 +194,13 @@ describe('useThoughts', () => {
         type: 'neutral',
         createdAt: '2024-01-01T00:00:00Z',
       });
+      await new Promise(resolve => setTimeout(resolve, 100));
       await result.current.add({
         text: 'Second',
         type: 'neutral',
         createdAt: '2024-01-02T00:00:00Z',
       });
+      await new Promise(resolve => setTimeout(resolve, 100));
     });
 
     // Thoughts should be in the order they were added

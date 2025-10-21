@@ -13,6 +13,7 @@ export interface Thought {
   createdAt: string
   tags?: string[]
   intensity?: number // 1-10 for feelings
+  notes?: string // Additional notes or conversation data
   cbtAnalysis?: {
     situation?: string
     automaticThought?: string

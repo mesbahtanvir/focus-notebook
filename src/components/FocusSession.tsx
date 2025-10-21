@@ -402,29 +402,35 @@ export function FocusSession() {
 
       {/* Create Follow-up Task Modal */}
       {showCreateTask && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-background rounded-lg shadow-xl max-w-2xl w-full p-6"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Create Follow-up Task</h2>
-              <button
-                onClick={() => setShowCreateTask(false)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Create a new task based on outcomes or next steps from &quot;{currentFocusTask.task.title}&quot;
-            </p>
-            <TaskInput 
-              onClose={() => setShowCreateTask(false)}
-              onTaskCreated={handleTaskCreated}
-            />
-          </motion.div>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="min-h-full flex items-center justify-center py-8">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-background rounded-lg shadow-xl max-w-2xl w-full my-8"
+            >
+              <div className="sticky top-0 bg-background rounded-t-lg border-b border-gray-200 dark:border-gray-700 p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-xl font-bold">Create Follow-up Task</h2>
+                  <button
+                    onClick={() => setShowCreateTask(false)}
+                    className="text-muted-foreground hover:text-foreground transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Create a new task based on outcomes or next steps from &quot;{currentFocusTask.task.title}&quot;
+                </p>
+              </div>
+              <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+                <TaskInput 
+                  onClose={() => setShowCreateTask(false)}
+                  onTaskCreated={handleTaskCreated}
+                />
+              </div>
+            </motion.div>
+          </div>
         </div>
       )}
 

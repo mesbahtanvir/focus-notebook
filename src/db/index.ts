@@ -28,6 +28,7 @@ export type ThoughtRow = {
   createdAt: string
   tags?: string
   intensity?: number
+  notes?: string
   cbtAnalysis?: string
 }
 
@@ -148,6 +149,7 @@ export function toThoughtRow(thought: any): ThoughtRow {
     createdAt: thought.createdAt,
     tags: thought.tags ? JSON.stringify(thought.tags) : undefined,
     intensity: thought.intensity,
+    notes: thought.notes,
     cbtAnalysis: thought.cbtAnalysis ? JSON.stringify(thought.cbtAnalysis) : undefined,
   }
 }
@@ -161,6 +163,7 @@ export function toThought(row: ThoughtRow): any {
     createdAt: row.createdAt,
     tags: row.tags ? JSON.parse(row.tags) : undefined,
     intensity: row.intensity,
+    notes: row.notes,
     cbtAnalysis: row.cbtAnalysis ? JSON.parse(row.cbtAnalysis) : undefined,
   }
 }

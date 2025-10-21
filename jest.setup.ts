@@ -1,5 +1,8 @@
 import '@testing-library/jest-dom'
 
+// Mock the database module
+jest.mock('@/db')
+
 // Mock Firebase modules to prevent initialization errors in tests
 jest.mock('@/lib/firebase', () => ({
   auth: {
@@ -22,9 +25,3 @@ jest.mock('@/contexts/AuthContext', () => ({
   }),
   AuthProvider: ({ children }: any) => children,
 }))
-
-// Mock window.indexedDB for tests
-Object.defineProperty(global, 'indexedDB', {
-  writable: true,
-  value: undefined,
-})
