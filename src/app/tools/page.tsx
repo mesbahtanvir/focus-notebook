@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText } from "lucide-react";
+import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag } from "lucide-react";
 
 const TOOLS = [
   {
@@ -84,6 +84,16 @@ const TOOLS = [
     gradient: "from-violet-400 to-fuchsia-500",
     bgGradient: "from-violet-50 to-fuchsia-50",
     borderColor: "border-violet-300",
+  },
+  {
+    key: "errands",
+    title: "Errands",
+    description: "Out-of-office tasks like shopping, appointments, and errands.",
+    icon: ShoppingBag,
+    emoji: "🛍️",
+    gradient: "from-orange-400 to-amber-500",
+    bgGradient: "from-orange-50 to-amber-50",
+    borderColor: "border-orange-300",
   },
 ];
 

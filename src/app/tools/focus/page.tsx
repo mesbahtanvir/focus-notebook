@@ -20,6 +20,7 @@ function FocusPageContent() {
   const sessions = useFocus((s) => s.sessions);
   const startSession = useFocus((s) => s.startSession);
   const loadSessions = useFocus((s) => s.loadSessions);
+  const loadActiveSession = useFocus((s) => s.loadActiveSession);
   
   // Get duration from URL or default to 60 minutes
   const urlDuration = searchParams.get('duration');
@@ -28,6 +29,7 @@ function FocusPageContent() {
   const [showHistory, setShowHistory] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [selectedSession, setSelectedSession] = useState<FocusSessionType | null>(null);
+  const [hasActiveSession, setHasActiveSession] = useState(false);
 
   const activeTasks = tasks.filter(t => !t.done && t.status === 'active' && (t.focusEligible === true || t.focusEligible === undefined));
   const autoSuggestedTasks = selectBalancedTasks(tasks, duration);
@@ -39,10 +41,23 @@ function FocusPageContent() {
     }
   }, [autoSuggestedTasks, selectedTaskIds.length]);
 
-  // Load sessions on mount
+  // Load sessions and check for active session on mount
   useEffect(() => {
     loadSessions();
+    checkForActiveSession();
   }, [loadSessions]);
+
+  const checkForActiveSession = async () => {
+    // Check IndexedDB for active sessions
+    const { db } = await import('@/db');
+    const allSessions = await db.focusSessions.toArray();
+    const activeSessions = allSessions.filter(s => s.isActive === true);
+    setHasActiveSession(activeSessions.length > 0);
+  };
+
+  const handleResumeSession = async () => {
+    await loadActiveSession();
+  };
 
   const toggleTaskSelection = (taskId: string) => {
     setSelectedTaskIds(prev => 
@@ -97,6 +112,56 @@ function FocusPageContent() {
                 Deep work mode with balanced task selection
               </p>
             </div>
+
+            {/* Active Session Alert / New Session Prompt */}
+            {hasActiveSession ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-4 border-amber-300 dark:border-amber-800 shadow-xl p-6"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-amber-100 dark:bg-amber-900/50 rounded-xl">
+                    <Play className="h-6 w-6 text-amber-600 dark:text-amber-400 animate-pulse" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold bg-gradient-to-r from-amber-600 to-orange-600 dark:from-amber-400 dark:to-orange-400 bg-clip-text text-transparent mb-1">
+                      ⚡ Session In Progress
+                    </h3>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                      You have an active focus session waiting for you. Resume where you left off!
+                    </p>
+                    <button
+                      onClick={handleResumeSession}
+                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold shadow-lg transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2"
+                    >
+                      <Play className="h-5 w-5" />
+                      Resume Session
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-xl">
+                    <Target className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent mb-1">
+                      🚀 Ready to Focus?
+                    </h3>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      No active session. Select your duration and tasks below to start a new focus session.
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
             {/* Duration Selection */}
             <div className="card p-8 space-y-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm">
