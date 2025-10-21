@@ -380,11 +380,11 @@ export default function SettingsPage() {
                         Cloud Sync is Always Active
                       </p>
                       <p className="text-sm text-gray-700">
-                        Your data automatically syncs to the cloud when you're signed in. You can access it from any device (iPhone, iPad, Mac, etc.) by signing in with the same account.
+                        Your data automatically syncs to the cloud when you&apos;re signed in. You can access it from any device (iPhone, iPad, Mac, etc.) by signing in with the same account.
                       </p>
                       <div className="mt-3 p-3 bg-white rounded-lg border border-green-300">
                         <p className="text-xs text-gray-600">
-                          💡 <strong>Troubleshooting:</strong> If data isn't syncing on mobile, check that you're signed in and have internet connection. Visit <code className="bg-gray-100 px-1 rounded">/admin</code> page to see sync status and force sync if needed.
+                          💡 <strong>Troubleshooting:</strong> If data isn&apos;t syncing on mobile, check that you&apos;re signed in and have internet connection. Visit <code className="bg-gray-100 px-1 rounded">/admin</code> page to see sync status and force sync if needed.
                         </p>
                       </div>
                     </div>

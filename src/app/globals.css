@@ -66,6 +66,38 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* iPad and touch device optimizations */
+  html, body {
+    -webkit-overflow-scrolling: touch; /* Smooth momentum scrolling on iOS */
+    touch-action: pan-y pan-x; /* Allow pan gestures */
+  }
+  
+  /* Fix scrolling in landscape mode on iPad */
+  @media (orientation: landscape) {
+    html, body {
+      overflow-x: hidden;
+      overflow-y: auto;
+      height: 100%;
+      position: relative;
+    }
+  }
+  
+  /* Ensure all scrollable containers work with touch */
+  .overflow-auto,
+  .overflow-y-auto,
+  .overflow-x-auto,
+  [style*="overflow: auto"],
+  [style*="overflow-y: auto"],
+  [style*="overflow-x: auto"] {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+  
+  /* Fix for modal/overlay scrolling on iOS */
+  .fixed {
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 @layer components {

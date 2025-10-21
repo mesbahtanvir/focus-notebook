@@ -96,13 +96,13 @@ export function FocusSession() {
     }
   }, [currentSession, endSession]);
 
-  // Load notes for current task
+  // Load notes for current task (only when task index changes, not on every session update)
   useEffect(() => {
     if (currentSession) {
       const currentTask = currentSession.tasks[currentSession.currentTaskIndex];
       setLocalNotes(currentTask.notes || "");
     }
-  }, [currentSession?.currentTaskIndex, currentSession]);
+  }, [currentSession?.currentTaskIndex]); // Removed currentSession dependency to prevent note clearing
 
   // Auto-save notes with debouncing
   useEffect(() => {
