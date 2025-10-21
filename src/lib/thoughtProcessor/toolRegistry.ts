@@ -13,6 +13,8 @@ export interface ToolDefinition {
   actions: ToolAction[];
   priority: number;
   active: boolean;
+  examples: string[]; // Example thoughts that would trigger this tool
+  keywords: string[]; // Keywords that indicate this tool should be used
 }
 
 class ToolRegistryClass {
@@ -56,10 +58,15 @@ class ToolRegistryClass {
     return this.getActive()
       .map(t => {
         const caps = t.capabilities.join('\n   - ');
+        const examples = t.examples.slice(0, 3).join('\n   - '); // Show first 3 examples
+        const keywords = t.keywords.slice(0, 10).join(', '); // Show first 10 keywords
         return `${t.name} (${t.id}):
    Description: ${t.description}
    Capabilities:
-   - ${caps}`;
+   - ${caps}
+   Example thoughts that trigger this tool:
+   - ${examples}
+   Keywords: ${keywords}`;
       })
       .join('\n\n');
   }
@@ -91,7 +98,22 @@ class ToolRegistryClass {
         }
       ],
       priority: 1,
-      active: true
+      active: true,
+      examples: [
+        'I need to buy groceries',
+        'I want to learn Python',
+        'I should call mom this week',
+        'Need to finish the project report',
+        'I need to exercise more',
+        'Should organize my desk',
+        'I want to read that book'
+      ],
+      keywords: [
+        'need to', 'should', 'want to', 'have to', 'must',
+        'todo', 'task', 'do', 'finish', 'complete', 'work on',
+        'learn', 'study', 'practice', 'buy', 'call', 'email',
+        'fix', 'organize', 'clean', 'prepare'
+      ]
     });
 
     // Brainstorming Tool
@@ -114,7 +136,20 @@ class ToolRegistryClass {
         }
       ],
       priority: 2,
-      active: true
+      active: true,
+      examples: [
+        'Ideas for new app features',
+        'What if we tried a different approach?',
+        'Thinking about career options',
+        'How can I improve my workflow?',
+        'Exploring different solutions',
+        'What are some creative ways to...?'
+      ],
+      keywords: [
+        'idea', 'ideas', 'brainstorm', 'think', 'explore',
+        'what if', 'how can', 'ways to', 'options', 'solutions',
+        'creative', 'different approach', 'possibilities'
+      ]
     });
 
     // CBT Tool
@@ -142,7 +177,20 @@ class ToolRegistryClass {
         }
       ],
       priority: 3,
-      active: true
+      active: true,
+      examples: [
+        'I always mess things up',
+        'Nobody likes me',
+        'I\'m not good enough',
+        'Everything is going wrong',
+        'I can\'t do anything right',
+        'This is hopeless'
+      ],
+      keywords: [
+        'always', 'never', 'can\'t', 'impossible', 'hopeless',
+        'nobody', 'everyone', 'worthless', 'failure', 'terrible',
+        'anxious', 'worried', 'scared', 'overwhelmed'
+      ]
     });
 
     // Mood Tracker Tool
@@ -155,7 +203,8 @@ class ToolRegistryClass {
         'Categorize emotional states',
         'Track mood patterns over time',
         'Identify triggers and trends',
-        'Support emotional awareness'
+        'Support emotional awareness',
+        'Create mood entries with intensity levels'
       ],
       actions: [
         {
@@ -167,10 +216,32 @@ class ToolRegistryClass {
           type: 'setIntensity',
           description: 'Sets emotional intensity',
           params: { intensity: 'number (1-10)' }
+        },
+        {
+          type: 'createMoodEntry',
+          description: 'Creates a mood tracker entry',
+          params: { mood: 'string', intensity: 'number (1-10)', notes: 'string' }
         }
       ],
       priority: 4,
-      active: true
+      active: true,
+      examples: [
+        'I am sooo sad right now',
+        'Feeling really happy today!',
+        'I\'m so stressed out',
+        'Feeling anxious about tomorrow',
+        'I feel amazing!',
+        'So frustrated right now',
+        'Feeling down today',
+        'I\'m really excited!'
+      ],
+      keywords: [
+        'feeling', 'feel', 'emotion', 'mood', 'am', 'i\'m',
+        'happy', 'sad', 'angry', 'anxious', 'excited', 'depressed',
+        'stressed', 'frustrated', 'overwhelmed', 'joyful', 'content',
+        'worried', 'nervous', 'calm', 'peaceful', 'energetic', 'tired',
+        'so', 'really', 'very', 'extremely'
+      ]
     });
 
     // Focus Tool
@@ -192,7 +263,17 @@ class ToolRegistryClass {
         }
       ],
       priority: 5,
-      active: true
+      active: true,
+      examples: [
+        'I need dedicated time to work on this',
+        'This requires deep focus',
+        'I should block out time for...',
+        'Need to concentrate on this project'
+      ],
+      keywords: [
+        'focus', 'concentrate', 'dedicated time', 'deep work',
+        'block time', 'uninterrupted', 'pomodoro'
+      ]
     });
 
     // Documents Tool
@@ -214,7 +295,17 @@ class ToolRegistryClass {
         }
       ],
       priority: 6,
-      active: true
+      active: true,
+      examples: [
+        'Notes from the meeting',
+        'Important information to remember',
+        'Things I learned today',
+        'Key points about...'
+      ],
+      keywords: [
+        'notes', 'remember', 'document', 'write down',
+        'important', 'key points', 'information', 'reference'
+      ]
     });
   }
 }

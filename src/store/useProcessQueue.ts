@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 
 export type ProcessingMode = 'auto' | 'safe' | 'manual';
 export type QueueStatus = 'pending' | 'processing' | 'awaiting-approval' | 'completed' | 'reverted' | 'failed' | 'cancelled';
-export type ActionType = 'createTask' | 'addTag' | 'enhanceThought' | 'changeType' | 'setIntensity';
+export type ActionType = 'createTask' | 'addTag' | 'enhanceThought' | 'changeType' | 'setIntensity' | 'createMoodEntry';
 
 export interface ProcessAction {
   id: string;

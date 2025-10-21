@@ -1,7 +1,7 @@
 "use client";
 
 import { ProcessQueueItem, ProcessAction } from '@/store/useProcessQueue';
-import { X, Check, CheckCircle2, Sparkles, Tag, FileEdit, RefreshCw, TrendingUp } from 'lucide-react';
+import { X, Check, CheckCircle2, Sparkles, Tag, FileEdit, RefreshCw, TrendingUp, Heart } from 'lucide-react';
 import { useState } from 'react';
 
 interface ProcessingApprovalDialogProps {
@@ -36,6 +36,7 @@ export function ProcessingApprovalDialog({ queueItem, onApprove, onReject }: Pro
       case 'enhanceThought': return <Sparkles className="h-5 w-5" />;
       case 'changeType': return <RefreshCw className="h-5 w-5" />;
       case 'setIntensity': return <TrendingUp className="h-5 w-5" />;
+      case 'createMoodEntry': return <Heart className="h-5 w-5" />;
       default: return <FileEdit className="h-5 w-5" />;
     }
   };
@@ -47,6 +48,7 @@ export function ProcessingApprovalDialog({ queueItem, onApprove, onReject }: Pro
       case 'enhanceThought': return 'from-amber-500 to-orange-500';
       case 'changeType': return 'from-green-500 to-emerald-500';
       case 'setIntensity': return 'from-red-500 to-rose-500';
+      case 'createMoodEntry': return 'from-pink-500 to-rose-500';
       default: return 'from-gray-500 to-slate-500';
     }
   };
@@ -63,6 +65,8 @@ export function ProcessingApprovalDialog({ queueItem, onApprove, onReject }: Pro
         return `Change Type to: ${action.data.type}`;
       case 'setIntensity':
         return `Set Intensity: ${action.data.intensity}/10`;
+      case 'createMoodEntry':
+        return `Create Mood Entry: ${action.data.mood}`;
       default:
         return action.type;
     }
@@ -92,6 +96,37 @@ export function ProcessingApprovalDialog({ queueItem, onApprove, onReject }: Pro
                 )}
               </div>
             )}
+          </div>
+        );
+      case 'createMoodEntry':
+        return (
+          <div className="mt-2 text-sm text-gray-600 space-y-1">
+            <div><strong>Mood:</strong> {action.data.mood}</div>
+            <div><strong>Intensity:</strong> {action.data.intensity}/10</div>
+            {action.data.notes && (
+              <div className="mt-2 p-2 bg-pink-50 rounded border border-pink-200">
+                <strong className="text-pink-700">💭 Notes:</strong>
+                <div className="text-pink-600 text-xs mt-1">
+                  {action.data.notes}
+                </div>
+              </div>
+            )}
+            <div className="mt-2 flex items-center gap-1">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-2 w-full rounded ${
+                    i < action.data.intensity
+                      ? action.data.intensity <= 3
+                        ? 'bg-green-400'
+                        : action.data.intensity <= 6
+                        ? 'bg-yellow-400'
+                        : 'bg-red-400'
+                      : 'bg-gray-200'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         );
       case 'enhanceThought':

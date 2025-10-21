@@ -46,6 +46,10 @@ export class ActionExecutor {
           await this.setIntensity(action, queueItem);
           break;
 
+        case 'createMoodEntry':
+          await this.createMoodEntry(action, queueItem);
+          break;
+
         default:
           throw new Error(`Unknown action type: ${action.type}`);
       }
@@ -213,6 +217,57 @@ export class ActionExecutor {
     });
 
     this.log('Intensity set', { intensity: action.data.intensity });
+  }
+
+  private async createMoodEntry(action: ProcessAction, queueItem: ProcessQueueItem) {
+    // For now, we'll log mood entries as thoughts with specific types
+    // In the future, this could create a separate mood tracker entry
+    const { useThoughts } = await import('@/store/useThoughts');
+    const updateThought = useThoughts.getState().updateThought;
+    const thought = useThoughts.getState().thoughts.find(t => t.id === action.thoughtId);
+    
+    if (!thought) {
+      throw new Error('Thought not found');
+    }
+
+    // Determine feeling type based on mood data
+    const moodText = action.data.mood.toLowerCase();
+    let feelingType: 'feeling-good' | 'feeling-bad' | 'neutral' = 'neutral';
+    
+    // Positive moods
+    if (moodText.match(/(happy|joy|excited|amazing|great|wonderful|love|content)/i)) {
+      feelingType = 'feeling-good';
+    }
+    // Negative moods
+    else if (moodText.match(/(sad|depressed|anxious|stressed|frustrated|angry|worried|down|terrible|awful)/i)) {
+      feelingType = 'feeling-bad';
+    }
+
+    // Save original for revert
+    if (!queueItem.revertData.thoughtChanges.typeChanged) {
+      queueItem.revertData.thoughtChanges.typeChanged = true;
+      queueItem.revertData.thoughtChanges.originalType = thought.type;
+    }
+    if (!queueItem.revertData.thoughtChanges.intensityChanged) {
+      queueItem.revertData.thoughtChanges.intensityChanged = true;
+      queueItem.revertData.thoughtChanges.originalIntensity = thought.intensity;
+    }
+
+    // Update thought to be a mood entry
+    updateThought(action.thoughtId, {
+      type: feelingType,
+      intensity: action.data.intensity,
+      tags: [...(thought.tags || []), 'mood']
+    });
+
+    // Track tag for revert
+    queueItem.revertData.addedTags.push('mood');
+
+    this.log('Mood entry created', { 
+      mood: action.data.mood, 
+      intensity: action.data.intensity,
+      type: feelingType
+    });
   }
 
   async revertProcessing(queueItemId: string): Promise<{ success: boolean; error?: string }> {

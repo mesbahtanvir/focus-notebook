@@ -40,12 +40,18 @@ Type: ${thought.type || 'neutral'}
 Current Tags: ${thought.tags?.join(', ') || 'none'}
 Created: ${thought.createdAt}
 
-Analyze this thought and suggest helpful actions. Consider:
+Analyze this thought and suggest helpful actions. Use the tool examples and keywords above to guide your decision. Consider:
 1. **Thought Enhancement**: Can the text be improved for clarity or grammar?
-2. **Relevant Tools**: Which tools would help process this thought?
+2. **Relevant Tools**: Which tools would help process this thought? Match against example thoughts and keywords.
 3. **Specific Actions**: What should be created or updated?
 4. **Task Frequency**: If creating a task, should it recur? (daily, weekly, monthly, workweek, none)
-5. **Reasoning**: Why are these suggestions appropriate?
+5. **Mood Recognition**: If this is clearly an emotional expression, create a mood entry with intensity
+6. **Reasoning**: Why are these suggestions appropriate?
+
+IMPORTANT: Match the thought against the tool examples and keywords provided above. For example:
+- "I am sooo sad right now" → Mood Tracker tool (matches keywords: sad, feeling, so)
+- "I need to buy groceries" → Tasks tool (matches keywords: need to, buy)
+- "Ideas for new features" → Brainstorming tool (matches keywords: ideas)
 
 Respond ONLY with valid JSON (no markdown, no code blocks):
 {
@@ -77,6 +83,16 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
       "tool": "system",
       "data": { "tag": "research" },
       "reasoning": "why this tag is appropriate"
+    },
+    {
+      "type": "createMoodEntry",
+      "tool": "mood",
+      "data": {
+        "mood": "sad",
+        "intensity": 9,
+        "notes": "User expresses strong sadness"
+      },
+      "reasoning": "Clear emotional expression with high intensity"
     }
   ],
   "confidence": 0.95,
@@ -92,7 +108,20 @@ Rules:
 - One-time tasks should have recurrence.type = "none"
 - Be conservative with task creation
 - Enhance text only if there are clear improvements
-- Consider the thought type and existing tags`;
+- Consider the thought type and existing tags
+
+MOOD RECOGNITION RULES:
+- If thought clearly expresses emotion (contains "I feel", "I am", "so sad", "really happy", etc.), create a mood entry
+- Estimate intensity 1-10 based on language intensity:
+  * Words like "a bit", "slightly", "somewhat" → 3-4
+  * Neutral expressions → 5
+  * Words like "really", "very" → 6-7
+  * Words like "so", "sooo", "extremely", "really really" → 8-10
+- Examples:
+  * "I am sooo sad right now" → intensity: 9 (multiple 'o's indicate strong emotion)
+  * "Feeling a bit down" → intensity: 4
+  * "I'm extremely happy!" → intensity: 9
+  * "Kind of stressed" → intensity: 5`;
 
     // Call OpenAI API
     console.log('📤 Calling OpenAI API');
