@@ -121,39 +121,39 @@ export default function DocumentsPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 p-6 rounded-2xl border-2 border-indigo-200 dark:border-indigo-800 shadow-lg">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
-            📚 Documents
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm md:text-base">
-            All your notes and documentation
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <div className="text-xs text-muted-foreground">Documents</div>
+      <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 border-4 border-indigo-200 dark:border-indigo-800 shadow-xl p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">📝 Documents & Notes</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm">
+              All your notes and documentation
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-900 dark:to-purple-900 border-2 border-indigo-300 dark:border-indigo-700">
+              <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{stats.total}</div>
+              <div className="text-xs text-indigo-700 dark:text-indigo-300 font-medium">Documents</div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-2">
-        <div className="card p-4">
-          <div className="text-sm text-muted-foreground">Total Documents</div>
-          <div className="text-2xl font-bold mt-1">{stats.total}</div>
+        <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6">
+          <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Total Documents</div>
+          <div className="text-3xl font-bold mt-2 bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">{stats.total}</div>
         </div>
-        <div className="card p-4">
-          <div className="text-sm text-muted-foreground">Total Words</div>
-          <div className="text-2xl font-bold mt-1 text-purple-600 dark:text-purple-400">
+        <div className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-4 border-purple-200 dark:border-purple-800 shadow-xl p-6">
+          <div className="text-sm font-medium text-purple-700 dark:text-purple-300">Total Words</div>
+          <div className="text-3xl font-bold mt-2 bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
             {stats.totalWords.toLocaleString()}
           </div>
         </div>
       </div>
 
       {/* Search and Filter */}
-      <div className="card p-4 space-y-4">
+      <div className="rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-4 border-green-200 dark:border-green-800 shadow-xl p-6 space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">
           {/* Search */}
           <div className="flex-1 relative">

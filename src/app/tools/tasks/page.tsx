@@ -153,6 +153,21 @@ export default function TasksPage() {
         </div>
       </div>
 
+      {/* Info Box */}
+      <div className="rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-4 border-amber-200 dark:border-amber-800 shadow-xl p-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-lg">
+            <CheckCircle2 className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-amber-900 dark:text-amber-100 text-sm">Complete Tasks During Work</h3>
+            <p className="text-xs text-amber-800 dark:text-amber-200 mt-1">
+              Tasks can only be completed in <strong>Focus Mode</strong> (for desk work) or <strong>Errands Page</strong> (for out-of-office tasks). This ensures intentional task completion.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Filters & Sort */}
       <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
         <div className="flex items-center justify-between">
@@ -308,15 +323,14 @@ export default function TasksPage() {
                   >
                     <div className="flex items-start gap-4">
                       <div className="flex items-center gap-3 flex-1">
-                        <input
-                          type="checkbox"
-                          checked={task.done}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            useTasks.getState().toggle(task.id);
-                          }}
-                          className="h-5 w-5 rounded"
-                        />
+                        {/* Visual indicator only - not clickable */}
+                        <div className={`h-5 w-5 rounded border-2 flex items-center justify-center ${
+                          task.done 
+                            ? 'bg-green-100 border-green-500 dark:bg-green-950/40 dark:border-green-400' 
+                            : 'border-gray-300 dark:border-gray-600'
+                        }`}>
+                          {task.done && <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />}
+                        </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <h3 className={`font-medium ${task.done && !task.recurrence ? 'line-through text-muted-foreground' : ''}`}>

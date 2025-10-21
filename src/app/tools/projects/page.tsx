@@ -69,26 +69,25 @@ export default function ProjectsPage() {
   return (
     <div className="space-y-4 max-w-7xl mx-auto p-4 md:p-6">
       {/* Compact Header with inline stats */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-        <div className="flex-1">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Projects</h1>
-          <div className="flex items-center gap-4 mt-1 text-xs text-gray-500 dark:text-gray-400">
-            <span>{stats.active} active</span>
-            <span>•</span>
-            <span>{stats.completed} done</span>
-            <span>•</span>
-            <span>{stats.shortTerm} short-term</span>
-            <span>•</span>
-            <span>{stats.longTerm} long-term</span>
+      <div className="rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-4 border-green-200 dark:border-green-800 shadow-xl p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">🎯 Projects</h1>
+            <div className="flex items-center gap-3 mt-2 text-sm font-medium">
+              <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">{stats.active} active</span>
+              <span className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300">{stats.completed} done</span>
+              <span className="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300">{stats.shortTerm} short-term</span>
+              <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">{stats.longTerm} long-term</span>
+            </div>
           </div>
+          <button
+            onClick={() => setShowNewProject(true)}
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold shadow-lg transition-all transform hover:scale-105 active:scale-95"
+          >
+            <Plus className="h-5 w-5" />
+            New Project
+          </button>
         </div>
-        <button
-          onClick={() => setShowNewProject(true)}
-          className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          New Project
-        </button>
       </div>
 
       {/* Compact Filters */}
