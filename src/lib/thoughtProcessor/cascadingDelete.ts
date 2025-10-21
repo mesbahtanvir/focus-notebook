@@ -9,6 +9,7 @@ export class CascadingDelete {
       tasks: number;
       notes: number;
       thoughts: number;
+      projects: number;
     };
     error?: string;
   }> {
@@ -20,7 +21,8 @@ export class CascadingDelete {
       const results = {
         tasks: 0,
         notes: 0,
-        thoughts: 0
+        thoughts: 0,
+        projects: 0
       };
 
       // Find all queue items for this thought
@@ -55,8 +57,32 @@ export class CascadingDelete {
         }
       }
 
+      // Delete all related projects
+      const { useProjects } = await import('@/store/useProjects');
+      const deleteProject = useProjects.getState().delete;
+      const allProjectIds = new Set<string>();
+      for (const queueItem of relatedQueueItems) {
+        if (queueItem.revertData?.createdItems?.projectIds) {
+          queueItem.revertData.createdItems.projectIds.forEach(id => allProjectIds.add(id));
+        }
+        
+        for (const action of queueItem.actions) {
+          if (action.status === 'executed' && action.createdItems?.projectIds) {
+            action.createdItems.projectIds.forEach(id => allProjectIds.add(id));
+          }
+        }
+      }
+
+      for (const projectId of allProjectIds) {
+        try {
+          await deleteProject(projectId);
+          results.projects++;
+        } catch (error) {
+          console.error(`Failed to delete project ${projectId}:`, error);
+        }
+      }
+
       // TODO: Delete related notes/documents when those features are added
-      // For now, we only track tasks
 
       // Finally, delete the thought itself
       await deleteThought(thoughtId);
@@ -73,7 +99,7 @@ export class CascadingDelete {
       console.error('💥 Cascading delete failed:', error);
       return {
         success: false,
-        deleted: { tasks: 0, notes: 0, thoughts: 0 },
+        deleted: { tasks: 0, notes: 0, thoughts: 0, projects: 0 },
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }

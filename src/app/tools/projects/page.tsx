@@ -1,0 +1,484 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import { useProjects, Project, ProjectTimeframe, ProjectStatus } from "@/store/useProjects";
+import { useThoughts } from "@/store/useThoughts";
+import { useTasks } from "@/store/useTasks";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Target, 
+  Plus,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Trash2,
+  Edit3,
+  Link as LinkIcon,
+  TrendingUp,
+  Flag,
+  X,
+  Save,
+  MessageSquare,
+  ListChecks,
+  Milestone
+} from "lucide-react";
+
+export default function ProjectsPage() {
+  const projects = useProjects((s) => s.projects);
+  const addProject = useProjects((s) => s.add);
+  const updateProject = useProjects((s) => s.update);
+  const deleteProject = useProjects((s) => s.delete);
+  const thoughts = useThoughts((s) => s.thoughts);
+  const tasks = useTasks((s) => s.tasks);
+  
+  const [showNewProject, setShowNewProject] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [filterTimeframe, setFilterTimeframe] = useState<'all' | ProjectTimeframe>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | ProjectStatus>('all');
+
+  const filteredProjects = useMemo(() => {
+    return projects.filter(p => {
+      if (filterTimeframe !== 'all' && p.timeframe !== filterTimeframe) return false;
+      if (filterStatus !== 'all' && p.status !== filterStatus) return false;
+      return true;
+    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [projects, filterTimeframe, filterStatus]);
+
+  const stats = useMemo(() => {
+    const total = projects.length;
+    const active = projects.filter(p => p.status === 'active').length;
+    const completed = projects.filter(p => p.status === 'completed').length;
+    const shortTerm = projects.filter(p => p.timeframe === 'short-term').length;
+    const longTerm = projects.filter(p => p.timeframe === 'long-term').length;
+    
+    return { total, active, completed, shortTerm, longTerm };
+  }, [projects]);
+
+  const getProjectThoughts = (projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return [];
+    return thoughts.filter(t => project.linkedThoughtIds.includes(t.id));
+  };
+
+  const getProjectTasks = (projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return [];
+    return tasks.filter(t => project.linkedTaskIds.includes(t.id));
+  };
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 p-6 rounded-2xl border-2 border-blue-200 dark:border-blue-800 shadow-lg">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
+            🎯 Goals & Projects
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm md:text-base">
+            Plan and track your long-term and short-term goals
+          </p>
+        </div>
+        <button
+          onClick={() => setShowNewProject(true)}
+          className="flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105"
+        >
+          <Plus className="h-5 w-5" />
+          New Project
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-5">
+        <div className="card p-4">
+          <div className="text-sm text-muted-foreground">Total</div>
+          <div className="text-2xl font-bold mt-1">{stats.total}</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-sm text-muted-foreground">Active</div>
+          <div className="text-2xl font-bold mt-1 text-blue-600">{stats.active}</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-sm text-muted-foreground">Completed</div>
+          <div className="text-2xl font-bold mt-1 text-green-600">{stats.completed}</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-sm text-muted-foreground">Short-term</div>
+          <div className="text-2xl font-bold mt-1 text-orange-600">{stats.shortTerm}</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-sm text-muted-foreground">Long-term</div>
+          <div className="text-2xl font-bold mt-1 text-purple-600">{stats.longTerm}</div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="card p-4 flex flex-wrap gap-3">
+        <select
+          value={filterTimeframe}
+          onChange={(e) => setFilterTimeframe(e.target.value as any)}
+          className="input py-2 text-sm"
+        >
+          <option value="all">All Timeframes</option>
+          <option value="short-term">Short-term</option>
+          <option value="long-term">Long-term</option>
+        </select>
+        
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value as any)}
+          className="input py-2 text-sm"
+        >
+          <option value="all">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="on-hold">On Hold</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+
+      {/* Projects List */}
+      <div className="space-y-4">
+        {filteredProjects.length === 0 && (
+          <div className="card p-12 text-center">
+            <Target className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">No projects yet</h3>
+            <p className="text-muted-foreground mb-4">
+              Start planning your goals and projects
+            </p>
+            <button
+              onClick={() => setShowNewProject(true)}
+              className="btn-primary mx-auto"
+            >
+              Create First Project
+            </button>
+          </div>
+        )}
+
+        <AnimatePresence>
+          {filteredProjects.map((project) => {
+            const linkedThoughts = getProjectThoughts(project.id);
+            const linkedTasks = getProjectTasks(project.id);
+            
+            return (
+              <motion.div
+                key={project.id}
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                onClick={() => setSelectedProject(project)}
+                className="card p-6 space-y-4 hover:shadow-md transition-shadow cursor-pointer"
+              >
+                {/* Project Header */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Target className="h-5 w-5 text-blue-500" />
+                      <h3 className="text-xl font-bold">{project.title}</h3>
+                    </div>
+                    
+                    {project.description && (
+                      <p className="text-gray-600 dark:text-gray-400 mb-3">
+                        {project.description}
+                      </p>
+                    )}
+                    
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        project.timeframe === 'short-term'
+                          ? 'bg-orange-100 text-orange-700'
+                          : 'bg-purple-100 text-purple-700'
+                      }`}>
+                        {project.timeframe === 'short-term' ? '⏱️ Short-term' : '🎯 Long-term'}
+                      </span>
+                      
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        project.status === 'active' ? 'bg-blue-100 text-blue-700' :
+                        project.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        project.status === 'on-hold' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {project.status}
+                      </span>
+                      
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        project.category === 'health' ? 'bg-red-100 text-red-700' :
+                        project.category === 'wealth' ? 'bg-green-100 text-green-700' :
+                        project.category === 'mastery' ? 'bg-blue-100 text-blue-700' :
+                        'bg-pink-100 text-pink-700'
+                      }`}>
+                        {project.category}
+                      </span>
+                      
+                      {project.targetDate && (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          Target: {new Date(project.targetDate).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {typeof project.progress === 'number' && (
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-blue-600">{project.progress}%</div>
+                      <div className="text-xs text-muted-foreground">Progress</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Progress Bar */}
+                {typeof project.progress === 'number' && (
+                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all"
+                      style={{ width: `${project.progress}%` }}
+                    />
+                  </div>
+                )}
+
+                {/* Linked Items */}
+                <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2 border-t">
+                  <div className="flex items-center gap-1">
+                    <MessageSquare className="h-4 w-4" />
+                    {linkedThoughts.length} thought(s)
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <ListChecks className="h-4 w-4" />
+                    {linkedTasks.length} task(s)
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    {new Date(project.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+
+      {/* New Project Modal */}
+      {showNewProject && (
+        <NewProjectModal onClose={() => setShowNewProject(false)} />
+      )}
+
+      {/* Project Detail Modal */}
+      {selectedProject && (
+        <ProjectDetailModal 
+          project={selectedProject}
+          onClose={() => setSelectedProject(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// New Project Modal Component
+function NewProjectModal({ onClose }: { onClose: () => void }) {
+  const addProject = useProjects((s) => s.add);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [timeframe, setTimeframe] = useState<ProjectTimeframe>('short-term');
+  const [category, setCategory] = useState<'health' | 'wealth' | 'mastery' | 'connection'>('mastery');
+  const [targetDate, setTargetDate] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+
+    addProject({
+      title: title.trim(),
+      description: description.trim() || undefined,
+      timeframe,
+      category,
+      status: 'active',
+      targetDate: targetDate || undefined,
+      progress: 0,
+    });
+
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 border-b">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">🎯 New Project</h2>
+            <button onClick={onClose} className="p-2 hover:bg-accent rounded-lg">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Project Title *</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g., Better Physique, Learn Spanish"
+              className="input w-full"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What do you want to achieve?"
+              className="input w-full min-h-[100px]"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Timeframe *</label>
+              <select
+                value={timeframe}
+                onChange={(e) => setTimeframe(e.target.value as ProjectTimeframe)}
+                className="input w-full"
+              >
+                <option value="short-term">Short-term (weeks-months)</option>
+                <option value="long-term">Long-term (months-years)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Category *</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value as any)}
+                className="input w-full"
+              >
+                <option value="health">Health</option>
+                <option value="wealth">Wealth</option>
+                <option value="mastery">Mastery</option>
+                <option value="connection">Connection</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Target Date (Optional)</label>
+            <input
+              type="date"
+              value={targetDate}
+              onChange={(e) => setTargetDate(e.target.value)}
+              className="input w-full"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 rounded-lg border hover:bg-accent">
+              Cancel
+            </button>
+            <button type="submit" className="flex-1 btn-primary">
+              Create Project
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+}
+
+// Project Detail Modal Component (placeholder for now)
+function ProjectDetailModal({ project, onClose }: { project: Project; onClose: () => void }) {
+  const updateProject = useProjects((s) => s.update);
+  const deleteProject = useProjects((s) => s.delete);
+  const thoughts = useThoughts((s) => s.thoughts);
+  const tasks = useTasks((s) => s.tasks);
+  
+  const linkedThoughts = thoughts.filter(t => project.linkedThoughtIds.includes(t.id));
+  const linkedTasks = tasks.filter(t => project.linkedTaskIds.includes(t.id));
+
+  const handleDelete = () => {
+    if (confirm(`Delete project "${project.title}"?`)) {
+      deleteProject(project.id);
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 border-b">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">{project.title}</h2>
+            <div className="flex items-center gap-2">
+              <button onClick={handleDelete} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                <Trash2 className="h-4 w-4" />
+              </button>
+              <button onClick={onClose} className="p-2 hover:bg-accent rounded-lg">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {project.description && (
+            <div>
+              <h3 className="font-semibold mb-2">Description</h3>
+              <p className="text-gray-600 dark:text-gray-400">{project.description}</p>
+            </div>
+          )}
+
+          {/* Linked Thoughts */}
+          <div>
+            <h3 className="font-semibold mb-2 flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Linked Thoughts ({linkedThoughts.length})
+            </h3>
+            {linkedThoughts.length > 0 ? (
+              <div className="space-y-2">
+                {linkedThoughts.map(t => (
+                  <div key={t.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    {t.text}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No thoughts linked yet</p>
+            )}
+          </div>
+
+          {/* Linked Tasks */}
+          <div>
+            <h3 className="font-semibold mb-2 flex items-center gap-2">
+              <ListChecks className="h-4 w-4" />
+              Linked Tasks ({linkedTasks.length})
+            </h3>
+            {linkedTasks.length > 0 ? (
+              <div className="space-y-2">
+                {linkedTasks.map(t => (
+                  <div key={t.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center gap-2">
+                    <input type="checkbox" checked={t.done} readOnly className="rounded" />
+                    <span className={t.done ? 'line-through text-gray-500' : ''}>{t.title}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No tasks linked yet</p>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}

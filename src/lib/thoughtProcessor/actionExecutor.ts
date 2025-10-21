@@ -50,6 +50,14 @@ export class ActionExecutor {
           await this.createMoodEntry(action, queueItem);
           break;
 
+        case 'createProject':
+          await this.createProject(action, queueItem);
+          break;
+
+        case 'linkToProject':
+          await this.linkToProject(action, queueItem);
+          break;
+
         default:
           throw new Error(`Unknown action type: ${action.type}`);
       }
@@ -270,6 +278,74 @@ export class ActionExecutor {
     });
   }
 
+  private async createProject(action: ProcessAction, queueItem: ProcessQueueItem) {
+    const { useProjects } = await import('@/store/useProjects');
+    const { useThoughts } = await import('@/store/useThoughts');
+    const addProject = useProjects.getState().add;
+    const linkThought = useProjects.getState().linkThought;
+
+    const metadata = {
+      sourceThoughtId: action.thoughtId,
+      createdBy: 'thought-processor',
+      processQueueId: queueItem.id,
+      aiReasoning: action.aiReasoning,
+      processedAt: new Date().toISOString(),
+    };
+
+    // Create the project
+    const projectId = addProject({
+      title: action.data.title,
+      description: action.data.description || undefined,
+      timeframe: action.data.timeframe || 'long-term',
+      category: action.data.category || 'mastery',
+      status: 'active',
+      targetDate: action.data.targetDate || undefined,
+      progress: 0,
+      notes: JSON.stringify(metadata),
+    });
+
+    // Link the originating thought to the project
+    linkThought(projectId, action.thoughtId);
+
+    // Track for revert
+    if (!action.createdItems) {
+      action.createdItems = { taskIds: [], noteIds: [], projectIds: [] };
+    }
+    action.createdItems.projectIds = [projectId];
+    queueItem.revertData.createdItems.projectIds.push(projectId);
+
+    this.log('Project created', { 
+      projectId, 
+      title: action.data.title,
+      timeframe: action.data.timeframe
+    });
+  }
+
+  private async linkToProject(action: ProcessAction, queueItem: ProcessQueueItem) {
+    const { useProjects } = await import('@/store/useProjects');
+    const projects = useProjects.getState().projects;
+    const linkThought = useProjects.getState().linkThought;
+
+    // Find project by title (case-insensitive)
+    const project = projects.find(p => 
+      p.title.toLowerCase() === action.data.projectTitle.toLowerCase() ||
+      p.title.toLowerCase().includes(action.data.projectTitle.toLowerCase())
+    );
+
+    if (!project) {
+      throw new Error(`Project "${action.data.projectTitle}" not found`);
+    }
+
+    // Link thought to project
+    linkThought(project.id, action.thoughtId);
+
+    this.log('Thought linked to project', { 
+      projectId: project.id,
+      projectTitle: project.title,
+      thoughtId: action.thoughtId
+    });
+  }
+
   async revertProcessing(queueItemId: string): Promise<{ success: boolean; error?: string }> {
     try {
       const { useProcessQueue } = await import('@/store/useProcessQueue');
@@ -292,6 +368,14 @@ export class ActionExecutor {
       for (const taskId of queueItem.revertData.createdItems.taskIds) {
         await deleteTask(taskId);
         this.log('Deleted task', { taskId });
+      }
+
+      // 2. Delete created projects
+      const { useProjects } = await import('@/store/useProjects');
+      const deleteProject = useProjects.getState().delete;
+      for (const projectId of queueItem.revertData.createdItems.projectIds) {
+        await deleteProject(projectId);
+        this.log('Deleted project', { projectId });
       }
 
       // 2. Restore thought

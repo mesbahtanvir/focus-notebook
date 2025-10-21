@@ -1,7 +1,7 @@
 "use client";
 
 import { ProcessQueueItem, ProcessAction } from '@/store/useProcessQueue';
-import { X, Check, CheckCircle2, Sparkles, Tag, FileEdit, RefreshCw, TrendingUp, Heart } from 'lucide-react';
+import { X, Check, CheckCircle2, Sparkles, Tag, FileEdit, RefreshCw, TrendingUp, Heart, Target, Link as LinkIcon } from 'lucide-react';
 import { useState } from 'react';
 
 interface ProcessingApprovalDialogProps {
@@ -37,6 +37,8 @@ export function ProcessingApprovalDialog({ queueItem, onApprove, onReject }: Pro
       case 'changeType': return <RefreshCw className="h-5 w-5" />;
       case 'setIntensity': return <TrendingUp className="h-5 w-5" />;
       case 'createMoodEntry': return <Heart className="h-5 w-5" />;
+      case 'createProject': return <Target className="h-5 w-5" />;
+      case 'linkToProject': return <LinkIcon className="h-5 w-5" />;
       default: return <FileEdit className="h-5 w-5" />;
     }
   };
@@ -49,6 +51,8 @@ export function ProcessingApprovalDialog({ queueItem, onApprove, onReject }: Pro
       case 'changeType': return 'from-green-500 to-emerald-500';
       case 'setIntensity': return 'from-red-500 to-rose-500';
       case 'createMoodEntry': return 'from-pink-500 to-rose-500';
+      case 'createProject': return 'from-blue-500 to-cyan-500';
+      case 'linkToProject': return 'from-teal-500 to-emerald-500';
       default: return 'from-gray-500 to-slate-500';
     }
   };
@@ -67,6 +71,10 @@ export function ProcessingApprovalDialog({ queueItem, onApprove, onReject }: Pro
         return `Set Intensity: ${action.data.intensity}/10`;
       case 'createMoodEntry':
         return `Create Mood Entry: ${action.data.mood}`;
+      case 'createProject':
+        return `Create Project: "${action.data.title}"`;
+      case 'linkToProject':
+        return `Link to Project: "${action.data.projectTitle}"`;
       default:
         return action.type;
     }
@@ -126,6 +134,35 @@ export function ProcessingApprovalDialog({ queueItem, onApprove, onReject }: Pro
                   }`}
                 />
               ))}
+            </div>
+          </div>
+        );
+      case 'createProject':
+        return (
+          <div className="mt-2 text-sm text-gray-600 space-y-1">
+            <div><strong>Description:</strong> {action.data.description || 'N/A'}</div>
+            <div><strong>Timeframe:</strong> {action.data.timeframe === 'short-term' ? '⏱️ Short-term (weeks-months)' : '🎯 Long-term (months-years)'}</div>
+            <div><strong>Category:</strong> {action.data.category}</div>
+            {action.data.targetDate && (
+              <div><strong>Target Date:</strong> {new Date(action.data.targetDate).toLocaleDateString()}</div>
+            )}
+            <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+              <strong className="text-blue-700">📝 Note:</strong>
+              <div className="text-blue-600 text-xs mt-1">
+                This thought will be automatically linked to the new project
+              </div>
+            </div>
+          </div>
+        );
+      case 'linkToProject':
+        return (
+          <div className="mt-2 text-sm text-gray-600 space-y-1">
+            <div><strong>Project:</strong> {action.data.projectTitle}</div>
+            <div className="mt-2 p-2 bg-teal-50 rounded border border-teal-200">
+              <strong className="text-teal-700">🔗 Link:</strong>
+              <div className="text-teal-600 text-xs mt-1">
+                This thought will be linked to the existing project for context and tracking
+              </div>
             </div>
           </div>
         );

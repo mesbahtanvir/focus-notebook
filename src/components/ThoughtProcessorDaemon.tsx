@@ -87,7 +87,8 @@ export function ThoughtProcessorDaemon() {
           },
           createdItems: {
             taskIds: [],
-            noteIds: []
+            noteIds: [],
+            projectIds: []
           },
           thoughtChanges: {
             textChanged: false,

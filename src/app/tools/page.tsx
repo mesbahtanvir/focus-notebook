@@ -56,6 +56,16 @@ const TOOLS = [
     borderColor: "border-green-300",
   },
   {
+    key: "projects",
+    title: "Goals & Projects",
+    description: "Plan and track long-term and short-term goals with linked thoughts and tasks.",
+    icon: Target,
+    emoji: "🎯",
+    gradient: "from-blue-400 to-cyan-500",
+    bgGradient: "from-blue-50 to-cyan-50",
+    borderColor: "border-blue-300",
+  },
+  {
     key: "thoughts",
     title: "Thoughts",
     description: "Manage your thoughts with CBT analysis for difficult feelings.",

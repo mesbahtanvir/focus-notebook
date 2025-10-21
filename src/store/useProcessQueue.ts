@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 
 export type ProcessingMode = 'auto' | 'safe' | 'manual';
 export type QueueStatus = 'pending' | 'processing' | 'awaiting-approval' | 'completed' | 'reverted' | 'failed' | 'cancelled';
-export type ActionType = 'createTask' | 'addTag' | 'enhanceThought' | 'changeType' | 'setIntensity' | 'createMoodEntry';
+export type ActionType = 'createTask' | 'addTag' | 'enhanceThought' | 'changeType' | 'setIntensity' | 'createMoodEntry' | 'createProject' | 'linkToProject';
 
 export interface ProcessAction {
   id: string;
@@ -14,6 +14,7 @@ export interface ProcessAction {
   createdItems?: {
     taskIds?: string[];
     noteIds?: string[];
+    projectIds?: string[];
   };
   aiReasoning?: string;
   error?: string;
@@ -30,6 +31,7 @@ export interface RevertData {
   createdItems: {
     taskIds: string[];
     noteIds: string[];
+    projectIds: string[];
   };
   thoughtChanges: {
     textChanged: boolean;

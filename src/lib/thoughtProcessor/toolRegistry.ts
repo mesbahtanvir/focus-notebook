@@ -307,6 +307,58 @@ class ToolRegistryClass {
         'important', 'key points', 'information', 'reference'
       ]
     });
+
+    // Projects/Goals Tool
+    this.register({
+      id: 'projects',
+      name: 'Goals & Projects',
+      description: 'Create and manage long-term and short-term goals and projects',
+      icon: 'Target',
+      capabilities: [
+        'Create short-term and long-term projects',
+        'Link thoughts and tasks to projects',
+        'Track goal progress',
+        'Identify related thoughts for existing projects'
+      ],
+      actions: [
+        {
+          type: 'createProject',
+          description: 'Creates a new project/goal',
+          params: {
+            title: 'string',
+            description: 'string',
+            timeframe: 'short-term | long-term',
+            category: 'health | wealth | mastery | connection',
+            targetDate: 'ISO date string (optional)'
+          }
+        },
+        {
+          type: 'linkToProject',
+          description: 'Links thought to an existing project',
+          params: {
+            projectTitle: 'string',
+            reasoning: 'why this thought relates to the project'
+          }
+        }
+      ],
+      priority: 2,
+      active: true,
+      examples: [
+        'I want to have a great physique in 2 years',
+        'Goal: Learn Spanish fluently',
+        'How can I achieve great physique in 2 years',
+        'I want to build a successful business',
+        'Planning to run a marathon next year',
+        'I want to master machine learning',
+        'Building better relationships with family'
+      ],
+      keywords: [
+        'goal', 'project', 'want to', 'achieve', 'plan', 'build',
+        'in 2 years', 'by', 'target', 'aim', 'objective',
+        'long-term', 'short-term', 'master', 'learn', 'become',
+        'improve', 'develop', 'get better at'
+      ]
+    });
   }
 }
 

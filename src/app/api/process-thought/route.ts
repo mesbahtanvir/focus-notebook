@@ -93,6 +93,18 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
         "notes": "User expresses strong sadness"
       },
       "reasoning": "Clear emotional expression with high intensity"
+    },
+    {
+      "type": "createProject",
+      "tool": "projects",
+      "data": {
+        "title": "Better Physique",
+        "description": "Achieve great physical fitness and body composition",
+        "timeframe": "long-term",
+        "category": "health",
+        "targetDate": "2027-10-21"
+      },
+      "reasoning": "Clear long-term goal with 2 year timeframe"
     }
   ],
   "confidence": 0.95,
@@ -121,7 +133,19 @@ MOOD RECOGNITION RULES:
   * "I am sooo sad right now" → intensity: 9 (multiple 'o's indicate strong emotion)
   * "Feeling a bit down" → intensity: 4
   * "I'm extremely happy!" → intensity: 9
-  * "Kind of stressed" → intensity: 5`;
+  * "Kind of stressed" → intensity: 5
+
+PROJECT/GOAL RECOGNITION RULES:
+- If thought expresses a long-term aspiration (months-years), create a project with timeframe "long-term"
+- If thought expresses a short-term goal (weeks-months), create a project with timeframe "short-term"
+- Look for time indicators: "in 2 years", "by next year", "within 6 months"
+- Extract target date if mentioned
+- If thought mentions HOW to achieve a goal or relates to existing goal, use "linkToProject" instead
+- Examples:
+  * "I want to have a great physique in 2 years" → createProject (long-term, health, target: 2 years from now)
+  * "How can I achieve great physique in 2 years" → linkToProject (link to "Better Physique" project) + createTask + addTag: brainstorm
+  * "Goal: Learn Spanish fluently" → createProject (long-term, mastery)
+  * "Ideas for improving my fitness routine" → linkToProject (link to fitness-related project) + addTag: brainstorm`;
 
     // Call OpenAI API
     console.log('📤 Calling OpenAI API');
