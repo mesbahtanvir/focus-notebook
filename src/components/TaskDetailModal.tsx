@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useTasks, Task, TaskCategory, TaskPriority, TaskStatus, RecurrenceType } from "@/store/useTasks";
 import { FormattedNotes } from "@/lib/formatNotes";
+import { SourceInfo } from "@/components/SourceBadge";
 import { 
   X, 
   Calendar, 
@@ -373,6 +374,15 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
             <div>Created: {new Date(task.createdAt).toLocaleString()}</div>
             {task.completedAt && (
               <div>Completed: {new Date(task.completedAt).toLocaleString()}</div>
+            )}
+            {(task.source || task.lastModifiedSource) && (
+              <div className="pt-2">
+                <SourceInfo 
+                  source={task.source} 
+                  lastModifiedSource={task.lastModifiedSource}
+                  layout="vertical"
+                />
+              </div>
             )}
           </div>
         </div>

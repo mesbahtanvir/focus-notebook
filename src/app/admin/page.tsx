@@ -8,10 +8,11 @@ import { useThoughts } from "@/store/useThoughts";
 import { useMoods } from "@/store/useMoods";
 import { useProjects } from "@/store/useProjects";
 import { useFocus } from "@/store/useFocus";
-import { Shield, RefreshCw, Trash2, Search, Filter, ChevronDown, ChevronUp, Database, Cloud } from "lucide-react";
+import { Shield, RefreshCw, Trash2, Search, Filter, ChevronDown, ChevronUp, Database, Cloud, CloudUpload, AlertCircle, CheckCircle2 } from "lucide-react";
 import { CloudSyncMonitor } from "@/components/CloudSyncMonitor";
 import { db as firestore, auth } from "@/lib/firebase";
 import { collection, getDocs } from "firebase/firestore";
+import { smartSync } from "@/lib/syncEngine";
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
@@ -31,8 +32,14 @@ export default function AdminPage() {
     focusSessions: []
   });
   const [loadingCloudData, setLoadingCloudData] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<{
+    inProgress: boolean;
+    success: boolean | null;
+    message: string;
+    details?: { mergedItems?: number; conflicts?: number };
+  }>({ inProgress: false, success: null, message: '' });
   
-  // Get all local data
+  // Get all local data and reload functions
   const tasks = useTasks((s) => s.tasks);
   const thoughts = useThoughts((s) => s.thoughts);
   const moods = useMoods((s) => s.moods);
@@ -78,6 +85,68 @@ export default function AdminPage() {
       loadCloudData();
     }
   }, [showCloudData, user]);
+
+  /**
+   * Force sync with smart merging between local and cloud
+   */
+  const handleForceSync = async () => {
+    if (!user) {
+      setSyncStatus({
+        inProgress: false,
+        success: false,
+        message: 'Please sign in to sync data',
+        details: undefined
+      });
+      return;
+    }
+
+    setSyncStatus({
+      inProgress: true,
+      success: null,
+      message: 'Syncing data with cloud...',
+      details: undefined
+    });
+
+    try {
+      const result = await smartSync();
+      
+      if (result.success) {
+        setSyncStatus({
+          inProgress: false,
+          success: true,
+          message: 'Sync completed successfully!',
+          details: {
+            mergedItems: result.mergedItems,
+            conflicts: result.conflicts
+          }
+        });
+
+        // Reload cloud data to show updated state
+        if (showCloudData) {
+          await loadCloudData();
+        }
+
+        // Auto-hide success message after 5 seconds
+        setTimeout(() => {
+          setSyncStatus({ inProgress: false, success: null, message: '' });
+        }, 5000);
+      } else {
+        setSyncStatus({
+          inProgress: false,
+          success: false,
+          message: result.error || 'Sync failed',
+          details: undefined
+        });
+      }
+    } catch (error: any) {
+      setSyncStatus({
+        inProgress: false,
+        success: false,
+        message: error.message || 'An error occurred during sync',
+        details: undefined
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -151,6 +220,90 @@ export default function AdminPage() {
             💡 This page shows all your Firebase sync operations and local data for debugging purposes
           </p>
         </div>
+      </div>
+
+      {/* Force Sync Section */}
+      <div className="bg-gradient-to-r from-cyan-50 via-blue-50 to-indigo-50 rounded-xl p-4 md:p-6 border-4 border-cyan-300 shadow-lg">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex-1">
+            <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-600 to-indigo-600 bg-clip-text text-transparent mb-2 flex items-center gap-2">
+              <CloudUpload className="h-6 w-6 text-cyan-600" />
+              Force Sync with Cloud
+            </h2>
+            <p className="text-sm text-gray-600 mb-2">
+              Manually trigger smart sync between local IndexedDB and Firebase Cloud. 
+              Conflicts are automatically resolved by keeping the most recent version.
+            </p>
+            <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+              <span className="flex items-center gap-1">
+                <Database className="h-3 w-3" />
+                Local: {tasks.length + thoughts.length + moods.length + projects.length + sessions.length} items
+              </span>
+              <span className="flex items-center gap-1">
+                <Cloud className="h-3 w-3" />
+                Cloud: {cloudData.tasks?.length + cloudData.thoughts?.length + cloudData.moods?.length + cloudData.focusSessions?.length || 0} items
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex-shrink-0">
+            <button
+              onClick={handleForceSync}
+              disabled={syncStatus.inProgress || !user}
+              className={`px-6 py-4 rounded-xl font-bold text-lg shadow-xl transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3 ${
+                syncStatus.inProgress
+                  ? 'bg-gray-400 text-white cursor-not-allowed'
+                  : !user
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white'
+              }`}
+            >
+              {syncStatus.inProgress ? (
+                <>
+                  <RefreshCw className="h-6 w-6 animate-spin" />
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <CloudUpload className="h-6 w-6" />
+                  Force Sync Now
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Sync Status Message */}
+        {syncStatus.message && (
+          <div className={`mt-4 p-4 rounded-lg border-2 flex items-start gap-3 ${
+            syncStatus.success === true
+              ? 'bg-green-50 border-green-300 text-green-800'
+              : syncStatus.success === false
+              ? 'bg-red-50 border-red-300 text-red-800'
+              : 'bg-blue-50 border-blue-300 text-blue-800'
+          }`}>
+            {syncStatus.success === true ? (
+              <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+            ) : syncStatus.success === false ? (
+              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            ) : (
+              <RefreshCw className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5 animate-spin" />
+            )}
+            <div className="flex-1">
+              <p className="font-semibold">{syncStatus.message}</p>
+              {syncStatus.details && (
+                <div className="mt-2 text-sm space-y-1">
+                  {syncStatus.details.mergedItems !== undefined && (
+                    <p>✅ Merged {syncStatus.details.mergedItems} items</p>
+                  )}
+                  {syncStatus.details.conflicts !== undefined && syncStatus.details.conflicts > 0 && (
+                    <p>⚠️ Resolved {syncStatus.details.conflicts} conflicts</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Request Queue */}

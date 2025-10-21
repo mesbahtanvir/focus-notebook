@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { db, toTask, toTaskRow } from '@/db'
 import { pushItemToCloud, deleteItemFromCloud } from '@/lib/syncEngine'
 import { auth } from '@/lib/firebase'
+import { getCompactSource } from '@/lib/deviceDetection'
 
 export type TaskStatus = 'active' | 'completed' | 'backlog'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
@@ -33,6 +34,8 @@ export interface Task {
   completionCount?: number // Track how many times completed this period
   projectId?: string // Link to project
   focusEligible?: boolean // Can be done during a focus session (laptop/notebook work)
+  source?: string // Device/platform source (e.g., "iPhone-Safari", "Mac-Chrome")
+  lastModifiedSource?: string // Source of last modification
 }
 
 // Helper functions for recurring tasks
@@ -159,11 +162,14 @@ export const useTasks = create<State>((set, get) => ({
   },
   
   add: async (task) => {
+    const source = getCompactSource();
     const newTask = {
       ...task,
       id: Date.now().toString(),
       done: false,
       updatedAt: Date.now(),
+      source,
+      lastModifiedSource: source,
     }
     
     try {
@@ -220,7 +226,12 @@ export const useTasks = create<State>((set, get) => ({
   
   updateTask: async (id, updates) => {
     try {
-      const updatesWithTimestamp = { ...updates, updatedAt: Date.now() }
+      const source = getCompactSource();
+      const updatesWithTimestamp = { 
+        ...updates, 
+        updatedAt: Date.now(),
+        lastModifiedSource: source 
+      }
       const serializedUpdates = toTaskRow({ id, ...updatesWithTimestamp } as any)
       const { id: _, ...updateData } = serializedUpdates
       

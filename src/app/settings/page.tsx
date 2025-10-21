@@ -14,6 +14,7 @@ import { useSettings } from '@/store/useSettings'
 import { syncToCloud, syncFromCloud } from '@/lib/cloudSync'
 import { useAuth } from '@/contexts/AuthContext'
 import { Cloud, CloudOff, RefreshCw, Upload, Key, Eye, EyeOff, Check, X } from 'lucide-react'
+import { SyncStatusIndicator } from '@/components/SyncStatusIndicator'
 
 type SettingsFormValues = {
   allowBackgroundProcessing: boolean;
@@ -361,6 +362,9 @@ export default function SettingsPage() {
                 <h3 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">Cloud Sync</h3>
               </div>
               
+              {/* Sync Status Indicator */}
+              <SyncStatusIndicator />
+              
               {!user ? (
                 <div className="rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 p-6 border-2 border-blue-200">
                   <p className="text-sm text-gray-700 font-medium">
@@ -376,8 +380,13 @@ export default function SettingsPage() {
                         Cloud Sync is Always Active
                       </p>
                       <p className="text-sm text-gray-700">
-                        Your data automatically syncs to the cloud every 5 minutes. You can access it from any device by signing in with the same account. No configuration needed!
+                        Your data automatically syncs to the cloud when you're signed in. You can access it from any device (iPhone, iPad, Mac, etc.) by signing in with the same account.
                       </p>
+                      <div className="mt-3 p-3 bg-white rounded-lg border border-green-300">
+                        <p className="text-xs text-gray-600">
+                          💡 <strong>Troubleshooting:</strong> If data isn't syncing on mobile, check that you're signed in and have internet connection. Visit <code className="bg-gray-100 px-1 rounded">/admin</code> page to see sync status and force sync if needed.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>

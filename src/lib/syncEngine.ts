@@ -309,46 +309,88 @@ export async function smartSync(): Promise<SyncResult> {
 
 /**
  * Push single item to cloud immediately (for real-time sync)
+ * Includes retry logic and better error handling
  */
 export async function pushItemToCloud(
   collection: 'tasks' | 'thoughts' | 'moods' | 'focusSessions',
-  item: any
+  item: any,
+  retries: number = 3
 ): Promise<boolean> {
-  try {
-    const user = auth.currentUser
-    if (!user) return false
-
-    const userId = user.uid
-    const itemRef = doc(firestore, `users/${userId}/${collection}`, item.id)
-    const cleanedItem = cleanUndefined({ ...item, updatedAt: Date.now() })
-    
-    await setDoc(itemRef, cleanedItem)
-    console.log(`✅ Pushed ${collection}/${item.id} to cloud`)
-    
-    // Log successful push
-    await logSyncOperation({
-      operation: 'push',
-      collection,
-      itemId: item.id,
-      status: 'success',
-      itemsAffected: 1,
-    })
-    
-    return true
-  } catch (error) {
-    console.error(`Failed to push ${collection} item:`, error)
-    
-    // Log failed push
-    await logSyncOperation({
-      operation: 'push',
-      collection,
-      itemId: item.id,
-      status: 'failed',
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
-    })
-    
-    return false
+  // Emit sync start event
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('syncStart'));
   }
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const user = auth.currentUser
+      if (!user) {
+        console.warn('⚠️ Cannot push to cloud: User not authenticated');
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('syncError', { 
+            detail: { error: 'Not authenticated' }
+          }));
+        }
+        return false;
+      }
+
+      const userId = user.uid
+      const itemRef = doc(firestore, `users/${userId}/${collection}`, item.id)
+      const cleanedItem = cleanUndefined({ ...item, updatedAt: Date.now() })
+      
+      await setDoc(itemRef, cleanedItem)
+      console.log(`✅ Pushed ${collection}/${item.id} to cloud (attempt ${attempt}/${retries})`);
+      
+      // Log successful push
+      await logSyncOperation({
+        operation: 'push',
+        collection,
+        itemId: item.id,
+        status: 'success',
+        itemsAffected: 1,
+      })
+      
+      // Emit sync success event
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('syncSuccess'));
+      }
+      
+      return true
+    } catch (error: any) {
+      console.error(`❌ Failed to push ${collection}/${item.id} (attempt ${attempt}/${retries}):`, error);
+      
+      // If this is the last attempt, log the failure
+      if (attempt === retries) {
+        const errorMessage = error?.message || error?.code || 'Unknown error';
+        console.error(`❌ All ${retries} attempts failed for ${collection}/${item.id}`);
+        
+        // Log failed push
+        await logSyncOperation({
+          operation: 'push',
+          collection,
+          itemId: item.id,
+          status: 'failed',
+          errorMessage,
+        })
+        
+        // Emit sync error event
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('syncError', { 
+            detail: { error: errorMessage }
+          }));
+        }
+        
+        return false
+      }
+      
+      // Wait before retrying (exponential backoff)
+      const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+      console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+  }
+  
+  return false;
 }
 
 /**

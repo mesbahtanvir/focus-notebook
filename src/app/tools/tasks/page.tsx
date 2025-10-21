@@ -19,6 +19,7 @@ import {
 import { getNotesPreview } from "@/lib/formatNotes";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { TaskInput } from "@/components/TaskInput";
+import { SourceBadge } from "@/components/SourceBadge";
 
 type SortOption = 'priority' | 'dueDate' | 'createdAt' | 'title';
 type ViewMode = 'list' | 'kanban';
@@ -382,6 +383,9 @@ export default function TasksPage() {
                                 {task.recurrence.type}
                                 {task.recurrence.frequency && ` (${task.completionCount || 0}/${task.recurrence.frequency})`}
                               </span>
+                            )}
+                            {task.source && (
+                              <SourceBadge source={task.source} size="sm" showIcon={true} />
                             )}
                           </div>
                         </div>
