@@ -4,6 +4,7 @@ import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 import Layout from '@/components/Layout'
 import { AutoSync } from '@/components/AutoSync'
+import { ThoughtProcessorDaemon } from '@/components/ThoughtProcessorDaemon'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -29,6 +30,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <AuthProvider>
           <AutoSync />
+          <ThoughtProcessorDaemon />
           <Layout>
             {children}
           </Layout>
