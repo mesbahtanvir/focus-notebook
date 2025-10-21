@@ -1,7 +1,7 @@
 "use client";
 
 import { useTasks } from "@/store/useTasks";
-import { useThoughts } from "@/store/useThoughts";
+import { useThoughts, Thought } from "@/store/useThoughts";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import { useState, useMemo } from "react";
@@ -9,6 +9,7 @@ import TaskList from "@/components/TaskList";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { Sparkles, Lock, MessageSquare, Lightbulb, Trash2, CheckCircle } from "lucide-react";
+import { ThoughtDetailModal } from "@/components/ThoughtDetailModal";
 
 // Disable static generation for now
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,7 @@ export default function Page() {
   // Tasks store (for New Task button only; TaskList handles its own reads)
   const addTask = useTasks((s) => s.add);
   const [showAll, setShowAll] = useState(false);
+  const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
 
   const recentThoughts = useMemo(() => {
     const sorted = [...thoughts];
@@ -162,29 +164,36 @@ export default function Page() {
                 key={t.id}
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`flex items-center gap-3 p-4 rounded-xl bg-white border-2 transition-all hover:shadow-md ${
+                className={`flex items-center gap-3 p-4 rounded-xl bg-white border-2 transition-all hover:shadow-md cursor-pointer ${
                   t.done ? 'border-green-200 bg-green-50' : 'border-blue-200'
                 }`}
               >
                 <input
-                  id={`task-${t.id}`}
+                  id={`thought-${t.id}`}
                   type="checkbox"
                   checked={t.done}
-                  onChange={() => toggleThought(t.id)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    toggleThought(t.id);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
                   className="w-5 h-5 rounded border-2 border-blue-300 text-blue-600 focus:ring-2 focus:ring-blue-200 cursor-pointer"
                 />
-                <label 
-                  htmlFor={`task-${t.id}`} 
-                  className={`flex-1 cursor-pointer ${
+                <div 
+                  onClick={() => setSelectedThought(t)}
+                  className={`flex-1 ${
                     t.done ? 'line-through text-gray-400' : 'text-gray-800 font-medium'
                   }`}
                 >
                   {t.done && <CheckCircle className="inline h-4 w-4 mr-2 text-green-500" />}
                   {t.text}
-                </label>
+                </div>
                 <button
                   className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-all transform hover:scale-110"
-                  onClick={() => deleteThought(t.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteThought(t.id);
+                  }}
                   aria-label={`Delete ${t.text}`}
                   title="Delete"
                 >
@@ -195,6 +204,14 @@ export default function Page() {
           </ul>
         </div>
       </section>
+
+      {/* Thought Detail Modal */}
+      {selectedThought && (
+        <ThoughtDetailModal
+          thought={selectedThought}
+          onClose={() => setSelectedThought(null)}
+        />
+      )}
     </div>
   );
 }
