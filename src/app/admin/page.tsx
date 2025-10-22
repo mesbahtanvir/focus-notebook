@@ -2,12 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRequestLog, RequestLog } from "@/store/useRequestLog";
-import { useTasks } from "@/store/useTasks";
-import { useThoughts } from "@/store/useThoughts";
-import { useMoods } from "@/store/useMoods";
-import { useProjects } from "@/store/useProjects";
-import { useFocus } from "@/store/useFocus";
+import { useRequestLog } from "@/store/useRequestLog";
 import { Shield, RefreshCw, Trash2, Search, Filter, ChevronDown, ChevronUp, Database, Cloud } from "lucide-react";
 import { db as firestore } from "@/lib/firebaseClient";
 import { collection, getDocs } from "firebase/firestore";
@@ -19,8 +14,6 @@ export default function AdminPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [showLocalData, setShowLocalData] = useState(false);
-  const [selectedDataType, setSelectedDataType] = useState<string>('tasks');
   const [showCloudData, setShowCloudData] = useState(false);
   const [selectedCloudDataType, setSelectedCloudDataType] = useState<string>('tasks');
   const [cloudData, setCloudData] = useState<any>({
@@ -30,13 +23,6 @@ export default function AdminPage() {
     focusSessions: []
   });
   const [loadingCloudData, setLoadingCloudData] = useState(false);
-  
-  // Get all local data and reload functions
-  const tasks = useTasks((s) => s.tasks);
-  const thoughts = useThoughts((s) => s.thoughts);
-  const moods = useMoods((s) => s.moods);
-  const projects = useProjects((s) => s.projects);
-  const sessions = useFocus((s) => s.sessions);
   
   const pendingRequests = getPendingRequests();
   const inProgressRequests = getInProgressRequests();
@@ -313,123 +299,6 @@ export default function AdminPage() {
             className="w-full pl-10 pr-4 py-3 rounded-lg border-2 border-purple-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none"
           />
         </div>
-      </div>
-
-      {/* Local Database Viewer */}
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 md:p-6 border-4 border-green-300 shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent flex items-center gap-2">
-            <Database className="h-6 w-6 text-green-600" />
-            Local Database
-          </h2>
-          <button
-            onClick={() => setShowLocalData(!showLocalData)}
-            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-              showLocalData
-                ? "bg-green-500 text-white"
-                : "bg-white text-green-700 border-2 border-green-300 hover:bg-green-50"
-            }`}
-          >
-            {showLocalData ? 'Hide' : 'Show'} Data
-          </button>
-        </div>
-
-        {showLocalData && (
-          <div className="space-y-4">
-            {/* Data Type Selector */}
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setSelectedDataType('tasks')}
-                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                  selectedDataType === 'tasks'
-                    ? "bg-green-600 text-white shadow-md"
-                    : "bg-white text-gray-700 hover:bg-green-50 border-2 border-green-300"
-                }`}
-              >
-                Tasks ({tasks.length})
-              </button>
-              <button
-                onClick={() => setSelectedDataType('thoughts')}
-                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                  selectedDataType === 'thoughts'
-                    ? "bg-green-600 text-white shadow-md"
-                    : "bg-white text-gray-700 hover:bg-green-50 border-2 border-green-300"
-                }`}
-              >
-                Thoughts ({thoughts.length})
-              </button>
-              <button
-                onClick={() => setSelectedDataType('moods')}
-                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                  selectedDataType === 'moods'
-                    ? "bg-green-600 text-white shadow-md"
-                    : "bg-white text-gray-700 hover:bg-green-50 border-2 border-green-300"
-                }`}
-              >
-                Moods ({moods.length})
-              </button>
-              <button
-                onClick={() => setSelectedDataType('projects')}
-                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                  selectedDataType === 'projects'
-                    ? "bg-green-600 text-white shadow-md"
-                    : "bg-white text-gray-700 hover:bg-green-50 border-2 border-green-300"
-                }`}
-              >
-                Projects ({projects.length})
-              </button>
-              <button
-                onClick={() => setSelectedDataType('sessions')}
-                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                  selectedDataType === 'sessions'
-                    ? "bg-green-600 text-white shadow-md"
-                    : "bg-white text-gray-700 hover:bg-green-50 border-2 border-green-300"
-                }`}
-              >
-                Focus Sessions ({sessions.length})
-              </button>
-            </div>
-
-            {/* Data Display */}
-            <div className="bg-white rounded-lg p-4 border-2 border-green-300 max-h-[600px] overflow-auto">
-              <pre className="text-xs font-mono">
-                {JSON.stringify(
-                  selectedDataType === 'tasks' ? tasks :
-                  selectedDataType === 'thoughts' ? thoughts :
-                  selectedDataType === 'moods' ? moods :
-                  selectedDataType === 'projects' ? projects :
-                  sessions,
-                  null,
-                  2
-                )}
-              </pre>
-            </div>
-
-            {/* Summary Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              <div className="bg-white rounded-lg p-3 border-2 border-green-300 text-center">
-                <div className="text-2xl font-bold text-green-600">{tasks.length}</div>
-                <div className="text-xs text-gray-600">Tasks</div>
-              </div>
-              <div className="bg-white rounded-lg p-3 border-2 border-green-300 text-center">
-                <div className="text-2xl font-bold text-purple-600">{thoughts.length}</div>
-                <div className="text-xs text-gray-600">Thoughts</div>
-              </div>
-              <div className="bg-white rounded-lg p-3 border-2 border-green-300 text-center">
-                <div className="text-2xl font-bold text-yellow-600">{moods.length}</div>
-                <div className="text-xs text-gray-600">Moods</div>
-              </div>
-              <div className="bg-white rounded-lg p-3 border-2 border-green-300 text-center">
-                <div className="text-2xl font-bold text-blue-600">{projects.length}</div>
-                <div className="text-xs text-gray-600">Projects</div>
-              </div>
-              <div className="bg-white rounded-lg p-3 border-2 border-green-300 text-center">
-                <div className="text-2xl font-bold text-indigo-600">{sessions.length}</div>
-                <div className="text-xs text-gray-600">Sessions</div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Cloud Database (Firebase) */}
