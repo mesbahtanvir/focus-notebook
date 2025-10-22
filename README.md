@@ -42,10 +42,10 @@ Most of this codebase has been collaboratively developed with LLMs, demonstratin
 - **Request Logging**: Track and debug API interactions
 
 ### 🔐 Privacy & Sync
-- **Offline-First**: Full functionality without internet
-- **IndexedDB**: Local-first data storage
-- **Firebase Sync**: Optional cloud backup with authentication
-- **No Server Lock-in**: Your data stays with you
+- **Real-time Sync**: Automatic synchronization across all devices
+- **Firestore**: Cloud-first data storage with offline support
+- **Firebase Auth**: Secure authentication and user management
+- **Multi-device**: Access your data from iPhone, iPad, Mac, and web
 
 ### 🤖 AI Integration
 - **Background Processing**: Optional LLM-powered thought analysis
@@ -58,13 +58,14 @@ Most of this codebase has been collaboratively developed with LLMs, demonstratin
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **State Management**: Zustand
-- **Database**: Dexie.js (IndexedDB wrapper)
-- **Backend**: Firebase (Authentication & Firestore)
+- **Database**: Firebase Firestore (real-time sync)
+- **Authentication**: Firebase Auth
 - **Animation**: Framer Motion
 - **Forms**: React Hook Form
 - **UI Components**: Radix UI + shadcn/ui
 - **Icons**: Lucide React
 - **Testing**: Jest + React Testing Library
+- **Mobile**: Capacitor (iOS/iPadOS support)
 
 ## 🚀 Getting Started
 
