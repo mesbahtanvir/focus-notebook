@@ -10,32 +10,45 @@ function uid(): string {
 
 /**
  * Remove undefined values from an object recursively (Firestore doesn't accept undefined)
- * Also handles arrays and nested objects
+ * Also handles arrays and nested objects. Omits undefined fields entirely.
  */
 function removeUndefined(obj: any): any {
-  if (obj === null || obj === undefined) {
-    return obj;
+  // Null is valid in Firestore
+  if (obj === null) {
+    return null;
   }
   
-  // Handle arrays
+  // Undefined should be filtered out at parent level
+  if (obj === undefined) {
+    return undefined; // Will be filtered by parent
+  }
+  
+  // Handle arrays - filter out undefined elements
   if (Array.isArray(obj)) {
     return obj
       .filter(item => item !== undefined)
       .map(item => removeUndefined(item));
   }
   
-  // Handle objects
-  if (typeof obj === 'object') {
+  // Handle plain objects (not Date, not Firebase types, etc.)
+  if (obj && typeof obj === 'object' && obj.constructor === Object) {
     const cleaned: any = {};
     for (const key in obj) {
-      if (obj.hasOwnProperty(key) && obj[key] !== undefined) {
-        cleaned[key] = removeUndefined(obj[key]);
+      if (obj.hasOwnProperty(key)) {
+        const value = obj[key];
+        if (value !== undefined) {
+          const cleanedValue = removeUndefined(value);
+          // Only add if the cleaned value is not undefined
+          if (cleanedValue !== undefined) {
+            cleaned[key] = cleanedValue;
+          }
+        }
       }
     }
     return cleaned;
   }
   
-  // Primitives
+  // Return everything else as-is (primitives, Date objects, Firebase FieldValue objects, etc.)
   return obj;
 }
 
