@@ -57,7 +57,7 @@ export default function DashboardPage() {
         return sessionDate.toDateString() === date.toDateString();
       });
       const totalMinutes = daySessions.reduce((sum, s) => {
-        const sessionTime = s.tasks.reduce((t, task) => t + task.timeSpent, 0) / 60;
+        const sessionTime = (s.tasks || []).reduce((t, task) => t + task.timeSpent, 0) / 60;
         return sum + sessionTime;
       }, 0);
       focusData.push({ date, minutes: totalMinutes });
@@ -77,7 +77,7 @@ export default function DashboardPage() {
 
     // Overall statistics
     const totalFocusTime = sessions.reduce((sum, s) => {
-      return sum + s.tasks.reduce((t, task) => t + task.timeSpent, 0);
+      return sum + (s.tasks || []).reduce((t, task) => t + task.timeSpent, 0);
     }, 0);
 
     const completedTasks = tasks.filter(t => t.completedAt && new Date(t.completedAt) >= startDate);
@@ -101,8 +101,8 @@ export default function DashboardPage() {
 
     sessions.filter(s => new Date(s.startTime) >= startDate).forEach(session => {
       const timeOfDay = getTimeOfDayCategory(session.startTime);
-      const sessionTime = session.tasks.reduce((sum, t) => sum + t.timeSpent, 0);
-      const completed = session.tasks.filter(t => t.completed).length;
+      const sessionTime = (session.tasks || []).reduce((sum, t) => sum + t.timeSpent, 0);
+      const completed = (session.tasks || []).filter(t => t.completed).length;
       
       timeOfDayData[timeOfDay].sessions++;
       timeOfDayData[timeOfDay].totalTime += sessionTime;
@@ -115,7 +115,7 @@ export default function DashboardPage() {
       if (data.sessions > 0) {
         const totalPossibleTasks = sessions
           .filter(s => getTimeOfDayCategory(s.startTime) === key)
-          .reduce((sum, s) => sum + s.tasks.length, 0);
+          .reduce((sum, s) => sum + (s.tasks || []).length, 0);
         data.avgCompletion = totalPossibleTasks > 0 ? (data.completedTasks / totalPossibleTasks) * 100 : 0;
       }
     });

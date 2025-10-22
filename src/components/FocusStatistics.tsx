@@ -17,16 +17,17 @@ export function FocusStatistics() {
 
   if (!completedSession) return null;
 
-  const totalTimeSpent = completedSession.tasks.reduce((sum, t) => sum + t.timeSpent, 0);
-  const completedTasks = completedSession.tasks.filter(t => t.completed).length;
-  const totalTasks = completedSession.tasks.length;
-  const completionRate = (completedTasks / totalTasks) * 100;
+  const tasks = completedSession.tasks || [];
+  const totalTimeSpent = tasks.reduce((sum, t) => sum + t.timeSpent, 0);
+  const completedTasks = tasks.filter(t => t.completed).length;
+  const totalTasks = tasks.length;
+  const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   // Calculate mastery vs pleasure ratio
-  const masteryTime = completedSession.tasks
+  const masteryTime = tasks
     .filter(t => t.task.category === 'mastery')
     .reduce((sum, t) => sum + t.timeSpent, 0);
-  const pleasureTime = completedSession.tasks
+  const pleasureTime = tasks
     .filter(t => t.task.category === 'pleasure')
     .reduce((sum, t) => sum + t.timeSpent, 0);
   

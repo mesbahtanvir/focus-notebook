@@ -347,9 +347,9 @@ function FocusPageContent() {
                   </h3>
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {sessions.slice(0, 10).map((session) => {
-                      const totalTime = session.tasks.reduce((sum, t) => sum + t.timeSpent, 0);
-                      const completed = session.tasks.filter(t => t.completed).length;
-                      const completionRate = (completed / session.tasks.length) * 100;
+                      const totalTime = (session.tasks || []).reduce((sum, t) => sum + t.timeSpent, 0);
+                      const completed = (session.tasks || []).filter(t => t.completed).length;
+                      const completionRate = session.tasks?.length ? (completed / session.tasks.length) * 100 : 0;
                       
                       return (
                         <motion.button

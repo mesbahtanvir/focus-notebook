@@ -11,16 +11,17 @@ interface Props {
 }
 
 export function FocusSessionDetailModal({ session, onClose }: Props) {
-  const totalTimeSpent = session.tasks.reduce((sum, t) => sum + t.timeSpent, 0);
-  const completedTasks = session.tasks.filter(t => t.completed).length;
-  const totalTasks = session.tasks.length;
-  const completionRate = (completedTasks / totalTasks) * 100;
+  const tasks = session.tasks || [];
+  const totalTimeSpent = tasks.reduce((sum, t) => sum + t.timeSpent, 0);
+  const completedTasks = tasks.filter(t => t.completed).length;
+  const totalTasks = tasks.length;
+  const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   // Calculate mastery vs pleasure ratio
-  const masteryTime = session.tasks
+  const masteryTime = tasks
     .filter(t => t.task.category === 'mastery')
     .reduce((sum, t) => sum + t.timeSpent, 0);
-  const pleasureTime = session.tasks
+  const pleasureTime = tasks
     .filter(t => t.task.category === 'pleasure')
     .reduce((sum, t) => sum + t.timeSpent, 0);
   

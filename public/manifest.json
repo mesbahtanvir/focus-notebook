@@ -1,0 +1,42 @@
+{
+  "name": "Focus Notebook",
+  "short_name": "Focus",
+  "description": "Privacy-first productivity dashboard for personal growth",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#9333ea",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "lifestyle", "health"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Add Thought",
+      "url": "/tools/thoughts",
+      "description": "Quick capture a thought"
+    },
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "description": "View your progress"
+    },
+    {
+      "name": "Focus Session",
+      "url": "/tools/focus",
+      "description": "Start a focus session"
+    },
+    {
+      "name": "Tasks",
+      "url": "/tools/tasks",
+      "description": "Manage your tasks"
+    }
+  ]
+}
