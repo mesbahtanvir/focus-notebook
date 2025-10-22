@@ -4,6 +4,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import Layout from '@/components/Layout'
 import { AutoSync } from '@/components/AutoSync'
 import { ThoughtProcessorDaemon } from '@/components/ThoughtProcessorDaemon'
+import { SyncToast } from '@/components/SyncToast'
 
 export const metadata: Metadata = {
   title: 'Focus Notebook',
@@ -28,6 +29,7 @@ export default function RootLayout({
         <AuthProvider>
           <AutoSync />
           <ThoughtProcessorDaemon />
+          <SyncToast />
           <Layout>
             {children}
           </Layout>

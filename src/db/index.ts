@@ -9,15 +9,19 @@ export type TaskRow = {
   status: string
   priority: string
   createdAt: string
+  updatedAt?: number
   dueDate?: string
   completedAt?: string
   notes?: string
   tags?: string
   estimatedMinutes?: number
+  actualMinutes?: number
   recurrence?: string
   parentTaskId?: string
   completionCount?: number
   focusEligible?: boolean
+  source?: string
+  lastModifiedSource?: string
 }
 
 // Thoughts table row type
@@ -27,6 +31,7 @@ export type ThoughtRow = {
   type: string
   done: boolean
   createdAt: string
+  updatedAt?: number
   tags?: string
   intensity?: number
   notes?: string
@@ -39,6 +44,7 @@ export type MoodRow = {
   value: number // 1-10
   note?: string
   createdAt: string
+  updatedAt?: number
 }
 
 // Sync history table row type
@@ -68,6 +74,7 @@ export type FocusSessionRow = {
   currentTaskIndex?: number
   pausedAt?: string // timestamp when session was paused
   totalPausedTime?: number // total paused time in milliseconds
+  updatedAt?: number
 }
 
 class AppDB extends Dexie {
@@ -131,6 +138,14 @@ class AppDB extends Dexie {
       focusSessions: '&id, startTime, endTime, isActive',
       syncHistory: '&id, timestamp, operation, status',
     })
+    // Version 12: Add updatedAt field for incremental sync
+    this.version(12).stores({
+      tasks: '&id, title, done, category, status, priority, createdAt, updatedAt, dueDate, completedAt, parentTaskId, focusEligible',
+      thoughts: '&id, text, type, done, createdAt, updatedAt',
+      moods: '&id, value, createdAt, updatedAt',
+      focusSessions: '&id, startTime, endTime, isActive, updatedAt',
+      syncHistory: '&id, timestamp, operation, status',
+    })
   }
 }
 
@@ -146,15 +161,19 @@ export function toTaskRow(task: any): TaskRow {
     status: task.status,
     priority: task.priority,
     createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
     dueDate: task.dueDate,
     completedAt: task.completedAt,
     notes: task.notes,
     tags: task.tags ? JSON.stringify(task.tags) : undefined,
     estimatedMinutes: task.estimatedMinutes,
+    actualMinutes: task.actualMinutes,
     recurrence: task.recurrence ? JSON.stringify(task.recurrence) : undefined,
     parentTaskId: task.parentTaskId,
     completionCount: task.completionCount,
     focusEligible: task.focusEligible,
+    source: task.source,
+    lastModifiedSource: task.lastModifiedSource,
   }
 }
 
@@ -168,15 +187,19 @@ export function toTask(row: TaskRow): any {
     status: row.status,
     priority: row.priority,
     createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
     dueDate: row.dueDate,
     completedAt: row.completedAt,
     notes: row.notes,
     tags: row.tags ? JSON.parse(row.tags) : undefined,
     estimatedMinutes: row.estimatedMinutes,
+    actualMinutes: row.actualMinutes,
     recurrence: row.recurrence ? JSON.parse(row.recurrence) : undefined,
     parentTaskId: row.parentTaskId,
     completionCount: row.completionCount,
     focusEligible: row.focusEligible,
+    source: row.source,
+    lastModifiedSource: row.lastModifiedSource,
   }
 }
 
@@ -188,6 +211,7 @@ export function toThoughtRow(thought: any): ThoughtRow {
     type: thought.type,
     done: thought.done,
     createdAt: thought.createdAt,
+    updatedAt: thought.updatedAt,
     tags: thought.tags ? JSON.stringify(thought.tags) : undefined,
     intensity: thought.intensity,
     notes: thought.notes,
@@ -202,6 +226,7 @@ export function toThought(row: ThoughtRow): any {
     type: row.type,
     done: row.done,
     createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
     tags: row.tags ? JSON.parse(row.tags) : undefined,
     intensity: row.intensity,
     notes: row.notes,

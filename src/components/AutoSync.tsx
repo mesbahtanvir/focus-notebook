@@ -5,19 +5,33 @@ import { useAuth } from '@/contexts/AuthContext';
 import { smartSync } from '@/lib/syncEngine';
 import { useTasks } from '@/store/useTasks';
 import { useThoughts } from '@/store/useThoughts';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
+import { useSyncStatus } from '@/store/useSyncStatus';
 
 /**
- * AutoSync component - Intelligent bidirectional sync with conflict resolution
- * - Pulls from cloud every 5 minutes
- * - Merges local and cloud data
- * - Resolves conflicts by keeping most recent changes
+ * AutoSync component - Real-time bidirectional sync with Firestore listeners
+ * 
+ * NEW FEATURES:
+ * - Real-time sync via Firestore listeners (< 1 second latency)
+ * - Fallback periodic sync every 10 minutes for reliability
+ * - Initial full sync on login
+ * - Intelligent conflict resolution
  * - Works offline and syncs when back online
+ * 
+ * MIGRATION FROM OLD SYSTEM:
+ * - Replaced 5-minute polling with real-time listeners
+ * - Added 10-minute fallback sync for safety
+ * - Maintains backward compatibility
  */
 export function AutoSync() {
   const { user } = useAuth();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastSyncRef = useRef<number>(0);
   const isSyncingRef = useRef<boolean>(false);
+  const { setSyncStatus } = useSyncStatus();
+
+  // Initialize real-time sync listeners (PRIMARY SYNC METHOD)
+  useRealtimeSync();
 
   useEffect(() => {
     // Only sync if user is logged in
@@ -29,12 +43,13 @@ export function AutoSync() {
       return;
     }
 
-    // Perform initial smart sync after 3 seconds
+    // Perform initial full sync after 3 seconds
     const initialTimeout = setTimeout(async () => {
       if (isSyncingRef.current) return;
       
-      console.log('🔄 Performing initial smart sync...');
+      console.log('🔄 Performing initial full sync...');
       isSyncingRef.current = true;
+      setSyncStatus('syncing');
       
       try {
         const result = await smartSync();
@@ -47,38 +62,44 @@ export function AutoSync() {
             useTasks.getState().loadTasks(),
             useThoughts.getState().loadThoughts(),
           ]);
+          
+          setSyncStatus('synced');
         } else {
           console.error('❌ Initial sync failed:', result.error);
+          setSyncStatus('error');
         }
       } catch (error) {
         console.error('❌ Initial sync error:', error);
+        setSyncStatus('error');
       } finally {
         isSyncingRef.current = false;
       }
     }, 3000);
 
-    // Set up periodic smart sync every 5 minutes
+    // Set up FALLBACK periodic sync every 10 minutes
+    // This ensures we catch any missed changes from the real-time listeners
     intervalRef.current = setInterval(async () => {
       if (isSyncingRef.current) {
-        console.log('⏭️ Skipping sync - already in progress');
+        console.log('⏭️ Skipping fallback sync - already in progress');
         return;
       }
       
       const now = Date.now();
       const timeSinceLastSync = now - lastSyncRef.current;
       
-      // Only sync if it's been more than 4 minutes since last sync
-      if (timeSinceLastSync < 240000) {
+      // Only sync if it's been more than 9 minutes since last sync
+      if (timeSinceLastSync < 540000) {
         return;
       }
 
-      console.log('🔄 Performing periodic smart sync...');
+      console.log('🔄 Performing fallback periodic sync (safety net)...');
       isSyncingRef.current = true;
+      setSyncStatus('syncing');
       
       try {
         const result = await smartSync();
         if (result.success) {
-          console.log(`✅ Periodic sync: ${result.mergedItems} items synced, ${result.conflicts} conflicts resolved`);
+          console.log(`✅ Fallback sync: ${result.mergedItems} items synced, ${result.conflicts} conflicts resolved`);
           lastSyncRef.current = now;
           
           // Reload stores to show merged data
@@ -86,15 +107,19 @@ export function AutoSync() {
             useTasks.getState().loadTasks(),
             useThoughts.getState().loadThoughts(),
           ]);
+          
+          setSyncStatus('synced');
         } else {
-          console.error('❌ Periodic sync failed:', result.error);
+          console.error('❌ Fallback sync failed:', result.error);
+          setSyncStatus('error');
         }
       } catch (error) {
-        console.error('❌ Periodic sync error:', error);
+        console.error('❌ Fallback sync error:', error);
+        setSyncStatus('error');
       } finally {
         isSyncingRef.current = false;
       }
-    }, 300000); // 5 minutes
+    }, 600000); // 10 minutes (fallback only)
 
     // Cleanup
     return () => {
@@ -103,7 +128,7 @@ export function AutoSync() {
       }
       clearTimeout(initialTimeout);
     };
-  }, [user]);
+  }, [user, setSyncStatus]);
 
   return null; // This component doesn't render anything
 }
