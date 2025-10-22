@@ -57,10 +57,11 @@ function cleanUndefined(obj: any): any {
 }
 
 /**
- * Merge strategy: Keep the most recently updated item
+ * Deep JSON-level merge strategy
+ * Combines data from both local and cloud versions field by field
  * @param local - Local item
  * @param cloud - Cloud item
- * @returns Merged item
+ * @returns Intelligently merged item
  */
 function mergeItems<T extends { id: string; updatedAt?: number; createdAt?: string | number }>(
   local: T | undefined,
@@ -71,12 +72,149 @@ function mergeItems<T extends { id: string; updatedAt?: number; createdAt?: stri
   if (local && !cloud) return local
   if (!local && !cloud) return null
 
-  // Both exist - compare timestamps
+  // Both exist - perform deep merge
   const localTime = local!.updatedAt || new Date(local!.createdAt as string).getTime()
   const cloudTime = cloud!.updatedAt || new Date(cloud!.createdAt as string).getTime()
 
-  // Return the most recent one
-  return localTime >= cloudTime ? local! : cloud!
+  // Start with the newer version as base
+  const base = localTime >= cloudTime ? { ...local! } : { ...cloud! }
+  const other = localTime >= cloudTime ? cloud! : local!
+
+  // Get all unique keys from both objects
+  const allKeys = new Set([
+    ...Object.keys(base),
+    ...Object.keys(other)
+  ])
+
+  // Merge each field
+  const merged: any = { ...base }
+
+  for (const key of allKeys) {
+    const baseValue = (base as any)[key]
+    const otherValue = (other as any)[key]
+
+    // Skip if same value
+    if (JSON.stringify(baseValue) === JSON.stringify(otherValue)) {
+      merged[key] = baseValue
+      continue
+    }
+
+    // If key only exists in other, add it
+    if (baseValue === undefined && otherValue !== undefined) {
+      merged[key] = otherValue
+      continue
+    }
+
+    // If key only exists in base, keep it
+    if (otherValue === undefined && baseValue !== undefined) {
+      merged[key] = baseValue
+      continue
+    }
+
+    // Both exist but different - merge intelligently based on type
+    if (Array.isArray(baseValue) && Array.isArray(otherValue)) {
+      // Merge arrays - combine and deduplicate
+      merged[key] = mergeArrays(baseValue, otherValue)
+    } else if (typeof baseValue === 'object' && baseValue !== null && 
+               typeof otherValue === 'object' && otherValue !== null) {
+      // Merge nested objects recursively
+      merged[key] = deepMergeObjects(baseValue, otherValue)
+    } else if (typeof baseValue === 'string' && typeof otherValue === 'string') {
+      // For strings, prefer non-empty and longer version
+      merged[key] = mergeStrings(baseValue, otherValue, localTime, cloudTime, key === 'notes')
+    } else if (typeof baseValue === 'number' && typeof otherValue === 'number') {
+      // For numbers, use the larger value unless it's a timestamp
+      const isTimestamp = key.toLowerCase().includes('time') || 
+                         key.toLowerCase().includes('date') ||
+                         key.toLowerCase().includes('at')
+      merged[key] = isTimestamp ? Math.max(baseValue, otherValue) : baseValue
+    } else {
+      // For other types, keep the base value (from newer version)
+      merged[key] = baseValue
+    }
+  }
+
+  // Ensure we preserve the most recent updatedAt timestamp
+  merged.updatedAt = Math.max(localTime, cloudTime)
+
+  return merged as T
+}
+
+/**
+ * Merge two arrays intelligently
+ */
+function mergeArrays(arr1: any[], arr2: any[]): any[] {
+  // For primitive arrays, combine and deduplicate
+  const combined = [...arr1, ...arr2]
+  
+  // If array contains objects, deduplicate by id if available
+  if (combined.length > 0 && typeof combined[0] === 'object' && combined[0] !== null) {
+    const map = new Map()
+    combined.forEach(item => {
+      const key = item.id || JSON.stringify(item)
+      if (!map.has(key)) {
+        map.set(key, item)
+      }
+    })
+    return Array.from(map.values())
+  }
+  
+  // For primitives, use Set to deduplicate
+  return Array.from(new Set(combined))
+}
+
+/**
+ * Deep merge two objects
+ */
+function deepMergeObjects(obj1: any, obj2: any): any {
+  const result: any = { ...obj1 }
+  
+  for (const key in obj2) {
+    if (obj2[key] === undefined) continue
+    
+    if (obj1[key] === undefined) {
+      result[key] = obj2[key]
+    } else if (Array.isArray(obj1[key]) && Array.isArray(obj2[key])) {
+      result[key] = mergeArrays(obj1[key], obj2[key])
+    } else if (typeof obj1[key] === 'object' && obj1[key] !== null &&
+               typeof obj2[key] === 'object' && obj2[key] !== null) {
+      result[key] = deepMergeObjects(obj1[key], obj2[key])
+    } else {
+      // Keep obj1 value (from newer version)
+      result[key] = obj1[key]
+    }
+  }
+  
+  return result
+}
+
+/**
+ * Merge two strings intelligently
+ */
+function mergeStrings(str1: string, str2: string, time1: number, time2: number, isNotes: boolean = false): string {
+  // If one is empty, use the other
+  if (!str1 || str1.trim() === '') return str2
+  if (!str2 || str2.trim() === '') return str1
+  
+  // If identical, return either
+  if (str1 === str2) return str1
+  
+  // For notes, combine both with timestamps if significantly different
+  if (isNotes && str1.length > 20 && str2.length > 20) {
+    // Check if one contains the other
+    if (str1.includes(str2) || str2.includes(str1)) {
+      // One is a subset, use the longer one
+      return str1.length >= str2.length ? str1 : str2
+    }
+    
+    // Both have substantial different content - combine them
+    const date1 = new Date(time1).toLocaleString()
+    const date2 = new Date(time2).toLocaleString()
+    return `**Version from ${date1}:**\n${str1}\n\n---\n\n**Version from ${date2}:**\n${str2}`
+  }
+  
+  // For other strings, prefer non-empty and longer version
+  return str1.length >= str2.length ? str1 : str2
 }
 
 /**
@@ -125,19 +263,17 @@ export async function smartSync(): Promise<SyncResult> {
       const merged = mergeItems(local, cloud)
       if (!merged) continue
 
-      // Count conflicts
-      if (local && cloud && local.updatedAt !== cloud.updatedAt) {
+      // Count conflicts (when both exist with different data)
+      if (local && cloud && JSON.stringify(local) !== JSON.stringify(cloud)) {
         conflicts++
       }
 
-      // Update cloud if needed
-      if (!cloud || (local && local.updatedAt && local.updatedAt > (cloud.updatedAt || 0))) {
-        const taskRef = doc(firestore, `users/${userId}/tasks`, id)
-        const cleanedTask = cleanUndefined({ ...merged, updatedAt: Date.now() })
-        batch.set(taskRef, cleanedTask)
-      }
+      // Always update cloud with merged data to ensure consistency
+      const taskRef = doc(firestore, `users/${userId}/tasks`, id)
+      const cleanedTask = cleanUndefined({ ...merged, updatedAt: Date.now() })
+      batch.set(taskRef, cleanedTask)
 
-      // Queue for local update
+      // Queue for local update (always update local with merged data)
       tasksToUpdate.push(merged)
       mergedItems++
     }
@@ -170,16 +306,17 @@ export async function smartSync(): Promise<SyncResult> {
       const merged = mergeItems(local, cloud)
       if (!merged) continue
 
-      if (local && cloud && local.updatedAt !== cloud.updatedAt) {
+      // Count conflicts (when both exist with different data)
+      if (local && cloud && JSON.stringify(local) !== JSON.stringify(cloud)) {
         conflicts++
       }
 
-      if (!cloud || (local && local.updatedAt && local.updatedAt > (cloud.updatedAt || 0))) {
-        const thoughtRef = doc(firestore, `users/${userId}/thoughts`, id)
-        const cleanedThought = cleanUndefined({ ...merged, updatedAt: Date.now() })
-        batch.set(thoughtRef, cleanedThought)
-      }
+      // Always update cloud with merged data to ensure consistency
+      const thoughtRef = doc(firestore, `users/${userId}/thoughts`, id)
+      const cleanedThought = cleanUndefined({ ...merged, updatedAt: Date.now() })
+      batch.set(thoughtRef, cleanedThought)
 
+      // Queue for local update (always update local with merged data)
       thoughtsToUpdate.push(merged)
       mergedItems++
     }
@@ -212,16 +349,17 @@ export async function smartSync(): Promise<SyncResult> {
       const merged = mergeItems(local, cloud)
       if (!merged) continue
 
-      if (local && cloud && local.updatedAt !== cloud.updatedAt) {
+      // Count conflicts (when both exist with different data)
+      if (local && cloud && JSON.stringify(local) !== JSON.stringify(cloud)) {
         conflicts++
       }
 
-      if (!cloud || (local && local.updatedAt && local.updatedAt > (cloud.updatedAt || 0))) {
-        const moodRef = doc(firestore, `users/${userId}/moods`, id)
-        const cleanedMood = cleanUndefined({ ...merged, updatedAt: Date.now() })
-        batch.set(moodRef, cleanedMood)
-      }
+      // Always update cloud with merged data to ensure consistency
+      const moodRef = doc(firestore, `users/${userId}/moods`, id)
+      const cleanedMood = cleanUndefined({ ...merged, updatedAt: Date.now() })
+      batch.set(moodRef, cleanedMood)
 
+      // Queue for local update (always update local with merged data)
       moodsToUpdate.push(merged)
       mergedItems++
     }
@@ -254,16 +392,17 @@ export async function smartSync(): Promise<SyncResult> {
       const merged = mergeItems(local, cloud)
       if (!merged) continue
 
-      if (local && cloud && local.updatedAt !== cloud.updatedAt) {
+      // Count conflicts (when both exist with different data)
+      if (local && cloud && JSON.stringify(local) !== JSON.stringify(cloud)) {
         conflicts++
       }
 
-      if (!cloud || (local && local.updatedAt && local.updatedAt > (cloud.updatedAt || 0))) {
-        const sessionRef = doc(firestore, `users/${userId}/focusSessions`, id)
-        const cleanedSession = cleanUndefined({ ...merged, updatedAt: Date.now() })
-        batch.set(sessionRef, cleanedSession)
-      }
+      // Always update cloud with merged data to ensure consistency
+      const sessionRef = doc(firestore, `users/${userId}/focusSessions`, id)
+      const cleanedSession = cleanUndefined({ ...merged, updatedAt: Date.now() })
+      batch.set(sessionRef, cleanedSession)
 
+      // Queue for local update (always update local with merged data)
       sessionsToUpdate.push(merged)
       mergedItems++
     }
