@@ -11,47 +11,6 @@ jest.mock('@/store/useTasks', () => ({
   useTasks: jest.fn(),
 }))
 
-// Mock Dexie at the module level
-jest.mock('dexie', () => {
-  const mockDB = new Map<string, any>()
-
-  class MockTable {
-    toArray() {
-      return Promise.resolve(Array.from(mockDB.values()))
-    }
-    add(task: any) {
-      mockDB.set(task.id, task)
-      return Promise.resolve(task.id)
-    }
-    update(id: string, changes: any) {
-      if (mockDB.has(id)) {
-        const task = { ...mockDB.get(id), ...changes }
-        mockDB.set(id, task)
-        return Promise.resolve(1)
-      }
-      return Promise.resolve(0)
-    }
-    delete(id: string) {
-      return Promise.resolve(mockDB.delete(id))
-    }
-  }
-
-  return {
-    __esModule: true,
-    default: class MockDexie {
-      tasks: any
-      constructor() {
-        this.tasks = new MockTable()
-      }
-      version() {
-        return {
-          stores: () => ({})
-        }
-      }
-    }
-  }
-})
-
 describe('Home Page', () => {
   const mockTasks: Task[] = []
   const mockAdd = jest.fn()
