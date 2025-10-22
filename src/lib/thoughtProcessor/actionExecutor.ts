@@ -302,15 +302,19 @@ export class ActionExecutor {
     };
 
     // Create the project
-    const projectId = addProject({
+    const projectId = await addProject({
       title: action.data.title,
+      objective: action.data.objective || action.data.description || 'AI-suggested project',
+      actionPlan: action.data.actionPlan || [],
       description: action.data.description || undefined,
       timeframe: action.data.timeframe || 'long-term',
       category: action.data.category || 'mastery',
+      priority: action.data.priority || 'medium',
       status: 'active',
       targetDate: action.data.targetDate || undefined,
       progress: 0,
       notes: JSON.stringify(metadata),
+      source: 'ai',
     });
 
     // Link the originating thought to the project

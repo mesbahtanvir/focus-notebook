@@ -320,75 +320,88 @@ export default function TasksPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
-                    className="card p-4 cursor-pointer hover:shadow-md transition-shadow"
+                    className={`p-4 rounded-xl cursor-pointer transition-all transform hover:scale-[1.02] hover:shadow-xl border-2 ${
+                      task.done 
+                        ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-300 dark:border-green-800' 
+                        : task.category === 'mastery'
+                        ? 'bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/20 dark:via-indigo-950/20 dark:to-purple-950/20 border-blue-300 dark:border-blue-800'
+                        : 'bg-gradient-to-r from-pink-50 via-rose-50 to-red-50 dark:from-pink-950/20 dark:via-rose-950/20 dark:to-red-950/20 border-pink-300 dark:border-pink-800'
+                    }`}
                     onClick={() => setSelectedTask(task)}
                   >
-                    <div className="flex items-start gap-4">
-                      <div className="flex items-center gap-3 flex-1">
-                        {/* Visual indicator only - not clickable */}
-                        <div className={`h-5 w-5 rounded border-2 flex items-center justify-center ${
-                          task.done 
-                            ? 'bg-green-100 border-green-500 dark:bg-green-950/40 dark:border-green-400' 
-                            : 'border-gray-300 dark:border-gray-600'
+                    <div className="flex items-center gap-3">
+                      {/* Visual indicator only - not clickable */}
+                      <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 shadow-md ${
+                        task.done 
+                          ? 'bg-gradient-to-br from-green-400 to-emerald-500 border-green-600 dark:from-green-600 dark:to-emerald-700 dark:border-green-500' 
+                          : 'bg-white dark:bg-gray-800 border-gray-400 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
+                      }`}>
+                        {task.done && <CheckCircle2 className="h-4 w-4 text-white" />}
+                      </div>
+                      
+                      {/* Single line with all info */}
+                      <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                        <h3 className={`font-medium shrink-0 ${task.done && !task.recurrence ? 'line-through text-muted-foreground' : ''}`}>
+                          {task.title}
+                        </h3>
+                        
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 shrink-0 ${getPriorityColor(task.priority)}`}>
+                          {getPriorityIcon(task.priority)}
+                          {task.priority}
+                        </span>
+                        
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold shadow-sm shrink-0 ${
+                          task.category === "mastery"
+                            ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0"
+                            : "bg-gradient-to-r from-pink-500 to-rose-600 text-white border-0"
                         }`}>
-                          {task.done && <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className={`font-medium ${task.done && !task.recurrence ? 'line-through text-muted-foreground' : ''}`}>
-                              {task.title}
-                            </h3>
-                            {task.done && task.recurrence && task.recurrence.type !== 'none' && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400">
-                                ✓ Done for today
-                              </span>
-                            )}
-                          </div>
-                          {task.notes && (
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{getNotesPreview(task.notes, 80)}</p>
-                          )}
-                          <div className="flex flex-wrap items-center gap-2 mt-2">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium border flex items-center gap-1 ${getPriorityColor(task.priority)}`}>
-                              {getPriorityIcon(task.priority)}
-                              {task.priority}
-                            </span>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
-                              task.category === "mastery"
-                                ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900"
-                                : "bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-900"
-                            }`}>
-                              {task.category}
-                            </span>
-                            {task.dueDate && (
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {new Date(task.dueDate).toLocaleDateString()}
-                              </span>
-                            )}
-                            {task.estimatedMinutes && (
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {task.estimatedMinutes}m
-                              </span>
-                            )}
-                            {task.tags && Array.isArray(task.tags) && task.tags.length > 0 && (
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Tag className="h-3 w-3" />
-                                {task.tags.join(', ')}
-                              </span>
-                            )}
-                            {task.recurrence && task.recurrence.type !== 'none' && (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-900 flex items-center gap-1">
-                                <Repeat className="h-3 w-3" />
-                                {task.recurrence.type}
-                                {task.recurrence.frequency && ` (${task.completionCount || 0}/${task.recurrence.frequency})`}
-                              </span>
-                            )}
-                            {task.source && (
-                              <SourceBadge source={task.source} size="sm" showIcon={true} />
-                            )}
-                          </div>
-                        </div>
+                          {task.category === "mastery" ? "🧠 " : "💝 "}{task.category}
+                        </span>
+                        
+                        {task.focusEligible !== false && (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm shrink-0">
+                            🎯 Focus
+                          </span>
+                        )}
+                        
+                        {task.done && task.recurrence && task.recurrence.type !== 'none' && (
+                          <span className="text-xs px-2.5 py-1 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold shadow-sm shrink-0">
+                            ✓ Done today
+                          </span>
+                        )}
+                        
+                        {task.recurrence && task.recurrence.type !== 'none' && (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-purple-500 to-violet-600 text-white shadow-sm flex items-center gap-1 shrink-0">
+                            <Repeat className="h-3 w-3" />
+                            {task.recurrence.type}
+                            {task.recurrence.frequency && ` (${task.completionCount || 0}/${task.recurrence.frequency})`}
+                          </span>
+                        )}
+                        
+                        {task.dueDate && (
+                          <span className="text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 shadow-sm">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(task.dueDate).toLocaleDateString()}
+                          </span>
+                        )}
+                        
+                        {task.estimatedMinutes && (
+                          <span className="text-xs font-semibold bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 shadow-sm">
+                            <Clock className="h-3 w-3" />
+                            {task.estimatedMinutes}m
+                          </span>
+                        )}
+                        
+                        {task.tags && Array.isArray(task.tags) && task.tags.length > 0 && (
+                          <span className="text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 shadow-sm">
+                            <Tag className="h-3 w-3" />
+                            {task.tags.join(', ')}
+                          </span>
+                        )}
+                        
+                        {task.source && (
+                          <SourceBadge source={task.source} size="sm" showIcon={true} />
+                        )}
                       </div>
                     </div>
                   </motion.div>

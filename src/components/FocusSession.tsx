@@ -58,8 +58,9 @@ export function FocusSession() {
   const [autoSaving, setAutoSaving] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastUpdateRef = useRef<number>(Date.now());
 
-  // Timer effect
+  // Timer effect - uses elapsed time instead of interval ticks to work reliably in background
   useEffect(() => {
     if (!currentSession || !currentSession.isActive) {
       if (timerRef.current) {
@@ -69,14 +70,23 @@ export function FocusSession() {
       return;
     }
 
+    // Initialize last update time
+    lastUpdateRef.current = Date.now();
+
     // Start timer for current task
     timerRef.current = setInterval(() => {
-      const currentTaskIndex = currentSession.currentTaskIndex;
-      const currentTaskTime = currentSession.tasks[currentTaskIndex].timeSpent;
-      const newTime = currentTaskTime + 1;
+      const now = Date.now();
+      const elapsed = Math.floor((now - lastUpdateRef.current) / 1000);
       
-      updateTaskTime(currentTaskIndex, newTime);
-      setCurrentTime(newTime);
+      if (elapsed >= 1) {
+        const currentTaskIndex = currentSession.currentTaskIndex;
+        const currentTaskTime = currentSession.tasks[currentTaskIndex].timeSpent;
+        const newTime = currentTaskTime + elapsed;
+        
+        updateTaskTime(currentTaskIndex, newTime);
+        setCurrentTime(newTime);
+        lastUpdateRef.current = now;
+      }
     }, 1000);
 
     return () => {

@@ -11,15 +11,17 @@ import { FocusStatistics } from "@/components/FocusStatistics";
 import { FocusSessionDetailModal } from "@/components/FocusSessionDetailModal";
 import { FocusSession as FocusSessionType } from "@/store/useFocus";
 import { formatDateTime } from "@/lib/formatDateTime";
+import { useAuth } from "@/contexts/AuthContext";
 
 function FocusPageContent() {
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const tasks = useTasks((s) => s.tasks);
   const currentSession = useFocus((s) => s.currentSession);
   const completedSession = useFocus((s) => s.completedSession);
   const sessions = useFocus((s) => s.sessions);
   const startSession = useFocus((s) => s.startSession);
-  const loadSessions = useFocus((s) => s.loadSessions);
+  const subscribe = useFocus((s) => s.subscribe);
   const loadActiveSession = useFocus((s) => s.loadActiveSession);
   
   // Get duration from URL or default to 60 minutes
@@ -47,11 +49,13 @@ function FocusPageContent() {
     setHasActiveSession(currentSession !== null);
   }, [currentSession]);
 
-  // Load sessions and check for active session on mount
+  // Subscribe to sessions and check for active session on mount
   useEffect(() => {
-    loadSessions();
+    if (user?.uid) {
+      subscribe(user.uid);
+    }
     checkForActiveSession();
-  }, [loadSessions, checkForActiveSession]);
+  }, [user?.uid, subscribe, checkForActiveSession]);
 
   const handleResumeSession = async () => {
     await loadActiveSession();

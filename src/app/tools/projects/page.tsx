@@ -258,19 +258,25 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
   const addProject = useProjects((s) => s.add);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [objective, setObjective] = useState("");
+  const [actionPlan, setActionPlan] = useState<string[]>([""]);
   const [timeframe, setTimeframe] = useState<ProjectTimeframe>('short-term');
   const [category, setCategory] = useState<'health' | 'wealth' | 'mastery' | 'connection'>('mastery');
+  const [priority, setPriority] = useState<'urgent' | 'high' | 'medium' | 'low'>('medium');
   const [targetDate, setTargetDate] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || !objective.trim()) return;
 
     addProject({
       title: title.trim(),
+      objective: objective.trim(),
+      actionPlan: actionPlan.filter(ap => ap.trim()),
       description: description.trim() || undefined,
       timeframe,
       category,
+      priority,
       status: 'active',
       targetDate: targetDate || undefined,
       progress: 0,
@@ -310,12 +316,58 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
+            <label className="block text-sm font-medium mb-2">Objective *</label>
+            <textarea
+              value={objective}
+              onChange={(e) => setObjective(e.target.value)}
+              placeholder="What is the purpose of this project?"
+              className="input w-full min-h-[80px]"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Action Plan</label>
+            {actionPlan.map((step, index) => (
+              <div key={index} className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={step}
+                  onChange={(e) => {
+                    const newPlan = [...actionPlan];
+                    newPlan[index] = e.target.value;
+                    setActionPlan(newPlan);
+                  }}
+                  className="flex-1 input"
+                  placeholder={`Step ${index + 1}`}
+                />
+                {actionPlan.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setActionPlan(actionPlan.filter((_, i) => i !== index))}
+                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setActionPlan([...actionPlan, ""])}
+              className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+            >
+              + Add Step
+            </button>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium mb-2">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="What do you want to achieve?"
-              className="input w-full min-h-[100px]"
+              placeholder="Additional details (optional)"
+              className="input w-full min-h-[60px]"
             />
           </div>
 
@@ -347,14 +399,30 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Target Date (Optional)</label>
-            <input
-              type="date"
-              value={targetDate}
-              onChange={(e) => setTargetDate(e.target.value)}
-              className="input w-full"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Priority *</label>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as any)}
+                className="input w-full"
+              >
+                <option value="urgent">Urgent</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Target Date</label>
+              <input
+                type="date"
+                value={targetDate}
+                onChange={(e) => setTargetDate(e.target.value)}
+                className="input w-full"
+              />
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">

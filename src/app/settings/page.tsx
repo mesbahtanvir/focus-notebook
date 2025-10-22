@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { useSettings } from '@/store/useSettings'
-import { Key, Eye, EyeOff, Check, X } from 'lucide-react'
+import { Key, Eye, EyeOff, Check, X, ExternalLink } from 'lucide-react'
+import Link from 'next/link'
 
 type SettingsFormValues = {
   allowBackgroundProcessing: boolean;
@@ -161,10 +162,19 @@ export default function SettingsPage() {
               </div>
 
               <div className="rounded-xl bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 p-6 border-2 border-yellow-200 dark:border-yellow-800">
-                <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
-                  Configure your OpenAI API key to enable AI-powered brainstorming features. 
-                  Your key is stored locally in your browser and never sent to our servers.
-                </p>
+                <div className="flex items-start justify-between mb-4">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 flex-1">
+                    Configure your OpenAI API key to enable AI-powered features. 
+                    Your key is stored locally and never sent to our servers.
+                  </p>
+                  <Link
+                    href="/learn/api-key"
+                    className="ml-4 px-3 py-1.5 bg-white dark:bg-gray-800 border border-yellow-400 rounded-lg text-xs font-medium text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 shrink-0"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Learn How
+                  </Link>
+                </div>
                 
                 <div className="space-y-4">
                   {/* API Key Input */}
@@ -227,24 +237,23 @@ export default function SettingsPage() {
                     )}
                     {isApiKeyValid === true && (
                       <p className="text-sm text-green-600 dark:text-green-400">
-                        API key is valid and saved!
+                        ✓ API key saved successfully!
                       </p>
                     )}
                   </div>
 
-                  {/* Help Text */}
+                  {/* Quick Help */}
                   <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-yellow-300 dark:border-yellow-700">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-                      📝 How to get your API key:
-                    </p>
-                    <ol className="text-sm text-gray-700 dark:text-gray-300 space-y-1 list-decimal list-inside">
-                      <li>Visit <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">platform.openai.com/api-keys</a></li>
-                      <li>Sign in or create an OpenAI account</li>
-                      <li>Click &quot;Create new secret key&quot;</li>
-                      <li>Copy the key and paste it above</li>
-                    </ol>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-3">
-                      💡 Your key is stored securely in your browser&apos;s local storage
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <strong>Need help?</strong> Visit the{" "}
+                      <Link 
+                        href="/learn/api-key" 
+                        className="text-purple-600 dark:text-purple-400 hover:underline font-medium inline-flex items-center gap-1"
+                      >
+                        API Key Guide
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                      {" "}for detailed instructions on getting your OpenAI API key, pricing info, and troubleshooting tips.
                     </p>
                   </div>
                 </div>

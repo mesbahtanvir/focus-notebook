@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useMoods, type MoodEntry } from "@/store/useMoods";
 import { useThoughts } from "@/store/useThoughts";
 import { X, Trash2, ExternalLink } from "lucide-react";
+import { ConfirmModal } from "@/components/ConfirmModal";
 
 // Emotion definitions with categories
 type Emotion = {
@@ -331,14 +332,13 @@ function MoodDetailModal({ mood, onClose }: { mood: MoodEntry; onClose: () => vo
   const deleteMood = useMoods((s) => s.delete);
   const thoughts = useThoughts((s) => s.thoughts);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const sourceThought = mood.metadata?.sourceThoughtId
     ? thoughts.find(t => t.id === mood.metadata?.sourceThoughtId)
     : null;
 
   const handleDelete = async () => {
-    if (!confirm('Delete this mood entry? This cannot be undone.')) return;
-    
     setDeleting(true);
     await deleteMood(mood.id);
     onClose();
@@ -508,7 +508,7 @@ function MoodDetailModal({ mood, onClose }: { mood: MoodEntry; onClose: () => vo
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t-4 border-gray-200 dark:border-gray-700">
             <button
-              onClick={handleDelete}
+              onClick={() => setShowDeleteConfirm(true)}
               disabled={deleting}
               className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-bold rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
             >
@@ -524,6 +524,16 @@ function MoodDetailModal({ mood, onClose }: { mood: MoodEntry; onClose: () => vo
           </div>
         </div>
       </motion.div>
+      
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        title="Delete Mood Entry?"
+        message="This will permanently delete this mood entry. This action cannot be undone."
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+        confirmText="Delete"
+      />
     </div>
   );
 }

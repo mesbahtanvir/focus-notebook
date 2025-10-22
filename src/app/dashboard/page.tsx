@@ -9,19 +9,23 @@ import { useMoods } from "@/store/useMoods";
 import { useFocus } from "@/store/useFocus";
 import { motion } from "framer-motion";
 import { getTimeOfDayCategory } from "@/lib/formatDateTime";
+import { useAuth } from "@/contexts/AuthContext";
 
 type TimeRange = '7d' | '30d' | '90d';
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const tasks = useTasks((s) => s.tasks);
   const moods = useMoods((s) => s.moods);
   const sessions = useFocus((s) => s.sessions);
-  const loadSessions = useFocus((s) => s.loadSessions);
+  const subscribe = useFocus((s) => s.subscribe);
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
 
   useEffect(() => {
-    loadSessions();
-  }, [loadSessions]);
+    if (user?.uid) {
+      subscribe(user.uid);
+    }
+  }, [user?.uid, subscribe]);
 
   const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
 
@@ -78,8 +82,10 @@ export default function DashboardPage() {
 
     const completedTasks = tasks.filter(t => t.completedAt && new Date(t.completedAt) >= startDate);
 
-    const avgMood = moods.filter(m => new Date(m.createdAt) >= startDate)
-      .reduce((sum, m, i, arr) => sum + m.value / arr.length, 0);
+    const recentMoods = moods.filter(m => new Date(m.createdAt) >= startDate);
+    const avgMood = recentMoods.length > 0
+      ? recentMoods.reduce((sum, m) => sum + m.value, 0) / recentMoods.length
+      : 0;
 
     const totalTaskTime = completedTasks.reduce((sum, t) => {
       return sum + (t.estimatedMinutes || 0);
@@ -327,7 +333,7 @@ function LineChart({ data, color, maxValue }: {
   const height = 200;
   const padding = 40;
 
-  const validData = data.filter(d => d.value !== null) as { date: Date; value: number }[];
+  const validData = data.filter(d => d.value !== null && !isNaN(d.value)) as { date: Date; value: number }[];
   if (validData.length === 0) {
     return (
       <div className="flex items-center justify-center h-[200px] text-muted-foreground">
@@ -338,13 +344,28 @@ function LineChart({ data, color, maxValue }: {
 
   const max = maxValue || Math.max(...validData.map(d => d.value));
   const min = 0;
+  const range = max - min;
 
-  const xScale = (index: number) => padding + (index / (data.length - 1)) * (width - 2 * padding);
-  const yScale = (value: number) => height - padding - ((value - min) / (max - min)) * (height - 2 * padding);
+  // Handle edge cases
+  const xScale = (index: number) => {
+    if (data.length === 1) return width / 2;
+    return padding + (index / (data.length - 1)) * (width - 2 * padding);
+  };
+  
+  const yScale = (value: number) => {
+    if (range === 0) return height / 2; // If all values are the same
+    const normalized = (value - min) / range;
+    if (isNaN(normalized)) return height / 2;
+    return height - padding - normalized * (height - 2 * padding);
+  };
 
   const points = data.map((d, i) => {
     if (d.value === null) return null;
-    return `${xScale(i)},${yScale(d.value)}`;
+    const x = xScale(i);
+    const y = yScale(d.value);
+    // Skip if either coordinate is NaN or invalid
+    if (isNaN(x) || isNaN(y) || !isFinite(x) || !isFinite(y)) return null;
+    return `${x},${y}`;
   }).filter(Boolean).join(' ');
 
   return (
@@ -352,6 +373,7 @@ function LineChart({ data, color, maxValue }: {
       {/* Grid lines */}
       {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
         const y = height - padding - ratio * (height - 2 * padding);
+        const labelValue = min + ratio * (max - min);
         return (
           <g key={ratio}>
             <line
@@ -369,30 +391,36 @@ function LineChart({ data, color, maxValue }: {
               dominantBaseline="middle"
               className="text-xs fill-muted-foreground"
             >
-              {(min + ratio * (max - min)).toFixed(1)}
+              {isFinite(labelValue) ? labelValue.toFixed(1) : '0'}
             </text>
           </g>
         );
       })}
 
       {/* Line */}
-      <polyline
-        points={points}
-        fill="none"
-        stroke={color}
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      {points && (
+        <polyline
+          points={points}
+          fill="none"
+          stroke={color}
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
 
       {/* Points */}
       {data.map((d, i) => {
         if (d.value === null) return null;
+        const cx = xScale(i);
+        const cy = yScale(d.value);
+        // Only render if coordinates are valid numbers
+        if (isNaN(cx) || isNaN(cy) || !isFinite(cx) || !isFinite(cy)) return null;
         return (
           <circle
             key={i}
-            cx={xScale(i)}
-            cy={yScale(d.value)}
+            cx={cx}
+            cy={cy}
             r="4"
             fill={color}
           />
