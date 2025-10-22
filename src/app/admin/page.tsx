@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRequestLog, RequestLog } from "@/store/useRequestLog";
 import { useTasks } from "@/store/useTasks";
@@ -50,7 +50,7 @@ export default function AdminPage() {
     return () => clearInterval(interval);
   }, [autoRefresh]);
 
-  const loadCloudData = async () => {
+  const loadCloudData = useCallback(async () => {
     if (!user) return;
     setLoadingCloudData(true);
     try {
@@ -70,13 +70,13 @@ export default function AdminPage() {
     } finally {
       setLoadingCloudData(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (showCloudData && user) {
       loadCloudData();
     }
-  }, [showCloudData, user]);
+  }, [showCloudData, user, loadCloudData]);
 
   // Note: Force sync removed - real-time Firestore listeners handle all syncing automatically
 

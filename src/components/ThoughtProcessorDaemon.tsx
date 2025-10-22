@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useThoughts } from '@/store/useThoughts';
 import { useProcessQueue, ProcessingMode } from '@/store/useProcessQueue';
 import { useSettings } from '@/store/useSettings';
@@ -71,7 +71,7 @@ export function ThoughtProcessorDaemon() {
   }, []);
 
   // Get processing candidates (thoughts without 'processed' tag)
-  const getProcessingCandidates = () => {
+  const getProcessingCandidates = useCallback(() => {
     const queue = useProcessQueue.getState().queue;
     const thoughtsInQueue = new Set(queue.map(q => q.thoughtId));
     
@@ -80,10 +80,10 @@ export function ThoughtProcessorDaemon() {
       const notInQueue = !thoughtsInQueue.has(t.id);
       return notProcessed && notInQueue;
     });
-  };
+  }, [thoughts]);
 
   // Process a single thought
-  const processThought = async (thoughtId: string) => {
+  const processThought = useCallback(async (thoughtId: string) => {
     const thought = thoughts.find(t => t.id === thoughtId);
     if (!thought) return;
 
@@ -242,7 +242,7 @@ export function ThoughtProcessorDaemon() {
       setIsProcessing(false);
       setStatus('idle');
     }
-  };
+  }, [thoughts, hasApiKey, addToLog, addToQueue, updateQueueItem, addAction, settings]);
 
   // Daemon loop
   useEffect(() => {
@@ -275,7 +275,7 @@ export function ThoughtProcessorDaemon() {
       }
       clearTimeout(initialTimeout);
     };
-  }, [thoughts, isProcessing, isBackgroundProcessingEnabled]);
+  }, [thoughts, isProcessing, isBackgroundProcessingEnabled, getProcessingCandidates, processThought]);
 
   // Show processing indicator
   if (isProcessing) {

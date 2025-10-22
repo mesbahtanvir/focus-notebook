@@ -102,7 +102,9 @@ export function FocusSession() {
       const currentTask = currentSession.tasks[currentSession.currentTaskIndex];
       setLocalNotes(currentTask.notes || "");
     }
-  }, [currentSession?.currentTaskIndex]); // Removed currentSession dependency to prevent note clearing
+    // Only depend on task index to prevent note clearing on other session updates
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSession?.currentTaskIndex]);
 
   // Auto-save notes with debouncing
   useEffect(() => {

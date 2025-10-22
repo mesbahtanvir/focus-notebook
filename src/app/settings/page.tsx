@@ -1,17 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
-import { useSettingsStore } from '@/store/useSettingsStore'
 import { useSettings } from '@/store/useSettings'
-import { useAuth } from '@/contexts/AuthContext'
-import { Cloud, CloudOff, RefreshCw, Upload, Key, Eye, EyeOff, Check, X } from 'lucide-react'
+import { Key, Eye, EyeOff, Check, X } from 'lucide-react'
 
 type SettingsFormValues = {
   allowBackgroundProcessing: boolean;
@@ -21,17 +19,12 @@ type SettingsFormValues = {
 export default function SettingsPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
-  const { register, setValue, watch } = useForm<SettingsFormValues>({
+  const { setValue, watch } = useForm<SettingsFormValues>({
     defaultValues: {
       allowBackgroundProcessing: false,
       openaiApiKey: '',
     },
   });
-  const [syncing, setSyncing] = useState(false);
-  const [exportOpen, setExportOpen] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   
   // API Key management
   const { settings, updateSettings, clearApiKey } = useSettings();
@@ -39,15 +32,6 @@ export default function SettingsPage() {
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [isApiKeyValid, setIsApiKeyValid] = useState<boolean | null>(null);
   
-  // Cloud sync settings
-  const { 
-    cloudSyncEnabled, 
-    syncInterval, 
-    lastSyncTime,
-    setCloudSyncEnabled,
-    setSyncInterval,
-    updateLastSyncTime 
-  } = useSettingsStore();
 
   // Load saved settings from localStorage on component mount
   useEffect(() => {
@@ -109,33 +93,6 @@ export default function SettingsPage() {
     });
   };
 
-  const doExport = async () => {
-    // Note: Export/Import now uses Firestore directly
-    // TODO: Implement Firestore export functionality
-    toast({ title: 'Coming soon', description: 'Export functionality will be re-implemented with Firestore.', variant: 'destructive' });
-    setExportOpen(false);
-  };
-
-  const startImport = () => {
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChosen: React.ChangeEventHandler<HTMLInputElement> = async (e) => {
-    // Note: Import now uses Firestore directly
-    // TODO: Implement Firestore import functionality
-    toast({ title: 'Coming soon', description: 'Import functionality will be re-implemented with Firestore.', variant: 'destructive' });
-    setImportOpen(false);
-  };
-
-  const handleCloudSync = async () => {
-    // Note: Cloud sync is now automatic via real-time Firestore listeners
-    // No manual sync needed
-    toast({
-      title: 'Automatic Sync Active',
-      description: 'Your data syncs automatically in real-time. No manual sync needed!',
-    });
-  };
 
   const allowBackgroundProcessing = watch('allowBackgroundProcessing');
 
@@ -294,87 +251,9 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Cloud Sync Info */}
-            <div className="pt-8 space-y-6 border-t-4 border-blue-200">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full">
-                  <Cloud className="h-5 w-5 text-white" />
-                </div>
-                <h3 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">Cloud Sync</h3>
-              </div>
-              
-              {/* Note: Sync Status Indicator removed - sync is now automatic */}
-              
-              {!user ? (
-                <div className="rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 p-6 border-2 border-blue-200">
-                  <p className="text-sm text-gray-700 font-medium">
-                    🔐 Sign in to enable automatic cloud sync and access your data across multiple devices.
-                  </p>
-                </div>
-              ) : (
-                <div className="rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 p-6 border-2 border-green-200">
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">✨</span>
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-800 font-bold mb-2">
-                        Cloud Sync is Always Active
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        Your data automatically syncs to the cloud when you&apos;re signed in. You can access it from any device (iPhone, iPad, Mac, etc.) by signing in with the same account.
-                      </p>
-                      <div className="mt-3 p-3 bg-white rounded-lg border border-green-300">
-                        <p className="text-xs text-gray-600">
-                          💡 <strong>Troubleshooting:</strong> If data isn&apos;t syncing on mobile, check that you&apos;re signed in and have internet connection. Visit <code className="bg-gray-100 px-1 rounded">/admin</code> page to see sync status and force sync if needed.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
           </CardContent>
       </Card>
 
-      {exportOpen && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/30" onClick={() => setExportOpen(false)} />
-          <div className="relative z-10 flex min-h-full items-center justify-center p-4">
-            <div className="card p-6 border w-full max-w-md">
-              <div className="text-lg font-medium">Export Data</div>
-              <div className="mt-2 text-sm text-muted-foreground">Export tasks (including backlog) and moods as a JSON file?</div>
-              <div className="mt-4 flex justify-end gap-2">
-                <Button variant="secondary" type="button" onClick={() => setExportOpen(false)}>Cancel</Button>
-                <Button type="button" onClick={doExport}>Export</Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {importOpen && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/30" onClick={() => setImportOpen(false)} />
-          <div className="relative z-10 flex min-h-full items-center justify-center p-4">
-            <div className="card p-6 border w-full max-w-md">
-              <div className="text-lg font-medium">Import Data</div>
-              <div className="mt-2 text-sm text-muted-foreground">This will replace your current tasks and moods with the JSON file content. Continue?</div>
-              <div className="mt-4 flex justify-end gap-2">
-                <Button variant="secondary" type="button" onClick={() => setImportOpen(false)}>Cancel</Button>
-                <Button type="button" onClick={startImport}>Choose File</Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Hidden file input for import */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/json"
-        onChange={handleFileChosen}
-        className="hidden"
-      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTasks } from "@/store/useTasks";
 import { useFocus, selectBalancedTasks } from "@/store/useFocus";
@@ -41,17 +41,17 @@ function FocusPageContent() {
     }
   }, [autoSuggestedTasks, selectedTaskIds.length]);
 
+  const checkForActiveSession = useCallback(async () => {
+    // Check Firestore for active sessions (handled by useFocus store)
+    // Note: Active session loading is now handled by FirestoreSubscriber
+    setHasActiveSession(currentSession !== null);
+  }, [currentSession]);
+
   // Load sessions and check for active session on mount
   useEffect(() => {
     loadSessions();
     checkForActiveSession();
-  }, [loadSessions]);
-
-  const checkForActiveSession = async () => {
-    // Check Firestore for active sessions (handled by useFocus store)
-    // Note: Active session loading is now handled by FirestoreSubscriber
-    setHasActiveSession(currentSession !== null);
-  };
+  }, [loadSessions, checkForActiveSession]);
 
   const handleResumeSession = async () => {
     await loadActiveSession();

@@ -67,7 +67,7 @@ export default function DocumentsPage() {
     return filtered.sort((a, b) => 
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-  }, [tasksWithNotes, filterCategory, searchQuery]);
+  }, [tasksWithNotes, searchQuery]);
 
   const stats = useMemo(() => {
     const total = tasksWithNotes.length;
@@ -115,8 +115,9 @@ export default function DocumentsPage() {
 
   // Cleanup timeouts on unmount
   useEffect(() => {
+    const timeouts = saveTimeoutRef.current;
     return () => {
-      Object.values(saveTimeoutRef.current).forEach(timeout => clearTimeout(timeout));
+      Object.values(timeouts).forEach(timeout => clearTimeout(timeout));
     };
   }, []);
 
@@ -357,6 +358,7 @@ function DocumentNotepad({
       // Move cursor to end
       textareaRef.current.setSelectionRange(notes.length, notes.length);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
