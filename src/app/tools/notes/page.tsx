@@ -256,7 +256,7 @@ export default function DocumentsPage() {
                     }`}>
                       {doc.priority}
                     </span>
-                    {doc.tags && doc.tags.length > 0 && (
+                    {doc.tags && Array.isArray(doc.tags) && doc.tags.length > 0 && (
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Tag className="h-3 w-3" />
                         {doc.tags.join(', ')}

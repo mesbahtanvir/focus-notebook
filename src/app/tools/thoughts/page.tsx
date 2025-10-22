@@ -276,7 +276,7 @@ export default function ThoughtsPage() {
                               Analyzed
                             </span>
                           )}
-                          {thought.tags && thought.tags.length > 0 && (
+                          {thought.tags && Array.isArray(thought.tags) && thought.tags.length > 0 && (
                             <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800">
                               <Tag className="h-3 w-3" />
                               {thought.tags.join(', ')}

@@ -371,7 +371,7 @@ export default function TasksPage() {
                                 {task.estimatedMinutes}m
                               </span>
                             )}
-                            {task.tags && task.tags.length > 0 && (
+                            {task.tags && Array.isArray(task.tags) && task.tags.length > 0 && (
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 <Tag className="h-3 w-3" />
                                 {task.tags.join(', ')}
