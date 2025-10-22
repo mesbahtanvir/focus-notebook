@@ -36,7 +36,12 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const [text, setText] = useState(thought.text);
   const [type, setType] = useState<ThoughtType>(thought.type);
   const [intensity, setIntensity] = useState(thought.intensity || 5);
-  const [tagsInput, setTagsInput] = useState(thought.tags?.join(', ') || '');
+  const [tagsInput, setTagsInput] = useState(() => {
+    if (!thought.tags) return '';
+    if (Array.isArray(thought.tags)) return thought.tags.join(', ');
+    if (typeof thought.tags === 'string') return thought.tags;
+    return '';
+  });
   const [showRevertDialog, setShowRevertDialog] = useState(false);
 
   // CBT Analysis fields
@@ -53,7 +58,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   
   // Processing queue
   const queue = useProcessQueue((s) => s.queue);
-  const isProcessed = thought.tags?.includes('processed');
+  const isProcessed = Array.isArray(thought.tags) && thought.tags.includes('processed');
   
   // Find the queue item for this thought (most recent completed)
   const queueItem = queue
@@ -314,7 +319,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                     placeholder="Enter tags separated by commas"
                     className="input w-full"
                   />
-                ) : thought.tags && thought.tags.length > 0 ? (
+                ) : thought.tags && Array.isArray(thought.tags) && thought.tags.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {thought.tags.map((tag, i) => (
                       <span
