@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Helper function to validate version increment (prevent stale overwrites)
+    function isValidVersion() {
+      return !resource.data.keys().hasAny(['version']) ||
+             !request.resource.data.keys().hasAny(['version']) ||
+             request.resource.data.version >= resource.data.version;
+    }
+    
+    // Helper function to validate updatedAt timestamp
+    function hasValidTimestamp() {
+      return !resource.data.keys().hasAny(['updatedAt']) ||
+             request.resource.data.updatedAt is timestamp;
+    }
+    
+    // User data collections
+    match /users/{userId}/{collection}/{document} {
+      // Allow read if user owns the data
+      allow read: if isOwner(userId);
+      
+      // Allow create if user owns the data
+      allow create: if isOwner(userId);
+      
+      // Allow update/delete with version and timestamp validation
+      allow update, delete: if isOwner(userId) 
+                            && isValidVersion()
+                            && hasValidTimestamp();
+    }
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -76,7 +76,6 @@ describe('useMoods store', () => {
       await act(async () => {
         await useMoods.getState().add({
           value: -5,
-          createdAt: new Date().toISOString(),
         })
       })
 
@@ -88,7 +87,6 @@ describe('useMoods store', () => {
       await act(async () => {
         await useMoods.getState().add({
           value: 15,
-          createdAt: new Date().toISOString(),
         })
       })
 
@@ -100,7 +98,6 @@ describe('useMoods store', () => {
       await act(async () => {
         await useMoods.getState().add({
           value: 7.6,
-          createdAt: new Date().toISOString(),
         })
       })
 
@@ -120,7 +117,6 @@ Additional notes about my day.`
         await useMoods.getState().add({
           value: 6,
           note: emotionNote,
-          createdAt: new Date().toISOString(),
         })
       })
 
@@ -160,7 +156,6 @@ Additional notes about my day.`
       await act(async () => {
         await useMoods.getState().add({
           value: 5,
-          createdAt: new Date().toISOString(),
         })
       })
 
@@ -170,7 +165,6 @@ Additional notes about my day.`
       await act(async () => {
         await useMoods.getState().add({
           value: 7,
-          createdAt: new Date().toISOString(),
         })
       })
 
@@ -233,7 +227,6 @@ Additional notes about my day.`
         await act(async () => {
           await useMoods.getState().add({
             value: i + 1,
-            createdAt: new Date().toISOString(),
           })
         })
         // Small delay to ensure unique IDs
@@ -251,7 +244,6 @@ Additional notes about my day.`
         await useMoods.getState().add({
           value: 5,
           note: longNote,
-          createdAt: new Date().toISOString(),
         })
       })
 
@@ -266,7 +258,6 @@ Additional notes about my day.`
         await useMoods.getState().add({
           value: 7,
           note: specialNote,
-          createdAt: new Date().toISOString(),
         })
       })
 

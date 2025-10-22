@@ -38,8 +38,7 @@ describe.skip('Task Management Workflow Integration Tests', () => {
           priority: 'high',
           estimatedMinutes: 60,
           notes: 'Include API documentation and usage examples',
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
       });
 
@@ -93,7 +92,6 @@ describe.skip('Task Management Workflow Integration Tests', () => {
           recurrence: { type: 'daily', frequency: 30 },
           estimatedMinutes: 15,
           status: 'active',
-          createdAt: new Date().toISOString(),
         });
       });
 
@@ -135,8 +133,7 @@ describe.skip('Task Management Workflow Integration Tests', () => {
           priority: 'medium',
           recurrence: { type: 'weekly', frequency: 3 },
           estimatedMinutes: 45,
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
       });
 
@@ -172,7 +169,6 @@ describe.skip('Task Management Workflow Integration Tests', () => {
           category: 'mastery',
           priority: 'low',
           status: 'backlog',
-          createdAt: new Date().toISOString(),
         });
       });
 
@@ -203,29 +199,25 @@ describe.skip('Task Management Workflow Integration Tests', () => {
           title: 'Urgent mastery task',
           category: 'mastery',
           priority: 'urgent',
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
         await result.current.add({
           title: 'High mastery task',
           category: 'mastery',
           priority: 'high',
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
         await result.current.add({
           title: 'Pleasure task',
           category: 'pleasure',
           priority: 'medium',
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
         await result.current.add({
           title: 'Backlog task',
           category: 'mastery',
           priority: 'low',
-          status: 'backlog',
-          createdAt: new Date().toISOString()
+          status: 'backlog'
         });
       });
 
@@ -260,7 +252,6 @@ describe.skip('Task Management Workflow Integration Tests', () => {
           category: 'mastery',
           priority: 'high',
           focusEligible: true,
-          createdAt: new Date().toISOString(),
           status: 'active'
         });
         await result.current.add({
@@ -268,7 +259,6 @@ describe.skip('Task Management Workflow Integration Tests', () => {
           category: 'pleasure',
           priority: 'medium',
           focusEligible: false,
-          createdAt: new Date().toISOString(),
           status: 'active'
         });
         await result.current.add({
@@ -276,7 +266,6 @@ describe.skip('Task Management Workflow Integration Tests', () => {
           category: 'mastery',
           priority: 'low',
           focusEligible: false,
-          createdAt: new Date().toISOString(),
           status: 'active'
         });
       });
@@ -299,7 +288,6 @@ describe.skip('Task Management Workflow Integration Tests', () => {
           category: 'mastery',
           priority: 'high',
           focusEligible: true,
-          createdAt: new Date().toISOString(),
           status: 'active'
         });
       });
@@ -332,7 +320,6 @@ describe.skip('Task Management Workflow Integration Tests', () => {
           category: 'mastery',
           priority: 'high',
           estimatedMinutes: 60,
-          createdAt: new Date().toISOString(),
           status: 'active'
         });
       });
@@ -365,7 +352,6 @@ describe.skip('Task Management Workflow Integration Tests', () => {
           category: 'mastery',
           priority: 'urgent',
           dueDate: tomorrow,
-          createdAt: new Date().toISOString(),
           status: 'active'
         });
         await result.current.add({
@@ -373,7 +359,6 @@ describe.skip('Task Management Workflow Integration Tests', () => {
           category: 'mastery',
           priority: 'medium',
           dueDate: nextWeek,
-          createdAt: new Date().toISOString(),
           status: 'active'
         });
       });
@@ -397,7 +382,6 @@ describe.skip('Task Management Workflow Integration Tests', () => {
           category: 'mastery',
           priority: 'high',
           tags: ['project-alpha', 'design', 'ui'],
-          createdAt: new Date().toISOString(),
           status: 'active'
         });
         await result.current.add({
@@ -405,7 +389,6 @@ describe.skip('Task Management Workflow Integration Tests', () => {
           category: 'mastery',
           priority: 'high',
           tags: ['project-alpha', 'development'],
-          createdAt: new Date().toISOString(),
           status: 'active'
         });
         await result.current.add({
@@ -413,7 +396,6 @@ describe.skip('Task Management Workflow Integration Tests', () => {
           category: 'mastery',
           priority: 'medium',
           tags: ['project-beta', 'planning'],
-          createdAt: new Date().toISOString(),
           status: 'active'
         });
       });

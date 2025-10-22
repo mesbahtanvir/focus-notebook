@@ -1,7 +1,8 @@
 import { create } from 'zustand'
-import { db, toTask, toTaskRow } from '@/db'
-import { pushItemToCloud, deleteItemFromCloud } from '@/lib/syncEngine'
-import { auth } from '@/lib/firebase'
+import { collection, query, orderBy } from 'firebase/firestore'
+import { db, auth } from '@/lib/firebaseClient'
+import { createAt, setAt, updateAt, deleteAt } from '@/lib/data/gateway'
+import { subscribeCol } from '@/lib/data/subscribe'
 import { getCompactSource } from '@/lib/deviceDetection'
 
 export type TaskStatus = 'active' | 'completed' | 'backlog'
@@ -23,8 +24,10 @@ export interface Task {
   status: TaskStatus
   priority: TaskPriority
   category?: TaskCategory
-  createdAt: string
-  updatedAt?: number
+  createdAt: string | any // Firebase Timestamp or ISO string
+  updatedAt?: any // Firebase Timestamp
+  updatedBy?: string
+  version?: number
   dueDate?: string
   completedAt?: string
   notes?: string
@@ -87,26 +90,33 @@ function shouldCreateTaskForToday(task: Task, existingTasks: Task[]): boolean {
 }
 
 // Create a task instance for today
-function createTaskForToday(task: Task): Task {
+function createTaskForToday(task: Task): Omit<Task, 'id'> {
   const today = getDateString(new Date())
   
   return {
-    ...task,
-    id: Date.now().toString() + Math.random().toString(36).substring(2),
+    title: task.title,
     done: false,
     status: 'active',
+    priority: task.priority,
+    category: task.category,
+    createdAt: new Date().toISOString(),
     completedAt: undefined,
     completionCount: 0,
     dueDate: today,
-    createdAt: new Date().toISOString(),
+    notes: task.notes,
+    tags: task.tags,
+    estimatedMinutes: task.estimatedMinutes,
+    recurrence: task.recurrence,
     parentTaskId: task.parentTaskId || task.id,
+    projectId: task.projectId,
+    focusEligible: task.focusEligible,
+    source: getCompactSource(),
+    lastModifiedSource: getCompactSource(),
   }
 }
 
 // Generate missing recurring task instances
-async function generateMissingRecurringTasks(tasks: Task[]): Promise<Task[]> {
-  const newTasks: Task[] = []
-  
+async function generateMissingRecurringTasks(tasks: Task[], userId: string): Promise<void> {
   // Find all recurring task templates (original tasks with recurrence)
   const recurringTemplates = tasks.filter(t => 
     t.recurrence && 
@@ -116,20 +126,23 @@ async function generateMissingRecurringTasks(tasks: Task[]): Promise<Task[]> {
   
   for (const template of recurringTemplates) {
     if (shouldCreateTaskForToday(template, tasks)) {
-      newTasks.push(createTaskForToday(template))
+      const newTask = createTaskForToday(template)
+      const taskId = Date.now().toString() + Math.random().toString(36).substring(2)
+      await createAt(`users/${userId}/tasks/${taskId}`, newTask)
     }
   }
-  
-  return newTasks
 }
 
 type State = {
   tasks: Task[]
   isLoading: boolean
-  loadTasks: () => Promise<void>
-  add: (task: Omit<Task, 'id' | 'done'>) => Promise<string>
+  fromCache: boolean
+  hasPendingWrites: boolean
+  unsubscribe: (() => void) | null
+  subscribe: (userId: string) => void
+  add: (task: Omit<Task, 'id' | 'done' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>) => Promise<string>
   toggle: (id: string) => Promise<void>
-  updateTask: (id: string, updates: Partial<Omit<Task, 'id'>>) => Promise<void>
+  updateTask: (id: string, updates: Partial<Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>>) => Promise<void>
   deleteTask: (id: string) => Promise<void>
   getTasksByStatus: (status: TaskStatus) => Task[]
   resetDailyTasks: () => Promise<void>
@@ -139,83 +152,77 @@ type State = {
 export const useTasks = create<State>((set, get) => ({
   tasks: [],
   isLoading: true,
+  fromCache: false,
+  hasPendingWrites: false,
+  unsubscribe: null,
   
-  loadTasks: async () => {
-    try {
-      const tasks = await db.tasks.toArray()
-      const loadedTasks = tasks.map(toTask)
-      
-      // Generate missing recurring task instances for today
-      const newRecurringTasks = await generateMissingRecurringTasks(loadedTasks)
-      
-      // Add new recurring tasks to database
-      if (newRecurringTasks.length > 0) {
-        for (const newTask of newRecurringTasks) {
-          await db.tasks.add(toTaskRow(newTask))
-        }
-        
-        // Update state with all tasks including newly created ones
-        set({ tasks: [...loadedTasks, ...newRecurringTasks], isLoading: false })
-      } else {
-        set({ tasks: loadedTasks, isLoading: false })
-      }
-    } catch (error) {
-      console.error('Failed to load tasks:', error)
-      set({ isLoading: false })
+  subscribe: (userId: string) => {
+    // Unsubscribe from previous subscription if any
+    const currentUnsub = get().unsubscribe
+    if (currentUnsub) {
+      currentUnsub()
     }
+    
+    // Subscribe to tasks collection
+    const tasksQuery = query(
+      collection(db, `users/${userId}/tasks`),
+      orderBy('createdAt', 'desc')
+    )
+    
+    const unsub = subscribeCol<Task>(tasksQuery, async (tasks, meta) => {
+      set({ 
+        tasks, 
+        isLoading: false,
+        fromCache: meta.fromCache,
+        hasPendingWrites: meta.hasPendingWrites,
+      })
+      
+      // Generate missing recurring tasks (only on first load, not from cache)
+      if (!meta.fromCache && tasks.length > 0) {
+        await generateMissingRecurringTasks(tasks, userId)
+      }
+    })
+    
+    set({ unsubscribe: unsub })
   },
   
   add: async (task) => {
-    const source = getCompactSource();
-    const now = Date.now();
-    // Add random suffix to ensure unique IDs even if called in same millisecond
-    const uniqueId = `${now}-${Math.random().toString(36).substr(2, 9)}`;
-    const newTask: Task = {
+    const userId = auth.currentUser?.uid
+    if (!userId) throw new Error('Not authenticated')
+    
+    const source = getCompactSource()
+    const taskId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    
+    const newTask: Omit<Task, 'id'> = {
       ...task,
-      id: uniqueId,
       done: false,
       status: task.status || 'active',
       priority: task.priority || 'medium',
       category: task.category,
-      createdAt: new Date(now).toISOString(),
+      createdAt: new Date().toISOString(),
       source,
       lastModifiedSource: source,
       focusEligible: task.focusEligible !== undefined ? task.focusEligible : true,
     }
     
-    try {
-      await db.tasks.add(toTaskRow(newTask))
-      set((state) => ({
-        tasks: [...state.tasks, newTask]
-      }))
-      
-      // Push to cloud immediately if user is authenticated
-      if (auth.currentUser) {
-        pushItemToCloud('tasks', newTask).catch(err => 
-          console.error('Failed to push new task to cloud:', err)
-        )
-      }
-      
-      return newTask.id
-    } catch (error) {
-      console.error('Failed to add task:', error)
-      return ''
-    }
+    await createAt(`users/${userId}/tasks/${taskId}`, newTask)
+    return taskId
   },
   
   toggle: async (id) => {
-    // Get fresh state each time to avoid stale closures
+    const userId = auth.currentUser?.uid
+    if (!userId) throw new Error('Not authenticated')
+    
     const task = get().tasks.find(t => t.id === id)
     if (!task) return
     
     const isRecurring = task.recurrence && task.recurrence.type !== 'none'
     const nowDone = !task.done
     
-    const updatedTask = {
-      ...task,
+    const updates: Partial<Task> = {
       done: nowDone,
       // Recurring tasks stay 'active' even when done, non-recurring become 'completed'
-      status: (nowDone && !isRecurring) ? 'completed' : 'active' as TaskStatus,
+      status: (nowDone && !isRecurring) ? 'completed' : 'active',
       completedAt: nowDone ? new Date().toISOString() : undefined,
       // Increment count every time task is marked as done
       completionCount: nowDone && isRecurring
@@ -223,72 +230,27 @@ export const useTasks = create<State>((set, get) => ({
         : task.completionCount,
     }
     
-    try {
-      await db.tasks.update(id, toTaskRow(updatedTask))
-      set((state) => ({
-        tasks: state.tasks.map(t => t.id === id ? updatedTask : t)
-      }))
-      
-      // Push to cloud immediately if user is authenticated
-      if (auth.currentUser) {
-        pushItemToCloud('tasks', updatedTask).catch(err => 
-          console.error('Failed to push task update to cloud:', err)
-        )
-      }
-    } catch (error) {
-      console.error('Failed to toggle task:', error)
-    }
+    await updateAt(`users/${userId}/tasks/${id}`, updates)
   },
   
   updateTask: async (id, updates) => {
-    try {
-      const source = getCompactSource();
-      const updatesWithTimestamp = { 
-        ...updates, 
-        updatedAt: Date.now(),
-        lastModifiedSource: source 
-      }
-      const serializedUpdates = toTaskRow({ id, ...updatesWithTimestamp } as any)
-      const { id: _, ...updateData } = serializedUpdates
-      
-      await db.tasks.update(id, updateData)
-      
-      const updatedTask = get().tasks.find(t => t.id === id)
-      const finalTask = updatedTask ? { ...updatedTask, ...updatesWithTimestamp } : null
-      
-      set((state) => ({
-        tasks: state.tasks.map((task) =>
-          task.id === id ? { ...task, ...updatesWithTimestamp } : task
-        ),
-      }))
-      
-      // Push to cloud immediately if user is authenticated
-      if (auth.currentUser && finalTask) {
-        pushItemToCloud('tasks', finalTask).catch(err => 
-          console.error('Failed to push task update to cloud:', err)
-        )
-      }
-    } catch (error) {
-      console.error('Failed to update task:', error)
+    const userId = auth.currentUser?.uid
+    if (!userId) throw new Error('Not authenticated')
+    
+    const source = getCompactSource()
+    const updatesWithSource = { 
+      ...updates, 
+      lastModifiedSource: source 
     }
+    
+    await updateAt(`users/${userId}/tasks/${id}`, updatesWithSource)
   },
   
   deleteTask: async (id) => {
-    try {
-      await db.tasks.delete(id)
-      set((state) => ({
-        tasks: state.tasks.filter((task) => task.id !== id),
-      }))
-      
-      // Delete from cloud immediately if user is authenticated
-      if (auth.currentUser) {
-        deleteItemFromCloud('tasks', id).catch(err => 
-          console.error('Failed to delete task from cloud:', err)
-        )
-      }
-    } catch (error) {
-      console.error('Failed to delete task:', error)
-    }
+    const userId = auth.currentUser?.uid
+    if (!userId) throw new Error('Not authenticated')
+    
+    await deleteAt(`users/${userId}/tasks/${id}`)
   },
   
   getTasksByStatus: (status) => {
@@ -296,52 +258,35 @@ export const useTasks = create<State>((set, get) => ({
   },
   
   resetDailyTasks: async () => {
+    const userId = auth.currentUser?.uid
+    if (!userId) throw new Error('Not authenticated')
+    
     const tasks = get().tasks
     const dailyTasks = tasks.filter(t => t.recurrence?.type === 'daily' && t.done)
     
     for (const task of dailyTasks) {
-      const { completedAt, ...updates } = toTaskRow({ ...task, done: false, status: 'active' })
-      await db.tasks.update(task.id, updates)
-    }
-    
-    set((state) => ({
-      tasks: state.tasks.map(t => {
-        if (t.recurrence?.type === 'daily' && t.done) {
-          const { completedAt, ...rest } = t
-          return { ...rest, done: false, status: 'active' }
-        }
-        return t
+      await updateAt(`users/${userId}/tasks/${task.id}`, {
+        done: false,
+        status: 'active',
+        completedAt: undefined,
       })
-    }))
+    }
   },
   
   resetWeeklyTasks: async () => {
+    const userId = auth.currentUser?.uid
+    if (!userId) throw new Error('Not authenticated')
+    
     const tasks = get().tasks
     const weeklyTasks = tasks.filter(t => t.recurrence?.type === 'weekly' && t.done)
     
     for (const task of weeklyTasks) {
-      const { completedAt, ...updates } = toTaskRow({ 
-        ...task, 
-        done: false, 
+      await updateAt(`users/${userId}/tasks/${task.id}`, {
+        done: false,
         status: 'active',
-        completionCount: 0 // Reset completion count for new week
+        completedAt: undefined,
+        completionCount: 0, // Reset completion count for new week
       })
-      await db.tasks.update(task.id, updates)
     }
-    
-    set((state) => ({
-      tasks: state.tasks.map(t => {
-        if (t.recurrence?.type === 'weekly' && t.done) {
-          const { completedAt, ...rest } = t
-          return { ...rest, done: false, status: 'active', completionCount: 0 }
-        }
-        return t
-      })
-    }))
   },
 }))
-
-// Load tasks when the store is first used
-if (typeof window !== 'undefined') {
-  useTasks.getState().loadTasks()
-}

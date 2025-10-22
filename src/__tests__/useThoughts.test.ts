@@ -28,7 +28,6 @@ describe('useThoughts', () => {
       await result.current.add({
         text: 'Test thought',
         type: 'neutral',
-        createdAt: new Date().toISOString(),
       });
       // Wait for state update
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -47,7 +46,6 @@ describe('useThoughts', () => {
       await result.current.add({
         text: 'CBT thought',
         type: 'feeling-bad',
-        createdAt: new Date().toISOString(),
         tags: ['cbt', 'anxiety'],
       });
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -63,7 +61,6 @@ describe('useThoughts', () => {
       await result.current.add({
         text: 'Intense thought',
         type: 'feeling-bad',
-        createdAt: new Date().toISOString(),
         intensity: 8,
       });
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -80,7 +77,6 @@ describe('useThoughts', () => {
       await result.current.add({
         text: 'Toggle test',
         type: 'neutral',
-        createdAt: new Date().toISOString(),
       });
       await new Promise(resolve => setTimeout(resolve, 100));
     });
@@ -112,7 +108,6 @@ describe('useThoughts', () => {
       await result.current.add({
         text: 'CBT test',
         type: 'feeling-bad',
-        createdAt: new Date().toISOString(),
       });
       await new Promise(resolve => setTimeout(resolve, 100));
     });
@@ -146,7 +141,6 @@ describe('useThoughts', () => {
       await result.current.add({
         text: 'Delete test',
         type: 'neutral',
-        createdAt: new Date().toISOString(),
       });
       await new Promise(resolve => setTimeout(resolve, 100));
     });
@@ -176,7 +170,6 @@ describe('useThoughts', () => {
         await result.current.add({
           text: `${type} thought`,
           type,
-          createdAt: new Date().toISOString(),
         });
         await new Promise(resolve => setTimeout(resolve, 100));
       });
@@ -193,13 +186,11 @@ describe('useThoughts', () => {
       await result.current.add({
         text: 'First',
         type: 'neutral',
-        createdAt: '2024-01-01T00:00:00Z',
       });
       await new Promise(resolve => setTimeout(resolve, 100));
       await result.current.add({
         text: 'Second',
         type: 'neutral',
-        createdAt: '2024-01-02T00:00:00Z',
       });
       await new Promise(resolve => setTimeout(resolve, 100));
     });

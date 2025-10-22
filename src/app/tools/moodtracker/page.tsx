@@ -122,7 +122,6 @@ export default function MoodTrackerPage() {
     await addMood({ 
       value: avgValue, 
       note: emotionsSummary, 
-      createdAt: new Date().toISOString(),
       metadata: {
         createdBy: 'manual',
         dimensions: Object.keys(dimensions).length > 0 ? dimensions : undefined

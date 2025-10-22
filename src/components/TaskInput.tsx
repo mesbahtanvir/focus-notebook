@@ -47,7 +47,6 @@ export function TaskInput({ onClose, onTaskCreated }: TaskInputProps = {}) {
     const taskId = await addTask({
       title: taskName.trim(),
       priority,
-      createdAt: new Date().toISOString(),
       dueDate: dueDate || (destination === 'today' ? new Date().toISOString().split('T')[0] : undefined),
       status: destination === 'today' ? 'active' : 'backlog',
       notes: notes.trim() || undefined,

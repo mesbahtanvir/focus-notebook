@@ -47,8 +47,7 @@ describe('useTasks Store', () => {
           title: 'Test Task',
           category: 'mastery',
           priority: 'medium',
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         } as any); // Type assertion to bypass type checking since store adds defaults
       });
 
@@ -75,8 +74,7 @@ describe('useTasks Store', () => {
           status: 'active',
           focusEligible: true,
           recurrence: undefined,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
         await result.current.add({ 
           title: 'Task 2', 
@@ -85,8 +83,7 @@ describe('useTasks Store', () => {
           status: 'active',
           focusEligible: true,
           recurrence: undefined,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
       });
 
@@ -106,8 +103,7 @@ describe('useTasks Store', () => {
           status: 'active',
           focusEligible: true,
           recurrence: undefined,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
       });
 
@@ -132,8 +128,7 @@ describe('useTasks Store', () => {
           status: 'active',
           focusEligible: true,
           recurrence: undefined,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
       });
 
@@ -165,8 +160,7 @@ describe('useTasks Store', () => {
           status: 'active',
           focusEligible: true,
           recurrence: undefined,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
       });
 
@@ -192,8 +186,7 @@ describe('useTasks Store', () => {
           recurrence: { type: 'daily', frequency: 30 },
           status: 'active',
           focusEligible: true,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
       });
 
@@ -222,8 +215,7 @@ describe('useTasks Store', () => {
           completedAt: new Date(Date.now() - 86400000).toISOString(), // Yesterday
           status: 'active',
           focusEligible: true,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
       });
 
@@ -246,8 +238,7 @@ describe('useTasks Store', () => {
           recurrence: { type: 'daily', frequency: 30 },
           status: 'active',
           focusEligible: true,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
       });
 
@@ -276,8 +267,7 @@ describe('useTasks Store', () => {
           status: 'active',
           focusEligible: true,
           recurrence: undefined,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
       });
 
@@ -306,8 +296,7 @@ describe('useTasks Store', () => {
           status: 'active',
           focusEligible: true,
           recurrence: undefined,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
       });
 
@@ -337,8 +326,7 @@ describe('useTasks Store', () => {
           status: 'active',
           focusEligible: true,
           recurrence: undefined,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
       });
 
@@ -376,8 +364,7 @@ describe('useTasks Store', () => {
           status: 'active',
           focusEligible: true,
           recurrence: undefined,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
         await result.current.add({
           title: 'Active Pleasure',
@@ -386,8 +373,7 @@ describe('useTasks Store', () => {
           status: 'active',
           focusEligible: true,
           recurrence: undefined,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
         await result.current.add({
           title: 'Backlog Task',
@@ -396,8 +382,7 @@ describe('useTasks Store', () => {
           status: 'backlog',
           focusEligible: true,
           recurrence: undefined,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
         await result.current.add({
           title: 'Completed Task',
@@ -406,8 +391,7 @@ describe('useTasks Store', () => {
           status: 'completed',
           focusEligible: true,
           recurrence: undefined,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
       });
     });
@@ -452,8 +436,7 @@ describe('useTasks Store', () => {
           status: 'active',
           focusEligible: true,
           recurrence: undefined,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
       });
 
@@ -471,8 +454,7 @@ describe('useTasks Store', () => {
           focusEligible: false,
           status: 'active',
           recurrence: undefined,
-          completionCount: 0,
-          createdAt: new Date().toISOString()
+          completionCount: 0
         });
       });
 

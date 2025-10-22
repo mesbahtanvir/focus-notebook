@@ -7,10 +7,7 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged 
 } from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase';
-import { smartSync } from '@/lib/syncEngine';
-import { useTasks } from '@/store/useTasks';
-import { useThoughts } from '@/store/useThoughts';
+import { auth, googleProvider } from '@/lib/firebaseClient';
 
 interface AuthContextType {
   user: User | null;
@@ -39,30 +36,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
       
-      // Automatically sync data when user logs in (smart merge)
+      // FirestoreSubscriber component handles all subscriptions automatically
+      // No manual sync needed - real-time listeners take care of everything
       if (user) {
-        try {
-          console.log('🔄 User logged in, performing smart sync...');
-          const result = await smartSync();
-          if (result.success) {
-            console.log(`✅ Login sync: ${result.mergedItems} items synced, ${result.conflicts} conflicts resolved`);
-            
-            // Reload all stores to reflect merged data
-            await Promise.all([
-              useTasks.getState().loadTasks(),
-              useThoughts.getState().loadThoughts(),
-            ]);
-            console.log('✅ All stores reloaded with merged data');
-          } else {
-            console.error('❌ Failed to sync data:', result.error);
-          }
-        } catch (error) {
-          console.error('❌ Error syncing data on login:', error);
-        }
+        console.log('✅ User logged in:', user.email);
+      } else {
+        console.log('👋 User logged out');
       }
     });
 

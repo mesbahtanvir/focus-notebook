@@ -35,8 +35,7 @@ describe('Focus Session Workflow Integration Tests', () => {
           priority: 'high',
           estimatedMinutes: 45,
           focusEligible: true,
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
         await tasksHook.result.current.add({
           title: 'Read technical article',
@@ -44,8 +43,7 @@ describe('Focus Session Workflow Integration Tests', () => {
           priority: 'medium',
           estimatedMinutes: 15,
           focusEligible: true,
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
       });
 
@@ -128,8 +126,7 @@ describe('Focus Session Workflow Integration Tests', () => {
           priority: 'high',
           estimatedMinutes: 30,
           focusEligible: true,
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
       });
 
@@ -184,8 +181,7 @@ describe('Focus Session Workflow Integration Tests', () => {
           priority: 'urgent',
           estimatedMinutes: 45,
           focusEligible: true,
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
       });
 
@@ -229,8 +225,7 @@ describe('Focus Session Workflow Integration Tests', () => {
           priority: 'high',
           estimatedMinutes: 20,
           focusEligible: true,
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
         await tasksHook.result.current.add({
           title: 'Task B',
@@ -238,8 +233,7 @@ describe('Focus Session Workflow Integration Tests', () => {
           priority: 'medium',
           estimatedMinutes: 15,
           focusEligible: true,
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
         await tasksHook.result.current.add({
           title: 'Task C',
@@ -247,8 +241,7 @@ describe('Focus Session Workflow Integration Tests', () => {
           priority: 'medium',
           estimatedMinutes: 25,
           focusEligible: true,
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
       });
 
@@ -313,8 +306,7 @@ describe('Focus Session Workflow Integration Tests', () => {
           priority: 'high',
           estimatedMinutes: 30,
           focusEligible: true,
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
         await tasksHook.result.current.add({
           title: 'Go to post office',
@@ -322,8 +314,7 @@ describe('Focus Session Workflow Integration Tests', () => {
           priority: 'medium',
           estimatedMinutes: 20,
           focusEligible: false,
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
         await tasksHook.result.current.add({
           title: 'Write tests',
@@ -331,8 +322,7 @@ describe('Focus Session Workflow Integration Tests', () => {
           priority: 'high',
           estimatedMinutes: 45,
           focusEligible: true,
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
       });
 
@@ -366,8 +356,7 @@ describe('Focus Session Workflow Integration Tests', () => {
           priority: 'high',
           estimatedMinutes: 30,
           focusEligible: true,
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
       });
 
@@ -387,8 +376,7 @@ describe('Focus Session Workflow Integration Tests', () => {
           priority: 'medium',
           estimatedMinutes: 20,
           focusEligible: true,
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
       });
 
@@ -430,8 +418,7 @@ describe('Focus Session Workflow Integration Tests', () => {
           priority: 'high',
           estimatedMinutes: 5,
           focusEligible: true,
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
       });
 
@@ -455,8 +442,7 @@ describe('Focus Session Workflow Integration Tests', () => {
           priority: 'high',
           estimatedMinutes: 180,
           focusEligible: true,
-          status: 'active',
-          createdAt: new Date().toISOString()
+          status: 'active'
         });
       });
 

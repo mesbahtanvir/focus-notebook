@@ -8,13 +8,10 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
-import { db, type TaskRow, type MoodRow } from '@/db'
 import { useSettingsStore } from '@/store/useSettingsStore'
 import { useSettings } from '@/store/useSettings'
-import { syncToCloud, syncFromCloud } from '@/lib/cloudSync'
 import { useAuth } from '@/contexts/AuthContext'
 import { Cloud, CloudOff, RefreshCw, Upload, Key, Eye, EyeOff, Check, X } from 'lucide-react'
-import { SyncStatusIndicator } from '@/components/SyncStatusIndicator'
 
 type SettingsFormValues = {
   allowBackgroundProcessing: boolean;
@@ -113,25 +110,10 @@ export default function SettingsPage() {
   };
 
   const doExport = async () => {
-    try {
-      const tasks = await db.tasks.toArray();
-      const moods = (db as any).moods ? await (db as any).moods.toArray() : [];
-      const payload = { version: 1, exportedAt: new Date().toISOString(), tasks, moods };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `focus-notebook-export-${Date.now()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast({ title: 'Exported', description: 'Your data has been exported as JSON.' });
-    } catch (e) {
-      toast({ title: 'Export failed', description: 'Could not export data.', variant: 'destructive' });
-    } finally {
-      setExportOpen(false);
-    }
+    // Note: Export/Import now uses Firestore directly
+    // TODO: Implement Firestore export functionality
+    toast({ title: 'Coming soon', description: 'Export functionality will be re-implemented with Firestore.', variant: 'destructive' });
+    setExportOpen(false);
   };
 
   const startImport = () => {
@@ -140,60 +122,19 @@ export default function SettingsPage() {
   };
 
   const handleFileChosen: React.ChangeEventHandler<HTMLInputElement> = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      const tasks: TaskRow[] = Array.isArray(data?.tasks) ? data.tasks : [];
-      const moods: MoodRow[] = Array.isArray(data?.moods) ? data.moods : [];
-      await db.tasks.clear();
-      if ((db as any).moods) await (db as any).moods.clear();
-      if (tasks.length) await db.tasks.bulkPut(tasks as any);
-      if ((db as any).moods && moods.length) await (db as any).moods.bulkPut(moods as any);
-      toast({ title: 'Import complete', description: 'Your data has been restored.' });
-    } catch (e) {
-      toast({ title: 'Import failed', description: 'Invalid or unreadable JSON.', variant: 'destructive' });
-    } finally {
-      setImportOpen(false);
-    }
+    // Note: Import now uses Firestore directly
+    // TODO: Implement Firestore import functionality
+    toast({ title: 'Coming soon', description: 'Import functionality will be re-implemented with Firestore.', variant: 'destructive' });
+    setImportOpen(false);
   };
 
   const handleCloudSync = async () => {
-    if (syncing) return;
-    
-    if (!user) {
-      toast({
-        title: 'Not authenticated',
-        description: 'Please sign in to sync your data.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    setSyncing(true);
-    try {
-      // Upload local data to Firebase
-      const result = await syncToCloud();
-      
-      if (result.success) {
-        updateLastSyncTime(result.timestamp);
-        toast({
-          title: 'Cloud sync complete',
-          description: 'Your data has been uploaded to Firebase successfully.',
-        });
-      } else {
-        throw new Error(result.error || 'Unknown error');
-      }
-    } catch (e) {
-      toast({
-        title: 'Cloud sync failed',
-        description: e instanceof Error ? e.message : 'Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setSyncing(false);
-    }
+    // Note: Cloud sync is now automatic via real-time Firestore listeners
+    // No manual sync needed
+    toast({
+      title: 'Automatic Sync Active',
+      description: 'Your data syncs automatically in real-time. No manual sync needed!',
+    });
   };
 
   const allowBackgroundProcessing = watch('allowBackgroundProcessing');
@@ -362,8 +303,7 @@ export default function SettingsPage() {
                 <h3 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">Cloud Sync</h3>
               </div>
               
-              {/* Sync Status Indicator */}
-              <SyncStatusIndicator />
+              {/* Note: Sync Status Indicator removed - sync is now automatic */}
               
               {!user ? (
                 <div className="rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 p-6 border-2 border-blue-200">

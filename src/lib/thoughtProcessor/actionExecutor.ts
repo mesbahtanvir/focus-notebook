@@ -104,7 +104,6 @@ export class ActionExecutor {
       estimatedMinutes: action.data.estimatedTime || 30,
       priority: action.data.priority || 'medium',
       status: 'active',
-      createdAt: new Date().toISOString(),
       recurrence,
       notes: JSON.stringify(metadata), // Store metadata in notes field
     });
@@ -275,7 +274,6 @@ export class ActionExecutor {
     await addMood({
       value: Math.round(action.data.intensity / 10), // Convert 0-100 to 1-10
       note: action.data.notes || `${action.data.mood} (from thought)`,
-      createdAt: new Date().toISOString(),
       metadata: {
         sourceThoughtId: action.thoughtId,
         createdBy: 'thought-processor',

@@ -41,7 +41,6 @@ describe('useTasks store', () => {
         title: 'Write tests',
         category: 'mastery' as any,
         status: 'active' as any,
-        createdAt: new Date().toISOString(),
       })
     })
 
@@ -62,7 +61,6 @@ describe('useTasks store', () => {
         title: 'Complete me',
         category: 'mastery' as any,
         status: 'active' as any,
-        createdAt: new Date().toISOString(),
       })
     })
     taskId = useTasks.getState().tasks[0].id
@@ -86,7 +84,6 @@ describe('useTasks store', () => {
         title: 'Backlog candidate',
         category: 'pleasure' as any,
         status: 'active' as any,
-        createdAt: new Date().toISOString(),
       })
     })
     const id = useTasks.getState().tasks[0].id

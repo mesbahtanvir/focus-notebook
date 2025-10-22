@@ -1,9 +1,6 @@
 import { create } from 'zustand'
 import { Task } from './useTasks'
-import { collection, query, orderBy, where } from 'firebase/firestore'
-import { db, auth } from '@/lib/firebaseClient'
-import { createAt, updateAt, deleteAt } from '@/lib/data/gateway'
-import { subscribeCol } from '@/lib/data/subscribe'
+import { db, FocusSessionRow } from '@/db'
 
 export interface FocusTask {
   task: Task
@@ -25,21 +22,12 @@ export interface FocusSession {
   rating?: number
   pausedAt?: string // timestamp when paused
   totalPausedTime?: number // total time paused in milliseconds
-  createdAt?: string | any
-  updatedAt?: any
-  updatedBy?: string
-  version?: number
 }
 
 type State = {
   currentSession: FocusSession | null
   completedSession: FocusSession | null
   sessions: FocusSession[]
-  isLoading: boolean
-  fromCache: boolean
-  hasPendingWrites: boolean
-  unsubscribe: (() => void) | null
-  subscribe: (userId: string) => void
   startSession: (tasks: Task[], duration: number) => Promise<void>
   endSession: (feedback?: string, rating?: number) => Promise<void>
   saveSessionFeedback: (feedback: string, rating: number) => Promise<void>
@@ -156,36 +144,6 @@ export const useFocus = create<State>((set, get) => ({
   currentSession: null,
   completedSession: null,
   sessions: [],
-  isLoading: true,
-  fromCache: false,
-  hasPendingWrites: false,
-  unsubscribe: null,
-  
-  subscribe: (userId: string) => {
-    // Unsubscribe from previous subscription if any
-    const currentUnsub = get().unsubscribe
-    if (currentUnsub) {
-      currentUnsub()
-    }
-
-    // Subscribe to completed sessions only
-    const sessionsQuery = query(
-      collection(db, `users/${userId}/focusSessions`),
-      where('isActive', '==', false),
-      orderBy('startTime', 'desc')
-    )
-
-    const unsub = subscribeCol<FocusSession>(sessionsQuery, (sessions, meta) => {
-      set({ 
-        sessions, 
-        isLoading: false,
-        fromCache: meta.fromCache,
-        hasPendingWrites: meta.hasPendingWrites,
-      })
-    })
-
-    set({ unsubscribe: unsub })
-  },
   
   startSession: async (tasks, duration) => {
     // Don't create session with no tasks
@@ -193,12 +151,8 @@ export const useFocus = create<State>((set, get) => ({
       return
     }
     
-    const userId = auth.currentUser?.uid
-    if (!userId) throw new Error('Not authenticated')
-    
-    const sessionId = Date.now().toString()
     const newSession: FocusSession = {
-      id: sessionId,
+      id: Date.now().toString(),
       duration,
       tasks: tasks.map(task => ({
         task,
@@ -213,17 +167,18 @@ export const useFocus = create<State>((set, get) => ({
     
     set({ currentSession: newSession })
     
-    // Persist to Firestore immediately
+    // Persist to database immediately
     try {
-      await createAt(`users/${userId}/focusSessions/${sessionId}`, {
+      const sessionRow: FocusSessionRow = {
+        id: newSession.id,
         duration: newSession.duration,
         startTime: newSession.startTime,
         tasksData: JSON.stringify(newSession.tasks),
         isActive: true,
         currentTaskIndex: 0,
         totalPausedTime: 0,
-        createdAt: newSession.startTime,
-      })
+      }
+      await db.focusSessions.add(sessionRow)
     } catch (error) {
       console.error('Failed to persist focus session:', error)
     }
@@ -233,9 +188,6 @@ export const useFocus = create<State>((set, get) => ({
     const current = get().currentSession
     if (!current) return
     
-    const userId = auth.currentUser?.uid
-    if (!userId) throw new Error('Not authenticated')
-    
     const completedSession = {
       ...current,
       endTime: new Date().toISOString(),
@@ -244,15 +196,18 @@ export const useFocus = create<State>((set, get) => ({
       rating,
     }
     
-    // Update Firestore - mark as completed
+    // Update database - mark as completed
     try {
-      await updateAt(`users/${userId}/focusSessions/${completedSession.id}`, {
+      await db.focusSessions.update(completedSession.id, {
         endTime: completedSession.endTime,
         isActive: false,
         tasksData: JSON.stringify(completedSession.tasks),
         feedback,
         rating,
       })
+      
+      // Reload sessions from database to keep in sync
+      await get().loadSessions()
     } catch (error) {
       console.error('Failed to save focus session:', error)
     }
@@ -268,25 +223,22 @@ export const useFocus = create<State>((set, get) => ({
     const completed = get().completedSession
     if (!completed) return
     
-    const userId = auth.currentUser?.uid
-    if (!userId) throw new Error('Not authenticated')
-    
     const updatedSession = {
       ...completed,
       feedback,
       rating,
     }
     
-    // Update in Firestore
+    // Update in database
     try {
-      await updateAt(`users/${userId}/focusSessions/${completed.id}`, {
+      await db.focusSessions.update(completed.id, {
         feedback,
         rating,
       })
       
       set((state) => ({
         completedSession: updatedSession,
-        sessions: state.sessions.map(s => s.id === completed.id ? updatedSession : s),
+        sessions: [...state.sessions, updatedSession],
       }))
     } catch (error) {
       console.error('Failed to save feedback:', error)
@@ -298,56 +250,60 @@ export const useFocus = create<State>((set, get) => ({
   },
   
   loadSessions: async () => {
-    // This is now handled by subscribe(), but keep for backward compatibility
-    console.log('loadSessions() is deprecated - use subscribe() instead')
+    try {
+      const rows = await db.focusSessions.orderBy('startTime').reverse().toArray()
+      // Filter completed sessions with feedback/rating
+      const completedRows = rows.filter(row => !row.isActive && row.endTime)
+      const sessions: FocusSession[] = completedRows.map(row => ({
+        id: row.id,
+        duration: row.duration,
+        startTime: row.startTime,
+        endTime: row.endTime,
+        tasks: JSON.parse(row.tasksData),
+        currentTaskIndex: row.currentTaskIndex || 0,
+        isActive: false,
+        feedback: row.feedback,
+        rating: row.rating,
+        totalPausedTime: row.totalPausedTime || 0,
+      }))
+      set({ sessions })
+    } catch (error) {
+      console.error('Failed to load sessions:', error)
+    }
   },
   
   loadActiveSession: async () => {
-    // Load active session from Firestore on mount
-    const userId = auth.currentUser?.uid
-    if (!userId) return
-    
     try {
-      const sessionsQuery = query(
-        collection(db, `users/${userId}/focusSessions`),
-        where('isActive', '==', true)
-      )
-      
-      // We can't use subscribeCol here because we need one-time fetch
-      // Use getDocs for now (can be optimized later)
-      const { getDocs } = await import('firebase/firestore')
-      const snapshot = await getDocs(sessionsQuery)
-      
-      if (!snapshot.empty) {
-        const doc = snapshot.docs[0]
-        const data = doc.data()
-        
+      const allSessions = await db.focusSessions.toArray()
+      const activeSessions = allSessions.filter(s => s.isActive === true)
+      if (activeSessions.length > 0) {
+        const row = activeSessions[0]
         const session: FocusSession = {
-          id: doc.id,
-          duration: data.duration,
-          startTime: data.startTime,
-          endTime: data.endTime,
-          tasks: JSON.parse(data.tasksData || '[]'),
-          currentTaskIndex: data.currentTaskIndex || 0,
+          id: row.id,
+          duration: row.duration,
+          startTime: row.startTime,
+          endTime: row.endTime,
+          tasks: JSON.parse(row.tasksData),
+          currentTaskIndex: row.currentTaskIndex || 0,
           isActive: false, // Will be paused when reloaded
-          feedback: data.feedback,
-          rating: data.rating,
-          pausedAt: data.pausedAt,
-          totalPausedTime: data.totalPausedTime || 0,
+          feedback: row.feedback,
+          rating: row.rating,
+          pausedAt: row.pausedAt,
+          totalPausedTime: row.totalPausedTime || 0,
         }
         
         // Calculate additional paused time if session was left active
-        if (data.pausedAt) {
+        if (row.pausedAt) {
           const now = new Date().getTime()
-          const pausedTime = new Date(data.pausedAt).getTime()
+          const pausedTime = new Date(row.pausedAt).getTime()
           const additionalPause = now - pausedTime
           session.totalPausedTime = (session.totalPausedTime || 0) + additionalPause
         }
         
         set({ currentSession: session })
         
-        // Update Firestore with new pause time
-        await updateAt(`users/${userId}/focusSessions/${session.id}`, {
+        // Update database with new pause time
+        await db.focusSessions.update(session.id, {
           pausedAt: new Date().toISOString(),
           totalPausedTime: session.totalPausedTime,
         })
@@ -361,11 +317,8 @@ export const useFocus = create<State>((set, get) => ({
     const current = get().currentSession
     if (!current) return
     
-    const userId = auth.currentUser?.uid
-    if (!userId) throw new Error('Not authenticated')
-    
     try {
-      await updateAt(`users/${userId}/focusSessions/${current.id}`, {
+      await db.focusSessions.update(current.id, {
         tasksData: JSON.stringify(current.tasks),
         currentTaskIndex: current.currentTaskIndex,
         isActive: current.isActive,

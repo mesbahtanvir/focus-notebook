@@ -2,9 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 import Layout from '@/components/Layout'
-import { AutoSync } from '@/components/AutoSync'
 import { ThoughtProcessorDaemon } from '@/components/ThoughtProcessorDaemon'
-import { SyncToast } from '@/components/SyncToast'
+import { FirestoreSubscriber } from '@/components/FirestoreSubscriber'
 
 export const metadata: Metadata = {
   title: 'Focus Notebook',
@@ -27,9 +26,8 @@ export default function RootLayout({
     <html lang="en" className="light">
       <body className="font-sans antialiased">
         <AuthProvider>
-          <AutoSync />
+          <FirestoreSubscriber />
           <ThoughtProcessorDaemon />
-          <SyncToast />
           <Layout>
             {children}
           </Layout>

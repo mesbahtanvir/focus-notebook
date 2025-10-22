@@ -51,7 +51,6 @@ export default function Page() {
     await addThought({
       text: data.text.trim(),
       type: 'neutral',
-      createdAt: new Date().toISOString(),
     });
     reset();
   };

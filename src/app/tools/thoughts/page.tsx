@@ -366,7 +366,6 @@ function NewThoughtModal({ onClose }: { onClose: () => void }) {
     await addThought({
       text: text.trim(),
       type,
-      createdAt: new Date().toISOString(),
       intensity: showIntensity ? intensity : undefined,
       tags: tagsList.length > 0 ? tagsList : undefined,
     });

@@ -6,14 +6,12 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import Onboarding from './Onboarding';
 import OfflineBanner from './OfflineBanner';
-import { useCloudSync } from '@/hooks/useCloudSync';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const prefersReducedMotion = useReducedMotion();
   
-  // Enable automatic cloud sync when configured
-  useCloudSync();
+  // Note: Cloud sync is now automatic via FirestoreSubscriber in layout.tsx
   
   return (
     <div className="flex h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 text-gray-800">

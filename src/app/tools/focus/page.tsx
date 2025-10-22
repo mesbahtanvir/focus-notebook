@@ -48,11 +48,9 @@ function FocusPageContent() {
   }, [loadSessions]);
 
   const checkForActiveSession = async () => {
-    // Check IndexedDB for active sessions
-    const { db } = await import('@/db');
-    const allSessions = await db.focusSessions.toArray();
-    const activeSessions = allSessions.filter(s => s.isActive === true);
-    setHasActiveSession(activeSessions.length > 0);
+    // Check Firestore for active sessions (handled by useFocus store)
+    // Note: Active session loading is now handled by FirestoreSubscriber
+    setHasActiveSession(currentSession !== null);
   };
 
   const handleResumeSession = async () => {
