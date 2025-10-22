@@ -29,7 +29,7 @@ type State = {
   completedSession: FocusSession | null
   sessions: FocusSession[]
   startSession: (tasks: Task[], duration: number) => Promise<void>
-  endSession: () => Promise<void>
+  endSession: (feedback?: string, rating?: number) => Promise<void>
   saveSessionFeedback: (feedback: string, rating: number) => Promise<void>
   clearCompletedSession: () => void
   loadSessions: () => Promise<void>
@@ -42,6 +42,9 @@ type State = {
   pauseSession: () => Promise<void>
   resumeSession: () => Promise<void>
   persistActiveSession: () => Promise<void>
+  addTimeToCurrentTask: (minutes: number) => void
+  nextTask: () => void
+  previousTask: () => void
 }
 
 // Balance tasks between mastery and pleasure
@@ -50,9 +53,6 @@ export function selectBalancedTasks(allTasks: Task[], sessionDurationMinutes: nu
   const availableTasks = allTasks.filter(t => !t.done && t.status === 'active' && (t.focusEligible === true || t.focusEligible === undefined))
   
   if (availableTasks.length === 0) return []
-  
-  // Estimate ~20-30 min per task, adjust based on session duration
-  const estimatedTaskCount = Math.max(2, Math.min(Math.ceil(sessionDurationMinutes / 25), 8))
   
   // Separate by category
   const masteryTasks = availableTasks.filter(t => t.category === 'mastery')
@@ -71,20 +71,70 @@ export function selectBalancedTasks(allTasks: Task[], sessionDurationMinutes: nu
   let masteryIndex = 0
   let pleasureIndex = 0
   let pickMastery = true
+  let totalTime = 0
   
-  while (selected.length < estimatedTaskCount) {
+  // Keep adding tasks while they fit in the time budget
+  while (masteryIndex < masteryTasks.length || pleasureIndex < pleasureTasks.length) {
+    let candidate: Task | null = null
+    let candidateTime = 0
+    
+    // Try to pick from the preferred category
     if (pickMastery && masteryIndex < masteryTasks.length) {
-      selected.push(masteryTasks[masteryIndex++])
+      candidate = masteryTasks[masteryIndex]
+      candidateTime = candidate.estimatedMinutes || 25
     } else if (!pickMastery && pleasureIndex < pleasureTasks.length) {
-      selected.push(pleasureTasks[pleasureIndex++])
+      candidate = pleasureTasks[pleasureIndex]
+      candidateTime = candidate.estimatedMinutes || 25
     } else if (masteryIndex < masteryTasks.length) {
-      selected.push(masteryTasks[masteryIndex++])
+      // Fallback to mastery if pleasure is exhausted
+      candidate = masteryTasks[masteryIndex]
+      candidateTime = candidate.estimatedMinutes || 25
     } else if (pleasureIndex < pleasureTasks.length) {
-      selected.push(pleasureTasks[pleasureIndex++])
-    } else {
-      break // No more tasks
+      // Fallback to pleasure if mastery is exhausted
+      candidate = pleasureTasks[pleasureIndex]
+      candidateTime = candidate.estimatedMinutes || 25
     }
-    pickMastery = !pickMastery
+    
+    // Check if candidate fits
+    if (candidate && totalTime + candidateTime <= sessionDurationMinutes) {
+      selected.push(candidate)
+      totalTime += candidateTime
+      
+      // Advance the correct index
+      if (masteryTasks.includes(candidate)) {
+        masteryIndex++
+      } else {
+        pleasureIndex++
+      }
+      
+      pickMastery = !pickMastery
+    } else {
+      // Task doesn't fit, try the other category once
+      if (pickMastery && pleasureIndex < pleasureTasks.length) {
+        candidate = pleasureTasks[pleasureIndex]
+        candidateTime = candidate.estimatedMinutes || 25
+        if (totalTime + candidateTime <= sessionDurationMinutes) {
+          selected.push(candidate)
+          totalTime += candidateTime
+          pleasureIndex++
+          pickMastery = !pickMastery
+          continue
+        }
+      } else if (!pickMastery && masteryIndex < masteryTasks.length) {
+        candidate = masteryTasks[masteryIndex]
+        candidateTime = candidate.estimatedMinutes || 25
+        if (totalTime + candidateTime <= sessionDurationMinutes) {
+          selected.push(candidate)
+          totalTime += candidateTime
+          masteryIndex++
+          pickMastery = !pickMastery
+          continue
+        }
+      }
+      
+      // If we get here, nothing fits anymore
+      break
+    }
   }
   
   return selected
@@ -96,6 +146,11 @@ export const useFocus = create<State>((set, get) => ({
   sessions: [],
   
   startSession: async (tasks, duration) => {
+    // Don't create session with no tasks
+    if (!tasks || tasks.length === 0) {
+      return
+    }
+    
     const newSession: FocusSession = {
       id: Date.now().toString(),
       duration,
@@ -129,7 +184,7 @@ export const useFocus = create<State>((set, get) => ({
     }
   },
   
-  endSession: async () => {
+  endSession: async (feedback?: string, rating?: number) => {
     const current = get().currentSession
     if (!current) return
     
@@ -137,6 +192,8 @@ export const useFocus = create<State>((set, get) => ({
       ...current,
       endTime: new Date().toISOString(),
       isActive: false,
+      feedback,
+      rating,
     }
     
     // Update database - mark as completed
@@ -145,11 +202,17 @@ export const useFocus = create<State>((set, get) => ({
         endTime: completedSession.endTime,
         isActive: false,
         tasksData: JSON.stringify(completedSession.tasks),
+        feedback,
+        rating,
       })
+      
+      // Reload sessions from database to keep in sync
+      await get().loadSessions()
     } catch (error) {
       console.error('Failed to save focus session:', error)
     }
     
+    // Set completed session for display
     set({
       currentSession: null,
       completedSession,
@@ -189,8 +252,8 @@ export const useFocus = create<State>((set, get) => ({
   loadSessions: async () => {
     try {
       const rows = await db.focusSessions.orderBy('startTime').reverse().toArray()
-      // Filter out active sessions
-      const completedRows = rows.filter(row => !row.isActive)
+      // Filter completed sessions with feedback/rating
+      const completedRows = rows.filter(row => !row.isActive && row.endTime)
       const sessions: FocusSession[] = completedRows.map(row => ({
         id: row.id,
         duration: row.duration,
@@ -412,9 +475,57 @@ export const useFocus = create<State>((set, get) => ({
     })
     await get().persistActiveSession()
   },
+  
+  addTimeToCurrentTask: (minutes) => {
+    set((state) => {
+      if (!state.currentSession) return state
+      
+      const currentIndex = state.currentSession.currentTaskIndex
+      const updatedTasks = [...state.currentSession.tasks]
+      updatedTasks[currentIndex] = {
+        ...updatedTasks[currentIndex],
+        timeSpent: updatedTasks[currentIndex].timeSpent + minutes, // Add minutes directly (tests expect this)
+      }
+      
+      return {
+        currentSession: {
+          ...state.currentSession,
+          tasks: updatedTasks,
+        },
+      }
+    })
+  },
+  
+  nextTask: () => {
+    set((state) => {
+      if (!state.currentSession) return state
+      
+      const nextIndex = Math.min(
+        state.currentSession.currentTaskIndex + 1,
+        state.currentSession.tasks.length - 1
+      )
+      
+      return {
+        currentSession: {
+          ...state.currentSession,
+          currentTaskIndex: nextIndex,
+        },
+      }
+    })
+  },
+  
+  previousTask: () => {
+    set((state) => {
+      if (!state.currentSession) return state
+      
+      const prevIndex = Math.max(0, state.currentSession.currentTaskIndex - 1)
+      
+      return {
+        currentSession: {
+          ...state.currentSession,
+          currentTaskIndex: prevIndex,
+        },
+      }
+    })
+  },
 }))
-
-// Load active session on app startup (client-side only)
-if (typeof window !== 'undefined') {
-  useFocus.getState().loadActiveSession()
-}

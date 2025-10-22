@@ -24,11 +24,13 @@ export interface Task {
   priority: TaskPriority
   category?: TaskCategory
   createdAt: string
+  updatedAt?: number
   dueDate?: string
   completedAt?: string
   notes?: string
   tags?: string[]
   estimatedMinutes?: number
+  actualMinutes?: number
   recurrence?: RecurrenceConfig
   parentTaskId?: string // For tracking recurring task instances
   completionCount?: number // Track how many times completed this period
@@ -130,6 +132,8 @@ type State = {
   updateTask: (id: string, updates: Partial<Omit<Task, 'id'>>) => Promise<void>
   deleteTask: (id: string) => Promise<void>
   getTasksByStatus: (status: TaskStatus) => Task[]
+  resetDailyTasks: () => Promise<void>
+  resetWeeklyTasks: () => Promise<void>
 }
 
 export const useTasks = create<State>((set, get) => ({
@@ -163,13 +167,20 @@ export const useTasks = create<State>((set, get) => ({
   
   add: async (task) => {
     const source = getCompactSource();
-    const newTask = {
+    const now = Date.now();
+    // Add random suffix to ensure unique IDs even if called in same millisecond
+    const uniqueId = `${now}-${Math.random().toString(36).substr(2, 9)}`;
+    const newTask: Task = {
       ...task,
-      id: Date.now().toString(),
+      id: uniqueId,
       done: false,
-      updatedAt: Date.now(),
+      status: task.status || 'active',
+      priority: task.priority || 'medium',
+      category: task.category,
+      createdAt: new Date(now).toISOString(),
       source,
       lastModifiedSource: source,
+      focusEligible: task.focusEligible !== undefined ? task.focusEligible : true,
     }
     
     try {
@@ -193,18 +204,23 @@ export const useTasks = create<State>((set, get) => ({
   },
   
   toggle: async (id) => {
+    // Get fresh state each time to avoid stale closures
     const task = get().tasks.find(t => t.id === id)
     if (!task) return
     
+    const isRecurring = task.recurrence && task.recurrence.type !== 'none'
+    const nowDone = !task.done
+    
     const updatedTask = {
       ...task,
-      done: !task.done,
-      status: !task.done ? 'completed' : 'active' as TaskStatus,
-      completedAt: !task.done ? new Date().toISOString() : undefined,
-      completionCount: !task.done && task.recurrence?.type !== 'none' 
+      done: nowDone,
+      // Recurring tasks stay 'active' even when done, non-recurring become 'completed'
+      status: (nowDone && !isRecurring) ? 'completed' : 'active' as TaskStatus,
+      completedAt: nowDone ? new Date().toISOString() : undefined,
+      // Increment count every time task is marked as done
+      completionCount: nowDone && isRecurring
         ? (task.completionCount || 0) + 1 
         : task.completionCount,
-      updatedAt: Date.now(),
     }
     
     try {
@@ -276,7 +292,52 @@ export const useTasks = create<State>((set, get) => ({
   },
   
   getTasksByStatus: (status) => {
-    return get().tasks.filter((task) => task.status === status)
+    return get().tasks.filter(t => t.status === status)
+  },
+  
+  resetDailyTasks: async () => {
+    const tasks = get().tasks
+    const dailyTasks = tasks.filter(t => t.recurrence?.type === 'daily' && t.done)
+    
+    for (const task of dailyTasks) {
+      const { completedAt, ...updates } = toTaskRow({ ...task, done: false, status: 'active' })
+      await db.tasks.update(task.id, updates)
+    }
+    
+    set((state) => ({
+      tasks: state.tasks.map(t => {
+        if (t.recurrence?.type === 'daily' && t.done) {
+          const { completedAt, ...rest } = t
+          return { ...rest, done: false, status: 'active' }
+        }
+        return t
+      })
+    }))
+  },
+  
+  resetWeeklyTasks: async () => {
+    const tasks = get().tasks
+    const weeklyTasks = tasks.filter(t => t.recurrence?.type === 'weekly' && t.done)
+    
+    for (const task of weeklyTasks) {
+      const { completedAt, ...updates } = toTaskRow({ 
+        ...task, 
+        done: false, 
+        status: 'active',
+        completionCount: 0 // Reset completion count for new week
+      })
+      await db.tasks.update(task.id, updates)
+    }
+    
+    set((state) => ({
+      tasks: state.tasks.map(t => {
+        if (t.recurrence?.type === 'weekly' && t.done) {
+          const { completedAt, ...rest } = t
+          return { ...rest, done: false, status: 'active', completionCount: 0 }
+        }
+        return t
+      })
+    }))
   },
 }))
 
