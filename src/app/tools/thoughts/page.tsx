@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { useThoughts, Thought } from "@/store/useThoughts";
 import { useProcessQueue } from "@/store/useProcessQueue";
+import { useSearchParams } from "next/navigation";
 import { manualProcessor } from "@/lib/thoughtProcessor/manualProcessor";
 import { approvalHandler } from "@/lib/thoughtProcessor/approvalHandler";
 import { ProcessingApprovalDialog } from "@/components/ProcessingApprovalDialog";
@@ -32,9 +33,10 @@ import {
   EmptyState
 } from "@/components/tools";
 
-export default function ThoughtsPage() {
+function ThoughtsPageContent() {
   const thoughts = useThoughts((s) => s.thoughts);
   const queue = useProcessQueue((s) => s.queue);
+  const searchParams = useSearchParams();
   const [showNewThought, setShowNewThought] = useState(false);
   const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -42,6 +44,17 @@ export default function ThoughtsPage() {
   const [processingThoughtId, setProcessingThoughtId] = useState<string | null>(null);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [currentApprovalItem, setCurrentApprovalItem] = useState<string | null>(null);
+
+  // Auto-open thought detail if navigating from tasks page
+  useEffect(() => {
+    const thoughtId = searchParams.get('id');
+    if (thoughtId) {
+      const thought = thoughts.find(t => t.id === thoughtId);
+      if (thought) {
+        setSelectedThought(thought);
+      }
+    }
+  }, [searchParams, thoughts]);
 
   // Get awaiting approval items
   const awaitingApproval = useMemo(() => {
@@ -478,5 +491,13 @@ function NewThoughtModal({ onClose }: { onClose: () => void }) {
         </form>
       </motion.div>
     </div>
+  );
+}
+
+export default function ThoughtsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+      <ThoughtsPageContent />
+    </Suspense>
   );
 }

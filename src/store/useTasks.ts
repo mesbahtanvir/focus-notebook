@@ -38,6 +38,7 @@ export interface Task {
   parentTaskId?: string // For tracking recurring task instances
   completionCount?: number // Track how many times completed this period
   projectId?: string // Link to project
+  thoughtId?: string // Link to thought that created this task
   focusEligible?: boolean // Can be done during a focus session (laptop/notebook work)
   source?: string // Device/platform source (e.g., "iPhone-Safari", "Mac-Chrome")
   lastModifiedSource?: string // Source of last modification

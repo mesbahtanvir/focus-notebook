@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useTasks } from "@/store/useTasks";
+import { useThoughts } from "@/store/useThoughts";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   FileText, 
@@ -15,15 +16,19 @@ import {
   BookOpen,
   Edit3,
   Save,
-  Check
+  Check,
+  ArrowRight,
+  ExternalLink
 } from "lucide-react";
 import { FormattedNotes, getNotesPreview } from "@/lib/formatNotes";
+import Link from "next/link";
 
 type FilterType = 'all';
 
 export default function DocumentsPage() {
   const tasks = useTasks((s) => s.tasks);
   const updateTask = useTasks((s) => s.updateTask);
+  const thoughts = useThoughts((s) => s.thoughts);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState<FilterType>('all');
   const [showFilters, setShowFilters] = useState(false);
@@ -237,7 +242,7 @@ export default function DocumentsPage() {
               {/* Document Header */}
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <FileText className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
                     <h3 className="text-xl font-bold">{doc.title}</h3>
                     {doc.done && (
@@ -245,6 +250,14 @@ export default function DocumentsPage() {
                         Completed
                       </span>
                     )}
+                    {/* Link to Task */}
+                    <Link
+                      href={`/tools/tasks?id=${doc.id}`}
+                      className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      View Task
+                    </Link>
                   </div>
                   
                   <div className="flex flex-wrap items-center gap-2">

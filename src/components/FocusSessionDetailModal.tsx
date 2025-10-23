@@ -159,7 +159,7 @@ export function FocusSessionDetailModal({ session, onClose }: Props) {
               Tasks
             </h3>
             <div className="space-y-2">
-              {session.tasks.map((focusTask, index) => (
+              {tasks.map((focusTask, index) => (
                 <div
                   key={index}
                   className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700"

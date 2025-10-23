@@ -18,6 +18,9 @@ export interface Thought {
   tags?: string[]
   intensity?: number // 1-10 for feelings
   notes?: string // Additional notes or conversation data
+  isDeepThought?: boolean // Marked for deep reflection
+  deepThoughtNotes?: string // Notes from deep thought sessions
+  deepThoughtSessionsCount?: number // Track number of deep thought sessions
   cbtAnalysis?: {
     situation?: string
     automaticThought?: string

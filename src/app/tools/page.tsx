@@ -105,6 +105,16 @@ const TOOLS = [
     bgGradient: "from-orange-50 to-amber-50",
     borderColor: "border-orange-300",
   },
+  {
+    key: "deepthought",
+    title: "Deep Thought",
+    description: "Profound reflections and philosophical explorations for deeper understanding.",
+    icon: Brain,
+    emoji: "🤔",
+    gradient: "from-teal-400 to-cyan-500",
+    bgGradient: "from-teal-50 to-cyan-50",
+    borderColor: "border-teal-300",
+  },
 ];
 
 export default function ToolsPage() {

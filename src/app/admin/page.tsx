@@ -3,45 +3,40 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRequestLog } from "@/store/useRequestLog";
-import { Shield, RefreshCw, Trash2, Search, Filter, ChevronDown, ChevronUp, Database, Cloud } from "lucide-react";
+import { Shield, RefreshCw, ChevronDown, ChevronUp, Database, Cloud } from "lucide-react";
 import { db as firestore } from "@/lib/firebaseClient";
 import { collection, getDocs } from "firebase/firestore";
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
-  const { logs, queue, clearLogs, getPendingRequests, getInProgressRequests } = useRequestLog();
-  const [filter, setFilter] = useState<string>("all");
-  const [searchTerm, setSearchTerm] = useState("");
+  const { logs, getPendingRequests, getInProgressRequests } = useRequestLog();
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(false);
   const [showCloudData, setShowCloudData] = useState(false);
   const [selectedCloudDataType, setSelectedCloudDataType] = useState<string>('tasks');
   const [cloudData, setCloudData] = useState<any>({
     tasks: [],
     thoughts: [],
     moods: [],
-    focusSessions: []
+    focusSessions: [],
+    goals: [],
+    projects: [],
+    notes: [],
+    errands: [],
+    brainstorming: [],
+    cbt: []
   });
   const [loadingCloudData, setLoadingCloudData] = useState(false);
   
   const pendingRequests = getPendingRequests();
   const inProgressRequests = getInProgressRequests();
 
-  useEffect(() => {
-    if (!autoRefresh) return;
-    const interval = setInterval(() => {
-      // Force re-render to show latest logs
-      setExpandedId(null);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [autoRefresh]);
 
   const loadCloudData = useCallback(async () => {
     if (!user) return;
     setLoadingCloudData(true);
     try {
       const userId = user.uid;
-      const collections = ['tasks', 'thoughts', 'moods', 'focusSessions'];
+      const collections = ['tasks', 'thoughts', 'moods', 'focusSessions', 'goals', 'projects', 'notes', 'errands', 'brainstorming', 'cbt'];
       const data: any = {};
 
       for (const collectionName of collections) {
@@ -77,14 +72,7 @@ export default function AdminPage() {
     );
   }
 
-  const filteredLogs = logs.filter(log => {
-    const matchesFilter = filter === "all" || log.type === filter;
-    const matchesSearch = !searchTerm || 
-      log.method?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.url?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.error?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  const filteredLogs = logs;
 
   const getStatusColor = (status?: number) => {
     if (!status) return "text-gray-600 bg-gray-100";
@@ -137,30 +125,6 @@ export default function AdminPage() {
           <p className="text-xs text-gray-600 mt-2">
             💡 This page shows all your Firebase sync operations and local data for debugging purposes
           </p>
-        </div>
-      </div>
-
-      {/* Real-time Sync Status */}
-      <div className="rounded-xl bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 p-8 border-2 border-green-200 shadow-xl">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1">
-            <h2 className="text-xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent mb-2 flex items-center gap-2">
-              <Cloud className="h-6 w-6 text-green-600" />
-              Real-Time Sync Active
-            </h2>
-            <p className="text-sm text-gray-600 mb-2">
-              ✅ Your data syncs automatically in real-time via Firestore listeners. Changes appear on all devices in &lt; 1 second!
-            </p>
-            <p className="text-xs text-gray-500">
-              No manual sync needed - FirestoreSubscriber handles everything automatically.
-            </p>
-          </div>
-          <div className="px-6 py-3 rounded-xl font-semibold bg-green-100 text-green-700 border-2 border-green-300">
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 bg-green-500 rounded-full animate-pulse"></div>
-              <span>Live</span>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -219,87 +183,6 @@ export default function AdminPage() {
           </div>
         </div>
       )}
-
-      {/* Controls */}
-      <div className="bg-white rounded-xl p-4 md:p-6 border-2 border-purple-200 shadow-md space-y-4">
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setFilter("all")}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                filter === "all"
-                  ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              All ({logs.length})
-            </button>
-            <button
-              onClick={() => setFilter("sync")}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                filter === "sync"
-                  ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              Sync ({logs.filter(l => l.type === "sync").length})
-            </button>
-            <button
-              onClick={() => setFilter("firebase")}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                filter === "firebase"
-                  ? "bg-gradient-to-r from-orange-600 to-red-600 text-white shadow-md"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              Firebase ({logs.filter(l => l.type === "firebase").length})
-            </button>
-            <button
-              onClick={() => setFilter("api")}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                filter === "api"
-                  ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              API ({logs.filter(l => l.type === "api").length})
-            </button>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                autoRefresh
-                  ? "bg-green-500 text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              }`}
-            >
-              <RefreshCw className={`h-4 w-4 ${autoRefresh ? "animate-spin" : ""}`} />
-              Auto Refresh
-            </button>
-            <button
-              onClick={clearLogs}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition-all text-sm"
-            >
-              <Trash2 className="h-4 w-4" />
-              Clear
-            </button>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by method, URL, or error..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 rounded-lg border-2 border-purple-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none"
-          />
-        </div>
-      </div>
 
       {/* Cloud Database (Firebase) */}
       <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl p-4 md:p-6 border-4 border-orange-300 shadow-lg">
@@ -375,6 +258,66 @@ export default function AdminPage() {
                     Focus Sessions ({cloudData.focusSessions?.length || 0})
                   </button>
                   <button
+                    onClick={() => setSelectedCloudDataType('goals')}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                      selectedCloudDataType === 'goals'
+                        ? "bg-orange-600 text-white shadow-md"
+                        : "bg-white text-gray-700 hover:bg-orange-50 border-2 border-orange-300"
+                    }`}
+                  >
+                    Goals ({cloudData.goals?.length || 0})
+                  </button>
+                  <button
+                    onClick={() => setSelectedCloudDataType('projects')}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                      selectedCloudDataType === 'projects'
+                        ? "bg-orange-600 text-white shadow-md"
+                        : "bg-white text-gray-700 hover:bg-orange-50 border-2 border-orange-300"
+                    }`}
+                  >
+                    Projects ({cloudData.projects?.length || 0})
+                  </button>
+                  <button
+                    onClick={() => setSelectedCloudDataType('notes')}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                      selectedCloudDataType === 'notes'
+                        ? "bg-orange-600 text-white shadow-md"
+                        : "bg-white text-gray-700 hover:bg-orange-50 border-2 border-orange-300"
+                    }`}
+                  >
+                    Notes ({cloudData.notes?.length || 0})
+                  </button>
+                  <button
+                    onClick={() => setSelectedCloudDataType('errands')}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                      selectedCloudDataType === 'errands'
+                        ? "bg-orange-600 text-white shadow-md"
+                        : "bg-white text-gray-700 hover:bg-orange-50 border-2 border-orange-300"
+                    }`}
+                  >
+                    Errands ({cloudData.errands?.length || 0})
+                  </button>
+                  <button
+                    onClick={() => setSelectedCloudDataType('brainstorming')}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                      selectedCloudDataType === 'brainstorming'
+                        ? "bg-orange-600 text-white shadow-md"
+                        : "bg-white text-gray-700 hover:bg-orange-50 border-2 border-orange-300"
+                    }`}
+                  >
+                    Brainstorming ({cloudData.brainstorming?.length || 0})
+                  </button>
+                  <button
+                    onClick={() => setSelectedCloudDataType('cbt')}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                      selectedCloudDataType === 'cbt'
+                        ? "bg-orange-600 text-white shadow-md"
+                        : "bg-white text-gray-700 hover:bg-orange-50 border-2 border-orange-300"
+                    }`}
+                  >
+                    CBT ({cloudData.cbt?.length || 0})
+                  </button>
+                  <button
                     onClick={loadCloudData}
                     className="px-4 py-2 rounded-lg font-semibold text-sm bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-md flex items-center gap-2"
                   >
@@ -395,7 +338,7 @@ export default function AdminPage() {
                 </div>
 
                 {/* Summary Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   <div className="bg-white rounded-lg p-3 border-2 border-orange-300 text-center">
                     <div className="text-2xl font-bold text-orange-600">{cloudData.tasks?.length || 0}</div>
                     <div className="text-xs text-gray-600">Tasks</div>
@@ -412,6 +355,30 @@ export default function AdminPage() {
                     <div className="text-2xl font-bold text-indigo-600">{cloudData.focusSessions?.length || 0}</div>
                     <div className="text-xs text-gray-600">Sessions</div>
                   </div>
+                  <div className="bg-white rounded-lg p-3 border-2 border-orange-300 text-center">
+                    <div className="text-2xl font-bold text-green-600">{cloudData.goals?.length || 0}</div>
+                    <div className="text-xs text-gray-600">Goals</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border-2 border-orange-300 text-center">
+                    <div className="text-2xl font-bold text-blue-600">{cloudData.projects?.length || 0}</div>
+                    <div className="text-xs text-gray-600">Projects</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border-2 border-orange-300 text-center">
+                    <div className="text-2xl font-bold text-pink-600">{cloudData.notes?.length || 0}</div>
+                    <div className="text-xs text-gray-600">Notes</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border-2 border-orange-300 text-center">
+                    <div className="text-2xl font-bold text-red-600">{cloudData.errands?.length || 0}</div>
+                    <div className="text-xs text-gray-600">Errands</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border-2 border-orange-300 text-center">
+                    <div className="text-2xl font-bold text-cyan-600">{cloudData.brainstorming?.length || 0}</div>
+                    <div className="text-xs text-gray-600">Brainstorming</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border-2 border-orange-300 text-center">
+                    <div className="text-2xl font-bold text-teal-600">{cloudData.cbt?.length || 0}</div>
+                    <div className="text-xs text-gray-600">CBT</div>
+                  </div>
                 </div>
               </>
             )}
@@ -425,12 +392,10 @@ export default function AdminPage() {
       <div className="space-y-3">
         {filteredLogs.length === 0 ? (
           <div className="bg-white rounded-xl p-12 text-center border-2 border-gray-200">
-            <Filter className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+            <Shield className="h-16 w-16 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-bold text-gray-800 mb-2">No logs found</h3>
             <p className="text-gray-600">
-              {logs.length === 0
-                ? "No requests have been logged yet. Activity will appear here automatically."
-                : "No logs match your current filter criteria."}
+              No requests have been logged yet. Activity will appear here automatically.
             </p>
           </div>
         ) : (

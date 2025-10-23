@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { useTasks, Task, TaskStatus, TaskCategory, TaskPriority } from "@/store/useTasks";
+import { useThoughts } from "@/store/useThoughts";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, 
@@ -14,18 +16,23 @@ import {
   AlertCircle,
   Tag,
   ChevronDown,
-  Repeat
+  Repeat,
+  MessageCircle,
+  ExternalLink
 } from "lucide-react";
 import { getNotesPreview } from "@/lib/formatNotes";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { TaskInput } from "@/components/TaskInput";
 import { SourceBadge } from "@/components/SourceBadge";
+import Link from "next/link";
 
 type SortOption = 'priority' | 'dueDate' | 'createdAt' | 'title';
 type ViewMode = 'list' | 'kanban';
 
-export default function TasksPage() {
+function TasksPageContent() {
   const tasks = useTasks((s) => s.tasks);
+  const thoughts = useThoughts((s) => s.thoughts);
+  const searchParams = useSearchParams();
   const [showNewTask, setShowNewTask] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
@@ -35,6 +42,17 @@ export default function TasksPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showFilters, setShowFilters] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+
+  // Auto-open task detail if navigating from notes page
+  useEffect(() => {
+    const taskId = searchParams.get('id');
+    if (taskId) {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        setSelectedTask(task);
+      }
+    }
+  }, [searchParams, tasks]);
 
   const filteredAndSortedTasks = useMemo(() => {
     let filtered = tasks.filter(task => {
@@ -402,6 +420,21 @@ export default function TasksPage() {
                         {task.source && (
                           <SourceBadge source={task.source} size="sm" showIcon={true} />
                         )}
+                        
+                        {task.thoughtId && (() => {
+                          const thought = thoughts.find(t => t.id === task.thoughtId);
+                          if (!thought) return null;
+                          return (
+                            <Link
+                              href={`/tools/thoughts?id=${task.thoughtId}`}
+                              className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm flex items-center gap-1 shrink-0 hover:from-indigo-600 hover:to-purple-700 transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MessageCircle className="h-3 w-3" />
+                              From Thought
+                            </Link>
+                          );
+                        })()}
                       </div>
                     </div>
                   </motion.div>
@@ -446,5 +479,13 @@ export default function TasksPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function TasksPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+      <TasksPageContent />
+    </Suspense>
   );
 }

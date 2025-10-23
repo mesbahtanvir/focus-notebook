@@ -371,9 +371,19 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
 
           {/* Metadata */}
           <div className="pt-4 border-t space-y-2 text-sm text-muted-foreground">
-            <div>Created: {new Date(task.createdAt).toLocaleString()}</div>
+            <div>
+              Created: {task.createdAt && typeof task.createdAt === 'object' && 'toDate' in task.createdAt
+                ? task.createdAt.toDate().toLocaleString()
+                : task.createdAt 
+                  ? new Date(task.createdAt).toLocaleString() 
+                  : 'N/A'}
+            </div>
             {task.completedAt && (
-              <div>Completed: {new Date(task.completedAt).toLocaleString()}</div>
+              <div>
+                Completed: {typeof task.completedAt === 'object' && task.completedAt !== null && 'toDate' in task.completedAt
+                  ? (task.completedAt as any).toDate().toLocaleString()
+                  : new Date(task.completedAt).toLocaleString()}
+              </div>
             )}
             {(task.source || task.lastModifiedSource) && (
               <div className="pt-2">
