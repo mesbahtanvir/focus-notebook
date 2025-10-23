@@ -13,7 +13,8 @@ export interface Project {
   objective: string;
   actionPlan: string[];
   description?: string;
-  goalId?: string; // Connected to a goal
+  goalId?: string; // Connected to a goal (only for top-level projects)
+  parentProjectId?: string; // For sub-projects (nested hierarchy)
   timeframe: ProjectTimeframe;
   status: ProjectStatus;
   priority: 'urgent' | 'high' | 'medium' | 'low';
@@ -23,11 +24,13 @@ export interface Project {
   completedAt?: string;
   category: 'health' | 'wealth' | 'mastery' | 'connection';
   linkedThoughtIds: string[]; // Thoughts attached to this project
-  linkedTaskIds: string[]; // Tasks related to this project
+  linkedTaskIds: string[]; // Tasks related to this project (only for leaf projects)
   tags?: string[];
   progress?: number; // 0-100
   notes?: string;
   source?: 'manual' | 'ai' | 'thought';
+  isLeaf?: boolean; // True if this project has tasks, false if it has sub-projects
+  level?: number; // Depth in hierarchy: 0 = under goal, 1 = sub-project, etc.
   milestones?: {
     id: string;
     title: string;
@@ -53,6 +56,10 @@ type State = {
   getProjectsByStatus: (status: ProjectStatus) => Project[];
   getProjectsByTimeframe: (timeframe: ProjectTimeframe) => Project[];
   getProjectsByGoal: (goalId: string) => Project[];
+  getSubProjects: (projectId: string) => Project[];
+  getTopLevelProjects: () => Project[];
+  getProjectHierarchy: (projectId: string) => Project[];
+  isLeafProject: (projectId: string) => boolean;
 };
 
 export const useProjects = create<State>((set, get) => ({
@@ -166,6 +173,39 @@ export const useProjects = create<State>((set, get) => ({
   },
 
   getProjectsByGoal: (goalId) => {
-    return get().projects.filter(p => p.goalId === goalId);
+    return get().projects.filter(p => p.goalId === goalId && !p.parentProjectId);
+  },
+
+  getSubProjects: (projectId) => {
+    return get().projects.filter(p => p.parentProjectId === projectId);
+  },
+
+  getTopLevelProjects: () => {
+    return get().projects.filter(p => !p.parentProjectId);
+  },
+
+  getProjectHierarchy: (projectId) => {
+    const hierarchy: Project[] = [];
+    let currentProject = get().projects.find(p => p.id === projectId);
+    
+    while (currentProject) {
+      hierarchy.unshift(currentProject);
+      if (currentProject.parentProjectId) {
+        currentProject = get().projects.find(p => p.id === currentProject!.parentProjectId);
+      } else {
+        break;
+      }
+    }
+    
+    return hierarchy;
+  },
+
+  isLeafProject: (projectId) => {
+    const project = get().projects.find(p => p.id === projectId);
+    if (!project) return false;
+    
+    // A project is a leaf if it explicitly has isLeaf=true or has no sub-projects
+    const hasSubProjects = get().projects.some(p => p.parentProjectId === projectId);
+    return project.isLeaf !== false && !hasSubProjects;
   },
 }));
