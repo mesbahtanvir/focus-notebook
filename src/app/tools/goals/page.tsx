@@ -7,7 +7,7 @@ import { useProjects } from "@/store/useProjects";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, Target, CheckCircle2, Clock, ChevronRight, 
-  Trash2, Edit2, PlayCircle, PauseCircle, Archive 
+  Trash2, Edit2, PlayCircle, PauseCircle, Archive, ChevronDown, ChevronUp 
 } from "lucide-react";
 import Link from "next/link";
 
@@ -30,6 +30,9 @@ export default function GoalsPage() {
   const [actionPlan, setActionPlan] = useState<string[]>([""]);
   const [priority, setPriority] = useState<'urgent' | 'high' | 'medium' | 'low'>('medium');
   const [targetDate, setTargetDate] = useState("");
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [showPaused, setShowPaused] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
     if (user?.uid) {
@@ -96,6 +99,7 @@ export default function GoalsPage() {
   const activeGoals = goals.filter(g => g.status === 'active');
   const completedGoals = goals.filter(g => g.status === 'completed');
   const pausedGoals = goals.filter(g => g.status === 'paused');
+  const archivedGoals = goals.filter(g => g.status === 'archived');
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
@@ -345,53 +349,153 @@ export default function GoalsPage() {
       {/* Paused Goals */}
       {pausedGoals.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
+          <button
+            onClick={() => setShowPaused(!showPaused)}
+            className="flex items-center gap-2 text-2xl font-bold hover:text-yellow-700 dark:hover:text-yellow-500 transition-colors w-full"
+          >
             <PauseCircle className="h-6 w-6 text-yellow-600" />
             Paused Goals ({pausedGoals.length})
-          </h2>
-          {pausedGoals.map((goal) => (
-            <div key={goal.id} className="card p-4 opacity-60 hover:opacity-100 transition-opacity">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">{goal.title}</h3>
-                <button
-                  onClick={() => updateGoal(goal.id, { status: 'active' })}
-                  className="text-sm px-3 py-1 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-950/40 dark:text-green-400 transition-colors"
-                >
-                  Resume
-                </button>
-              </div>
-            </div>
-          ))}
+            {showPaused ? <ChevronUp className="h-5 w-5 ml-auto" /> : <ChevronDown className="h-5 w-5 ml-auto" />}
+          </button>
+          <AnimatePresence>
+            {showPaused && pausedGoals.map((goal) => (
+              <motion.div
+                key={goal.id}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="card p-4 opacity-60 hover:opacity-100 transition-opacity"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">{goal.title}</h3>
+                    <p className="text-sm text-muted-foreground">{goal.objective}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => updateGoal(goal.id, { status: 'active' })}
+                      className="text-sm px-3 py-1 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-950/40 dark:text-green-400 transition-colors"
+                    >
+                      Resume
+                    </button>
+                    <button
+                      onClick={() => updateGoal(goal.id, { status: 'archived' })}
+                      className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                      title="Archive"
+                    >
+                      <Archive className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       )}
 
       {/* Completed Goals */}
       {completedGoals.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
+          <button
+            onClick={() => setShowCompleted(!showCompleted)}
+            className="flex items-center gap-2 text-2xl font-bold hover:text-green-700 dark:hover:text-green-500 transition-colors w-full"
+          >
             <CheckCircle2 className="h-6 w-6 text-green-600" />
             Completed Goals ({completedGoals.length})
-          </h2>
-          {completedGoals.map((goal) => (
-            <div key={goal.id} className="card p-4 bg-green-50 dark:bg-green-950/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold line-through text-muted-foreground">{goal.title}</h3>
-                  {goal.completedAt && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Completed: {new Date(goal.completedAt).toLocaleDateString()}
-                    </p>
-                  )}
+            {showCompleted ? <ChevronUp className="h-5 w-5 ml-auto" /> : <ChevronDown className="h-5 w-5 ml-auto" />}
+          </button>
+          <AnimatePresence>
+            {showCompleted && completedGoals.map((goal) => (
+              <motion.div
+                key={goal.id}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="card p-4 bg-green-50 dark:bg-green-950/20"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold line-through text-muted-foreground">{goal.title}</h3>
+                    <p className="text-sm text-muted-foreground">{goal.objective}</p>
+                    {goal.completedAt && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Completed: {new Date(goal.completedAt).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => toggleStatus(goal.id)}
+                      className="text-sm px-3 py-1 rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-950/40 dark:text-yellow-400 transition-colors"
+                      title="Mark as active"
+                    >
+                      Reopen
+                    </button>
+                    <button
+                      onClick={() => updateGoal(goal.id, { status: 'archived' })}
+                      className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                      title="Archive"
+                    >
+                      <Archive className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => updateGoal(goal.id, { status: 'archived' })}
-                  className="text-sm px-3 py-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <Archive className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Archived Goals */}
+      {archivedGoals.length > 0 && (
+        <div className="space-y-4">
+          <button
+            onClick={() => setShowArchived(!showArchived)}
+            className="flex items-center gap-2 text-2xl font-bold hover:text-gray-700 dark:hover:text-gray-500 transition-colors w-full"
+          >
+            <Archive className="h-6 w-6 text-gray-600" />
+            Archived Goals ({archivedGoals.length})
+            {showArchived ? <ChevronUp className="h-5 w-5 ml-auto" /> : <ChevronDown className="h-5 w-5 ml-auto" />}
+          </button>
+          <AnimatePresence>
+            {showArchived && archivedGoals.map((goal) => (
+              <motion.div
+                key={goal.id}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="card p-4 bg-gray-50 dark:bg-gray-900/50 opacity-50 hover:opacity-100 transition-opacity"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-muted-foreground">{goal.title}</h3>
+                    <p className="text-sm text-muted-foreground">{goal.objective}</p>
+                    {goal.completedAt && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Archived: {new Date(goal.completedAt).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => updateGoal(goal.id, { status: 'active' })}
+                      className="text-sm px-3 py-1 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-950/40 dark:text-blue-400 transition-colors"
+                      title="Restore"
+                    >
+                      Restore
+                    </button>
+                    <button
+                      onClick={() => { if (confirm('Permanently delete this goal?')) deleteGoal(goal.id); }}
+                      className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/40 text-red-600 transition-colors"
+                      title="Delete permanently"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       )}
     </div>

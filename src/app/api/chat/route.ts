@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages, apiKey } = await request.json();
+    const { messages, apiKey, model } = await request.json();
+    const selectedModel = model || 'gpt-3.5-turbo'; // Default to cheapest model
 
     // Validate API key
     if (!apiKey || !apiKey.trim()) {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     // Call OpenAI API
     console.log('🤖 Calling OpenAI API at https://api.openai.com/v1/chat/completions');
-    console.log('📝 Using model: gpt-3.5-turbo');
+    console.log('📝 Using model:', selectedModel);
     console.log('💬 Message count:', messages.length);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo', // Use GPT-3.5 Turbo for cost-effectiveness and availability
+        model: selectedModel,
         messages: messages,
         temperature: 0.8, // Higher temperature for more creative brainstorming
         max_tokens: 500,

@@ -1,8 +1,9 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag } from "lucide-react";
+import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Search, ChevronDown, ChevronUp } from "lucide-react";
 
 const TOOLS = [
   {
@@ -14,6 +15,7 @@ const TOOLS = [
     gradient: "from-yellow-400 to-orange-500",
     bgGradient: "from-yellow-50 to-orange-50",
     borderColor: "border-yellow-300",
+    priority: "high" as const,
   },
   {
     key: "cbt",
@@ -24,6 +26,7 @@ const TOOLS = [
     gradient: "from-purple-400 to-pink-500",
     bgGradient: "from-purple-50 to-pink-50",
     borderColor: "border-purple-300",
+    priority: "high" as const,
   },
   {
     key: "focus",
@@ -34,6 +37,7 @@ const TOOLS = [
     gradient: "from-blue-400 to-cyan-500",
     bgGradient: "from-blue-50 to-cyan-50",
     borderColor: "border-blue-300",
+    priority: "high" as const,
   },
   {
     key: "moodtracker",
@@ -44,6 +48,7 @@ const TOOLS = [
     gradient: "from-pink-400 to-rose-500",
     bgGradient: "from-pink-50 to-rose-50",
     borderColor: "border-pink-300",
+    priority: "high" as const,
   },
   {
     key: "tasks",
@@ -54,6 +59,7 @@ const TOOLS = [
     gradient: "from-green-400 to-emerald-500",
     bgGradient: "from-green-50 to-emerald-50",
     borderColor: "border-green-300",
+    priority: "high" as const,
   },
   {
     key: "goals",
@@ -64,6 +70,7 @@ const TOOLS = [
     gradient: "from-purple-400 to-indigo-500",
     bgGradient: "from-purple-50 to-indigo-50",
     borderColor: "border-purple-300",
+    priority: "high" as const,
   },
   {
     key: "projects",
@@ -74,6 +81,7 @@ const TOOLS = [
     gradient: "from-blue-400 to-cyan-500",
     bgGradient: "from-blue-50 to-cyan-50",
     borderColor: "border-blue-300",
+    priority: "high" as const,
   },
   {
     key: "thoughts",
@@ -84,6 +92,7 @@ const TOOLS = [
     gradient: "from-indigo-400 to-purple-500",
     bgGradient: "from-indigo-50 to-purple-50",
     borderColor: "border-indigo-300",
+    priority: "high" as const,
   },
   {
     key: "notes",
@@ -94,6 +103,7 @@ const TOOLS = [
     gradient: "from-violet-400 to-fuchsia-500",
     bgGradient: "from-violet-50 to-fuchsia-50",
     borderColor: "border-violet-300",
+    priority: "medium" as const,
   },
   {
     key: "errands",
@@ -104,6 +114,7 @@ const TOOLS = [
     gradient: "from-orange-400 to-amber-500",
     bgGradient: "from-orange-50 to-amber-50",
     borderColor: "border-orange-300",
+    priority: "low" as const,
   },
   {
     key: "deepthought",
@@ -114,12 +125,43 @@ const TOOLS = [
     gradient: "from-teal-400 to-cyan-500",
     bgGradient: "from-teal-50 to-cyan-50",
     borderColor: "border-teal-300",
+    priority: "low" as const,
+  },
+  {
+    key: "friends",
+    title: "Relationships",
+    description: "Reflect on your connections to prioritize aligned relationships and personal growth.",
+    icon: Users,
+    emoji: "🤝",
+    gradient: "from-pink-400 to-rose-500",
+    bgGradient: "from-pink-50 to-rose-50",
+    borderColor: "border-pink-300",
+    priority: "medium" as const,
   },
 ];
 
+type ToolPriority = 'high' | 'medium' | 'low';
+
 export default function ToolsPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showLowPriority, setShowLowPriority] = useState(false);
+  const [showMediumPriority, setShowMediumPriority] = useState(true);
+
+  const { highPriority, mediumPriority, lowPriority } = useMemo(() => {
+    const filtered = TOOLS.filter(tool => 
+      tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tool.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    return {
+      highPriority: filtered.filter(t => t.priority === 'high'),
+      mediumPriority: filtered.filter(t => t.priority === 'medium'),
+      lowPriority: filtered.filter(t => t.priority === 'low'),
+    };
+  }, [searchQuery]);
+
   return (
-    <div className="container mx-auto py-8 space-y-8">
+    <div className="container mx-auto py-8 space-y-6">
       {/* Header Section */}
       <div className="text-center space-y-4">
         <div className="flex justify-center">
@@ -135,9 +177,28 @@ export default function ToolsPage() {
         </p>
       </div>
 
-      {/* Tools Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {TOOLS.map((tool) => {
+      {/* Search Bar */}
+      <div className="max-w-2xl mx-auto">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search tools by name or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+          />
+        </div>
+      </div>
+
+      {/* High Priority Tools */}
+      <div className="space-y-3">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+          <span className="px-2 py-1 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs">ESSENTIAL</span>
+          Core Tools ({highPriority.length})
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {highPriority.map((tool) => {
           const Icon = tool.icon;
           return (
             <Link
@@ -169,8 +230,114 @@ export default function ToolsPage() {
               <div className={`absolute inset-0 bg-gradient-to-r ${tool.gradient} opacity-0 group-hover:opacity-10 transition-opacity rounded-xl`} />
             </Link>
           );
-        })}
+          })}
+        </div>
       </div>
+
+      {/* Medium Priority Tools */}
+      {mediumPriority.length > 0 && (
+        <div className="space-y-3">
+          <button
+            onClick={() => setShowMediumPriority(!showMediumPriority)}
+            className="flex items-center gap-2 text-lg font-bold text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+          >
+            <span className="px-2 py-1 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs">USEFUL</span>
+            Additional Tools ({mediumPriority.length})
+            {showMediumPriority ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </button>
+          {showMediumPriority && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {mediumPriority.map((tool) => {
+                const Icon = tool.icon;
+                return (
+                  <Link
+                    key={tool.key}
+                    href={`/tools/${tool.key}`}
+                    className={`group relative overflow-hidden rounded-xl bg-gradient-to-br ${tool.bgGradient} border-2 ${tool.borderColor} p-4 transition-all duration-300 hover:shadow-xl hover:scale-105`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className={`p-2 bg-gradient-to-r ${tool.gradient} rounded-lg shadow-md group-hover:shadow-lg transition-all group-hover:scale-110`}>
+                        <Icon className="h-5 w-5 text-white" />
+                      </div>
+                      <span className="text-2xl group-hover:scale-125 transition-transform">
+                        {tool.emoji}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-bold text-gray-800 group-hover:text-gray-900">
+                        {tool.title}
+                      </h3>
+                      <p className="text-xs text-gray-600 leading-relaxed">
+                        {tool.description}
+                      </p>
+                    </div>
+                    <div className={`absolute inset-0 bg-gradient-to-r ${tool.gradient} opacity-0 group-hover:opacity-10 transition-opacity rounded-xl`} />
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Low Priority Tools */}
+      {lowPriority.length > 0 && (
+        <div className="space-y-3">
+          <button
+            onClick={() => setShowLowPriority(!showLowPriority)}
+            className="flex items-center gap-2 text-lg font-bold text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+          >
+            <span className="px-2 py-1 rounded-lg bg-gradient-to-r from-gray-400 to-slate-500 text-white text-xs">OPTIONAL</span>
+            Specialized Tools ({lowPriority.length})
+            {showLowPriority ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </button>
+          {showLowPriority && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {lowPriority.map((tool) => {
+                const Icon = tool.icon;
+                return (
+                  <Link
+                    key={tool.key}
+                    href={`/tools/${tool.key}`}
+                    className={`group relative overflow-hidden rounded-xl bg-gradient-to-br ${tool.bgGradient} border-2 ${tool.borderColor} p-4 transition-all duration-300 hover:shadow-xl hover:scale-105`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className={`p-2 bg-gradient-to-r ${tool.gradient} rounded-lg shadow-md group-hover:shadow-lg transition-all group-hover:scale-110`}>
+                        <Icon className="h-5 w-5 text-white" />
+                      </div>
+                      <span className="text-2xl group-hover:scale-125 transition-transform">
+                        {tool.emoji}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-bold text-gray-800 group-hover:text-gray-900">
+                        {tool.title}
+                      </h3>
+                      <p className="text-xs text-gray-600 leading-relaxed">
+                        {tool.description}
+                      </p>
+                    </div>
+                    <div className={`absolute inset-0 bg-gradient-to-r ${tool.gradient} opacity-0 group-hover:opacity-10 transition-opacity rounded-xl`} />
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* No Results */}
+      {searchQuery && highPriority.length === 0 && mediumPriority.length === 0 && lowPriority.length === 0 && (
+        <div className="text-center py-16">
+          <Search className="h-16 w-16 mx-auto text-gray-300 dark:text-gray-700 mb-4" />
+          <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">
+            No tools found
+          </h3>
+          <p className="text-gray-500 dark:text-gray-500">
+            Try searching with different keywords
+          </p>
+        </div>
+      )}
 
       {/* Info Card */}
       <Card className="border-4 border-purple-200 shadow-xl bg-gradient-to-br from-white to-purple-50">

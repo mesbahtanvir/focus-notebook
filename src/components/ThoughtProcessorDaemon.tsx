@@ -155,6 +155,7 @@ export function ThoughtProcessorDaemon() {
             createdAt: thought.createdAt
           },
           apiKey: settings.openaiApiKey,
+          model: settings.aiModel || 'gpt-3.5-turbo',
           toolDescriptions
         })
       });

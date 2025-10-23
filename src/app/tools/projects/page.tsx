@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useProjects, Project, ProjectTimeframe, ProjectStatus } from "@/store/useProjects";
 import { useThoughts } from "@/store/useThoughts";
 import { useTasks } from "@/store/useTasks";
+import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Target, 
@@ -24,12 +25,21 @@ import {
 } from "lucide-react";
 
 export default function ProjectsPage() {
+  const { user } = useAuth();
   const projects = useProjects((s) => s.projects);
+  const subscribe = useProjects((s) => s.subscribe);
   const addProject = useProjects((s) => s.add);
   const updateProject = useProjects((s) => s.update);
   const deleteProject = useProjects((s) => s.delete);
   const thoughts = useThoughts((s) => s.thoughts);
   const tasks = useTasks((s) => s.tasks);
+  
+  // Subscribe to Firebase projects
+  useEffect(() => {
+    if (user?.uid) {
+      subscribe(user.uid);
+    }
+  }, [user?.uid, subscribe]);
   
   const [showNewProject, setShowNewProject] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);

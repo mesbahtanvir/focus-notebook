@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { thought, apiKey, toolDescriptions } = await request.json();
+    const { thought, apiKey, toolDescriptions, model } = await request.json();
+    const selectedModel = model || 'gpt-3.5-turbo'; // Default to cheapest model
 
     // Validate API key
     if (!apiKey || !apiKey.trim()) {
@@ -156,7 +157,7 @@ PROJECT/GOAL RECOGNITION RULES:
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4-turbo-preview',
+        model: selectedModel,
         messages: [
           {
             role: 'system',

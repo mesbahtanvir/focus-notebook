@@ -86,6 +86,7 @@ export class ManualProcessor {
             createdAt: thought.createdAt
           },
           apiKey: settings.openaiApiKey,
+          model: settings.aiModel || 'gpt-3.5-turbo',
           toolDescriptions
         })
       });

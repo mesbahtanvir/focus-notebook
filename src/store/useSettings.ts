@@ -1,9 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export type AIModel = 'gpt-3.5-turbo' | 'gpt-4-turbo-preview' | 'gpt-4o' | 'gpt-4o-mini';
+
 export interface UserSettings {
   openaiApiKey?: string;
   theme?: 'light' | 'dark' | 'system';
+  aiModel?: AIModel; // Default: gpt-3.5-turbo (cheapest)
 }
 
 type SettingsState = {
@@ -18,6 +21,7 @@ export const useSettings = create<SettingsState>()(
     (set, get) => ({
       settings: {
         theme: 'system',
+        aiModel: 'gpt-3.5-turbo', // Default to cheapest model
       },
 
       updateSettings: (updates) => {
