@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useTasks } from "@/store/useTasks";
 import { useFocus, selectBalancedTasks } from "@/store/useFocus";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Zap, Clock, Target, History, Star, TrendingUp } from "lucide-react";
+import { Play, Zap, Clock, Target, History, Star, TrendingUp, Brain, Rocket, Heart, Briefcase, X } from "lucide-react";
 import { FocusSession } from "@/components/FocusSession";
 import { FocusStatistics } from "@/components/FocusStatistics";
 import { FocusSessionDetailModal } from "@/components/FocusSessionDetailModal";
@@ -32,6 +32,8 @@ function FocusPageContent() {
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [selectedSession, setSelectedSession] = useState<FocusSessionType | null>(null);
   const [hasActiveSession, setHasActiveSession] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [focusMode, setFocusMode] = useState<'regular' | 'philosopher' | 'beast' | 'selfcare'>('regular');
 
   const activeTasks = tasks.filter(t => !t.done && t.status === 'active' && (t.focusEligible === true || t.focusEligible === undefined));
   const autoSuggestedTasks = selectBalancedTasks(tasks, duration);
@@ -43,20 +45,12 @@ function FocusPageContent() {
     }
   }, [autoSuggestedTasks, selectedTaskIds.length]);
 
-  // Auto-start session if coming from Quick Focus (has duration param)
+  // Show confirmation modal if coming from Quick Focus (has duration param)
   useEffect(() => {
-    const shouldAutoStart = urlDuration && autoSuggestedTasks.length > 0 && !currentSession && !hasActiveSession;
+    const shouldShowConfirm = urlDuration && autoSuggestedTasks.length > 0 && !currentSession && !hasActiveSession;
     
-    if (shouldAutoStart && selectedTaskIds.length > 0) {
-      const tasksToStart = tasks.filter(t => selectedTaskIds.includes(t.id));
-      if (tasksToStart.length === 0) return;
-      
-      // Small delay to ensure UI is ready
-      const timer = setTimeout(async () => {
-        await startSession(tasksToStart, duration);
-        setShowSetup(false);
-      }, 500);
-      return () => clearTimeout(timer);
+    if (shouldShowConfirm && selectedTaskIds.length > 0 && !showConfirmModal) {
+      setShowConfirmModal(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlDuration, autoSuggestedTasks.length, currentSession, hasActiveSession, selectedTaskIds.length]);
@@ -91,8 +85,78 @@ function FocusPageContent() {
 
   const handleStartSession = async () => {
     if (selectedTasks.length === 0) return;
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmStart = async () => {
+    if (selectedTasks.length === 0) return;
     await startSession(selectedTasks, duration);
+    setShowConfirmModal(false);
     setShowSetup(false);
+  };
+
+  const selectModeTask = (mode: 'regular' | 'philosopher' | 'beast' | 'selfcare') => {
+    setFocusMode(mode);
+    let modeTasks: string[] = [];
+
+    switch (mode) {
+      case 'regular':
+        // Balanced mix of mastery and pleasure
+        modeTasks = selectBalancedTasks(tasks, duration).map(t => t.id);
+        break;
+      
+      case 'philosopher':
+        // Deep thinking: CBT, thoughts, notes, deep thought tasks
+        modeTasks = activeTasks
+          .filter(t => 
+            t.title.toLowerCase().includes('think') ||
+            t.title.toLowerCase().includes('reflect') ||
+            t.title.toLowerCase().includes('journal') ||
+            t.title.toLowerCase().includes('write') ||
+            t.title.toLowerCase().includes('read') ||
+            t.tags?.some(tag => ['thinking', 'reading', 'reflection', 'journal'].includes(tag.toLowerCase()))
+          )
+          .slice(0, Math.floor(duration / 20))
+          .map(t => t.id);
+        break;
+      
+      case 'beast':
+        // High productivity: urgent and high priority mastery tasks
+        modeTasks = activeTasks
+          .filter(t => 
+            t.category === 'mastery' &&
+            (t.priority === 'urgent' || t.priority === 'high')
+          )
+          .sort((a, b) => {
+            const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+            return priorityOrder[a.priority] - priorityOrder[b.priority];
+          })
+          .slice(0, Math.floor(duration / 15))
+          .map(t => t.id);
+        break;
+      
+      case 'selfcare':
+        // Wellness: pleasure tasks, low priority, self-care activities
+        modeTasks = activeTasks
+          .filter(t => 
+            t.category === 'pleasure' ||
+            t.title.toLowerCase().includes('relax') ||
+            t.title.toLowerCase().includes('rest') ||
+            t.title.toLowerCase().includes('exercise') ||
+            t.title.toLowerCase().includes('hobby') ||
+            t.tags?.some(tag => ['wellness', 'selfcare', 'hobby', 'fun'].includes(tag.toLowerCase()))
+          )
+          .slice(0, Math.floor(duration / 25))
+          .map(t => t.id);
+        break;
+    }
+
+    // If mode-specific selection is empty, fall back to balanced
+    if (modeTasks.length === 0) {
+      modeTasks = selectBalancedTasks(tasks, duration).map(t => t.id);
+    }
+
+    setSelectedTaskIds(modeTasks);
   };
 
   // Show statistics if session is completed
@@ -186,6 +250,68 @@ function FocusPageContent() {
                       className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-sm"
                       placeholder="Minutes"
                     />
+                  </div>
+                </div>
+
+                {/* Focus Mode Selection */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                  <label className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                    <Target className="h-4 w-4 text-purple-600" />
+                    Focus Mode
+                  </label>
+                  
+                  <div className="grid grid-cols-2 gap-2 mt-3">
+                    <button
+                      onClick={() => selectModeTask('regular')}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        focusMode === 'regular'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
+                      }`}
+                    >
+                      <Briefcase className="h-5 w-5 text-blue-600 mb-1" />
+                      <div className="text-xs font-bold text-gray-900 dark:text-white">Regular</div>
+                      <div className="text-[9px] text-gray-500 dark:text-gray-400">Balanced mix</div>
+                    </button>
+
+                    <button
+                      onClick={() => selectModeTask('philosopher')}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        focusMode === 'philosopher'
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600'
+                      }`}
+                    >
+                      <Brain className="h-5 w-5 text-indigo-600 mb-1" />
+                      <div className="text-xs font-bold text-gray-900 dark:text-white">Philosopher</div>
+                      <div className="text-[9px] text-gray-500 dark:text-gray-400">Deep thinking</div>
+                    </button>
+
+                    <button
+                      onClick={() => selectModeTask('beast')}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        focusMode === 'beast'
+                          ? 'border-red-500 bg-red-50 dark:bg-red-950/30'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-600'
+                      }`}
+                    >
+                      <Rocket className="h-5 w-5 text-red-600 mb-1" />
+                      <div className="text-xs font-bold text-gray-900 dark:text-white">Beast</div>
+                      <div className="text-[9px] text-gray-500 dark:text-gray-400">High productivity</div>
+                    </button>
+
+                    <button
+                      onClick={() => selectModeTask('selfcare')}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        focusMode === 'selfcare'
+                          ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/30'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-pink-300 dark:hover:border-pink-600'
+                      }`}
+                    >
+                      <Heart className="h-5 w-5 text-pink-600 mb-1" />
+                      <div className="text-xs font-bold text-gray-900 dark:text-white">Self Care</div>
+                      <div className="text-[9px] text-gray-500 dark:text-gray-400">Wellness</div>
+                    </button>
                   </div>
                 </div>
 
@@ -375,6 +501,119 @@ function FocusPageContent() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+          >
+            {/* Header */}
+            <div className="sticky top-0 bg-gradient-to-r from-purple-500 to-indigo-500 text-white p-6 rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Zap className="h-6 w-6" />
+                  Start Focus Session?
+                </h2>
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <p className="text-white/80 text-sm mt-2">
+                Review your selected tasks and mode before starting
+              </p>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Session Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-purple-50 dark:bg-purple-950/20 rounded-lg p-4">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Duration</div>
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{duration} min</div>
+                </div>
+                <div className="bg-indigo-50 dark:bg-indigo-950/20 rounded-lg p-4">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Mode</div>
+                  <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400 capitalize flex items-center gap-2">
+                    {focusMode === 'regular' && <><Briefcase className="h-5 w-5" /> Regular</>}
+                    {focusMode === 'philosopher' && <><Brain className="h-5 w-5" /> Philosopher</>}
+                    {focusMode === 'beast' && <><Rocket className="h-5 w-5" /> Beast</>}
+                    {focusMode === 'selfcare' && <><Heart className="h-5 w-5" /> Self Care</>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Selected Tasks */}
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+                  Selected Tasks ({selectedTasks.length})
+                </h3>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {selectedTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                    >
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900 dark:text-white">{task.title}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {task.category === 'mastery' ? '🎯 Mastery' : '🎉 Pleasure'}
+                          {task.estimatedMinutes && ` • ${task.estimatedMinutes} min`}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => toggleTaskSelection(task.id)}
+                        className="ml-3 p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition"
+                        title="Remove from session"
+                      >
+                        <X className="h-4 w-4 text-red-600" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {selectedTasks.length === 0 && (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    No tasks selected. Go back and select at least one task.
+                  </div>
+                )}
+              </div>
+
+              {/* Mode Description */}
+              <div className="bg-blue-50 dark:bg-blue-950/20 border-2 border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  {focusMode === 'regular' && '💼 Balanced work session with a mix of mastery and pleasure tasks.'}
+                  {focusMode === 'philosopher' && '🧠 Deep thinking session focused on reflection, reading, and intellectual work.'}
+                  {focusMode === 'beast' && '🚀 High-intensity productivity session tackling urgent and high-priority tasks.'}
+                  {focusMode === 'selfcare' && '💖 Wellness-focused session with relaxing and enjoyable activities.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-800 p-6 rounded-b-2xl border-t flex gap-3">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="flex-1 px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all font-medium"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleConfirmStart}
+                disabled={selectedTasks.length === 0}
+                className="flex-1 px-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold transition-all disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <Play className="h-5 w-5" />
+                Start Focus ({selectedTasks.length})
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Session Detail Modal */}
       {selectedSession && (

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useGoals, Goal } from "@/store/useGoals";
+import { useGoals, Goal, GoalTimeframe } from "@/store/useGoals";
 import { useProjects } from "@/store/useProjects";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -27,9 +27,9 @@ export default function GoalsPage() {
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [title, setTitle] = useState("");
   const [objective, setObjective] = useState("");
-  const [actionPlan, setActionPlan] = useState<string[]>([""]);
+  const [timeframe, setTimeframe] = useState<GoalTimeframe>('short-term');
   const [priority, setPriority] = useState<'urgent' | 'high' | 'medium' | 'low'>('medium');
-  const [targetDate, setTargetDate] = useState("");
+  const [newProjectName, setNewProjectName] = useState("");
   const [showCompleted, setShowCompleted] = useState(false);
   const [showPaused, setShowPaused] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
@@ -47,10 +47,9 @@ export default function GoalsPage() {
     const goalData = {
       title: title.trim(),
       objective: objective.trim(),
-      actionPlan: actionPlan.filter(ap => ap.trim()),
+      timeframe,
       status: 'active' as const,
       priority,
-      targetDate: targetDate || undefined,
     };
 
     if (editingGoal) {
@@ -65,9 +64,9 @@ export default function GoalsPage() {
   const resetForm = () => {
     setTitle("");
     setObjective("");
-    setActionPlan([""]);
+    setTimeframe('short-term');
     setPriority('medium');
-    setTargetDate("");
+    setNewProjectName("");
     setShowForm(false);
     setEditingGoal(null);
   };
@@ -76,24 +75,27 @@ export default function GoalsPage() {
     setEditingGoal(goal);
     setTitle(goal.title);
     setObjective(goal.objective);
-    setActionPlan(goal.actionPlan.length > 0 ? goal.actionPlan : [""]);
+    setTimeframe(goal.timeframe || 'short-term');
     setPriority(goal.priority);
-    setTargetDate(goal.targetDate || "");
     setShowForm(true);
   };
 
-  const updateActionPlan = (index: number, value: string) => {
-    const newPlan = [...actionPlan];
-    newPlan[index] = value;
-    setActionPlan(newPlan);
-  };
-
-  const addActionStep = () => {
-    setActionPlan([...actionPlan, ""]);
-  };
-
-  const removeActionStep = (index: number) => {
-    setActionPlan(actionPlan.filter((_, i) => i !== index));
+  const handleCreateProject = async (goalId: string, goalTitle: string) => {
+    if (!newProjectName.trim()) return;
+    
+    const projectId = await useProjects.getState().add({
+      title: newProjectName.trim(),
+      objective: `Project for ${goalTitle}`,
+      actionPlan: [],
+      goalId: goalId,
+      timeframe: 'long-term',
+      status: 'active',
+      category: 'mastery',
+      priority: 'medium',
+    });
+    
+    setNewProjectName("");
+    return projectId;
   };
 
   const activeGoals = goals.filter(g => g.status === 'active');
@@ -156,38 +158,28 @@ export default function GoalsPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">Action Plan</label>
-                {actionPlan.map((step, index) => (
-                  <div key={index} className="flex gap-2 mb-2">
-                    <input
-                      type="text"
-                      value={step}
-                      onChange={(e) => updateActionPlan(index, e.target.value)}
-                      className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 outline-none"
-                      placeholder={`Step ${index + 1}`}
-                    />
-                    {actionPlan.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeActionStep(index)}
-                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={addActionStep}
-                  className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-                >
-                  + Add Step
-                </button>
+              {/* Info about projects */}
+              <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border-2 border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  💡 <strong>Tip:</strong> After creating your goal, you can attach existing projects or create new projects directly from the goal card below.
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Timeframe *</label>
+                  <select
+                    value={timeframe}
+                    onChange={(e) => setTimeframe(e.target.value as GoalTimeframe)}
+                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 outline-none"
+                    required
+                  >
+                    <option value="immediate">⚡ Immediate (Days-Weeks)</option>
+                    <option value="short-term">🎯 Short-term (Months)</option>
+                    <option value="long-term">🌟 Long-term (Years)</option>
+                  </select>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium mb-2">Priority</label>
                   <select
@@ -195,21 +187,11 @@ export default function GoalsPage() {
                     onChange={(e) => setPriority(e.target.value as any)}
                     className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 outline-none"
                   >
-                    <option value="urgent">Urgent</option>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
+                    <option value="urgent">🔴 Urgent</option>
+                    <option value="high">🟠 High</option>
+                    <option value="medium">🟡 Medium</option>
+                    <option value="low">🟢 Low</option>
                   </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Target Date</label>
-                  <input
-                    type="date"
-                    value={targetDate}
-                    onChange={(e) => setTargetDate(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 outline-none"
-                  />
                 </div>
               </div>
 
@@ -262,45 +244,79 @@ export default function GoalsPage() {
                       }`}>
                         {goal.priority}
                       </span>
-                      {goal.targetDate && (
-                        <span className="text-sm text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {new Date(goal.targetDate).toLocaleDateString()}
-                        </span>
-                      )}
+                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                        {goal.timeframe === 'immediate' && '⚡ Immediate'}
+                        {goal.timeframe === 'short-term' && '🎯 Short-term'}
+                        {goal.timeframe === 'long-term' && '🌟 Long-term'}
+                        {!goal.timeframe && '🎯 Short-term'}
+                      </span>
                     </div>
                     <p className="text-muted-foreground mb-4">{goal.objective}</p>
-                    
-                    {goal.actionPlan && goal.actionPlan.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="font-semibold text-sm mb-2">Action Plan:</h4>
-                        <ul className="space-y-1">
-                          {goal.actionPlan.map((step, idx) => (
-                            <li key={idx} className="text-sm flex items-start gap-2">
-                              <ChevronRight className="h-4 w-4 text-purple-600 mt-0.5 shrink-0" />
-                              <span>{step}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
 
-                    {relatedProjects.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-                        <h4 className="font-semibold text-sm mb-2">Related Projects ({relatedProjects.length}):</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {relatedProjects.map((project) => (
-                            <Link
-                              key={project.id}
-                              href={`/tools/projects#${project.id}`}
-                              className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-950/60 transition-colors"
-                            >
-                              {project.title}
-                            </Link>
-                          ))}
-                        </div>
+                    {/* Projects Section */}
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                      <h4 className="font-semibold text-sm mb-2">Projects ({relatedProjects.length}):</h4>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {relatedProjects.map((project) => (
+                          <Link
+                            key={project.id}
+                            href={`/tools/projects#${project.id}`}
+                            className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-950/60 transition-colors"
+                          >
+                            {project.title}
+                          </Link>
+                        ))}
                       </div>
-                    )}
+                      {/* Quick Project Creation */}
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="New project name..."
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              const input = e.currentTarget;
+                              const projectName = input.value.trim();
+                              if (projectName) {
+                                useProjects.getState().add({
+                                  title: projectName,
+                                  objective: `Project for ${goal.title}`,
+                                  actionPlan: [],
+                                  goalId: goal.id,
+                                  timeframe: 'long-term',
+                                  status: 'active',
+                                  category: 'mastery',
+                                  priority: 'medium',
+                                });
+                                input.value = '';
+                              }
+                            }
+                          }}
+                          className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 outline-none"
+                        />
+                        <button
+                          onClick={(e) => {
+                            const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                            const projectName = input.value.trim();
+                            if (projectName) {
+                              useProjects.getState().add({
+                                title: projectName,
+                                objective: `Project for ${goal.title}`,
+                                actionPlan: [],
+                                goalId: goal.id,
+                                timeframe: 'long-term',
+                                status: 'active',
+                                category: 'mastery',
+                                priority: 'medium',
+                              });
+                              input.value = '';
+                            }
+                          }}
+                          className="px-3 py-1.5 text-sm rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:hover:bg-purple-950/60 transition-colors font-medium"
+                        >
+                          + Add Project
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2 ml-4">

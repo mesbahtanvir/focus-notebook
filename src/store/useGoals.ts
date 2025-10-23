@@ -4,20 +4,24 @@ import { db, auth } from '@/lib/firebaseClient';
 import { createAt, updateAt, deleteAt } from '@/lib/data/gateway';
 import { subscribeCol } from '@/lib/data/subscribe';
 
+export type GoalTimeframe = 'immediate' | 'short-term' | 'long-term';
+
 export interface Goal {
   id: string;
   title: string;
   objective: string;
-  actionPlan: string[];
+  timeframe: GoalTimeframe; // immediate, short-term, long-term
   status: 'active' | 'completed' | 'paused' | 'archived';
   priority: 'urgent' | 'high' | 'medium' | 'low';
-  targetDate?: string;
   progress?: number; // 0-100
   tags?: string[];
   createdAt: string;
   updatedAt?: number;
   completedAt?: string;
   source?: 'manual' | 'ai' | 'thought';
+  // Legacy fields (kept for backward compatibility)
+  actionPlan?: string[];
+  targetDate?: string;
 }
 
 type State = {

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useThoughts, Thought } from "@/store/useThoughts";
 import { useProcessQueue } from "@/store/useProcessQueue";
-import { useSearchParams } from "next/navigation";
 import { manualProcessor } from "@/lib/thoughtProcessor/manualProcessor";
 import { approvalHandler } from "@/lib/thoughtProcessor/approvalHandler";
 import { ProcessingApprovalDialog } from "@/components/ProcessingApprovalDialog";
@@ -68,6 +68,7 @@ function ThoughtsPageContent() {
   const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingThoughtId, setProcessingThoughtId] = useState<string | null>(null);
+  const router = useRouter();
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [currentApprovalItem, setCurrentApprovalItem] = useState<string | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -93,14 +94,14 @@ function ThoughtsPageContent() {
     return queue.filter(q => q.status === 'awaiting-approval');
   }, [queue]);
 
-  // Auto-show approval dialog when new items need approval
+  // Auto-navigate to detail page when new items need approval
   useEffect(() => {
     if (awaitingApproval.length > 0 && !showApprovalDialog && !currentApprovalItem) {
       const firstItem = awaitingApproval[0];
-      setCurrentApprovalItem(firstItem.id);
-      setShowApprovalDialog(true);
+      // Navigate to thought detail page with AI suggestions
+      router.push(`/tools/thoughts/${firstItem.thoughtId}`);
     }
-  }, [awaitingApproval, showApprovalDialog, currentApprovalItem]);
+  }, [awaitingApproval, showApprovalDialog, currentApprovalItem, router]);
 
   const filteredThoughts = useMemo(() => {
     // Sort by created date, newest first

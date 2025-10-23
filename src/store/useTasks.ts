@@ -16,6 +16,12 @@ export interface RecurrenceConfig {
   daysOfWeek?: number[] // 0-6 for Sunday-Saturday (for weekly tasks)
 }
 
+export interface TaskStep {
+  id: string
+  text: string
+  completed: boolean
+}
+
 export interface Task {
   id: string
   title: string
@@ -30,6 +36,7 @@ export interface Task {
   dueDate?: string
   completedAt?: string
   notes?: string
+  steps?: TaskStep[] // Subtasks/checklist for breaking down the task
   tags?: string[]
   estimatedMinutes?: number
   actualMinutes?: number

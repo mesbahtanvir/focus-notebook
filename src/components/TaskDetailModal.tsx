@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useTasks, Task, TaskCategory, TaskPriority, TaskStatus, RecurrenceType } from "@/store/useTasks";
+import { useTasks, Task, TaskCategory, TaskPriority, TaskStatus, RecurrenceType, TaskStep } from "@/store/useTasks";
 import { FormattedNotes } from "@/lib/formatNotes";
 import { SourceInfo } from "@/components/SourceBadge";
+import { TaskSteps } from "@/components/TaskSteps";
 import { 
   X, 
   Calendar, 
@@ -13,7 +14,8 @@ import {
   Trash2,
   Save,
   AlertCircle,
-  Repeat
+  Repeat,
+  ListChecks
 } from "lucide-react";
 
 interface TaskDetailModalProps {
@@ -33,6 +35,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
   const [tagsInput, setTagsInput] = useState(task.tags?.join(', ') || '');
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>(task.recurrence?.type || 'none');
   const [recurrenceFrequency, setRecurrenceFrequency] = useState(task.recurrence?.frequency || 0);
+  const [steps, setSteps] = useState<TaskStep[]>(task.steps || []);
 
   const updateTask = useTasks((s) => s.updateTask);
   const deleteTask = useTasks((s) => s.deleteTask);
@@ -59,6 +62,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
       estimatedMinutes: estimatedMinutes || undefined,
       tags: tags.length > 0 ? tags : undefined,
       recurrence: recurrenceConfig,
+      steps: steps.length > 0 ? steps : undefined,
     });
     setIsEditing(false);
   };
@@ -360,9 +364,27 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
             )}
           </div>
 
+          {/* Task Steps */}
+          <div>
+            <label className="block text-sm font-medium mb-3 flex items-center gap-2">
+              <ListChecks className="h-4 w-4" />
+              Task Steps
+            </label>
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <TaskSteps
+                steps={steps}
+                onUpdate={setSteps}
+                editable={isEditing || true}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Break down your task into smaller steps for easier execution
+            </p>
+          </div>
+
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium mb-2">Notes</label>
+            <label className="block text-sm font-medium mb-2">Additional Notes</label>
             {isEditing ? (
               <textarea
                 value={notes}
