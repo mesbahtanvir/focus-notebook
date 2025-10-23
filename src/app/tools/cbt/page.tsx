@@ -133,18 +133,23 @@ export default function CBTPage() {
                         {thought.text}
                       </p>
                       <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-gray-600">
-                        {thought.intensity && (
-                          <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
-                            Intensity: {thought.intensity}/10
-                          </span>
-                        )}
-                        {thought.intensity && (
-                          <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
-                            💪 Intensity: {thought.intensity}/10
-                          </span>
-                        )}
                         <span className="px-2 py-1 rounded-full bg-purple-50 text-purple-600 border border-purple-200">
-                          📅 {new Date(thought.createdAt).toLocaleDateString()}
+                          📅 {(() => {
+                            try {
+                              if (typeof thought.createdAt === 'object' && 'toDate' in thought.createdAt) {
+                                return thought.createdAt.toDate().toLocaleDateString();
+                              }
+                              if (typeof thought.createdAt === 'string') {
+                                return new Date(thought.createdAt).toLocaleDateString();
+                              }
+                              if (typeof thought.createdAt === 'object' && 'seconds' in thought.createdAt) {
+                                return new Date(thought.createdAt.seconds * 1000).toLocaleDateString();
+                              }
+                              return new Date(thought.createdAt).toLocaleDateString();
+                            } catch {
+                              return 'N/A';
+                            }
+                          })()}
                         </span>
                       </div>
                     </div>
@@ -176,11 +181,30 @@ function CBTProcessing({
   const [situation, setSituation] = useState("");
   const [automaticThought, setAutomaticThought] = useState(thought.text);
   const [emotions, setEmotions] = useState("");
-  const [physicalSensations, setPhysicalSensations] = useState("");
-  const [behaviors, setBehaviors] = useState("");
-  const [evidence, setEvidence] = useState("");
-  const [alternativeThought, setAlternativeThought] = useState("");
-  const [outcome, setOutcome] = useState("");
+  const [cognitiveDistortions, setCognitiveDistortions] = useState<string[]>([]);
+  const [rationalResponse, setRationalResponse] = useState("");
+
+  // Common cognitive distortions from Feeling Good
+  const distortionsList = [
+    "All-or-Nothing Thinking",
+    "Overgeneralization",
+    "Mental Filter",
+    "Disqualifying the Positive",
+    "Jumping to Conclusions",
+    "Magnification/Minimization",
+    "Emotional Reasoning",
+    "Should Statements",
+    "Labeling",
+    "Personalization"
+  ];
+
+  const toggleDistortion = (distortion: string) => {
+    if (cognitiveDistortions.includes(distortion)) {
+      setCognitiveDistortions(cognitiveDistortions.filter(d => d !== distortion));
+    } else {
+      setCognitiveDistortions([...cognitiveDistortions, distortion]);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,11 +213,8 @@ function CBTProcessing({
       situation,
       automaticThought,
       emotions,
-      physicalSensations,
-      behaviors,
-      evidence,
-      alternativeThought,
-      outcome,
+      cognitiveDistortions,
+      rationalResponse,
       processedAt: new Date().toISOString(),
     };
 
@@ -201,7 +222,7 @@ function CBTProcessing({
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
+    <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 p-6 rounded-2xl border-4 border-purple-200 shadow-lg">
         <button
@@ -219,7 +240,7 @@ function CBTProcessing({
             <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
               CBT Framework Processing
             </h1>
-            <p className="text-sm text-gray-600">ABC Model - Situation, Thoughts, Emotions, Behavior</p>
+            <p className="text-sm text-gray-600">Compact format from &quot;Feeling Good&quot; by Dr. David Burns</p>
           </div>
         </div>
       </div>
@@ -233,7 +254,7 @@ function CBTProcessing({
         <p className="text-gray-800 italic">&quot;{thought.text}&quot;</p>
       </div>
 
-      {/* CBT Form */}
+      {/* CBT Form - Compact Layout */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* 1. Situation */}
         <div className="rounded-xl p-6 bg-white border-2 border-purple-200 shadow-md">
@@ -243,15 +264,15 @@ function CBTProcessing({
               📍 Situation
             </span>
             <span className="text-sm text-gray-600 mt-1 block">
-              What was happening? Where were you? Who was involved?
+              Briefly describe the upsetting event
             </span>
           </label>
           <textarea
             value={situation}
             onChange={(e) => setSituation(e.target.value)}
             className="w-full mt-2 px-4 py-3 rounded-lg border-2 border-purple-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none"
-            rows={3}
-            placeholder="Describe the situation objectively..."
+            rows={2}
+            placeholder="e.g., My boss criticized my work in front of colleagues"
             required
           />
         </div>
@@ -261,17 +282,18 @@ function CBTProcessing({
           <label className="block mb-2">
             <span className="text-lg font-bold text-pink-600 flex items-center gap-2">
               <span className="flex items-center justify-center w-8 h-8 rounded-full bg-pink-500 text-white text-sm">2</span>
-              💭 Automatic Thought
+              💭 Automatic Thought(s)
             </span>
             <span className="text-sm text-gray-600 mt-1 block">
-              What went through your mind? What did you think?
+              What negative thoughts went through your mind?
             </span>
           </label>
           <textarea
             value={automaticThought}
             onChange={(e) => setAutomaticThought(e.target.value)}
             className="w-full mt-2 px-4 py-3 rounded-lg border-2 border-pink-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none"
-            rows={3}
+            rows={2}
+            placeholder="e.g., I'm incompetent. I'll get fired."
             required
           />
         </div>
@@ -284,7 +306,7 @@ function CBTProcessing({
               ❤️ Emotions
             </span>
             <span className="text-sm text-gray-600 mt-1 block">
-              What emotions did you feel? Rate intensity (0-100%)
+              What emotions did you feel? Rate 0-100%
             </span>
           </label>
           <textarea
@@ -292,116 +314,81 @@ function CBTProcessing({
             onChange={(e) => setEmotions(e.target.value)}
             className="w-full mt-2 px-4 py-3 rounded-lg border-2 border-red-200 focus:border-red-400 focus:ring-2 focus:ring-red-100 outline-none"
             rows={2}
-            placeholder="e.g., Anxiety (80%), Sadness (60%)"
+            placeholder="e.g., Sad 80%, Anxious 90%, Ashamed 75%"
             required
           />
         </div>
 
-        {/* 4. Physical Sensations */}
-        <div className="rounded-xl p-6 bg-white border-2 border-orange-200 shadow-md">
-          <label className="block mb-2">
+        {/* 4. Cognitive Distortions */}
+        <div className="rounded-xl p-6 bg-white border-2 border-orange-200 shadow-md lg:col-span-2">
+          <label className="block mb-3">
             <span className="text-lg font-bold text-orange-600 flex items-center gap-2">
               <span className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-500 text-white text-sm">4</span>
-              💪 Physical Sensations
+              🧩 Cognitive Distortions
             </span>
             <span className="text-sm text-gray-600 mt-1 block">
-              What did you notice in your body?
+              Which thinking errors are present? (Select all that apply)
             </span>
           </label>
-          <textarea
-            value={physicalSensations}
-            onChange={(e) => setPhysicalSensations(e.target.value)}
-            className="w-full mt-2 px-4 py-3 rounded-lg border-2 border-orange-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none"
-            rows={2}
-            placeholder="e.g., Racing heart, tense shoulders, stomach knot..."
-          />
+          
+          {/* Learn About Cognitive Distortions */}
+          <div className="rounded-lg p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 mb-4">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-gray-700">
+                <strong className="text-blue-600">New to cognitive distortions?</strong>{' '}
+                <a 
+                  href="https://positivepsychology.com/cognitive-distortions/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline font-semibold"
+                >
+                  Learn about the 10 common thinking errors →
+                </a>
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
+            {distortionsList.map((distortion) => (
+              <button
+                key={distortion}
+                type="button"
+                onClick={() => toggleDistortion(distortion)}
+                className={`px-4 py-3 rounded-lg border-2 text-sm font-semibold transition-all text-left ${
+                  cognitiveDistortions.includes(distortion)
+                    ? 'bg-orange-500 border-orange-600 text-white shadow-lg'
+                    : 'bg-white border-orange-200 text-orange-700 hover:border-orange-400'
+                }`}
+              >
+                {cognitiveDistortions.includes(distortion) && '✓ '}{distortion}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* 5. Behaviors */}
-        <div className="rounded-xl p-6 bg-white border-2 border-blue-200 shadow-md">
-          <label className="block mb-2">
-            <span className="text-lg font-bold text-blue-600 flex items-center gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 text-white text-sm">5</span>
-              🏃 Behaviors/Actions
-            </span>
-            <span className="text-sm text-gray-600 mt-1 block">
-              What did you do? How did you respond?
-            </span>
-          </label>
-          <textarea
-            value={behaviors}
-            onChange={(e) => setBehaviors(e.target.value)}
-            className="w-full mt-2 px-4 py-3 rounded-lg border-2 border-blue-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-            rows={2}
-            placeholder="e.g., Avoided the situation, snapped at someone..."
-          />
-        </div>
-
-        {/* 6. Evidence */}
-        <div className="rounded-xl p-6 bg-white border-2 border-green-200 shadow-md">
+        {/* 5. Rational Response */}
+        <div className="rounded-xl p-6 bg-white border-2 border-green-200 shadow-md lg:col-span-2">
           <label className="block mb-2">
             <span className="text-lg font-bold text-green-600 flex items-center gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-green-500 text-white text-sm">6</span>
-              🔍 Evidence Check
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-green-500 text-white text-sm">5</span>
+              💡 Rational Response
             </span>
             <span className="text-sm text-gray-600 mt-1 block">
-              What evidence supports or challenges this thought?
+              Write a more balanced, realistic response to the automatic thought
             </span>
           </label>
           <textarea
-            value={evidence}
-            onChange={(e) => setEvidence(e.target.value)}
+            value={rationalResponse}
+            onChange={(e) => setRationalResponse(e.target.value)}
             className="w-full mt-2 px-4 py-3 rounded-lg border-2 border-green-200 focus:border-green-400 focus:ring-2 focus:ring-green-100 outline-none"
-            rows={3}
-            placeholder="List facts that support or contradict the automatic thought..."
-            required
-          />
-        </div>
-
-        {/* 7. Alternative Thought */}
-        <div className="rounded-xl p-6 bg-white border-2 border-teal-200 shadow-md">
-          <label className="block mb-2">
-            <span className="text-lg font-bold text-teal-600 flex items-center gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-teal-500 text-white text-sm">7</span>
-              💡 Alternative Thought
-            </span>
-            <span className="text-sm text-gray-600 mt-1 block">
-              What&apos;s a more balanced or realistic way to think about this?
-            </span>
-          </label>
-          <textarea
-            value={alternativeThought}
-            onChange={(e) => setAlternativeThought(e.target.value)}
-            className="w-full mt-2 px-4 py-3 rounded-lg border-2 border-teal-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 outline-none"
-            rows={3}
-            placeholder="Reframe the thought based on evidence..."
-            required
-          />
-        </div>
-
-        {/* 8. Outcome */}
-        <div className="rounded-xl p-6 bg-white border-2 border-indigo-200 shadow-md">
-          <label className="block mb-2">
-            <span className="text-lg font-bold text-indigo-600 flex items-center gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-500 text-white text-sm">8</span>
-              🎯 Outcome & Action Plan
-            </span>
-            <span className="text-sm text-gray-600 mt-1 block">
-              How do you feel now? What will you do differently next time?
-            </span>
-          </label>
-          <textarea
-            value={outcome}
-            onChange={(e) => setOutcome(e.target.value)}
-            className="w-full mt-2 px-4 py-3 rounded-lg border-2 border-indigo-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none"
-            rows={3}
-            placeholder="Reflect on your current emotions and plan future actions..."
+            rows={4}
+            placeholder="e.g., Making mistakes is human. My boss gave feedback to help me improve, not to attack me personally. I've done good work before and can learn from this."
             required
           />
         </div>
 
         {/* Submit Button */}
-        <div className="flex gap-4 justify-end pt-4">
+        <div className="flex gap-4 justify-end pt-4 lg:col-span-2">
           <button
             type="button"
             onClick={onBack}

@@ -31,7 +31,6 @@ interface ThoughtDetailModalProps {
 export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(thought.text);
-  const [intensity, setIntensity] = useState(thought.intensity || 5);
   const [tagsInput, setTagsInput] = useState(() => {
     if (!thought.tags) return '';
     if (Array.isArray(thought.tags)) return thought.tags.join(', ');
@@ -60,7 +59,6 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
 
     await updateThought(thought.id, {
       text,
-      intensity: intensity,
       tags: tags.length > 0 ? tags : undefined,
     });
     setIsEditing(false);
@@ -197,35 +195,6 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                   </div>
                 )}
               </div>
-
-              {/* Intensity */}
-              {thought.intensity && (
-                <div>
-                  <label className="block text-sm font-medium mb-2 flex items-center gap-2">
-                    <Heart className="h-4 w-4" />
-                    Intensity
-                  </label>
-                  {isEditing ? (
-                    <>
-                      <input
-                        type="range"
-                        min="1"
-                        max="10"
-                        value={intensity}
-                        onChange={(e) => setIntensity(parseInt(e.target.value))}
-                        className="w-full"
-                      />
-                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>1 (Low)</span>
-                        <span className="font-medium">{intensity}/10</span>
-                        <span>10 (High)</span>
-                      </div>
-                    </>
-                  ) : (
-                    <span className="text-lg font-semibold text-purple-600 dark:text-purple-400">{thought.intensity}/10</span>
-                  )}
-                </div>
-              )}
 
               {/* Tags */}
               <div>

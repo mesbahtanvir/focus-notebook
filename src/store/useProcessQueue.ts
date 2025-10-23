@@ -38,8 +38,6 @@ export interface RevertData {
     originalText?: string;
     typeChanged: boolean;
     originalType?: string;
-    intensityChanged: boolean;
-    originalIntensity?: number;
   };
   addedTags: string[];
   canRevert: boolean;

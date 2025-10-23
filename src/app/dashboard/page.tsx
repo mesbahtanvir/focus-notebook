@@ -12,6 +12,7 @@ import { getTimeOfDayCategory } from "@/lib/formatDateTime";
 import { useAuth } from "@/contexts/AuthContext";
 
 type TimeRange = '7d' | '30d' | '90d';
+type SummaryPeriod = 'today' | 'week' | 'month';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -20,6 +21,7 @@ export default function DashboardPage() {
   const sessions = useFocus((s) => s.sessions);
   const subscribe = useFocus((s) => s.subscribe);
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
+  const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>('today');
 
   useEffect(() => {
     if (user?.uid) {
@@ -33,6 +35,18 @@ export default function DashboardPage() {
   const analytics = useMemo(() => {
     const now = new Date();
     const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+    // Summary period calculations
+    let summaryStartDate = new Date();
+    if (summaryPeriod === 'today') {
+      summaryStartDate.setHours(0, 0, 0, 0);
+    } else if (summaryPeriod === 'week') {
+      const dayOfWeek = now.getDay();
+      summaryStartDate = new Date(now.getTime() - dayOfWeek * 24 * 60 * 60 * 1000);
+      summaryStartDate.setHours(0, 0, 0, 0);
+    } else {
+      summaryStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
 
     // Mood trends
     const moodData = [];
@@ -91,16 +105,58 @@ export default function DashboardPage() {
       return sum + (t.estimatedMinutes || 0);
     }, 0);
 
+    // Summary stats
+    const summaryTasks = tasks.filter(t => {
+      if (!t.completedAt) return false;
+      const taskDate = new Date(t.completedAt);
+      return taskDate >= summaryStartDate;
+    });
+
+    const summaryMastery = summaryTasks.filter(t => t.category === 'mastery').length;
+    const summaryPleasure = summaryTasks.filter(t => t.category === 'pleasure').length;
+
+    const summaryMoods = moods.filter(m => new Date(m.createdAt) >= summaryStartDate);
+    const summaryAvgMood = summaryMoods.length > 0
+      ? summaryMoods.reduce((sum, m) => sum + m.value, 0) / summaryMoods.length
+      : 0;
+
+    const summaryFocusTime = sessions
+      .filter(s => new Date(s.startTime) >= summaryStartDate)
+      .reduce((sum, s) => sum + (s.tasks || []).reduce((t, task) => t + task.timeSpent, 0), 0);
+
+    // Mastery vs Pleasure trends
+    const categoryData = [];
+    for (let i = 0; i < days; i++) {
+      const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+      const dayTasks = tasks.filter(t => {
+        if (!t.completedAt) return false;
+        const taskDate = new Date(t.completedAt);
+        return taskDate.toDateString() === date.toDateString();
+      });
+      const mastery = dayTasks.filter(t => t.category === 'mastery').length;
+      const pleasure = dayTasks.filter(t => t.category === 'pleasure').length;
+      categoryData.push({ date, mastery, pleasure });
+    }
+
     // Productivity by time of day
     const timeOfDayData = {
       morning: { sessions: 0, totalTime: 0, completedTasks: 0, avgCompletion: 0 },
       afternoon: { sessions: 0, totalTime: 0, completedTasks: 0, avgCompletion: 0 },
       evening: { sessions: 0, totalTime: 0, completedTasks: 0, avgCompletion: 0 },
       night: { sessions: 0, totalTime: 0, completedTasks: 0, avgCompletion: 0 },
+      lateNight: { sessions: 0, totalTime: 0, completedTasks: 0, avgCompletion: 0 },
     };
 
     sessions.filter(s => new Date(s.startTime) >= startDate).forEach(session => {
-      const timeOfDay = getTimeOfDayCategory(session.startTime);
+      const hour = new Date(session.startTime).getHours();
+      let timeOfDay: keyof typeof timeOfDayData;
+      
+      if (hour >= 5 && hour < 12) timeOfDay = 'morning';
+      else if (hour >= 12 && hour < 17) timeOfDay = 'afternoon';
+      else if (hour >= 17 && hour < 21) timeOfDay = 'evening';
+      else if (hour >= 21 || hour < 2) timeOfDay = 'night';
+      else timeOfDay = 'lateNight'; // 2am - 5am
+
       const sessionTime = (session.tasks || []).reduce((sum, t) => sum + t.timeSpent, 0);
       const completed = (session.tasks || []).filter(t => t.completed).length;
       
@@ -124,6 +180,7 @@ export default function DashboardPage() {
       moodData,
       focusData,
       taskData,
+      categoryData,
       timeOfDayData,
       stats: {
         totalFocusTime: Math.round(totalFocusTime / 60),
@@ -131,9 +188,16 @@ export default function DashboardPage() {
         completedTasks: completedTasks.length,
         avgMood: avgMood || 0,
         totalTaskTime,
+      },
+      summary: {
+        tasksCompleted: summaryTasks.length,
+        mastery: summaryMastery,
+        pleasure: summaryPleasure,
+        avgMood: summaryAvgMood,
+        focusTime: Math.round(summaryFocusTime / 60),
       }
     };
-  }, [tasks, moods, sessions, days]);
+  }, [tasks, moods, sessions, days, summaryPeriod]);
 
   return (
     <div className="container mx-auto py-6 md:py-8 space-y-6 px-4 md:px-0 max-w-7xl">
@@ -169,25 +233,67 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Today's Summary */}
+      {/* Summary Section */}
       <Card className="border-4 border-blue-200 shadow-xl bg-gradient-to-br from-white to-blue-50 dark:from-gray-900 dark:to-blue-950">
         <CardHeader className="bg-gradient-to-r from-blue-100 via-cyan-100 to-teal-100 dark:from-blue-900 dark:via-cyan-900 dark:to-teal-900 border-b-4 border-blue-200 dark:border-blue-800">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg shadow-md">
-              <TrendingUp className="h-5 w-5 text-white" />
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg shadow-md">
+                <TrendingUp className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
+                  📈 Summary
+                </CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400 font-medium text-sm md:text-base">
+                  Your activity at a glance
+                </CardDescription>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
-                📈 Today&apos;s Summary
-              </CardTitle>
-              <CardDescription className="text-gray-600 dark:text-gray-400 font-medium text-sm md:text-base">
-                Your activity at a glance
-              </CardDescription>
+            
+            {/* Period Selector */}
+            <div className="flex gap-2">
+              {(['today', 'week', 'month'] as SummaryPeriod[]).map((period) => (
+                <button
+                  key={period}
+                  onClick={() => setSummaryPeriod(period)}
+                  className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-all ${
+                    summaryPeriod === period
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800'
+                  }`}
+                >
+                  {period === 'today' ? 'Today' : period === 'week' ? 'This Week' : 'This Month'}
+                </button>
+              ))}
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-4 md:p-6">
-          <SummaryPanel />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 rounded-lg bg-white/50 dark:bg-gray-800/50">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Tasks Completed</div>
+              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{analytics.summary.tasksCompleted}</div>
+            </div>
+            <div className="text-center p-4 rounded-lg bg-white/50 dark:bg-gray-800/50">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Mastery 🧠</div>
+              <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{analytics.summary.mastery}</div>
+            </div>
+            <div className="text-center p-4 rounded-lg bg-white/50 dark:bg-gray-800/50">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Pleasure 💝</div>
+              <div className="text-3xl font-bold text-pink-600 dark:text-pink-400">{analytics.summary.pleasure}</div>
+            </div>
+            <div className="text-center p-4 rounded-lg bg-white/50 dark:bg-gray-800/50">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Avg Mood</div>
+              <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{analytics.summary.avgMood.toFixed(1)}</div>
+            </div>
+          </div>
+          <div className="mt-4 p-4 rounded-lg bg-purple-50 dark:bg-purple-950/20 border-2 border-purple-200 dark:border-purple-800">
+            <div className="text-center">
+              <div className="text-sm text-purple-700 dark:text-purple-300 mb-1">Focus Time</div>
+              <div className="text-4xl font-bold text-purple-600 dark:text-purple-400">{analytics.summary.focusTime}m</div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

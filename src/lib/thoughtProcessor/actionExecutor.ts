@@ -38,10 +38,6 @@ export class ActionExecutor {
           await this.enhanceThought(action, queueItem);
           break;
 
-        case 'setIntensity':
-          await this.setIntensity(action, queueItem);
-          break;
-
         case 'createMoodEntry':
           await this.createMoodEntry(action, queueItem);
           break;
@@ -176,28 +172,6 @@ export class ActionExecutor {
     this.log('Thought enhanced', { changes: action.data.changes });
   }
 
-  private async setIntensity(action: ProcessAction, queueItem: ProcessQueueItem) {
-    const { useThoughts } = await import('@/store/useThoughts');
-    const thoughts = useThoughts.getState().thoughts;
-    const updateThought = useThoughts.getState().updateThought;
-
-    const thought = thoughts.find(t => t.id === action.thoughtId);
-    if (!thought) {
-      throw new Error('Thought not found');
-    }
-
-    // Save original for revert
-    if (!queueItem.revertData.thoughtChanges.intensityChanged) {
-      queueItem.revertData.thoughtChanges.intensityChanged = true;
-      queueItem.revertData.thoughtChanges.originalIntensity = thought.intensity;
-    }
-
-    updateThought(action.thoughtId, {
-      intensity: action.data.intensity
-    });
-
-    this.log('Intensity set', { intensity: action.data.intensity });
-  }
 
   private async createMoodEntry(action: ProcessAction, queueItem: ProcessQueueItem) {
     const { useThoughts } = await import('@/store/useThoughts');
@@ -219,19 +193,12 @@ export class ActionExecutor {
       feelingType = 'feeling-good';
     }
     // Negative moods
-    else if (moodText.match(/(sad|depressed|anxious|stressed|frustrated|angry|worried|down|terrible|awful)/i)) {
+    else if (moodText.match(/(sad|angry|anxious|depressed|frustrated|worried|stressed)/i)) {
       feelingType = 'feeling-bad';
     }
 
-    // Save original for revert
-    if (!queueItem.revertData.thoughtChanges.intensityChanged) {
-      queueItem.revertData.thoughtChanges.intensityChanged = true;
-      queueItem.revertData.thoughtChanges.originalIntensity = thought.intensity;
-    }
-
-    // Update thought intensity
+    // Update thought tags
     updateThought(action.thoughtId, {
-      intensity: action.data.intensity,
       tags: [...(thought.tags || []), 'mood']
     });
 
@@ -382,10 +349,6 @@ export class ActionExecutor {
           updates.type = queueItem.revertData.thoughtChanges.originalType;
         }
 
-        // Restore original intensity if changed
-        if (queueItem.revertData.thoughtChanges.intensityChanged) {
-          updates.intensity = queueItem.revertData.thoughtChanges.originalIntensity;
-        }
 
         // Add revert note
         const revertNote = `[Reverted: ${new Date().toISOString()}]`;

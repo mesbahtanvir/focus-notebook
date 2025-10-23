@@ -5,7 +5,7 @@ import { Thought } from '@/store/useThoughts';
  */
 export function thoughtsToCSV(thoughts: Thought[]): string {
   if (thoughts.length === 0) {
-    return 'id,text,createdAt,tags,intensity,notes,isDeepThought,deepThoughtNotes';
+    return 'id,text,createdAt,tags,notes,isDeepThought,deepThoughtNotes';
   }
 
   const headers = [
@@ -13,7 +13,6 @@ export function thoughtsToCSV(thoughts: Thought[]): string {
     'text',
     'createdAt',
     'tags',
-    'intensity',
     'notes',
     'isDeepThought',
     'deepThoughtNotes',
@@ -41,7 +40,6 @@ export function thoughtsToCSV(thoughts: Thought[]): string {
       escapeCsvValue(thought.text),
       escapeCsvValue(typeof thought.createdAt === 'string' ? thought.createdAt : new Date(thought.createdAt?.seconds * 1000 || Date.now()).toISOString()),
       escapeCsvValue(thought.tags?.join(';') || ''),
-      escapeCsvValue(thought.intensity || ''),
       escapeCsvValue(thought.notes || ''),
       escapeCsvValue(thought.isDeepThought || ''),
       escapeCsvValue(thought.deepThoughtNotes || ''),

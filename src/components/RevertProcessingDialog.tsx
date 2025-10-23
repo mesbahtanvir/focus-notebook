@@ -16,8 +16,7 @@ export function RevertProcessingDialog({ queueItem, onConfirm, onCancel }: Rever
     revertData.createdItems.taskIds.length > 0 ||
     revertData.addedTags.length > 0 ||
     revertData.thoughtChanges.textChanged ||
-    revertData.thoughtChanges.typeChanged ||
-    revertData.thoughtChanges.intensityChanged;
+    revertData.thoughtChanges.typeChanged;
 
   if (!hasChanges) {
     return (
@@ -115,18 +114,6 @@ export function RevertProcessingDialog({ queueItem, onConfirm, onCancel }: Rever
                 <div>
                   <span className="font-medium text-green-600">
                     Restore type to: {revertData.thoughtChanges.originalType || 'neutral'}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Intensity Changes */}
-            {revertData.thoughtChanges.intensityChanged && (
-              <div className="flex items-start gap-2 text-sm">
-                <RefreshCw className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <span className="font-medium text-amber-600">
-                    Restore intensity to: {revertData.thoughtChanges.originalIntensity || 'none'}
                   </span>
                 </div>
               </div>

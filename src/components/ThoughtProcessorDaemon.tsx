@@ -119,8 +119,7 @@ export function ThoughtProcessorDaemon() {
         revertData: {
           originalThought: {
             text: thought.text,
-            tags: thought.tags || [],
-            intensity: thought.intensity
+            tags: thought.tags || []
           },
           createdItems: {
             taskIds: [],
@@ -129,8 +128,7 @@ export function ThoughtProcessorDaemon() {
           },
           thoughtChanges: {
             textChanged: false,
-            typeChanged: false,
-            intensityChanged: false
+            typeChanged: false
           },
           addedTags: [],
           canRevert: true

@@ -74,6 +74,8 @@ function ThoughtsPageContent() {
   const [pendingImportThoughts, setPendingImportThoughts] = useState<any[]>([]);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Auto-open thought detail if navigating from tasks page
   useEffect(() => {
@@ -244,7 +246,8 @@ function ThoughtsPageContent() {
         await addThought(cleanedThought);
       }
       
-      alert(`Successfully imported ${pendingImportThoughts.length} thought(s)`);
+      setSuccessMessage(`Successfully imported ${pendingImportThoughts.length} thought(s)!`);
+      setShowSuccessModal(true);
       setShowImportModal(false);
       setPendingImportThoughts([]);
     } catch (error) {
@@ -364,13 +367,6 @@ function ThoughtsPageContent() {
                         </div>
                         
                         <div className="flex flex-wrap items-center gap-2 mt-2">
-                          {thought.intensity && (
-                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-sm flex items-center gap-1">
-                              <Heart className="h-3 w-3" />
-                              {thought.intensity}/10
-                            </span>
-                          )}
-                          
                           {thought.cbtAnalysis && (
                             <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-sm flex items-center gap-1">
                               <Brain className="h-3 w-3" />
@@ -471,6 +467,37 @@ function ThoughtsPageContent() {
         showSettingsButton={errorMessage.includes('OpenAI API key')}
       />
 
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg">
+                <CheckCircle2 className="h-8 w-8 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
+                  Success!
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  {successMessage}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowSuccessModal(false)}
+              className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold shadow-lg transition-all"
+            >
+              Got it!
+            </button>
+          </motion.div>
+        </div>
+      )}
+
       {/* Floating Action Button */}
       <button
         onClick={() => setShowNewThought(true)}
@@ -486,9 +513,7 @@ function ThoughtsPageContent() {
 function NewThoughtModal({ onClose }: { onClose: () => void }) {
   const addThought = useThoughts((s) => s.add);
   const [text, setText] = useState("");
-  const [intensity, setIntensity] = useState<number>(5);
   const [tags, setTags] = useState("");
-  const [showIntensity, setShowIntensity] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -501,7 +526,6 @@ function NewThoughtModal({ onClose }: { onClose: () => void }) {
 
     await addThought({
       text: text.trim(),
-      intensity: showIntensity ? intensity : undefined,
       tags: tagsList.length > 0 ? tagsList : undefined,
     });
 
@@ -537,38 +561,6 @@ function NewThoughtModal({ onClose }: { onClose: () => void }) {
               autoFocus
             />
           </div>
-
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium mb-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showIntensity}
-                onChange={(e) => setShowIntensity(e.target.checked)}
-                className="h-4 w-4 rounded"
-              />
-              Track intensity (for feelings/emotions)
-            </label>
-          </div>
-
-          {showIntensity && (
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Intensity: {intensity}/10
-              </label>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                value={intensity}
-                onChange={(e) => setIntensity(parseInt(e.target.value))}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                <span>Low</span>
-                <span>High</span>
-              </div>
-            </div>
-          )}
 
           <div>
             <label className="block text-sm font-medium mb-2">Tags (optional)</label>
