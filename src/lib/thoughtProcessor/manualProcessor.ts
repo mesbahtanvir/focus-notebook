@@ -52,7 +52,6 @@ export class ManualProcessor {
         revertData: {
           originalThought: {
             text: thought.text,
-            type: thought.type,
             tags: thought.tags || [],
             intensity: thought.intensity
           },
@@ -85,7 +84,6 @@ export class ManualProcessor {
           thought: {
             id: thought.id,
             text: thought.text,
-            type: thought.type,
             tags: thought.tags,
             createdAt: thought.createdAt
           },

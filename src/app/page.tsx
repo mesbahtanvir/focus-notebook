@@ -50,7 +50,6 @@ export default function Page() {
     if (!data.text?.trim()) return;
     await addThought({
       text: data.text.trim(),
-      type: 'neutral',
     });
     reset();
   };

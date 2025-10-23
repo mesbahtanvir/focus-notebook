@@ -38,10 +38,6 @@ export class ActionExecutor {
           await this.enhanceThought(action, queueItem);
           break;
 
-        case 'changeType':
-          await this.changeType(action, queueItem);
-          break;
-
         case 'setIntensity':
           await this.setIntensity(action, queueItem);
           break;
@@ -180,29 +176,6 @@ export class ActionExecutor {
     this.log('Thought enhanced', { changes: action.data.changes });
   }
 
-  private async changeType(action: ProcessAction, queueItem: ProcessQueueItem) {
-    const { useThoughts } = await import('@/store/useThoughts');
-    const thoughts = useThoughts.getState().thoughts;
-    const updateThought = useThoughts.getState().updateThought;
-
-    const thought = thoughts.find(t => t.id === action.thoughtId);
-    if (!thought) {
-      throw new Error('Thought not found');
-    }
-
-    // Save original for revert
-    if (!queueItem.revertData.thoughtChanges.typeChanged) {
-      queueItem.revertData.thoughtChanges.typeChanged = true;
-      queueItem.revertData.thoughtChanges.originalType = thought.type;
-    }
-
-    updateThought(action.thoughtId, {
-      type: action.data.type
-    });
-
-    this.log('Thought type changed', { from: thought.type, to: action.data.type });
-  }
-
   private async setIntensity(action: ProcessAction, queueItem: ProcessQueueItem) {
     const { useThoughts } = await import('@/store/useThoughts');
     const thoughts = useThoughts.getState().thoughts;
@@ -251,18 +224,13 @@ export class ActionExecutor {
     }
 
     // Save original for revert
-    if (!queueItem.revertData.thoughtChanges.typeChanged) {
-      queueItem.revertData.thoughtChanges.typeChanged = true;
-      queueItem.revertData.thoughtChanges.originalType = thought.type;
-    }
     if (!queueItem.revertData.thoughtChanges.intensityChanged) {
       queueItem.revertData.thoughtChanges.intensityChanged = true;
       queueItem.revertData.thoughtChanges.originalIntensity = thought.intensity;
     }
 
-    // Update thought to be a mood entry
+    // Update thought intensity
     updateThought(action.thoughtId, {
-      type: feelingType,
       intensity: action.data.intensity,
       tags: [...(thought.tags || []), 'mood']
     });
@@ -282,8 +250,7 @@ export class ActionExecutor {
 
     this.log('Mood entry created', { 
       mood: action.data.mood, 
-      intensity: action.data.intensity,
-      type: feelingType
+      intensity: action.data.intensity
     });
   }
 

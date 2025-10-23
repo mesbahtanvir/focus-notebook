@@ -119,7 +119,6 @@ export function ThoughtProcessorDaemon() {
         revertData: {
           originalThought: {
             text: thought.text,
-            type: thought.type,
             tags: thought.tags || [],
             intensity: thought.intensity
           },
@@ -154,7 +153,6 @@ export function ThoughtProcessorDaemon() {
           thought: {
             id: thought.id,
             text: thought.text,
-            type: thought.type,
             tags: thought.tags,
             createdAt: thought.createdAt
           },

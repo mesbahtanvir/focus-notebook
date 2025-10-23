@@ -4,13 +4,9 @@ import { db, auth } from '@/lib/firebaseClient'
 import { createAt, updateAt, deleteAt } from '@/lib/data/gateway'
 import { subscribeCol } from '@/lib/data/subscribe'
 
-export type ThoughtType = 'task' | 'feeling-good' | 'feeling-bad' | 'neutral'
-
 export interface Thought {
   id: string
   text: string
-  type: ThoughtType
-  done: boolean
   createdAt: string | any // Firebase Timestamp or ISO string
   updatedAt?: any // Firebase Timestamp
   updatedBy?: string
@@ -39,8 +35,7 @@ type State = {
   hasPendingWrites: boolean
   unsubscribe: (() => void) | null
   subscribe: (userId: string) => void
-  add: (data: Omit<Thought, 'id' | 'done' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>) => Promise<void>
-  toggle: (id: string) => Promise<void>
+  add: (data: Omit<Thought, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>) => Promise<void>
   updateThought: (id: string, updates: Partial<Omit<Thought, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>>) => Promise<void>
   deleteThought: (id: string) => Promise<void>
 }
@@ -81,32 +76,16 @@ export const useThoughts = create<State>((set, get) => ({
     const userId = auth.currentUser?.uid
     if (!userId) throw new Error('Not authenticated')
 
-    const thoughtId = Date.now().toString()
-    const newThought: Omit<Thought, 'id'> = {
-      text: data.text,
-      type: data.type,
+    const id = Date.now().toString()
+    const newThought: Thought = {
+      ...data,
+      id,
       createdAt: new Date().toISOString(),
-      done: false,
-      tags: data.tags,
-      intensity: data.intensity,
-      notes: data.notes,
-      cbtAnalysis: data.cbtAnalysis,
     }
 
-    await createAt(`users/${userId}/thoughts/${thoughtId}`, newThought)
+    await createAt(`users/${userId}/thoughts/${id}`, newThought)
   },
 
-  toggle: async (id) => {
-    const userId = auth.currentUser?.uid
-    if (!userId) throw new Error('Not authenticated')
-
-    const thought = get().thoughts.find((x) => x.id === id)
-    if (!thought) return
-
-    await updateAt(`users/${userId}/thoughts/${id}`, {
-      done: !thought.done,
-    })
-  },
 
   updateThought: async (id, updates) => {
     const userId = auth.currentUser?.uid

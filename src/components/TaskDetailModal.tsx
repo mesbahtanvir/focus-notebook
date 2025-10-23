@@ -179,7 +179,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
             ) : (
               <div className="flex items-center gap-2">
                 <div className={`w-3 h-3 rounded-full ${getPriorityColor(task.priority)}`} />
-                <span className="capitalize">{task.priority}</span>
+                <span>{task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}</span>
               </div>
             )}
           </div>
@@ -198,12 +198,12 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                   <option value="pleasure">Pleasure</option>
                 </select>
               ) : (
-                <span className={`px-3 py-1 rounded-full text-sm font-medium border inline-block ${
+                <span className={`px-3 py-1 rounded-full text-sm font-medium inline-block ${
                   (task.category || 'mastery') === "mastery"
                     ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900"
                     : "bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-900"
                 }`}>
-                  {task.category || 'mastery'}
+                  {(task.category || 'mastery').charAt(0).toUpperCase() + (task.category || 'mastery').slice(1)}
                 </span>
               )}
             </div>
@@ -221,7 +221,15 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                   <option value="completed">Completed</option>
                 </select>
               ) : (
-                <span className="capitalize">{task.status}</span>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium border inline-block ${
+                  task.status === 'active'
+                    ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-900"
+                    : task.status === 'completed'
+                    ? "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950/40 dark:text-gray-300 dark:border-gray-900"
+                    : "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/40 dark:text-yellow-300 dark:border-yellow-900"
+                }`}>
+                  {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
+                </span>
               )}
             </div>
           </div>
@@ -383,15 +391,6 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                 Completed: {typeof task.completedAt === 'object' && task.completedAt !== null && 'toDate' in task.completedAt
                   ? (task.completedAt as any).toDate().toLocaleString()
                   : new Date(task.completedAt).toLocaleString()}
-              </div>
-            )}
-            {(task.source || task.lastModifiedSource) && (
-              <div className="pt-2">
-                <SourceInfo 
-                  source={task.source} 
-                  lastModifiedSource={task.lastModifiedSource}
-                  layout="vertical"
-                />
               </div>
             )}
           </div>

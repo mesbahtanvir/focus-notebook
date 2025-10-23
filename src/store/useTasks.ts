@@ -3,7 +3,6 @@ import { collection, query, orderBy } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebaseClient'
 import { createAt, setAt, updateAt, deleteAt } from '@/lib/data/gateway'
 import { subscribeCol } from '@/lib/data/subscribe'
-import { getCompactSource } from '@/lib/deviceDetection'
 
 export type TaskStatus = 'active' | 'completed' | 'backlog'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
@@ -40,8 +39,6 @@ export interface Task {
   projectId?: string // Link to project
   thoughtId?: string // Link to thought that created this task
   focusEligible?: boolean // Can be done during a focus session (laptop/notebook work)
-  source?: string // Device/platform source (e.g., "iPhone-Safari", "Mac-Chrome")
-  lastModifiedSource?: string // Source of last modification
 }
 
 // Helper functions for recurring tasks
@@ -111,8 +108,6 @@ function createTaskForToday(task: Task): Omit<Task, 'id'> {
     parentTaskId: task.parentTaskId || task.id,
     projectId: task.projectId,
     focusEligible: task.focusEligible,
-    source: getCompactSource(),
-    lastModifiedSource: getCompactSource(),
   }
 }
 
@@ -191,18 +186,15 @@ export const useTasks = create<State>((set, get) => ({
     const userId = auth.currentUser?.uid
     if (!userId) throw new Error('Not authenticated')
     
-    const source = getCompactSource()
     const taskId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     
     const newTask: Omit<Task, 'id'> = {
-      ...task,
+      title: task.title || 'Untitled Task',
       done: false,
       status: task.status || 'active',
       priority: task.priority || 'medium',
       category: task.category,
       createdAt: new Date().toISOString(),
-      source,
-      lastModifiedSource: source,
       focusEligible: task.focusEligible !== undefined ? task.focusEligible : true,
     }
     
@@ -238,13 +230,7 @@ export const useTasks = create<State>((set, get) => ({
     const userId = auth.currentUser?.uid
     if (!userId) throw new Error('Not authenticated')
     
-    const source = getCompactSource()
-    const updatesWithSource = { 
-      ...updates, 
-      lastModifiedSource: source 
-    }
-    
-    await updateAt(`users/${userId}/tasks/${id}`, updatesWithSource)
+    await updateAt(`users/${userId}/tasks/${id}`, updates)
   },
   
   deleteTask: async (id) => {

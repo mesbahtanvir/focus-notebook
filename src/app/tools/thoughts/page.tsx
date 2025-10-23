@@ -19,8 +19,13 @@ import {
   Calendar,
   Sparkles,
   Loader2,
-  Bell
+  Bell,
+  Download,
+  Upload
 } from "lucide-react";
+import { thoughtsToCSV, downloadCSV, csvToThoughts } from '@/lib/csvUtils';
+import { ImportThoughtsModal } from '@/components/ImportThoughtsModal';
+import { ErrorModal } from '@/components/ErrorModal';
 import { ThoughtDetailModal } from "@/components/ThoughtDetailModal";
 import {
   ToolPageLayout,
@@ -37,13 +42,38 @@ function ThoughtsPageContent() {
   const thoughts = useThoughts((s) => s.thoughts);
   const queue = useProcessQueue((s) => s.queue);
   const searchParams = useSearchParams();
+
+  // Date formatting function
+  const formatDate = (date: any): string => {
+    if (!date) return 'N/A';
+    try {
+      // Handle Firebase Timestamp
+      if (typeof date === 'object' && 'toDate' in date) {
+        return date.toDate().toLocaleDateString();
+      }
+      // Handle ISO string
+      if (typeof date === 'string') {
+        return new Date(date).toLocaleDateString();
+      }
+      // Handle timestamp in seconds
+      if (typeof date === 'object' && 'seconds' in date) {
+        return new Date(date.seconds * 1000).toLocaleDateString();
+      }
+      return new Date(date).toLocaleDateString();
+    } catch (error) {
+      return 'Invalid date';
+    }
+  };
   const [showNewThought, setShowNewThought] = useState(false);
   const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
-  const [showCompleted, setShowCompleted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingThoughtId, setProcessingThoughtId] = useState<string | null>(null);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [currentApprovalItem, setCurrentApprovalItem] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [pendingImportThoughts, setPendingImportThoughts] = useState<any[]>([]);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Auto-open thought detail if navigating from tasks page
   useEffect(() => {
@@ -71,26 +101,20 @@ function ThoughtsPageContent() {
   }, [awaitingApproval, showApprovalDialog, currentApprovalItem]);
 
   const filteredThoughts = useMemo(() => {
-    let filtered = thoughts.filter(thought => {
-      if (!showCompleted && thought.done) return false;
-      return true;
-    });
-
     // Sort by created date, newest first
-    filtered.sort((a, b) => 
+    const sorted = [...thoughts].sort((a, b) => 
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    return filtered;
-  }, [thoughts, showCompleted]);
+    return sorted;
+  }, [thoughts]);
 
   const thoughtStats = useMemo(() => {
     const total = thoughts.length;
-    const completed = thoughts.filter(t => t.done).length;
     const analyzed = thoughts.filter(t => t.cbtAnalysis).length;
     const unprocessed = thoughts.filter(t => !t.tags?.includes('processed')).length;
 
-    return { total, completed, analyzed, unprocessed };
+    return { total, analyzed, unprocessed };
   }, [thoughts]);
 
   const handleProcessThought = async (thoughtId: string) => {
@@ -102,7 +126,11 @@ function ThoughtsPageContent() {
     if (result.success) {
       // Success - thought will be updated by the processor
     } else {
-      alert(`Failed to process: ${result.error}`);
+      const needsApiKey = result.error === 'OpenAI API key not configured';
+      setErrorMessage(needsApiKey 
+        ? 'Please configure your OpenAI API key in Settings to enable AI-powered thought processing.' 
+        : `Failed to process: ${result.error}`);
+      setShowErrorModal(true);
     }
     
     setIsProcessing(false);
@@ -173,6 +201,62 @@ function ThoughtsPageContent() {
     }, 100);
   };
 
+  const handleExport = () => {
+    const csv = thoughtsToCSV(thoughts);
+    const filename = `thoughts-export-${new Date().toISOString().split('T')[0]}.csv`;
+    downloadCSV(csv, filename);
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const csvContent = e.target?.result as string;
+        const importedThoughts = csvToThoughts(csvContent);
+        
+        if (importedThoughts.length === 0) {
+          alert('No valid thoughts found in CSV file');
+          return;
+        }
+
+        setPendingImportThoughts(importedThoughts);
+        setShowImportModal(true);
+      } catch (error) {
+        alert(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  };
+
+  const handleConfirmImport = async () => {
+    try {
+      const addThought = useThoughts.getState().add;
+      for (const thought of pendingImportThoughts) {
+        // Remove 'processed' tag so thoughts can be processed again
+        const cleanedThought = {
+          ...thought,
+          tags: thought.tags?.filter((tag: string) => tag !== 'processed')
+        };
+        await addThought(cleanedThought);
+      }
+      
+      alert(`Successfully imported ${pendingImportThoughts.length} thought(s)`);
+      setShowImportModal(false);
+      setPendingImportThoughts([]);
+    } catch (error) {
+      alert(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleCancelImport = () => {
+    setShowImportModal(false);
+    setPendingImportThoughts([]);
+  };
+
 
   return (
     <ToolPageLayout>
@@ -181,14 +265,8 @@ function ThoughtsPageContent() {
         stats={[
           { label: 'total', value: thoughtStats.total },
           { label: 'unprocessed', value: thoughtStats.unprocessed, variant: 'warning' },
-          { label: 'analyzed', value: thoughtStats.analyzed },
-          { label: 'done', value: thoughtStats.completed, variant: 'success' }
+          { label: 'analyzed', value: thoughtStats.analyzed, variant: 'success' }
         ]}
-        action={{
-          label: 'New Thought',
-          icon: Plus,
-          onClick: () => setShowNewThought(true)
-        }}
       />
 
       {(awaitingApproval.length > 0 || thoughtStats.unprocessed > 0) && (
@@ -228,15 +306,26 @@ function ThoughtsPageContent() {
       )}
 
       <ToolFilters>
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showCompleted}
-            onChange={(e) => setShowCompleted(e.target.checked)}
-            className="h-4 w-4 rounded"
-          />
-          <span className="text-gray-600 dark:text-gray-400">Show completed</span>
-        </label>
+        <div className="flex gap-2 ml-auto">
+          <button
+            onClick={handleExport}
+            className="px-3 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-300 text-sm font-medium transition-colors flex items-center gap-1.5"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </button>
+          
+          <label className="px-3 py-1.5 rounded-lg bg-green-100 hover:bg-green-200 dark:bg-green-900 dark:hover:bg-green-800 text-green-700 dark:text-green-300 text-sm font-medium transition-colors flex items-center gap-1.5 cursor-pointer">
+            <Upload className="h-4 w-4" />
+            Import CSV
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleImport}
+              className="hidden"
+            />
+          </label>
+        </div>
       </ToolFilters>
 
       <ToolContent>
@@ -263,41 +352,49 @@ function ThoughtsPageContent() {
                 >
                   <ToolCard onClick={() => setSelectedThought(thought)}>
                     <div className="flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        checked={thought.done}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          useThoughts.getState().toggle(thought.id);
-                        }}
-                        className="h-4 w-4 rounded mt-0.5"
-                      />
+                      <div className="h-6 w-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0 shadow-lg">
+                        <Brain className="h-4 w-4 text-white" />
+                      </div>
+                      
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium ${thought.done ? 'line-through text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
-                          {thought.text}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2 mt-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium text-gray-900 dark:text-gray-100 flex-1 min-w-0">
+                            {thought.text}
+                          </p>
+                        </div>
+                        
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
                           {thought.intensity && (
-                            <span className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800">
+                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-sm flex items-center gap-1">
                               <Heart className="h-3 w-3" />
                               {thought.intensity}/10
                             </span>
                           )}
+                          
                           {thought.cbtAnalysis && (
-                            <span className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800">
+                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-sm flex items-center gap-1">
                               <Brain className="h-3 w-3" />
-                              Analyzed
+                              CBT
                             </span>
                           )}
-                          {thought.tags && Array.isArray(thought.tags) && thought.tags.length > 0 && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800">
+                          
+                          {thought.tags && Array.isArray(thought.tags) && thought.tags.filter(t => t !== 'processed').length > 0 && (
+                            <span className="text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
                               <Tag className="h-3 w-3" />
-                              {thought.tags.join(', ')}
+                              {thought.tags.filter(t => t !== 'processed').join(', ')}
                             </span>
                           )}
-                          <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto flex items-center gap-1">
+                          
+                          {thought.tags?.includes('processed') && (
+                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-sm flex items-center gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Processed
+                            </span>
+                          )}
+                          
+                          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 ml-auto flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {new Date(thought.createdAt).toLocaleDateString()}
+                            {formatDate(thought.createdAt)}
                           </span>
                         </div>
                         
@@ -355,6 +452,33 @@ function ThoughtsPageContent() {
           onReject={handleReject}
         />
       )}
+
+      {/* Import Preview Modal */}
+      {showImportModal && (
+        <ImportThoughtsModal
+          thoughts={pendingImportThoughts}
+          onConfirm={handleConfirmImport}
+          onCancel={handleCancelImport}
+        />
+      )}
+
+      {/* Error Modal */}
+      <ErrorModal
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        title="Processing Failed"
+        message={errorMessage}
+        showSettingsButton={errorMessage.includes('OpenAI API key')}
+      />
+
+      {/* Floating Action Button */}
+      <button
+        onClick={() => setShowNewThought(true)}
+        className="fixed bottom-8 right-8 h-16 w-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-2xl hover:shadow-3xl transition-all flex items-center justify-center z-40 hover:scale-110"
+        title="New Thought"
+      >
+        <Plus className="h-8 w-8" />
+      </button>
     </ToolPageLayout>
   );
 }
@@ -362,7 +486,6 @@ function ThoughtsPageContent() {
 function NewThoughtModal({ onClose }: { onClose: () => void }) {
   const addThought = useThoughts((s) => s.add);
   const [text, setText] = useState("");
-  const [type, setType] = useState<'neutral' | 'task' | 'feeling-good' | 'feeling-bad'>('neutral');
   const [intensity, setIntensity] = useState<number>(5);
   const [tags, setTags] = useState("");
   const [showIntensity, setShowIntensity] = useState(false);
@@ -378,7 +501,6 @@ function NewThoughtModal({ onClose }: { onClose: () => void }) {
 
     await addThought({
       text: text.trim(),
-      type,
       intensity: showIntensity ? intensity : undefined,
       tags: tagsList.length > 0 ? tagsList : undefined,
     });
@@ -414,20 +536,6 @@ function NewThoughtModal({ onClose }: { onClose: () => void }) {
               required
               autoFocus
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Type</label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value as any)}
-              className="input w-full"
-            >
-              <option value="neutral">💭 Neutral</option>
-              <option value="task">✅ Task</option>
-              <option value="feeling-good">😊 Good Feeling</option>
-              <option value="feeling-bad">😔 Bad Feeling</option>
-            </select>
           </div>
 
           <div>

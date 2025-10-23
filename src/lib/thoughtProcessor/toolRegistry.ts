@@ -166,11 +166,6 @@ class ToolRegistryClass {
       ],
       actions: [
         {
-          type: 'changeType',
-          description: 'Changes thought type to feeling-bad',
-          params: { type: 'feeling-bad' }
-        },
-        {
           type: 'addTag',
           description: 'Adds CBT tag',
           params: { tag: 'cbt' }
@@ -207,11 +202,6 @@ class ToolRegistryClass {
         'Create mood entries with intensity levels'
       ],
       actions: [
-        {
-          type: 'changeType',
-          description: 'Changes thought type based on emotion',
-          params: { type: 'feeling-good | feeling-bad | neutral' }
-        },
         {
           type: 'setIntensity',
           description: 'Sets emotional intensity',

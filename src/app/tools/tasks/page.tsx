@@ -163,13 +163,6 @@ function TasksPageContent() {
               )}
             </div>
           </div>
-          <button
-            onClick={() => setShowNewTask(true)}
-            className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold shadow-lg transition-all transform hover:scale-105 active:scale-95"
-          >
-            <Plus className="h-5 w-5" />
-            New Task
-          </button>
         </div>
       </div>
 
@@ -478,6 +471,15 @@ function TasksPageContent() {
           onClose={() => setSelectedTask(null)}
         />
       )}
+
+      {/* Floating Action Button */}
+      <button
+        onClick={() => setShowNewTask(true)}
+        className="fixed bottom-8 right-8 h-16 w-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-2xl hover:shadow-3xl transition-all flex items-center justify-center z-40 hover:scale-110"
+        title="New Task"
+      >
+        <Plus className="h-8 w-8" />
+      </button>
     </div>
   );
 }
