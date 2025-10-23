@@ -410,10 +410,6 @@ function TasksPageContent() {
                           </span>
                         )}
                         
-                        {task.source && (
-                          <SourceBadge source={task.source} size="sm" showIcon={true} />
-                        )}
-                        
                         {task.thoughtId && (() => {
                           const thought = thoughts.find(t => t.id === task.thoughtId);
                           if (!thought) return null;
