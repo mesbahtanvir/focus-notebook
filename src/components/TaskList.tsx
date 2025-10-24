@@ -3,16 +3,7 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useTasks, Task } from "@/store/useTasks";
-
-function isSameDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-function isTodayISO(iso?: string) {
-  if (!iso) return false;
-  const d = new Date(iso);
-  return isSameDay(d, new Date());
-}
+import { isTodayISO } from "@/lib/utils/date";
 
 export default function TaskList() {
   const tasks = useTasks((s) => s.tasks);

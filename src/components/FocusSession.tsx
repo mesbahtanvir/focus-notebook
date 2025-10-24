@@ -13,24 +13,7 @@ import {
 } from "lucide-react";
 import { FormattedNotes } from '@/lib/formatNotes';
 import { ConfirmModal } from "./ConfirmModal";
-
-// Gentle timer - only show minutes, not seconds
-function formatTimeGentle(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const hours = Math.floor(mins / 60);
-  const remainingMins = mins % 60;
-  
-  if (hours > 0) {
-    if (remainingMins === 0) {
-      return `${hours}h`;
-    }
-    return `${hours}h ${remainingMins}m`;
-  }
-  if (mins === 0) {
-    return 'Starting...';
-  }
-  return `${mins}m`;
-}
+import { formatTimeGentle } from '@/lib/utils/date';
 
 export function FocusSession() {
   const currentSession = useFocus((s) => s.currentSession);

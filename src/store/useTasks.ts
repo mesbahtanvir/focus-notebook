@@ -3,6 +3,7 @@ import { collection, query, orderBy } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebaseClient'
 import { createAt, setAt, updateAt, deleteAt } from '@/lib/data/gateway'
 import { subscribeCol } from '@/lib/data/subscribe'
+import { isWorkday, getDateString } from '@/lib/utils/date'
 
 export type TaskStatus = 'active' | 'completed' | 'backlog'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
@@ -49,17 +50,6 @@ export interface Task {
 }
 
 // Helper functions for recurring tasks
-
-// Check if today is a workday (Monday-Friday)
-function isWorkday(date: Date = new Date()): boolean {
-  const day = date.getDay()
-  return day >= 1 && day <= 5 // Monday (1) to Friday (5)
-}
-
-// Get the date string in YYYY-MM-DD format
-function getDateString(date: Date): string {
-  return date.toISOString().split('T')[0]
-}
 
 // Check if we need to create a recurring task instance for today
 function shouldCreateTaskForToday(task: Task, existingTasks: Task[]): boolean {
