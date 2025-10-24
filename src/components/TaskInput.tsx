@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Check, Repeat } from 'lucide-react';
+import { Plus, Check, Repeat, Target } from 'lucide-react';
 import { useTasks, TaskPriority, RecurrenceType } from '@/store/useTasks';
+import { useProjects } from '@/store/useProjects';
 
 type TaskDestination = 'today' | 'backlog';
 
@@ -23,9 +24,11 @@ export function TaskInput({ onClose, onTaskCreated }: TaskInputProps = {}) {
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>('none');
   const [recurrenceFrequency, setRecurrenceFrequency] = useState('');
   const [focusEligible, setFocusEligible] = useState(true);
+  const [projectId, setProjectId] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const addTask = useTasks((state) => state.add);
+  const projects = useProjects((state) => state.projects);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,6 +58,7 @@ export function TaskInput({ onClose, onTaskCreated }: TaskInputProps = {}) {
       recurrence: recurrenceConfig,
       completionCount: 0,
       focusEligible,
+      projectId: projectId || undefined,
     });
 
     // Call onTaskCreated callback if provided
@@ -72,6 +76,7 @@ export function TaskInput({ onClose, onTaskCreated }: TaskInputProps = {}) {
     setRecurrenceType('none');
     setRecurrenceFrequency('');
     setFocusEligible(true);
+    setProjectId('');
     
     // Reset form
     setTimeout(() => {
@@ -155,6 +160,24 @@ export function TaskInput({ onClose, onTaskCreated }: TaskInputProps = {}) {
               <option value="medium">🟡 Medium</option>
               <option value="high">🟠 High</option>
               <option value="urgent">🔴 Urgent</option>
+            </select>
+          </div>
+
+          {/* Project Link */}
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-4 rounded-xl border-2 border-green-200 dark:border-green-800">
+            <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <Target className="h-4 w-4 text-green-500" />
+              🎯 Project
+            </label>
+            <select
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="input w-full text-sm font-medium border-2 focus:border-green-500"
+            >
+              <option value="">No project (standalone)</option>
+              {projects.filter(p => p.status === 'active').map(project => (
+                <option key={project.id} value={project.id}>{project.title}</option>
+              ))}
             </select>
           </div>
         </div>

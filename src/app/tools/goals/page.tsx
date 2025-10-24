@@ -284,12 +284,16 @@ export default function GoalsPage() {
                         {relatedProjects.map((project) => (
                           <Link
                             key={project.id}
-                            href={`/tools/projects#${project.id}`}
-                            className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-950/60 transition-colors"
+                            href={`/tools/projects/${project.id}`}
+                            className="px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition-all shadow-sm flex items-center gap-1"
                           >
+                            <Target className="h-3 w-3" />
                             {project.title}
                           </Link>
                         ))}
+                        {relatedProjects.length === 0 && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 italic">No projects yet. Create one below.</p>
+                        )}
                       </div>
                       {/* Quick Project Creation */}
                       <div className="flex gap-2">

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from "react";
-import { useTasks, Task, TaskStatus, TaskCategory, TaskPriority } from "@/store/useTasks";
-import { useThoughts } from "@/store/useThoughts";
+import { useTasks, Task, TaskStatus, TaskPriority, TaskCategory } from '@/store/useTasks';
+import { useThoughts } from '@/store/useThoughts';
+import { useProjects } from '@/store/useProjects';
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -15,10 +16,11 @@ import {
   Clock,
   AlertCircle,
   Tag,
-  ChevronDown,
   Repeat,
+  Trash2,
+  ChevronDown,
   MessageCircle,
-  ExternalLink,
+  Target,
   Search
 } from "lucide-react";
 import { getNotesPreview } from "@/lib/formatNotes";
@@ -34,6 +36,7 @@ type ViewMode = 'list' | 'kanban';
 function TasksPageContent() {
   const tasks = useTasks((s) => s.tasks);
   const thoughts = useThoughts((s) => s.thoughts);
+  const projects = useProjects((s) => s.projects);
   const searchParams = useSearchParams();
   const [showNewTask, setShowNewTask] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -449,6 +452,21 @@ function TasksPageContent() {
                             >
                               <MessageCircle className="h-3 w-3" />
                               From Thought
+                            </Link>
+                          );
+                        })()}
+                        
+                        {task.projectId && (() => {
+                          const project = projects.find(p => p.id === task.projectId);
+                          if (!project) return null;
+                          return (
+                            <Link
+                              href={`/tools/projects/${task.projectId}`}
+                              className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm flex items-center gap-1 shrink-0 hover:from-green-600 hover:to-emerald-700 transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Target className="h-3 w-3" />
+                              {project.title}
                             </Link>
                           );
                         })()}
