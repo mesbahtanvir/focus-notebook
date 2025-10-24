@@ -1,0 +1,460 @@
+"use client";
+
+import { useEffect, useState, useMemo } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useProjects, Project } from "@/store/useProjects";
+import { useTasks, Task } from "@/store/useTasks";
+import { useGoals } from "@/store/useGoals";
+import { useThoughts } from "@/store/useThoughts";
+import { useAuth } from "@/contexts/AuthContext";
+import { motion } from "framer-motion";
+import {
+  Target,
+  ArrowLeft,
+  Clock,
+  Calendar,
+  TrendingUp,
+  CheckCircle2,
+  Circle,
+  Edit3,
+  Trash2,
+  Plus,
+  Link as LinkIcon,
+  Flag,
+  Zap,
+  ListChecks,
+  BarChart3,
+  User
+} from "lucide-react";
+
+export default function ProjectDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const { user } = useAuth();
+  const projectId = params.id as string;
+
+  const projects = useProjects((s) => s.projects);
+  const subscribe = useProjects((s) => s.subscribe);
+  const updateProject = useProjects((s) => s.update);
+  const deleteProject = useProjects((s) => s.delete);
+
+  const tasks = useTasks((s) => s.tasks);
+  const subscribeTasks = useTasks((s) => s.subscribe);
+  const updateTask = useTasks((s) => s.updateTask);
+
+  const goals = useGoals((s) => s.goals);
+  const thoughts = useThoughts((s) => s.thoughts);
+
+  useEffect(() => {
+    if (user?.uid) {
+      subscribe(user.uid);
+      subscribeTasks(user.uid);
+    }
+  }, [user?.uid, subscribe, subscribeTasks]);
+
+  const project = projects.find((p) => p.id === projectId);
+
+  const linkedTasks = useMemo(() => {
+    if (!project) return [];
+    return tasks.filter((t) => project.linkedTaskIds.includes(t.id));
+  }, [project, tasks]);
+
+  const linkedGoal = useMemo(() => {
+    if (!project?.goalId) return null;
+    return goals.find((g) => g.id === project.goalId);
+  }, [project, goals]);
+
+  const linkedThoughts = useMemo(() => {
+    if (!project) return [];
+    return thoughts.filter((t) => project.linkedThoughtIds.includes(t.id));
+  }, [project, thoughts]);
+
+  const stats = useMemo(() => {
+    const totalTasks = linkedTasks.length;
+    const completedTasks = linkedTasks.filter((t) => t.done).length;
+    const incompleteTasks = totalTasks - completedTasks;
+    const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    // Calculate estimated time to finish (sum of incomplete tasks)
+    const estimatedMinutes = linkedTasks
+      .filter((t) => !t.done)
+      .reduce((sum, t) => sum + (t.estimatedMinutes || 0), 0);
+
+    const estimatedHours = Math.floor(estimatedMinutes / 60);
+    const remainingMinutes = estimatedMinutes % 60;
+
+    // Days until target date
+    let daysUntilTarget: number | null = null;
+    if (project?.targetDate) {
+      const target = new Date(project.targetDate);
+      const today = new Date();
+      const diffTime = target.getTime() - today.getTime();
+      daysUntilTarget = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+
+    return {
+      totalTasks,
+      completedTasks,
+      incompleteTasks,
+      completionPercentage,
+      estimatedMinutes,
+      estimatedHours,
+      remainingMinutes,
+      daysUntilTarget,
+    };
+  }, [linkedTasks, project]);
+
+  const handleToggleTaskComplete = async (taskId: string, done: boolean) => {
+    await updateTask(taskId, { done: !done });
+  };
+
+  const handleDeleteProject = async () => {
+    if (confirm("Are you sure you want to delete this project? This cannot be undone.")) {
+      await deleteProject(projectId);
+      router.push("/tools/projects");
+    }
+  };
+
+  if (!project) {
+    return (
+      <div className="max-w-7xl mx-auto p-4 md:p-6">
+        <div className="text-center py-12">
+          <Target className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">
+            Project Not Found
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            The project you&apos;re looking for doesn&apos;t exist or has been deleted.
+          </p>
+          <button
+            onClick={() => router.push("/tools/projects")}
+            className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all"
+          >
+            Back to Projects
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 dark:from-green-950/20 dark:via-emerald-950/20 dark:to-teal-950/20 p-6 rounded-2xl border-4 border-green-200 dark:border-green-800 shadow-xl">
+        <button
+          onClick={() => router.push("/tools/projects")}
+          className="flex items-center gap-2 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 font-semibold mb-4 transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          Back to Projects
+        </button>
+
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-4 flex-1">
+            <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl shadow-lg">
+              <Target className="h-8 w-8 text-white" />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
+                {project.title}
+              </h1>
+              <p className="text-gray-700 dark:text-gray-300 text-lg mb-3">{project.objective}</p>
+
+              {/* Meta info */}
+              <div className="flex flex-wrap items-center gap-3 text-sm">
+                <span className={`px-3 py-1 rounded-full font-semibold ${
+                  project.status === "active"
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                    : project.status === "completed"
+                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                    : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                }`}>
+                  {project.status}
+                </span>
+
+                <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 font-semibold">
+                  {project.category}
+                </span>
+
+                <span className={`px-3 py-1 rounded-full font-semibold ${
+                  project.priority === "urgent"
+                    ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                    : project.priority === "high"
+                    ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
+                    : project.priority === "medium"
+                    ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300"
+                    : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                }`}>
+                  {project.priority}
+                </span>
+
+                <span className="px-3 py-1 rounded-full bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300 font-semibold">
+                  {project.timeframe}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => {/* TODO: Edit modal */}}
+              className="p-2.5 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-lg transition-colors"
+              title="Edit Project"
+            >
+              <Edit3 className="h-5 w-5" />
+            </button>
+            <button
+              onClick={handleDeleteProject}
+              className="p-2.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg transition-colors"
+              title="Delete Project"
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="rounded-xl p-4 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-2 border-blue-200 dark:border-blue-800 shadow-md">
+          <div className="flex items-center gap-2 mb-2">
+            <ListChecks className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <div className="text-xs font-semibold text-blue-600 dark:text-blue-400">Tasks</div>
+          </div>
+          <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+            {stats.completedTasks}/{stats.totalTasks}
+          </div>
+          <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">completed</div>
+        </div>
+
+        <div className="rounded-xl p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-2 border-purple-200 dark:border-purple-800 shadow-md">
+          <div className="flex items-center gap-2 mb-2">
+            <BarChart3 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <div className="text-xs font-semibold text-purple-600 dark:text-purple-400">Progress</div>
+          </div>
+          <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+            {stats.completionPercentage}%
+          </div>
+          <div className="w-full bg-purple-200 dark:bg-purple-900 rounded-full h-1.5 mt-2">
+            <div
+              className="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 rounded-full transition-all"
+              style={{ width: `${stats.completionPercentage}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="rounded-xl p-4 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border-2 border-orange-200 dark:border-orange-800 shadow-md">
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+            <div className="text-xs font-semibold text-orange-600 dark:text-orange-400">Time Left</div>
+          </div>
+          <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">
+            {stats.estimatedHours > 0 ? `${stats.estimatedHours}h` : ""}
+            {stats.remainingMinutes > 0 ? ` ${stats.remainingMinutes}m` : stats.estimatedHours === 0 ? "0m" : ""}
+          </div>
+          <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">estimated</div>
+        </div>
+
+        <div className="rounded-xl p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-2 border-green-200 dark:border-green-800 shadow-md">
+          <div className="flex items-center gap-2 mb-2">
+            <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
+            <div className="text-xs font-semibold text-green-600 dark:text-green-400">Deadline</div>
+          </div>
+          {stats.daysUntilTarget !== null ? (
+            <>
+              <div className={`text-2xl font-bold ${
+                stats.daysUntilTarget < 0
+                  ? "text-red-700 dark:text-red-300"
+                  : stats.daysUntilTarget < 7
+                  ? "text-orange-700 dark:text-orange-300"
+                  : "text-green-700 dark:text-green-300"
+              }`}>
+                {Math.abs(stats.daysUntilTarget)}
+              </div>
+              <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                {stats.daysUntilTarget < 0 ? "days overdue" : "days left"}
+              </div>
+            </>
+          ) : (
+            <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">No deadline</div>
+          )}
+        </div>
+      </div>
+
+      {/* Split Layout: Project Details (Left) and Tasks (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Side - Project Details */}
+        <div className="space-y-6">
+          {/* Linked Goal */}
+          {linkedGoal && (
+            <div className="rounded-xl p-6 bg-white dark:bg-gray-900 border-2 border-purple-200 dark:border-purple-800 shadow-md">
+              <div className="flex items-center gap-2 mb-3">
+                <Flag className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">Linked Goal</h3>
+              </div>
+              <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
+                <div className="font-semibold text-purple-700 dark:text-purple-300">{linkedGoal.title}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{linkedGoal.objective}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Description */}
+          {project.description && (
+            <div className="rounded-xl p-6 bg-white dark:bg-gray-900 border-2 border-green-200 dark:border-green-800 shadow-md">
+              <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200 mb-3">Description</h3>
+              <p className="text-gray-700 dark:text-gray-300">{project.description}</p>
+            </div>
+          )}
+
+          {/* Action Plan */}
+          {project.actionPlan && project.actionPlan.length > 0 && (
+            <div className="rounded-xl p-6 bg-white dark:bg-gray-900 border-2 border-blue-200 dark:border-blue-800 shadow-md">
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">Action Plan</h3>
+              </div>
+              <ol className="space-y-2">
+                {project.actionPlan.map((step, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white text-sm font-bold flex-shrink-0">
+                      {index + 1}
+                    </span>
+                    <span className="text-gray-700 dark:text-gray-300 flex-1">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {/* Linked Thoughts */}
+          {linkedThoughts.length > 0 && (
+            <div className="rounded-xl p-6 bg-white dark:bg-gray-900 border-2 border-pink-200 dark:border-pink-800 shadow-md">
+              <div className="flex items-center gap-2 mb-3">
+                <LinkIcon className="h-5 w-5 text-pink-600 dark:text-pink-400" />
+                <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">
+                  Related Thoughts ({linkedThoughts.length})
+                </h3>
+              </div>
+              <div className="space-y-2">
+                {linkedThoughts.slice(0, 3).map((thought) => (
+                  <div
+                    key={thought.id}
+                    className="p-3 rounded-lg bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-800 text-sm"
+                  >
+                    {thought.text}
+                  </div>
+                ))}
+                {linkedThoughts.length > 3 && (
+                  <div className="text-sm text-gray-500 dark:text-gray-400 text-center pt-2">
+                    +{linkedThoughts.length - 3} more thoughts
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Side - Tasks List */}
+        <div className="rounded-xl p-6 bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-950/20 dark:to-blue-950/20 border-2 border-cyan-200 dark:border-cyan-800 shadow-md">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <ListChecks className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
+              <h3 className="font-bold text-xl text-gray-800 dark:text-gray-200">Project Tasks</h3>
+            </div>
+            <button
+              onClick={() => {/* TODO: Add task modal */}}
+              className="p-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg transition-colors"
+              title="Add Task"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+          </div>
+
+          {linkedTasks.length === 0 ? (
+            <div className="text-center py-12">
+              <ListChecks className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-600 dark:text-gray-400 mb-4">No tasks linked to this project yet</p>
+              <button
+                onClick={() => {/* TODO: Add task modal */}}
+                className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all"
+              >
+                Add First Task
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[600px] overflow-y-auto">
+              {linkedTasks.map((task) => (
+                <motion.div
+                  key={task.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`p-4 rounded-xl border-2 transition-all ${
+                    task.done
+                      ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-cyan-300 dark:hover:border-cyan-700"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <button
+                      onClick={() => handleToggleTaskComplete(task.id, task.done)}
+                      className={`mt-1 flex-shrink-0 transition-all ${
+                        task.done
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-gray-400 dark:text-gray-600 hover:text-cyan-600 dark:hover:text-cyan-400"
+                      }`}
+                    >
+                      {task.done ? (
+                        <CheckCircle2 className="h-6 w-6" />
+                      ) : (
+                        <Circle className="h-6 w-6" />
+                      )}
+                    </button>
+
+                    <div className="flex-1 min-w-0">
+                      <h4
+                        className={`font-semibold ${
+                          task.done
+                            ? "text-gray-500 dark:text-gray-400 line-through"
+                            : "text-gray-800 dark:text-gray-200"
+                        }`}
+                      >
+                        {task.title}
+                      </h4>
+
+                      <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
+                        <span className={`px-2 py-1 rounded-full font-semibold ${
+                          task.priority === "urgent"
+                            ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                            : task.priority === "high"
+                            ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
+                            : task.priority === "medium"
+                            ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300"
+                            : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                        }`}>
+                          {task.priority}
+                        </span>
+
+                        {task.estimatedMinutes && (
+                          <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                            <Clock className="h-3 w-3" />
+                            {task.estimatedMinutes}m
+                          </span>
+                        )}
+
+                        <span className="px-2 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 font-semibold">
+                          {task.category}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

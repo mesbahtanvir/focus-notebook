@@ -20,12 +20,8 @@ import {
   Calendar,
   Sparkles,
   Loader2,
-  Bell,
-  Download,
-  Upload
+  Bell
 } from "lucide-react";
-import { thoughtsToCSV, downloadCSV, csvToThoughts } from '@/lib/csvUtils';
-import { ImportThoughtsModal } from '@/components/ImportThoughtsModal';
 import { ErrorModal } from '@/components/ErrorModal';
 import { ThoughtDetailModal } from "@/components/ThoughtDetailModal";
 import {
@@ -51,8 +47,6 @@ function ThoughtsPageContent() {
   const [processingThoughtId, setProcessingThoughtId] = useState<string | null>(null);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [currentApprovalItem, setCurrentApprovalItem] = useState<string | null>(null);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [pendingImportThoughts, setPendingImportThoughts] = useState<any[]>([]);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -214,62 +208,6 @@ function ThoughtsPageContent() {
     }, 100);
   };
 
-  const handleExport = () => {
-    const csv = thoughtsToCSV(thoughts);
-    const filename = `thoughts-export-${new Date().toISOString().split('T')[0]}.csv`;
-    downloadCSV(csv, filename);
-  };
-
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const csvContent = e.target?.result as string;
-        const importedThoughts = csvToThoughts(csvContent);
-        
-        if (importedThoughts.length === 0) {
-          alert('No valid thoughts found in CSV file');
-          return;
-        }
-
-        setPendingImportThoughts(importedThoughts);
-        setShowImportModal(true);
-      } catch (error) {
-        alert(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
-  };
-
-  const handleConfirmImport = async () => {
-    try {
-      const addThought = useThoughts.getState().add;
-      for (const thought of pendingImportThoughts) {
-        // Remove 'processed' tag so thoughts can be processed again
-        const cleanedThought = {
-          ...thought,
-          tags: thought.tags?.filter((tag: string) => tag !== 'processed')
-        };
-        await addThought(cleanedThought);
-      }
-      
-      setSuccessMessage(`Successfully imported ${pendingImportThoughts.length} thought(s)!`);
-      setShowSuccessModal(true);
-      setShowImportModal(false);
-      setPendingImportThoughts([]);
-    } catch (error) {
-      alert(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
-
-  const handleCancelImport = () => {
-    setShowImportModal(false);
-    setPendingImportThoughts([]);
-  };
 
 
   return (
@@ -319,28 +257,6 @@ function ThoughtsPageContent() {
         </div>
       )}
 
-      <ToolFilters>
-        <div className="flex gap-2 ml-auto">
-          <button
-            onClick={handleExport}
-            className="px-3 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-300 text-sm font-medium transition-colors flex items-center gap-1.5"
-          >
-            <Download className="h-4 w-4" />
-            Export CSV
-          </button>
-          
-          <label className="px-3 py-1.5 rounded-lg bg-green-100 hover:bg-green-200 dark:bg-green-900 dark:hover:bg-green-800 text-green-700 dark:text-green-300 text-sm font-medium transition-colors flex items-center gap-1.5 cursor-pointer">
-            <Upload className="h-4 w-4" />
-            Import CSV
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleImport}
-              className="hidden"
-            />
-          </label>
-        </div>
-      </ToolFilters>
 
       <ToolContent>
         {filteredThoughts.length === 0 ? (
@@ -409,30 +325,6 @@ function ThoughtsPageContent() {
                             </span>
                           )}
                         </div>
-                        
-                        {/* Process Now Button for unprocessed thoughts */}
-                        {!thought.tags?.includes('processed') && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleProcessThought(thought.id);
-                            }}
-                            disabled={isProcessing && processingThoughtId === thought.id}
-                            className="mt-3 px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-semibold rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all flex items-center gap-1.5 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isProcessing && processingThoughtId === thought.id ? (
-                              <>
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                                Processing...
-                              </>
-                            ) : (
-                              <>
-                                <Sparkles className="h-3 w-3" />
-                                Process Now
-                              </>
-                            )}
-                          </button>
-                        )}
                       </div>
                     </div>
                   </ToolCard>
@@ -466,14 +358,6 @@ function ThoughtsPageContent() {
         />
       )}
 
-      {/* Import Preview Modal */}
-      {showImportModal && (
-        <ImportThoughtsModal
-          thoughts={pendingImportThoughts}
-          onConfirm={handleConfirmImport}
-          onCancel={handleCancelImport}
-        />
-      )}
 
       {/* Error Modal */}
       <ErrorModal

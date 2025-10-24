@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useProjects, Project, ProjectTimeframe, ProjectStatus } from "@/store/useProjects";
 import { useGoals } from "@/store/useGoals";
 import { useThoughts } from "@/store/useThoughts";
@@ -29,6 +30,7 @@ import {
 } from "lucide-react";
 
 export default function ProjectsPage() {
+  const router = useRouter();
   const { user } = useAuth();
   const projects = useProjects((s) => s.projects);
   const subscribe = useProjects((s) => s.subscribe);
@@ -172,7 +174,7 @@ export default function ProjectsPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                onClick={() => setSelectedProject(project)}
+                onClick={() => router.push(`/tools/projects/${project.id}`)}
                 className="card p-6 space-y-4 hover:shadow-md transition-shadow cursor-pointer"
               >
                 {/* Project Header */}
@@ -321,42 +323,47 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-gradient-to-br from-white to-green-50 dark:from-gray-900 dark:to-green-950/30 rounded-3xl shadow-2xl border-4 border-green-200 dark:border-green-800 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6 border-b">
+        <div className="sticky top-0 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/50 dark:to-emerald-900/50 border-b-4 border-green-300 dark:border-green-700 p-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">🎯 New Project</h2>
-            <button onClick={onClose} className="p-2 hover:bg-accent rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl shadow-lg">
+                <Target className="h-6 w-6 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">New Project</h2>
+            </div>
+            <button onClick={onClose} className="p-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors">
               <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 bg-white dark:bg-gray-900">
           <div>
-            <label className="block text-sm font-medium mb-2">Project Title *</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Project Title *</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Better Physique, Learn Spanish"
-              className="input w-full"
+              className="w-full p-3 rounded-xl border-2 border-green-200 dark:border-green-800 focus:border-green-400 dark:focus:border-green-600 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-900 bg-white dark:bg-gray-800 transition-all"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Objective *</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Objective *</label>
             <textarea
               value={objective}
               onChange={(e) => setObjective(e.target.value)}
               placeholder="What is the purpose of this project?"
-              className="input w-full min-h-[80px]"
+              className="w-full p-3 rounded-xl border-2 border-green-200 dark:border-green-800 focus:border-green-400 dark:focus:border-green-600 focus:ring-2 focus:ring-green-200 dark:focus:ring-green-900 bg-white dark:bg-gray-800 transition-all min-h-[80px]"
               required
             />
           </div>
@@ -474,11 +481,12 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 rounded-lg border hover:bg-accent">
+          <div className="flex gap-3 pt-4 border-t-2 border-green-200 dark:border-green-800">
+            <button type="button" onClick={onClose} className="flex-1 px-5 py-2.5 text-sm font-semibold rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
               Cancel
             </button>
-            <button type="submit" className="flex-1 btn-primary">
+            <button type="submit" className="flex-1 px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2">
+              <Save className="h-4 w-4" />
               Create Project
             </button>
           </div>

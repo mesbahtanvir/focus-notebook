@@ -18,6 +18,18 @@ export default function CBTPage() {
     });
   }, [thoughts]);
 
+  // Filter thoughts that have been processed with CBT
+  const processedThoughts = useMemo(() => {
+    return thoughts.filter(thought => {
+      const tags = thought.tags || [];
+      return tags.includes('cbt-processed') && thought.cbtAnalysis;
+    }).sort((a, b) => {
+      const dateA = a.cbtAnalysis?.analyzedAt ? new Date(a.cbtAnalysis.analyzedAt).getTime() : 0;
+      const dateB = b.cbtAnalysis?.analyzedAt ? new Date(b.cbtAnalysis.analyzedAt).getTime() : 0;
+      return dateB - dateA; // Most recent first
+    });
+  }, [thoughts]);
+
   const handleProcessComplete = (thought: Thought, cbtData: any) => {
     // Update thought with CBT analysis and add "cbt-processed" tag
     const updatedTags = [...(thought.tags || [])];
@@ -158,6 +170,134 @@ export default function CBTPage() {
                         Process →
                       </div>
                     </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
+
+      {/* Processed Thoughts List */}
+      <div className="space-y-4">
+        <h2 className="text-lg md:text-xl font-bold text-gray-800 flex items-center gap-2">
+          <CheckCircle className="h-5 w-5 text-green-500" />
+          CBT-Processed Thoughts History
+        </h2>
+
+        {processedThoughts.length === 0 ? (
+          <div className="rounded-2xl p-8 text-center bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
+            <CheckCircle className="h-12 w-12 mx-auto text-green-400 mb-3" />
+            <p className="text-gray-600">
+              No processed thoughts yet. Complete the CBT process above to see your history here.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            <AnimatePresence>
+              {processedThoughts.map((thought) => (
+                <motion.div
+                  key={thought.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="rounded-xl p-4 md:p-6 bg-white border-2 border-green-200 shadow-md hover:shadow-lg transition-all"
+                >
+                  <div className="space-y-4">
+                    {/* Header */}
+                    <div className="flex items-start gap-4 pb-4 border-b border-green-100">
+                      <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex-shrink-0">
+                        <CheckCircle className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-800 text-base">
+                          {thought.text}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Processed: {(() => {
+                            try {
+                              const date = thought.cbtAnalysis?.analyzedAt;
+                              if (!date) return 'N/A';
+                              return new Date(date).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              });
+                            } catch {
+                              return 'N/A';
+                            }
+                          })()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* CBT Analysis Summary */}
+                    {thought.cbtAnalysis && (
+                      <div className="grid gap-3 text-sm">
+                        {/* Situation */}
+                        {thought.cbtAnalysis.situation && (
+                          <div className="rounded-lg p-3 bg-purple-50 border border-purple-200">
+                            <div className="font-semibold text-purple-700 mb-1 flex items-center gap-2">
+                              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-purple-500 text-white text-xs">1</span>
+                              Situation
+                            </div>
+                            <p className="text-gray-700">{thought.cbtAnalysis.situation}</p>
+                          </div>
+                        )}
+
+                        {/* Automatic Thought */}
+                        {thought.cbtAnalysis.automaticThought && (
+                          <div className="rounded-lg p-3 bg-pink-50 border border-pink-200">
+                            <div className="font-semibold text-pink-700 mb-1 flex items-center gap-2">
+                              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-pink-500 text-white text-xs">2</span>
+                              Automatic Thought
+                            </div>
+                            <p className="text-gray-700 italic">&quot;{thought.cbtAnalysis.automaticThought}&quot;</p>
+                          </div>
+                        )}
+
+                        {/* Emotions */}
+                        {thought.cbtAnalysis.emotion && (
+                          <div className="rounded-lg p-3 bg-red-50 border border-red-200">
+                            <div className="font-semibold text-red-700 mb-1 flex items-center gap-2">
+                              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-xs">3</span>
+                              Emotions
+                            </div>
+                            <p className="text-gray-700">{thought.cbtAnalysis.emotion}</p>
+                          </div>
+                        )}
+
+                        {/* Cognitive Distortions */}
+                        {(thought.cbtAnalysis as any).cognitiveDistortions && (thought.cbtAnalysis as any).cognitiveDistortions.length > 0 && (
+                          <div className="rounded-lg p-3 bg-orange-50 border border-orange-200">
+                            <div className="font-semibold text-orange-700 mb-2 flex items-center gap-2">
+                              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-orange-500 text-white text-xs">4</span>
+                              Cognitive Distortions
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {(thought.cbtAnalysis as any).cognitiveDistortions.map((distortion: string, idx: number) => (
+                                <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium border border-orange-300">
+                                  {distortion}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Rational Response */}
+                        {(thought.cbtAnalysis as any).rationalResponse && (
+                          <div className="rounded-lg p-3 bg-green-50 border border-green-200">
+                            <div className="font-semibold text-green-700 mb-1 flex items-center gap-2">
+                              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-green-500 text-white text-xs">5</span>
+                              Rational Response
+                            </div>
+                            <p className="text-gray-700">{(thought.cbtAnalysis as any).rationalResponse}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               ))}

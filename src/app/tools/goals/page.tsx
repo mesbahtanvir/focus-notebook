@@ -7,7 +7,7 @@ import { useProjects } from "@/store/useProjects";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, Target, CheckCircle2, Clock, ChevronRight, 
-  Trash2, Edit2, PlayCircle, PauseCircle, Archive, ChevronDown, ChevronUp, Search 
+  Trash2, Edit2, PlayCircle, PauseCircle, Archive, ChevronDown, ChevronUp, Search, Save 
 } from "lucide-react";
 import Link from "next/link";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
@@ -144,28 +144,37 @@ export default function GoalsPage() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="card p-6"
+            className="rounded-3xl bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30 shadow-2xl border-4 border-purple-200 dark:border-purple-800 overflow-hidden"
           >
-            <h3 className="text-xl font-bold mb-4">{editingGoal ? 'Edit Goal' : 'Create New Goal'}</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/50 dark:to-indigo-900/50 border-b-4 border-purple-300 dark:border-purple-700 p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-xl shadow-lg">
+                  <Target className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                  {editingGoal ? 'Edit Goal' : 'Create New Goal'}
+                </h3>
+              </div>
+            </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 bg-white dark:bg-gray-900">
               <div>
-                <label className="block text-sm font-medium mb-2">Title *</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Title *</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 outline-none"
+                  className="w-full p-3 rounded-xl border-2 border-purple-200 dark:border-purple-800 focus:border-purple-400 dark:focus:border-purple-600 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900 bg-white dark:bg-gray-800 transition-all"
                   placeholder="e.g., Launch my own business"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Objective *</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Objective *</label>
                 <textarea
                   value={objective}
                   onChange={(e) => setObjective(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 outline-none"
+                  className="w-full p-3 rounded-xl border-2 border-purple-200 dark:border-purple-800 focus:border-purple-400 dark:focus:border-purple-600 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900 bg-white dark:bg-gray-800 transition-all"
                   rows={3}
                   placeholder="Why is this goal important? What will achieving it mean to you?"
                   required
@@ -209,19 +218,20 @@ export default function GoalsPage() {
                 </div>
               </div>
 
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  className="px-6 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:from-purple-700 hover:to-indigo-700 transition-all"
-                >
-                  {editingGoal ? 'Update Goal' : 'Create Goal'}
-                </button>
+              <div className="flex gap-3 pt-4 border-t-2 border-purple-200 dark:border-purple-800">
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-6 py-2 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                  className="flex-1 px-5 py-2.5 text-sm font-semibold rounded-xl border-2 border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
                   Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  {editingGoal ? 'Update Goal' : 'Create Goal'}
                 </button>
               </div>
             </form>
