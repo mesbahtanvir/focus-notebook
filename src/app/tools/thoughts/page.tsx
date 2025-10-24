@@ -106,18 +106,26 @@ function ThoughtsPageContent() {
   }, [awaitingApproval, showApprovalDialog, currentApprovalItem, router]);
 
   const filteredThoughts = useMemo(() => {
+    if (!thoughts || !Array.isArray(thoughts)) return [];
+    
     // Sort by created date, newest first
-    const sorted = [...thoughts].sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    const sorted = [...thoughts].sort((a, b) => {
+      const dateA = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
 
     return sorted;
   }, [thoughts]);
 
   const thoughtStats = useMemo(() => {
+    if (!thoughts || !Array.isArray(thoughts)) {
+      return { total: 0, analyzed: 0, unprocessed: 0 };
+    }
+    
     const total = thoughts.length;
-    const analyzed = thoughts.filter(t => t.cbtAnalysis).length;
-    const unprocessed = thoughts.filter(t => !t.tags?.includes('processed')).length;
+    const analyzed = thoughts.filter(t => t && t.cbtAnalysis).length;
+    const unprocessed = thoughts.filter(t => t && !t.tags?.includes('processed')).length;
 
     return { total, analyzed, unprocessed };
   }, [thoughts]);
@@ -348,26 +356,29 @@ function ThoughtsPageContent() {
         ) : (
           <ToolList>
             <AnimatePresence>
-              {filteredThoughts.map((thought) => (
-                <motion.div
-                  key={thought.id}
-                  layout
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                >
-                  <ToolCard onClick={() => setSelectedThought(thought)}>
-                    <div className="flex items-start gap-3">
-                      <div className="h-6 w-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0 shadow-lg">
-                        <Brain className="h-4 w-4 text-white" />
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-medium text-gray-900 dark:text-gray-100 flex-1 min-w-0">
-                            {thought.text}
-                          </p>
+              {filteredThoughts.map((thought) => {
+                if (!thought || !thought.id) return null;
+                
+                return (
+                  <motion.div
+                    key={thought.id}
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                  >
+                    <ToolCard onClick={() => setSelectedThought(thought)}>
+                      <div className="flex items-start gap-3">
+                        <div className="h-6 w-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0 shadow-lg">
+                          <Brain className="h-4 w-4 text-white" />
                         </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium text-gray-900 dark:text-gray-100 flex-1 min-w-0">
+                              {thought.text || 'No content'}
+                            </p>
+                          </div>
                         
                         <div className="flex flex-wrap items-center gap-2 mt-2">
                           {thought.cbtAnalysis && (
@@ -426,7 +437,8 @@ function ThoughtsPageContent() {
                     </div>
                   </ToolCard>
                 </motion.div>
-              ))}
+                );
+              })}
             </AnimatePresence>
           </ToolList>
         )}
