@@ -3,17 +3,31 @@ import { act } from '@testing-library/react'
 import MoodTrackerPage from '@/app/tools/moodtracker/page'
 
 // Mock the useMoods store
-const mockAdd = jest.fn()
-const mockMoods = jest.fn(() => [])
+const mockMoods = jest.fn()
+const mockAddMood = jest.fn()
 
 jest.mock('@/store/useMoods', () => ({
   useMoods: (selector: any) => {
     const state = {
-      moods: mockMoods(),
-      add: mockAdd,
+      moods: [],
+      add: mockAddMood,
+      isLoading: false,
+      fromCache: false,
+      hasPendingWrites: false,
+      subscribe: jest.fn(),
+      delete: jest.fn(),
+      ...(typeof selector === 'function' ? selector({
+        moods: [],
+        add: mockAddMood,
+        isLoading: false,
+        fromCache: false,
+        hasPendingWrites: false,
+        subscribe: jest.fn(),
+        delete: jest.fn(),
+      }) : {})
     }
-    return selector(state)
-  },
+    return state
+  }
 }))
 
 describe('MoodTracker Page', () => {
