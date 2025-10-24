@@ -2,6 +2,7 @@ import { useThoughts, Thought } from '@/store/useThoughts';
 import { useProcessQueue } from '@/store/useProcessQueue';
 import { useSettings } from '@/store/useSettings';
 import { useRequestLog } from '@/store/useRequestLog';
+import { useFriends } from '@/store/useFriends';
 import { ToolRegistry } from './toolRegistry';
 import { actionExecutor } from './actionExecutor';
 
@@ -74,6 +75,10 @@ export class ManualProcessor {
       // Get tool descriptions
       const toolDescriptions = ToolRegistry.getToolDescriptions();
 
+      // Get friends list for person name detection
+      const friends = useFriends.getState().friends;
+      const personNames = friends.map(f => f.name);
+
       // Call API to analyze thought
       const response = await fetch('/api/process-thought', {
         method: 'POST',
@@ -87,7 +92,8 @@ export class ManualProcessor {
           },
           apiKey: settings.openaiApiKey,
           model: settings.aiModel || 'gpt-3.5-turbo',
-          toolDescriptions
+          toolDescriptions,
+          personNames
         })
       });
 

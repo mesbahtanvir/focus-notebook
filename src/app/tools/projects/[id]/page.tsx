@@ -26,6 +26,7 @@ import {
   BarChart3,
   User
 } from "lucide-react";
+import { TaskModal } from "@/components/TaskModal";
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -37,6 +38,7 @@ export default function ProjectDetailPage() {
   const subscribe = useProjects((s) => s.subscribe);
   const updateProject = useProjects((s) => s.update);
   const deleteProject = useProjects((s) => s.delete);
+  const linkTask = useProjects((s) => s.linkTask);
 
   const tasks = useTasks((s) => s.tasks);
   const subscribeTasks = useTasks((s) => s.subscribe);
@@ -44,6 +46,8 @@ export default function ProjectDetailPage() {
 
   const goals = useGoals((s) => s.goals);
   const thoughts = useThoughts((s) => s.thoughts);
+
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
 
   useEffect(() => {
     if (user?.uid) {
@@ -106,6 +110,11 @@ export default function ProjectDetailPage() {
 
   const handleToggleTaskComplete = async (taskId: string, done: boolean) => {
     await updateTask(taskId, { done: !done });
+  };
+
+  const handleTaskCreated = async (taskId: string) => {
+    // Link the newly created task to this project
+    await linkTask(projectId, taskId);
   };
 
   const handleDeleteProject = async () => {
@@ -364,7 +373,7 @@ export default function ProjectDetailPage() {
               <h3 className="font-bold text-xl text-gray-800 dark:text-gray-200">Project Tasks</h3>
             </div>
             <button
-              onClick={() => {/* TODO: Add task modal */}}
+              onClick={() => setIsTaskModalOpen(true)}
               className="p-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg transition-colors"
               title="Add Task"
             >
@@ -377,7 +386,7 @@ export default function ProjectDetailPage() {
               <ListChecks className="h-16 w-16 mx-auto text-gray-400 mb-4" />
               <p className="text-gray-600 dark:text-gray-400 mb-4">No tasks linked to this project yet</p>
               <button
-                onClick={() => {/* TODO: Add task modal */}}
+                onClick={() => setIsTaskModalOpen(true)}
                 className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all"
               >
                 Add First Task
@@ -455,6 +464,15 @@ export default function ProjectDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Task Modal */}
+      <TaskModal
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        onTaskCreated={handleTaskCreated}
+        projectId={projectId}
+        projectTitle={project.title}
+      />
     </div>
   );
 }

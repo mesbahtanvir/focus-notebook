@@ -22,7 +22,8 @@ export default function GoalsPage() {
   const toggleStatus = useGoals((s) => s.toggleStatus);
   
   const getProjectsByGoal = useProjects((s) => s.getProjectsByGoal);
-  
+  const subscribeProjects = useProjects((s) => s.subscribe);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -33,8 +34,9 @@ export default function GoalsPage() {
   useEffect(() => {
     if (user?.uid) {
       subscribe(user.uid);
+      subscribeProjects(user.uid);
     }
-  }, [user?.uid, subscribe]);
+  }, [user?.uid, subscribe, subscribeProjects]);
 
   const handleSubmit = async (data: {
     title: string;
@@ -172,13 +174,14 @@ export default function GoalsPage() {
                       <div className="flex gap-2">
                         <input
                           type="text"
+                          id={`project-input-${goal.id}`}
                           placeholder="New project name..."
-                          onKeyPress={(e) => {
+                          onKeyPress={async (e) => {
                             if (e.key === 'Enter') {
                               const input = e.currentTarget;
                               const projectName = input.value.trim();
                               if (projectName) {
-                                useProjects.getState().add({
+                                await useProjects.getState().add({
                                   title: projectName,
                                   objective: `Project for ${goal.title}`,
                                   actionPlan: [],
@@ -192,24 +195,26 @@ export default function GoalsPage() {
                               }
                             }
                           }}
-                          className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 outline-none"
+                          className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 outline-none bg-white dark:bg-gray-800"
                         />
                         <button
-                          onClick={(e) => {
-                            const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                            const projectName = input.value.trim();
-                            if (projectName) {
-                              useProjects.getState().add({
-                                title: projectName,
-                                objective: `Project for ${goal.title}`,
-                                actionPlan: [],
-                                goalId: goal.id,
-                                timeframe: 'long-term',
-                                status: 'active',
-                                category: 'mastery',
-                                priority: 'medium',
-                              });
-                              input.value = '';
+                          onClick={async () => {
+                            const input = document.getElementById(`project-input-${goal.id}`) as HTMLInputElement;
+                            if (input) {
+                              const projectName = input.value.trim();
+                              if (projectName) {
+                                await useProjects.getState().add({
+                                  title: projectName,
+                                  objective: `Project for ${goal.title}`,
+                                  actionPlan: [],
+                                  goalId: goal.id,
+                                  timeframe: 'long-term',
+                                  status: 'active',
+                                  category: 'mastery',
+                                  priority: 'medium',
+                                });
+                                input.value = '';
+                              }
                             }
                           }}
                           className="px-3 py-1.5 text-sm rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:hover:bg-purple-950/60 transition-colors font-medium"

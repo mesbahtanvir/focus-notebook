@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Friend } from "@/store/useFriends";
 import { Zap, Battery, AlertCircle, Edit3, Trash2, TrendingUp, Shield, Clock } from "lucide-react";
+import Link from "next/link";
 
 export function FriendCard({ friend, onEdit, onDelete }: {
   friend: Friend;
@@ -35,21 +36,27 @@ export function FriendCard({ friend, onEdit, onDelete }: {
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
+        <Link href={`/tools/friends/${friend.id}`} className="flex-1 hover:opacity-80 transition-opacity">
           <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100">{friend.name}</h3>
           <p className="text-xs text-gray-600 dark:text-gray-400 capitalize">
             {friend.relationshipType.replace('-', ' ')}
           </p>
-        </div>
+        </Link>
         <div className="flex items-center gap-1">
           <button
-            onClick={onEdit}
+            onClick={(e) => {
+              e.preventDefault();
+              onEdit();
+            }}
             className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
           >
             <Edit3 className="h-4 w-4 text-gray-600 dark:text-gray-400" />
           </button>
           <button
-            onClick={onDelete}
+            onClick={(e) => {
+              e.preventDefault();
+              onDelete();
+            }}
             className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition"
           >
             <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />

@@ -24,7 +24,8 @@ function FocusPageContent() {
   const startSession = useFocus((s) => s.startSession);
   const subscribe = useFocus((s) => s.subscribe);
   const loadActiveSession = useFocus((s) => s.loadActiveSession);
-  
+  const clearCompletedSession = useFocus((s) => s.clearCompletedSession);
+
   // Get duration from URL or default to 60 minutes
   const urlDuration = searchParams.get('duration');
   const [duration, setDuration] = useState(urlDuration ? parseInt(urlDuration) : 60);

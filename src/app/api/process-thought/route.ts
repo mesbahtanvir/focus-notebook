@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { thought, apiKey, toolDescriptions, model } = await request.json();
+    const { thought, apiKey, toolDescriptions, model, personNames } = await request.json();
     const selectedModel = model || 'gpt-3.5-turbo'; // Default to cheapest model
 
     // Validate API key
@@ -30,10 +30,14 @@ export async function POST(request: NextRequest) {
     console.log('💭 Thought text:', thought.text);
 
     // Build the prompt
+    const personNamesContext = personNames && personNames.length > 0
+      ? `\n\nKnown People in User's Network:\n${personNames.join(', ')}`
+      : '';
+
     const prompt = `You are an intelligent thought processor for a productivity and mental wellness app.
 
 Available Tools:
-${toolDescriptions}
+${toolDescriptions}${personNamesContext}
 
 User Thought:
 Text: "${thought.text}"
@@ -146,7 +150,18 @@ PROJECT/GOAL RECOGNITION RULES:
   * "I want to have a great physique in 2 years" → createProject (long-term, health, target: 2 years from now)
   * "How can I achieve great physique in 2 years" → linkToProject (link to "Better Physique" project) + createTask + addTag: brainstorm
   * "Goal: Learn Spanish fluently" → createProject (long-term, mastery)
-  * "Ideas for improving my fitness routine" → linkToProject (link to fitness-related project) + addTag: brainstorm`;
+  * "Ideas for improving my fitness routine" → linkToProject (link to fitness-related project) + addTag: brainstorm
+
+PERSON NAME DETECTION RULES:
+- If the thought mentions any person from the "Known People in User's Network" list, automatically add their name as a tag
+- Check for exact matches (case-insensitive) of person names in the thought text
+- If multiple people are mentioned, add all their names as tags
+- Use the addTag action with type "addTag", tool "system", data: { "tag": "PersonName" }
+- Examples:
+  * Thought: "Had a great conversation with John today" + Known People: ["John", "Sarah"] → addTag: "John"
+  * Thought: "Meeting with Sarah and John tomorrow" + Known People: ["John", "Sarah"] → addTag: "Sarah" AND addTag: "John"
+  * Thought: "John mentioned an interesting project idea" + Known People: ["John"] → addTag: "John"
+- This helps users track thoughts related to specific people in their network`;
 
     // Call OpenAI API
     console.log('📤 Calling OpenAI API');

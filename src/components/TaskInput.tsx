@@ -11,9 +11,10 @@ type TaskDestination = 'today' | 'backlog';
 interface TaskInputProps {
   onClose?: () => void;
   onTaskCreated?: (taskId: string) => void;
+  defaultProjectId?: string;
 }
 
-export function TaskInput({ onClose, onTaskCreated }: TaskInputProps = {}) {
+export function TaskInput({ onClose, onTaskCreated, defaultProjectId }: TaskInputProps = {}) {
   const [taskName, setTaskName] = useState('');
   const [destination, setDestination] = useState<TaskDestination>('today');
   const [priority, setPriority] = useState<TaskPriority>('medium');
@@ -24,7 +25,7 @@ export function TaskInput({ onClose, onTaskCreated }: TaskInputProps = {}) {
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>('none');
   const [recurrenceFrequency, setRecurrenceFrequency] = useState('');
   const [focusEligible, setFocusEligible] = useState(true);
-  const [projectId, setProjectId] = useState('');
+  const [projectId, setProjectId] = useState(defaultProjectId || '');
   const [showSuccess, setShowSuccess] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const addTask = useTasks((state) => state.add);
