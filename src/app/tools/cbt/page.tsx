@@ -4,8 +4,11 @@ import { useState, useMemo } from "react";
 import { useThoughts, Thought } from "@/store/useThoughts";
 import { motion, AnimatePresence } from "framer-motion";
 import { Brain, CheckCircle, ArrowLeft, Lightbulb, AlertCircle, TrendingUp, Heart } from "lucide-react";
+import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 
 export default function CBTPage() {
+  useTrackToolUsage('cbt');
+
   const thoughts = useThoughts((s) => s.thoughts);
   const updateThought = useThoughts((s) => s.updateThought);
   const [selectedThought, setSelectedThought] = useState<Thought | null>(null);

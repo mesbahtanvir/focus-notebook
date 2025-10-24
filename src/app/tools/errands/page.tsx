@@ -6,8 +6,11 @@ import { ShoppingBag, MapPin, Car, Package, CheckCircle2, Circle, Trash2, Plus, 
 import { useState } from "react";
 import Link from "next/link";
 import { getNotesPreview } from "@/lib/formatNotes";
+import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 
 export default function ErrandsPage() {
+  useTrackToolUsage('errands');
+
   const tasks = useTasks((s) => s.tasks);
   const toggle = useTasks((s) => s.toggle);
   const deleteTask = useTasks((s) => s.deleteTask);

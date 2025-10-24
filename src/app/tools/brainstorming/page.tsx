@@ -6,9 +6,9 @@ import { useSettings } from "@/store/useSettings";
 import { useRequestLog } from "@/store/useRequestLog";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { 
-  Lightbulb, 
-  MessageSquare, 
+import {
+  Lightbulb,
+  MessageSquare,
   Send,
   ArrowLeft,
   Sparkles,
@@ -19,6 +19,7 @@ import {
   Key,
   AlertCircle
 } from "lucide-react";
+import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -27,6 +28,8 @@ interface Message {
 }
 
 export default function BrainstormingPage() {
+  useTrackToolUsage('brainstorming');
+
   const thoughts = useThoughts((s) => s.thoughts);
   const updateThought = useThoughts((s) => s.updateThought);
   const settings = useSettings((s) => s.settings);

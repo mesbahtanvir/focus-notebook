@@ -8,6 +8,7 @@ import { useMoods, type MoodEntry } from "@/store/useMoods";
 import { useThoughts } from "@/store/useThoughts";
 import { X, Trash2, ExternalLink } from "lucide-react";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 
 // Emotion definitions with categories
 type Emotion = {
@@ -71,6 +72,8 @@ const COMMON_EMOTIONS = EMOTIONS.filter(e => e.isCommon);
 const ALL_EMOTIONS = EMOTIONS;
 
 export default function MoodTrackerPage() {
+  useTrackToolUsage('moodtracker');
+
   const moods = useMoods((s) => s.moods) || [];
   const addMood = useMoods((s) => s.add);
 

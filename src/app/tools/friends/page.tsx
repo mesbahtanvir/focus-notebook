@@ -17,8 +17,11 @@ import {
   Search,
   UserX
 } from "lucide-react";
+import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 
 export default function FriendsPage() {
+  useTrackToolUsage('friends');
+
   const { user } = useAuth();
   const friends = useFriends((s) => s.friends);
   const subscribe = useFriends((s) => s.subscribe);

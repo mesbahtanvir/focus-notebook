@@ -24,10 +24,12 @@ import {
 import { FormattedNotes, getNotesPreview } from "@/lib/formatNotes";
 import Link from "next/link";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
+import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 
 type FilterType = 'all';
 
 export default function DocumentsPage() {
+  useTrackToolUsage('notes');
   const tasks = useTasks((s) => s.tasks);
   const updateTask = useTasks((s) => s.updateTask);
   const thoughts = useThoughts((s) => s.thoughts);

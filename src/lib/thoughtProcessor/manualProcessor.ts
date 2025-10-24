@@ -120,7 +120,7 @@ export class ManualProcessor {
 
       // Process actions
       const actions = result.actions || [];
-      
+
       // Add thought enhancement if suggested
       if (result.thoughtEnhancement?.shouldApply) {
         actions.unshift({
@@ -135,20 +135,44 @@ export class ManualProcessor {
       }
 
       // Create action objects
+      const actionIds: string[] = [];
       for (const actionData of actions) {
-        addAction(queueId, {
+        const actionId = addAction(queueId, {
           type: actionData.type,
           thoughtId: thought.id,
           data: actionData.data,
           status: 'pending',
           aiReasoning: actionData.reasoning
         });
+        actionIds.push(actionId);
       }
 
-      // Set status to awaiting approval (Safe Mode)
-      updateQueueItem(queueId, {
-        status: 'awaiting-approval'
-      });
+      // Check confidence level for auto-approval
+      const confidence = result.confidence || 0;
+      const HIGH_CONFIDENCE_THRESHOLD = 0.85; // 85% or higher
+
+      if (confidence >= HIGH_CONFIDENCE_THRESHOLD && actions.length > 0) {
+        // High confidence: auto-approve and execute
+        console.log(`✨ High confidence (${confidence}) - Auto-approving actions`);
+
+        // Import approval handler dynamically to avoid circular dependencies
+        const { approvalHandler } = await import('./approvalHandler');
+
+        // Execute all actions automatically
+        const executionResult = await approvalHandler.approveAndExecute(queueId, actionIds);
+
+        if (executionResult.success) {
+          console.log(`✅ Auto-executed ${executionResult.executed} actions`);
+        } else {
+          console.error(`❌ Auto-execution failed:`, executionResult.error);
+        }
+      } else {
+        // Lower confidence: request user approval
+        console.log(`⚠️  Lower confidence (${confidence}) - Awaiting user approval`);
+        updateQueueItem(queueId, {
+          status: 'awaiting-approval'
+        });
+      }
 
       // Update request log
       const updateRequestStatus = useRequestLog.getState().updateRequestStatus;

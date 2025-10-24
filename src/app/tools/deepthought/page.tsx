@@ -13,6 +13,7 @@ import {
   X,
   Save
 } from "lucide-react";
+import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 
 interface DeepThought {
   id: string;
@@ -24,6 +25,8 @@ interface DeepThought {
 }
 
 export default function DeepThoughtPage() {
+  useTrackToolUsage('deepthought');
+
   const [thoughts, setThoughts] = useState<DeepThought[]>([]);
   const [showNewThought, setShowNewThought] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
