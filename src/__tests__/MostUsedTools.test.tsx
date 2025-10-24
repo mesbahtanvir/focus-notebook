@@ -1,0 +1,193 @@
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import { MostUsedTools } from '@/components/MostUsedTools';
+
+// Mock dependencies
+const mockSubscribe = jest.fn();
+const mockGetMostUsedTools = jest.fn(() => []);
+const mockTrackToolClick = jest.fn();
+
+jest.mock('@/store/useToolUsage', () => ({
+  useToolUsage: jest.fn((selector) => {
+    const state = {
+      usageRecords: [],
+      isLoading: false,
+      fromCache: false,
+      hasPendingWrites: false,
+      unsubscribe: null,
+      subscribe: mockSubscribe,
+      trackToolClick: mockTrackToolClick,
+      getMostUsedTools: mockGetMostUsedTools,
+    };
+    return selector ? selector(state) : state;
+  }),
+}));
+
+jest.mock('@/contexts/AuthContext', () => ({
+  useAuth: jest.fn(() => ({
+    user: { uid: 'test-user-123' },
+    loading: false,
+    signInWithGoogle: jest.fn(),
+    signOut: jest.fn(),
+  })),
+}));
+
+describe('MostUsedTools Component', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetMostUsedTools.mockReturnValue([]);
+  });
+
+  it('renders nothing when no tools have been used', () => {
+    mockGetMostUsedTools.mockReturnValue([]);
+
+    const { container } = render(<MostUsedTools />);
+
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('renders most used tools when data is available', () => {
+    mockGetMostUsedTools.mockReturnValue([
+      { toolName: 'tasks', clickCount: 50, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'thoughts', clickCount: 30, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'goals', clickCount: 20, lastAccessed: '2025-01-01T00:00:00.000Z' },
+    ]);
+
+    render(<MostUsedTools />);
+
+    expect(screen.getByText('Most Used Tools')).toBeInTheDocument();
+    expect(screen.getByText('Tasks')).toBeInTheDocument();
+    expect(screen.getByText('Thoughts')).toBeInTheDocument();
+    expect(screen.getByText('Goals')).toBeInTheDocument();
+  });
+
+  it('displays click counts for each tool', () => {
+    mockGetMostUsedTools.mockReturnValue([
+      { toolName: 'tasks', clickCount: 50, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'thoughts', clickCount: 30, lastAccessed: '2025-01-01T00:00:00.000Z' },
+    ]);
+
+    render(<MostUsedTools />);
+
+    expect(screen.getByText('50 clicks')).toBeInTheDocument();
+    expect(screen.getByText('30 clicks')).toBeInTheDocument();
+  });
+
+  it('displays rank badges for tools', () => {
+    mockGetMostUsedTools.mockReturnValue([
+      { toolName: 'tasks', clickCount: 50, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'thoughts', clickCount: 30, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'goals', clickCount: 20, lastAccessed: '2025-01-01T00:00:00.000Z' },
+    ]);
+
+    render(<MostUsedTools />);
+
+    expect(screen.getByText('1')).toBeInTheDocument(); // Rank 1
+    expect(screen.getByText('2')).toBeInTheDocument(); // Rank 2
+    expect(screen.getByText('3')).toBeInTheDocument(); // Rank 3
+  });
+
+  it('subscribes to tool usage data when user is logged in', () => {
+    mockGetMostUsedTools.mockReturnValue([]);
+
+    render(<MostUsedTools />);
+
+    expect(mockSubscribe).toHaveBeenCalledWith('test-user-123');
+  });
+
+  it('does not subscribe when user is not logged in', () => {
+    const { useAuth } = require('@/contexts/AuthContext');
+    useAuth.mockReturnValueOnce({
+      user: null,
+      loading: false,
+      signInWithGoogle: jest.fn(),
+      signOut: jest.fn(),
+    });
+
+    mockGetMostUsedTools.mockReturnValue([]);
+
+    render(<MostUsedTools />);
+
+    expect(mockSubscribe).not.toHaveBeenCalled();
+  });
+
+  it('renders links to tool pages', () => {
+    mockGetMostUsedTools.mockReturnValue([
+      { toolName: 'tasks', clickCount: 50, lastAccessed: '2025-01-01T00:00:00.000Z' },
+    ]);
+
+    render(<MostUsedTools />);
+
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '/tools/tasks');
+  });
+
+  it('displays hint when less than 5 tools are used', () => {
+    mockGetMostUsedTools.mockReturnValue([
+      { toolName: 'tasks', clickCount: 50, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'thoughts', clickCount: 30, lastAccessed: '2025-01-01T00:00:00.000Z' },
+    ]);
+
+    render(<MostUsedTools />);
+
+    expect(screen.getByText(/Use more tools to see your top 5 favorites/)).toBeInTheDocument();
+  });
+
+  it('does not display hint when 5 tools are shown', () => {
+    mockGetMostUsedTools.mockReturnValue([
+      { toolName: 'tasks', clickCount: 50, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'thoughts', clickCount: 40, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'goals', clickCount: 30, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'projects', clickCount: 20, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'focus', clickCount: 10, lastAccessed: '2025-01-01T00:00:00.000Z' },
+    ]);
+
+    render(<MostUsedTools />);
+
+    expect(screen.queryByText(/Use more tools to see your top 5 favorites/)).not.toBeInTheDocument();
+  });
+
+  it('limits display to 5 tools maximum', () => {
+    mockGetMostUsedTools.mockReturnValue([
+      { toolName: 'tasks', clickCount: 60, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'thoughts', clickCount: 50, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'goals', clickCount: 40, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'projects', clickCount: 30, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'focus', clickCount: 20, lastAccessed: '2025-01-01T00:00:00.000Z' },
+    ]);
+
+    const { container } = render(<MostUsedTools />);
+
+    // Should have exactly 5 tool cards (links)
+    const links = container.querySelectorAll('a');
+    expect(links).toHaveLength(5);
+  });
+
+  it('calls getMostUsedTools with limit of 5', () => {
+    mockGetMostUsedTools.mockReturnValue([]);
+
+    render(<MostUsedTools />);
+
+    expect(mockGetMostUsedTools).toHaveBeenCalledWith(5);
+  });
+
+  it('handles all tool types correctly', () => {
+    const allTools = [
+      { toolName: 'tasks' as const, clickCount: 12, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'thoughts' as const, clickCount: 11, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'goals' as const, clickCount: 10, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'projects' as const, clickCount: 9, lastAccessed: '2025-01-01T00:00:00.000Z' },
+      { toolName: 'focus' as const, clickCount: 8, lastAccessed: '2025-01-01T00:00:00.000Z' },
+    ];
+
+    mockGetMostUsedTools.mockReturnValue(allTools);
+
+    render(<MostUsedTools />);
+
+    expect(screen.getByText('Tasks')).toBeInTheDocument();
+    expect(screen.getByText('Thoughts')).toBeInTheDocument();
+    expect(screen.getByText('Goals')).toBeInTheDocument();
+    expect(screen.getByText('Projects')).toBeInTheDocument();
+    expect(screen.getByText('Focus')).toBeInTheDocument();
+  });
+});

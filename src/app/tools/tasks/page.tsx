@@ -116,7 +116,7 @@ function TasksPageContent() {
     });
 
     return filtered;
-  }, [tasks, filterStatus, filterCategory, filterPriority, sortBy, showCompleted]);
+  }, [tasks, filterStatus, filterCategory, filterPriority, sortBy, showCompleted, searchTerm]);
 
   // Group tasks by frequency
   const groupedTasks = useMemo(() => {
