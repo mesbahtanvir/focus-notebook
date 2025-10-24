@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { useSettings, AIModel } from '@/store/useSettings'
-import { Key, Eye, EyeOff, Check, X, ExternalLink, Brain } from 'lucide-react'
+import { Key, Eye, EyeOff, Check, X, ExternalLink, Brain, Download, Trash2, Database, AlertTriangle, Upload, FileJson } from 'lucide-react'
 import Link from 'next/link'
+import { exportAllData, downloadDataAsFile, deleteAllUserData, getDataStats, importDataFromFile } from '@/lib/utils/data-management'
 
 type SettingsFormValues = {
   allowBackgroundProcessing: boolean;
@@ -33,6 +34,14 @@ export default function SettingsPage() {
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [isApiKeyValid, setIsApiKeyValid] = useState<boolean | null>(null);
   
+  // Data management state
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [dataStats, setDataStats] = useState({ tasks: 0, goals: 0, projects: 0, thoughts: 0, moods: 0, total: 0 });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  
 
   // Load saved settings from localStorage on component mount
   useEffect(() => {
@@ -50,6 +59,10 @@ export default function SettingsPage() {
         setApiKeyInput(settings.openaiApiKey);
         setIsApiKeyValid(true);
       }
+      
+      // Load data stats
+      const stats = getDataStats();
+      setDataStats(stats);
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -92,6 +105,128 @@ export default function SettingsPage() {
       title: 'API Key Removed',
       description: 'Your API key has been cleared from settings.',
     });
+  };
+  
+  // Export all data
+  const handleExportData = async () => {
+    try {
+      setIsExporting(true);
+      const data = await exportAllData();
+      downloadDataAsFile(data);
+      toast({
+        title: 'Data Exported Successfully',
+        description: `Exported ${dataStats.total} items to JSON file.`,
+      });
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast({
+        title: 'Export Failed',
+        description: error instanceof Error ? error.message : 'Failed to export data. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+  
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type === 'application/json' || file.name.endsWith('.json')) {
+        setSelectedFile(file);
+      } else {
+        toast({
+          title: 'Invalid File Type',
+          description: 'Please select a JSON file.',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+  
+  // Import data
+  const handleImportData = async () => {
+    if (!selectedFile) {
+      toast({
+        title: 'No File Selected',
+        description: 'Please select a JSON file to import.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    try {
+      setIsImporting(true);
+      const result = await importDataFromFile(selectedFile);
+      
+      if (result.success) {
+        toast({
+          title: 'Data Imported Successfully',
+          description: `Imported ${result.stats.tasks} tasks, ${result.stats.goals} goals, ${result.stats.projects} projects, ${result.stats.thoughts} thoughts, and ${result.stats.moods} moods.`,
+        });
+        
+        // Reset file input
+        setSelectedFile(null);
+        
+        // Refresh stats after import
+        setTimeout(() => {
+          const newStats = getDataStats();
+          setDataStats(newStats);
+        }, 1000);
+        
+        // Refresh page after a short delay to show updated data
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        toast({
+          title: 'Import Failed',
+          description: result.error || 'Failed to import data. Please check the file format.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Import failed:', error);
+      toast({
+        title: 'Import Failed',
+        description: error instanceof Error ? error.message : 'Failed to import data. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+  
+  // Delete all data
+  const handleDeleteAllData = async () => {
+    try {
+      setIsDeleting(true);
+      await deleteAllUserData();
+      
+      // Update stats after deletion
+      setDataStats({ tasks: 0, goals: 0, projects: 0, thoughts: 0, moods: 0, total: 0 });
+      setShowDeleteConfirm(false);
+      
+      toast({
+        title: 'All Data Deleted',
+        description: 'All your data has been permanently deleted.',
+      });
+      
+      // Refresh the page after a short delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error) {
+      console.error('Delete failed:', error);
+      toast({
+        title: 'Delete Failed',
+        description: error instanceof Error ? error.message : 'Failed to delete data. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
 
@@ -301,6 +436,206 @@ export default function SettingsPage() {
                       {" "}for detailed instructions on getting your OpenAI API key, pricing info, and troubleshooting tips.
                     </p>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Data Management Section */}
+            <div className="pt-8 space-y-4 border-t-4 border-red-200">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-2 bg-gradient-to-r from-red-400 to-pink-500 rounded-full">
+                  <Database className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="text-lg font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+                  Data Management
+                </h3>
+              </div>
+
+              <div className="rounded-xl bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-950/20 dark:to-pink-950/20 p-6 border-2 border-red-200 dark:border-red-800">
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
+                  Export your data for backup or delete everything permanently.
+                </p>
+                
+                {/* Data Statistics */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{dataStats.tasks}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Tasks</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{dataStats.goals}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Goals</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">{dataStats.projects}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Projects</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{dataStats.thoughts}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Thoughts</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-pink-600 dark:text-pink-400">{dataStats.moods}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Moods</div>
+                  </div>
+                  <div className="text-center border-l-2 border-gray-300 dark:border-gray-600">
+                    <div className="text-2xl font-bold text-red-600 dark:text-red-400">{dataStats.total}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Total Items</div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-3">
+                  {/* Export Data */}
+                  <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-900 dark:text-gray-100">Export All Data</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Download all your data as a JSON file for backup
+                      </div>
+                    </div>
+                    <Button
+                      onClick={handleExportData}
+                      disabled={isExporting || dataStats.total === 0}
+                      className="ml-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      {isExporting ? 'Exporting...' : 'Export'}
+                    </Button>
+                  </div>
+
+                  {/* Import Data */}
+                  <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900 dark:text-gray-100">Import Data</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          Restore data from a previously exported JSON file
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      <label htmlFor="import-file" className="flex-1 cursor-pointer">
+                        <div className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-600 transition-colors">
+                          <FileJson className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            {selectedFile ? selectedFile.name : 'Choose JSON file...'}
+                          </span>
+                        </div>
+                        <input
+                          id="import-file"
+                          type="file"
+                          accept=".json,application/json"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                      </label>
+                      
+                      <Button
+                        onClick={handleImportData}
+                        disabled={!selectedFile || isImporting}
+                        className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+                      >
+                        {isImporting ? (
+                          <>
+                            <span className="animate-spin mr-2">⏳</span>
+                            Importing...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4 mr-2" />
+                            Import
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    
+                    {selectedFile && (
+                      <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs text-blue-800 dark:text-blue-200">
+                        <strong>Ready to import:</strong> {selectedFile.name} ({(selectedFile.size / 1024).toFixed(2)} KB)
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Delete All Data */}
+                  {!showDeleteConfirm ? (
+                    <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-red-200 dark:border-red-800">
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900 dark:text-gray-100">Delete All Data</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          Permanently delete all your tasks, goals, projects, and more
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        disabled={dataStats.total === 0}
+                        variant="outline"
+                        className="ml-4 border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete All
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border-2 border-red-300 dark:border-red-700">
+                      <div className="flex items-start gap-3 mb-4">
+                        <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <div className="font-bold text-red-900 dark:text-red-100 mb-1">
+                            Are you absolutely sure?
+                          </div>
+                          <div className="text-sm text-red-800 dark:text-red-200 mb-2">
+                            This will permanently delete all your data including:
+                          </div>
+                          <ul className="text-sm text-red-800 dark:text-red-200 list-disc list-inside space-y-1 mb-4">
+                            <li>{dataStats.tasks} tasks</li>
+                            <li>{dataStats.goals} goals</li>
+                            <li>{dataStats.projects} projects</li>
+                            <li>{dataStats.thoughts} thoughts</li>
+                            <li>{dataStats.moods} mood entries</li>
+                          </ul>
+                          <div className="text-sm font-bold text-red-900 dark:text-red-100">
+                            This action cannot be undone!
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <Button
+                          onClick={handleDeleteAllData}
+                          disabled={isDeleting}
+                          className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          {isDeleting ? (
+                            <>
+                              <span className="animate-spin mr-2">⏳</span>
+                              Deleting...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Yes, Delete Everything
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => setShowDeleteConfirm(false)}
+                          disabled={isDeleting}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Warning Note */}
+                <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                    <strong>💡 Tip:</strong> Always export your data before deleting it. You can use the imported JSON file to restore your data later using the Import button.
+                  </p>
                 </div>
               </div>
             </div>
