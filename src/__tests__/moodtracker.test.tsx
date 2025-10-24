@@ -9,23 +9,38 @@ const mockAddMood = jest.fn()
 jest.mock('@/store/useMoods', () => ({
   useMoods: (selector: any) => {
     const state = {
-      moods: [],
+      moods: mockMoods(),
       add: mockAddMood,
       isLoading: false,
       fromCache: false,
       hasPendingWrites: false,
       subscribe: jest.fn(),
       delete: jest.fn(),
-      ...(typeof selector === 'function' ? selector({
-        moods: [],
-        add: mockAddMood,
-        isLoading: false,
-        fromCache: false,
-        hasPendingWrites: false,
-        subscribe: jest.fn(),
-        delete: jest.fn(),
-      }) : {})
     }
+    
+    if (typeof selector === 'function') {
+      return selector(state)
+    }
+    
+    return state
+  }
+}))
+
+// Mock the useThoughts store
+jest.mock('@/store/useThoughts', () => ({
+  useThoughts: (selector: any) => {
+    const state = {
+      thoughts: [],
+      add: jest.fn(),
+      deleteThought: jest.fn(),
+      updateThought: jest.fn(),
+      subscribe: jest.fn(),
+    }
+    
+    if (typeof selector === 'function') {
+      return selector(state)
+    }
+    
     return state
   }
 }))
@@ -217,7 +232,7 @@ describe('MoodTracker Page', () => {
       })
 
       await waitFor(() => {
-        expect(mockAdd).toHaveBeenCalled()
+        expect(mockAddMood).toHaveBeenCalled()
       })
     })
 
@@ -235,7 +250,7 @@ describe('MoodTracker Page', () => {
       })
 
       await waitFor(() => {
-        expect(mockAdd).toHaveBeenCalledWith(
+        expect(mockAddMood).toHaveBeenCalledWith(
           expect.objectContaining({
             note: expect.stringContaining('Emotions:'),
           })
@@ -256,7 +271,7 @@ describe('MoodTracker Page', () => {
       })
 
       await waitFor(() => {
-        expect(mockAdd).toHaveBeenCalledWith(
+        expect(mockAddMood).toHaveBeenCalledWith(
           expect.objectContaining({
             note: expect.stringContaining('Feeling anxious today'),
           })
@@ -313,7 +328,7 @@ describe('MoodTracker Page', () => {
     })
 
     it('should disable save button while saving', async () => {
-      mockAdd.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)))
+      mockAddMood.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)))
       
       render(<MoodTrackerPage />)
       
@@ -406,7 +421,7 @@ describe('MoodTracker Page', () => {
       })
 
       await waitFor(() => {
-        expect(mockAdd).toHaveBeenCalled()
+        expect(mockAddMood).toHaveBeenCalled()
       })
     })
 
@@ -423,7 +438,7 @@ describe('MoodTracker Page', () => {
       })
 
       await waitFor(() => {
-        expect(mockAdd).toHaveBeenCalledWith(
+        expect(mockAddMood).toHaveBeenCalledWith(
           expect.objectContaining({
             note: 'Just a note',
           })
@@ -445,7 +460,7 @@ describe('MoodTracker Page', () => {
       })
 
       await waitFor(() => {
-        expect(mockAdd).toHaveBeenCalledWith(
+        expect(mockAddMood).toHaveBeenCalledWith(
           expect.objectContaining({
             note: expect.stringContaining('A'.repeat(100)),
           })

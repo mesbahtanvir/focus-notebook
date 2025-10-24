@@ -7,9 +7,10 @@ import { useProjects } from "@/store/useProjects";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, Target, CheckCircle2, Clock, ChevronRight, 
-  Trash2, Edit2, PlayCircle, PauseCircle, Archive, ChevronDown, ChevronUp 
+  Trash2, Edit2, PlayCircle, PauseCircle, Archive, ChevronDown, ChevronUp, Search 
 } from "lucide-react";
 import Link from "next/link";
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 
 export default function GoalsPage() {
   const { user } = useAuth();
@@ -33,6 +34,7 @@ export default function GoalsPage() {
   const [showCompleted, setShowCompleted] = useState(false);
   const [showPaused, setShowPaused] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (user?.uid) {
@@ -98,29 +100,41 @@ export default function GoalsPage() {
     return projectId;
   };
 
-  const activeGoals = goals.filter(g => g.status === 'active');
-  const completedGoals = goals.filter(g => g.status === 'completed');
-  const pausedGoals = goals.filter(g => g.status === 'paused');
-  const archivedGoals = goals.filter(g => g.status === 'archived');
+  const filterGoals = (goalsList: Goal[]) => {
+    if (!searchQuery.trim()) return goalsList;
+    const query = searchQuery.toLowerCase();
+    return goalsList.filter(g => 
+      g.title.toLowerCase().includes(query) ||
+      g.objective.toLowerCase().includes(query)
+    );
+  };
+
+  const activeGoals = filterGoals(goals.filter(g => g.status === 'active'));
+  const completedGoals = filterGoals(goals.filter(g => g.status === 'completed'));
+  const pausedGoals = filterGoals(goals.filter(g => g.status === 'paused'));
+  const archivedGoals = filterGoals(goals.filter(g => g.status === 'archived'));
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Target className="h-8 w-8 text-purple-600" />
-            Goals
-          </h1>
-          <p className="text-muted-foreground mt-1">Define and achieve your long-term objectives</p>
-        </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:from-purple-700 hover:to-indigo-700 transition-all flex items-center gap-2 shadow-lg"
-        >
-          <Plus className="h-5 w-5" />
-          New Goal
-        </button>
+      <div>
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+          <Target className="h-8 w-8 text-purple-600" />
+          Goals
+        </h1>
+        <p className="text-muted-foreground mt-1">Define and achieve your long-term objectives</p>
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search goals..."
+          className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-600 focus:border-transparent outline-none transition-all"
+        />
       </div>
 
       {/* Add/Edit Form */}
@@ -514,6 +528,11 @@ export default function GoalsPage() {
           </AnimatePresence>
         </div>
       )}
+
+      <FloatingActionButton
+        onClick={() => setShowForm(true)}
+        title="New Goal"
+      />
     </div>
   );
 }

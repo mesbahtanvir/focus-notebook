@@ -2,10 +2,13 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useProjects, Project, ProjectTimeframe, ProjectStatus } from "@/store/useProjects";
+import { useGoals } from "@/store/useGoals";
 import { useThoughts } from "@/store/useThoughts";
 import { useTasks } from "@/store/useTasks";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { 
   Target, 
   Plus,
@@ -21,7 +24,8 @@ import {
   Save,
   MessageSquare,
   ListChecks,
-  Milestone
+  Milestone,
+  Search
 } from "lucide-react";
 
 export default function ProjectsPage() {
@@ -45,14 +49,22 @@ export default function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [filterTimeframe, setFilterTimeframe] = useState<'all' | ProjectTimeframe>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | ProjectStatus>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredProjects = useMemo(() => {
     return projects.filter(p => {
       if (filterTimeframe !== 'all' && p.timeframe !== filterTimeframe) return false;
       if (filterStatus !== 'all' && p.status !== filterStatus) return false;
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesTitle = p.title.toLowerCase().includes(query);
+        const matchesObjective = p.objective?.toLowerCase().includes(query);
+        const matchesDescription = p.description?.toLowerCase().includes(query);
+        if (!matchesTitle && !matchesObjective && !matchesDescription) return false;
+      }
       return true;
     }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [projects, filterTimeframe, filterStatus]);
+  }, [projects, filterTimeframe, filterStatus, searchQuery]);
 
   const stats = useMemo(() => {
     const total = projects.length;
@@ -81,7 +93,7 @@ export default function ProjectsPage() {
       {/* Compact Header with inline stats */}
       <div className="rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-4 border-green-200 dark:border-green-800 shadow-xl p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex-1">
+          <div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">🎯 Projects</h1>
             <div className="flex items-center gap-3 mt-2 text-sm font-medium">
               <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">{stats.active} active</span>
@@ -90,18 +102,22 @@ export default function ProjectsPage() {
               <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">{stats.longTerm} long-term</span>
             </div>
           </div>
-          <button
-            onClick={() => setShowNewProject(true)}
-            className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold shadow-lg transition-all transform hover:scale-105 active:scale-95"
-          >
-            <Plus className="h-5 w-5" />
-            New Project
-          </button>
         </div>
       </div>
 
-      {/* Compact Filters */}
-      <div className="flex flex-wrap gap-2">
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search projects..."
+            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent outline-none transition-all"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
         <select
           value={filterTimeframe}
           onChange={(e) => setFilterTimeframe(e.target.value as any)}
@@ -121,8 +137,9 @@ export default function ProjectsPage() {
           <option value="active">Active</option>
           <option value="on-hold">On Hold</option>
           <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
+          <option value="paused">Paused</option>
         </select>
+        </div>
       </div>
 
       {/* Projects List */}
@@ -259,13 +276,19 @@ export default function ProjectsPage() {
           onClose={() => setSelectedProject(null)}
         />
       )}
+
+      <FloatingActionButton
+        onClick={() => setShowNewProject(true)}
+        title="New Project"
+      />
     </div>
   );
 }
 
 // New Project Modal Component
 function NewProjectModal({ onClose }: { onClose: () => void }) {
-  const addProject = useProjects((s) => s.add);
+  const addProject = useProjects ((s) => s.add);
+  const goals = useGoals((s) => s.goals);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [objective, setObjective] = useState("");
@@ -274,6 +297,7 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
   const [category, setCategory] = useState<'health' | 'wealth' | 'mastery' | 'connection'>('mastery');
   const [priority, setPriority] = useState<'urgent' | 'high' | 'medium' | 'low'>('medium');
   const [targetDate, setTargetDate] = useState("");
+  const [goalId, setGoalId] = useState<string>("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -290,6 +314,7 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
       status: 'active',
       targetDate: targetDate || undefined,
       progress: 0,
+      goalId: goalId || undefined,
     });
 
     onClose();
@@ -381,6 +406,20 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium mb-2">Link to Goal (Optional)</label>
+            <select
+              value={goalId}
+              onChange={(e) => setGoalId(e.target.value)}
+              className="input w-full"
+            >
+              <option value="">No goal (standalone project)</option>
+              {goals.filter(g => g.status === 'active').map(goal => (
+                <option key={goal.id} value={goal.id}>{goal.title}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Timeframe *</label>
@@ -455,15 +494,15 @@ function ProjectDetailModal({ project, onClose }: { project: Project; onClose: (
   const deleteProject = useProjects((s) => s.delete);
   const thoughts = useThoughts((s) => s.thoughts);
   const tasks = useTasks((s) => s.tasks);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const linkedThoughts = thoughts.filter(t => project.linkedThoughtIds.includes(t.id));
   const linkedTasks = tasks.filter(t => project.linkedTaskIds.includes(t.id));
 
   const handleDelete = () => {
-    if (confirm(`Delete project "${project.title}"?`)) {
-      deleteProject(project.id);
-      onClose();
-    }
+    deleteProject(project.id);
+    setShowDeleteConfirm(false);
+    onClose();
   };
 
   return (
@@ -478,7 +517,7 @@ function ProjectDetailModal({ project, onClose }: { project: Project; onClose: (
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold">{project.title}</h2>
             <div className="flex items-center gap-2">
-              <button onClick={handleDelete} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+              <button onClick={() => setShowDeleteConfirm(true)} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors">
                 <Trash2 className="h-4 w-4" />
               </button>
               <button onClick={onClose} className="p-2 hover:bg-accent rounded-lg">
@@ -487,6 +526,17 @@ function ProjectDetailModal({ project, onClose }: { project: Project; onClose: (
             </div>
           </div>
         </div>
+
+        <ConfirmModal
+          isOpen={showDeleteConfirm}
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+          title="Delete Project?"
+          message={`Are you sure you want to delete "${project.title}"? This action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+          variant="danger"
+        />
 
         <div className="p-6 space-y-6">
           {project.description && (

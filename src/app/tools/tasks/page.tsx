@@ -18,13 +18,15 @@ import {
   ChevronDown,
   Repeat,
   MessageCircle,
-  ExternalLink
+  ExternalLink,
+  Search
 } from "lucide-react";
 import { getNotesPreview } from "@/lib/formatNotes";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { TaskInput } from "@/components/TaskInput";
 import { SourceBadge } from "@/components/SourceBadge";
 import Link from "next/link";
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 
 type SortOption = 'priority' | 'dueDate' | 'createdAt' | 'title';
 type ViewMode = 'list' | 'kanban';
@@ -42,6 +44,7 @@ function TasksPageContent() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showFilters, setShowFilters] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Auto-open task detail if navigating from notes page
   useEffect(() => {
@@ -55,6 +58,8 @@ function TasksPageContent() {
   }, [searchParams, tasks]);
 
   const filteredAndSortedTasks = useMemo(() => {
+    const searchLower = searchTerm.toLowerCase();
+    
     let filtered = tasks.filter(task => {
       // If showCompleted is true, show all tasks
       if (!showCompleted) {
@@ -64,6 +69,18 @@ function TasksPageContent() {
       if (filterStatus !== 'all' && task.status !== filterStatus) return false;
       if (filterCategory !== 'all' && task.category !== filterCategory) return false;
       if (filterPriority !== 'all' && task.priority !== filterPriority) return false;
+      
+      // Search in title and notes
+      if (searchTerm) {
+        const titleMatch = task.title.toLowerCase().includes(searchLower);
+        const notesMatch = task.notes?.toLowerCase().includes(searchLower) || false;
+        const tagsMatch = task.tags?.some(tag => tag.toLowerCase().includes(searchLower)) || false;
+        
+        if (!titleMatch && !notesMatch && !tagsMatch) {
+          return false;
+        }
+      }
+      
       return true;
     });
 
@@ -152,31 +169,42 @@ function TasksPageContent() {
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
       {/* Header with inline stats */}
       <div className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-4 border-purple-200 dark:border-purple-800 shadow-xl p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">📋 Tasks</h1>
-            <div className="flex items-center gap-4 mt-2 text-sm font-medium">
-              <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">{taskStats.active} active</span>
-              <span className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300">{taskStats.completed} done</span>
-              {taskStats.overdue > 0 && (
-                <span className="px-3 py-1 rounded-full bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300">{taskStats.overdue} overdue</span>
-              )}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">📋 Tasks</h1>
+              <div className="flex items-center gap-4 mt-2 text-sm font-medium">
+                <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">{taskStats.active} active</span>
+                <span className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300">{taskStats.completed} done</span>
+                {taskStats.overdue > 0 && (
+                  <span className="px-3 py-1 rounded-full bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300">{taskStats.overdue} overdue</span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Info Box */}
-      <div className="rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-4 border-amber-200 dark:border-amber-800 shadow-xl p-4">
-        <div className="flex items-start gap-3">
-          <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-lg">
-            <CheckCircle2 className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-amber-900 dark:text-amber-100 text-sm">Complete Tasks During Work</h3>
-            <p className="text-xs text-amber-800 dark:text-amber-200 mt-1">
-              Tasks can only be completed in <strong>Focus Mode</strong> (for desk work) or <strong>Errands Page</strong> (for out-of-office tasks). This ensures intentional task completion.
-            </p>
+          {/* Search Bar */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              placeholder="Search tasks..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              >
+                <svg className="h-5 w-5 text-gray-400 hover:text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -468,14 +496,10 @@ function TasksPageContent() {
         />
       )}
 
-      {/* Floating Action Button */}
-      <button
+      <FloatingActionButton
         onClick={() => setShowNewTask(true)}
-        className="fixed bottom-8 right-8 h-16 w-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-2xl hover:shadow-3xl transition-all flex items-center justify-center z-40 hover:scale-110"
         title="New Task"
-      >
-        <Plus className="h-8 w-8" />
-      </button>
+      />
     </div>
   );
 }

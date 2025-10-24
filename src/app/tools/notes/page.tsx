@@ -11,6 +11,7 @@ import {
   Calendar,
   Tag,
   ChevronDown,
+  ChevronRight,
   File,
   Folder,
   BookOpen,
@@ -22,6 +23,7 @@ import {
 } from "lucide-react";
 import { FormattedNotes, getNotesPreview } from "@/lib/formatNotes";
 import Link from "next/link";
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 
 type FilterType = 'all';
 
@@ -35,6 +37,7 @@ export default function DocumentsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingNotes, setEditingNotes] = useState<string>("");
   const [autoSaveStatus, setAutoSaveStatus] = useState<{[key: string]: 'saved' | 'saving'}>({});
+  const [expandedMetadata, setExpandedMetadata] = useState<{[key: string]: boolean}>({});
   const saveTimeoutRef = useRef<{[key: string]: NodeJS.Timeout}>({});
 
   // Get all tasks that have notes
@@ -240,53 +243,80 @@ export default function DocumentsPage() {
               className="card p-6 space-y-4 hover:shadow-md transition-shadow"
             >
               {/* Document Header */}
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <FileText className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
-                    <h3 className="text-xl font-bold">{doc.title}</h3>
-                    {doc.done && (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300">
-                        Completed
-                      </span>
-                    )}
-                    {/* Link to Task */}
-                    <Link
-                      href={`/tools/tasks?id=${doc.id}`}
-                      className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      View Task
-                    </Link>
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <FileText className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
+                      <h3 className="text-xl font-bold">{doc.title}</h3>
+                      {doc.done && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300">
+                          Completed
+                        </span>
+                      )}
+                    </div>
                   </div>
                   
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      doc.priority === 'urgent' ? 'bg-red-100 text-red-700' :
-                      doc.priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                      doc.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-green-100 text-green-700'
-                    }`}>
-                      {doc.priority}
-                    </span>
-                    {doc.tags && Array.isArray(doc.tags) && doc.tags.length > 0 && (
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Tag className="h-3 w-3" />
-                        {doc.tags.join(', ')}
-                      </span>
+                  <button
+                    onClick={() => setExpandedMetadata(prev => ({ ...prev, [doc.id]: !prev[doc.id] }))}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    {expandedMetadata[doc.id] ? (
+                      <>
+                        <ChevronDown className="h-4 w-4" />
+                        Hide Details
+                      </>
+                    ) : (
+                      <>
+                        <ChevronRight className="h-4 w-4" />
+                        Show Details
+                      </>
                     )}
-                  </div>
+                  </button>
                 </div>
 
-                <div className="text-right text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {new Date(doc.createdAt).toLocaleDateString()}
-                  </div>
-                  <div className="mt-1">
-                    {doc.notes.split(/\s+/).length} words
-                  </div>
-                </div>
+                {/* Collapsible Metadata */}
+                <AnimatePresence>
+                  {expandedMetadata[doc.id] && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-2 overflow-hidden"
+                    >
+                      <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          doc.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300' :
+                          doc.priority === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300' :
+                          doc.priority === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300' :
+                          'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300'
+                        }`}>
+                          Priority: {doc.priority}
+                        </span>
+                        {doc.tags && Array.isArray(doc.tags) && doc.tags.length > 0 && (
+                          <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300">
+                            <Tag className="h-3 w-3" />
+                            {doc.tags.join(', ')}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(doc.createdAt).toLocaleDateString()}
+                        </span>
+                        <span className="px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300">
+                          {doc.notes.split(/\s+/).length} words
+                        </span>
+                        <Link
+                          href={`/tools/tasks?id=${doc.id}`}
+                          className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          View Task
+                        </Link>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Document Content */}
@@ -327,7 +357,7 @@ export default function DocumentsPage() {
                   <DocumentNotepad
                     docId={doc.id}
                     initialNotes={doc.notes}
-                    onSave={(newNotes) => {
+                    onSave={(newNotes: string) => {
                       handleAutoSave(doc.id, newNotes);
                     }}
                     onClose={() => setEditingId(null)}
@@ -343,6 +373,12 @@ export default function DocumentsPage() {
           ))}
         </AnimatePresence>
       </div>
+
+      <FloatingActionButton
+        onClick={() => {}}
+        title="New Note"
+        icon={<Edit3 className="h-6 w-6" />}
+      />
     </div>
   );
 }
@@ -384,7 +420,7 @@ function DocumentNotepad({
   const charCount = notes.length;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       <div className="relative">
         <textarea
           ref={textareaRef}
@@ -400,14 +436,17 @@ function DocumentNotepad({
       </div>
       <div className="flex items-center justify-between">
         <div className="text-xs text-gray-500 dark:text-gray-400">
-          💡 Tip: Your changes are automatically saved as you type
+          {autoSaveStatus === 'saving' && '💡 Saving...'}
+          {autoSaveStatus === 'saved' && '✅ All changes saved'}
         </div>
-        <button
-          onClick={onClose}
-          className="px-4 py-2 rounded-lg bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-950 transition-colors font-medium text-sm"
-        >
-          Done
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            Done
+          </button>
+        </div>
       </div>
     </div>
   );

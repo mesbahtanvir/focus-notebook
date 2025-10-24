@@ -8,7 +8,7 @@ import { useState, useMemo } from "react";
 import TaskList from "@/components/TaskList";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { Sparkles, Lock, MessageSquare, Lightbulb, Trash2, Timer, Play, Coffee, ShoppingBag, MapPin } from "lucide-react";
+import { Sparkles, Lock, MessageSquare, Lightbulb, Trash2, Timer, Play, Coffee, ShoppingBag, MapPin, Brain, Rocket, Heart, Zap } from "lucide-react";
 import { ThoughtDetailModal } from "@/components/ThoughtDetailModal";
 
 // Disable static generation for now
@@ -142,33 +142,49 @@ export default function Page() {
       {/* Quick Focus Section */}
       <section className="rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-4 border-green-200 dark:border-green-800 shadow-xl overflow-hidden">
         <div className="px-6 py-4 bg-gradient-to-r from-green-100 via-emerald-100 to-teal-100 dark:from-green-900 dark:via-emerald-900 dark:to-teal-900 border-b-4 border-green-200 dark:border-green-800">
-          <h2 className="text-lg font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">⚡ Quick Focus</h2>
+          <h2 className="text-lg font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">⚡ Quick Focus Modes</h2>
         </div>
         <div className="p-6">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Link
-              href="/tools/focus?duration=25"
+              href="/tools/focus?duration=60&mode=regular"
               className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900 dark:to-emerald-900 border-2 border-green-300 dark:border-green-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
             >
-              <Timer className="h-6 w-6 text-green-600 dark:text-green-400" />
-              <span className="text-xl font-bold text-green-600 dark:text-green-400">25m</span>
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Pomodoro</span>
+              <Zap className="h-7 w-7 text-green-600 dark:text-green-400" />
+              <span className="text-base font-bold text-green-600 dark:text-green-400">Regular</span>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400 text-center">Balanced focus</span>
             </Link>
             <Link
-              href="/tools/focus?duration=50"
-              className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900 dark:to-cyan-900 border-2 border-blue-300 dark:border-blue-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+              href="/tools/focus?duration=90&mode=philosopher&breaks=true"
+              className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900 dark:to-indigo-900 border-2 border-purple-300 dark:border-purple-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 relative"
             >
-              <Play className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              <span className="text-xl font-bold text-blue-600 dark:text-blue-400">50m</span>
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Deep Work</span>
+              <div className="absolute top-2 right-2 flex gap-1">
+                <span className="text-xs" title="Includes coffee break">☕</span>
+                <span className="text-xs" title="Includes meditation">🧘</span>
+              </div>
+              <Brain className="h-7 w-7 text-purple-600 dark:text-purple-400" />
+              <span className="text-base font-bold text-purple-600 dark:text-purple-400">Philosopher</span>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400 text-center">Deep thinking + breaks</span>
             </Link>
             <Link
-              href="/tools/focus?duration=5"
-              className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900 dark:to-orange-900 border-2 border-amber-300 dark:border-amber-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+              href="/tools/focus?duration=120&mode=beast&breaks=true"
+              className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl bg-gradient-to-br from-red-100 to-orange-100 dark:from-red-900 dark:to-orange-900 border-2 border-red-300 dark:border-red-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 relative"
             >
-              <Coffee className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-              <span className="text-xl font-bold text-amber-600 dark:text-amber-400">5m</span>
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Break</span>
+              <div className="absolute top-2 right-2 flex gap-1">
+                <span className="text-xs" title="Includes coffee break">☕</span>
+                <span className="text-xs" title="Includes meditation">🧘</span>
+              </div>
+              <Rocket className="h-7 w-7 text-red-600 dark:text-red-400" />
+              <span className="text-base font-bold text-red-600 dark:text-red-400">Beast Mode</span>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400 text-center">Maximum output + breaks</span>
+            </Link>
+            <Link
+              href="/tools/focus?duration=45&mode=selfcare"
+              className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl bg-gradient-to-br from-pink-100 to-rose-100 dark:from-pink-900 dark:to-rose-900 border-2 border-pink-300 dark:border-pink-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+            >
+              <Heart className="h-7 w-7 text-pink-600 dark:text-pink-400" />
+              <span className="text-base font-bold text-pink-600 dark:text-pink-400">Self-Care</span>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400 text-center">Wellness first</span>
             </Link>
           </div>
         </div>

@@ -2,7 +2,7 @@
 
 import { useTasks } from "@/store/useTasks";
 import { motion } from "framer-motion";
-import { ShoppingBag, MapPin, Car, Package, CheckCircle2, Circle, Trash2, Plus } from "lucide-react";
+import { ShoppingBag, MapPin, Car, Package, CheckCircle2, Circle, Trash2, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
 import { getNotesPreview } from "@/lib/formatNotes";
@@ -14,11 +14,23 @@ export default function ErrandsPage() {
   const updateTask = useTasks((s) => s.updateTask);
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Filter for non-focus-eligible tasks (errands)
   const errandTasks = tasks.filter(t => t.focusEligible === false);
-  const activeErrands = errandTasks.filter(t => !t.done && t.status === 'active');
-  const completedErrands = errandTasks.filter(t => t.done);
+  
+  const filterErrandsBySearch = (errandsList: typeof errandTasks) => {
+    if (!searchQuery.trim()) return errandsList;
+    const query = searchQuery.toLowerCase();
+    return errandsList.filter(t => 
+      t.title.toLowerCase().includes(query) ||
+      t.notes?.toLowerCase().includes(query) ||
+      t.tags?.some(tag => tag.toLowerCase().includes(query))
+    );
+  };
+  
+  const activeErrands = filterErrandsBySearch(errandTasks.filter(t => !t.done && t.status === 'active'));
+  const completedErrands = filterErrandsBySearch(errandTasks.filter(t => t.done));
 
   const toggleFocusEligible = async (taskId: string, currentValue: boolean | undefined) => {
     await updateTask(taskId, { focusEligible: !currentValue });
@@ -46,6 +58,18 @@ export default function ErrandsPage() {
             New Task
           </Link>
         </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search errands..."
+          className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-600 focus:border-transparent outline-none transition-all"
+        />
       </div>
 
       {/* Quick Stats */}

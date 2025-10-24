@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { Task } from './useTasks'
-import { collection, query, orderBy, where } from 'firebase/firestore'
+import { collection, query, orderBy, where, getDocs } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebaseClient'
-import { createAt, updateAt, deleteAt } from '@/lib/data/gateway'
+import { createAt, updateAt } from '@/lib/data/gateway'
 import { subscribeCol } from '@/lib/data/subscribe'
 
 export interface FocusTask {
@@ -13,6 +13,13 @@ export interface FocusTask {
   followUpTaskIds?: string[] // IDs of follow-up tasks created
 }
 
+export interface BreakSession {
+  startTime: string
+  endTime?: string
+  duration: number // in minutes
+  type: 'coffee' | 'meditation' | 'stretch'
+}
+
 export interface FocusSession {
   id: string
   duration: number // total session duration in minutes
@@ -21,6 +28,9 @@ export interface FocusSession {
   endTime?: string
   currentTaskIndex: number
   isActive: boolean
+  isOnBreak: boolean
+  currentBreak?: BreakSession
+  breaks: BreakSession[]
   feedback?: string
   rating?: number
   pausedAt?: string // timestamp when paused
@@ -54,9 +64,11 @@ type State = {
   pauseSession: () => Promise<void>
   resumeSession: () => Promise<void>
   persistActiveSession: () => Promise<void>
-  addTimeToCurrentTask: (minutes: number) => void
-  nextTask: () => void
-  previousTask: () => void
+  addTimeToCurrentTask: (minutes: number) => Promise<void>
+  nextTask: () => Promise<void>
+  previousTask: () => Promise<void>
+  startBreak: (type: 'coffee' | 'meditation' | 'stretch', duration: number) => Promise<void>
+  endBreak: () => Promise<void>
 }
 
 // Balance tasks between mastery and pleasure
@@ -188,58 +200,68 @@ export const useFocus = create<State>((set, get) => ({
   },
   
   startSession: async (tasks, duration) => {
-    // Don't create session with no tasks
-    if (!tasks || tasks.length === 0) {
-      return
-    }
+    if (!auth.currentUser) throw new Error('User not authenticated');
     
-    const userId = auth.currentUser?.uid
-    if (!userId) throw new Error('Not authenticated')
-    
-    const sessionId = Date.now().toString()
-    const newSession: FocusSession = {
-      id: sessionId,
+    const session: FocusSession = {
+      id: `session_${Date.now()}`,
       duration,
       tasks: tasks.map(task => ({
         task,
         timeSpent: 0,
         completed: false,
+        notes: '',
+        followUpTaskIds: []
       })),
       startTime: new Date().toISOString(),
       currentTaskIndex: 0,
       isActive: true,
+      isOnBreak: false,
+      breaks: [],
+      feedback: '',
+      rating: 0,
       totalPausedTime: 0,
-    }
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      updatedBy: auth.currentUser.uid,
+      version: 1
+    };
     
-    set({ currentSession: newSession })
+    set({ currentSession: session })
     
     // Persist to Firestore immediately
     try {
-      await createAt(`users/${userId}/focusSessions/${sessionId}`, {
-        duration: newSession.duration,
-        startTime: newSession.startTime,
-        tasksData: JSON.stringify(newSession.tasks),
+      await createAt(`users/${auth.currentUser.uid}/focusSessions/${session.id}`, {
+        duration: session.duration,
+        startTime: session.startTime,
+        tasksData: JSON.stringify(session.tasks),
         isActive: true,
+        isOnBreak: false,
+        breaks: [],
         currentTaskIndex: 0,
         totalPausedTime: 0,
-        createdAt: newSession.startTime,
+        createdAt: session.startTime,
+        updatedAt: session.updatedAt,
+        updatedBy: session.updatedBy,
+        version: session.version
       })
     } catch (error) {
       console.error('Failed to persist focus session:', error)
     }
   },
   
-  endSession: async (feedback?: string, rating?: number) => {
+  endSession: async (feedback, rating) => {
     const current = get().currentSession
     if (!current) return
     
     const userId = auth.currentUser?.uid
     if (!userId) throw new Error('Not authenticated')
     
-    const completedSession = {
+    const completedSession: FocusSession = {
       ...current,
       endTime: new Date().toISOString(),
       isActive: false,
+      isOnBreak: false,
+      currentBreak: undefined,
       feedback,
       rating,
     }
@@ -249,6 +271,8 @@ export const useFocus = create<State>((set, get) => ({
       await updateAt(`users/${userId}/focusSessions/${completedSession.id}`, {
         endTime: completedSession.endTime,
         isActive: false,
+        isOnBreak: false,
+        currentBreak: null,
         tasksData: JSON.stringify(completedSession.tasks),
         feedback,
         rating,
@@ -313,9 +337,6 @@ export const useFocus = create<State>((set, get) => ({
         where('isActive', '==', true)
       )
       
-      // We can't use subscribeCol here because we need one-time fetch
-      // Use getDocs for now (can be optimized later)
-      const { getDocs } = await import('firebase/firestore')
       const snapshot = await getDocs(sessionsQuery)
       
       if (!snapshot.empty) {
@@ -329,11 +350,18 @@ export const useFocus = create<State>((set, get) => ({
           endTime: data.endTime,
           tasks: JSON.parse(data.tasksData || '[]'),
           currentTaskIndex: data.currentTaskIndex || 0,
-          isActive: false, // Will be paused when reloaded
+          isActive: false, // Will be resumed when loaded
+          isOnBreak: data.isOnBreak || false,
+          currentBreak: data.currentBreak || undefined,
+          breaks: data.breaks || [],
           feedback: data.feedback,
           rating: data.rating,
           pausedAt: data.pausedAt,
           totalPausedTime: data.totalPausedTime || 0,
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt,
+          updatedBy: data.updatedBy,
+          version: data.version || 1
         }
         
         // Calculate additional paused time if session was left active
@@ -358,19 +386,21 @@ export const useFocus = create<State>((set, get) => ({
   },
   
   persistActiveSession: async () => {
-    const current = get().currentSession
-    if (!current) return
-    
-    const userId = auth.currentUser?.uid
-    if (!userId) throw new Error('Not authenticated')
+    const { currentSession } = get()
+    if (!currentSession || !auth.currentUser) return
     
     try {
-      await updateAt(`users/${userId}/focusSessions/${current.id}`, {
-        tasksData: JSON.stringify(current.tasks),
-        currentTaskIndex: current.currentTaskIndex,
-        isActive: current.isActive,
-        pausedAt: current.pausedAt,
-        totalPausedTime: current.totalPausedTime,
+      await updateAt(`users/${auth.currentUser.uid}/focusSessions/${currentSession.id}`, {
+        tasksData: JSON.stringify(currentSession.tasks),
+        currentTaskIndex: currentSession.currentTaskIndex,
+        isActive: currentSession.isActive,
+        isOnBreak: currentSession.isOnBreak,
+        currentBreak: currentSession.currentBreak || null,
+        breaks: currentSession.breaks || [],
+        pausedAt: currentSession.pausedAt,
+        totalPausedTime: currentSession.totalPausedTime || 0,
+        updatedAt: new Date().toISOString(),
+        version: (currentSession.version || 0) + 1
       })
     } catch (error) {
       console.error('Failed to persist active session:', error)
@@ -489,7 +519,10 @@ export const useFocus = create<State>((set, get) => ({
   
   resumeSession: async () => {
     const current = get().currentSession
-    if (!current || !current.pausedAt) {
+    if (!current) return
+    
+    // If not paused, just ensure active state is true
+    if (!current.pausedAt) {
       set((state) => {
         if (!state.currentSession) return state
         return {
@@ -523,56 +556,91 @@ export const useFocus = create<State>((set, get) => ({
     await get().persistActiveSession()
   },
   
-  addTimeToCurrentTask: (minutes) => {
-    set((state) => {
-      if (!state.currentSession) return state
-      
-      const currentIndex = state.currentSession.currentTaskIndex
-      const updatedTasks = [...state.currentSession.tasks]
-      updatedTasks[currentIndex] = {
-        ...updatedTasks[currentIndex],
-        timeSpent: updatedTasks[currentIndex].timeSpent + minutes, // Add minutes directly (tests expect this)
-      }
-      
-      return {
-        currentSession: {
-          ...state.currentSession,
-          tasks: updatedTasks,
-        },
-      }
-    })
+  addTimeToCurrentTask: async (minutes) => {
+    const { currentSession } = get()
+    if (!currentSession) return
+    
+    const currentTask = currentSession.tasks[currentSession.currentTaskIndex]
+    if (currentTask) {
+      currentTask.timeSpent += minutes * 60
+      await get().persistActiveSession()
+    }
   },
   
-  nextTask: () => {
-    set((state) => {
-      if (!state.currentSession) return state
-      
-      const nextIndex = Math.min(
-        state.currentSession.currentTaskIndex + 1,
-        state.currentSession.tasks.length - 1
-      )
-      
-      return {
-        currentSession: {
-          ...state.currentSession,
-          currentTaskIndex: nextIndex,
-        },
-      }
-    })
+  nextTask: async () => {
+    const { currentSession } = get()
+    if (!currentSession) return
+    
+    const nextIndex = currentSession.currentTaskIndex + 1
+    if (nextIndex < currentSession.tasks.length) {
+      currentSession.currentTaskIndex = nextIndex
+      await get().persistActiveSession()
+    }
   },
   
-  previousTask: () => {
-    set((state) => {
-      if (!state.currentSession) return state
-      
-      const prevIndex = Math.max(0, state.currentSession.currentTaskIndex - 1)
-      
-      return {
-        currentSession: {
-          ...state.currentSession,
-          currentTaskIndex: prevIndex,
-        },
-      }
+  previousTask: async () => {
+    const { currentSession } = get()
+    if (!currentSession) return
+    
+    const prevIndex = currentSession.currentTaskIndex - 1
+    if (prevIndex >= 0) {
+      currentSession.currentTaskIndex = prevIndex
+      await get().persistActiveSession()
+    }
+  },
+  
+  startBreak: async (type, duration) => {
+    const { currentSession } = get()
+    if (!currentSession || currentSession.isOnBreak) return
+    
+    const breakSession: BreakSession = {
+      startTime: new Date().toISOString(),
+      duration,
+      type
+    }
+    
+    // Pause the current session
+    await get().pauseSession()
+    
+    set({
+      currentSession: {
+        ...currentSession,
+        isOnBreak: true,
+        currentBreak: breakSession,
+      },
     })
+    
+    // Auto-end break after duration
+    setTimeout(() => {
+      const { currentSession } = get()
+      if (currentSession?.isOnBreak) {
+        get().endBreak()
+      }
+    }, duration * 60 * 1000)
+  },
+  
+  endBreak: async () => {
+    const { currentSession } = get()
+    if (!currentSession?.isOnBreak || !currentSession.currentBreak) return
+    
+    const breakEndTime = new Date().toISOString()
+    const completedBreak: BreakSession = {
+      ...currentSession.currentBreak,
+      endTime: breakEndTime,
+    }
+    
+    // Resume the session
+    await get().resumeSession()
+    
+    set({
+      currentSession: {
+        ...currentSession,
+        isOnBreak: false,
+        currentBreak: undefined,
+        breaks: [...(currentSession.breaks || []), completedBreak],
+      },
+    })
+    
+    await get().persistActiveSession()
   },
 }))

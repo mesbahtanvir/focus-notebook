@@ -12,6 +12,7 @@ import { FocusSessionDetailModal } from "@/components/FocusSessionDetailModal";
 import { FocusSession as FocusSessionType } from "@/store/useFocus";
 import { formatDateTime } from "@/lib/formatDateTime";
 import { useAuth } from "@/contexts/AuthContext";
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 
 function FocusPageContent() {
   const { user } = useAuth();
@@ -620,6 +621,14 @@ function FocusPageContent() {
         <FocusSessionDetailModal
           session={selectedSession}
           onClose={() => setSelectedSession(null)}
+        />
+      )}
+
+      {!currentSession && (
+        <FloatingActionButton
+          onClick={() => setShowSetup(true)}
+          title="Start Focus Session"
+          icon={<Play className="h-6 w-6" />}
         />
       )}
     </div>

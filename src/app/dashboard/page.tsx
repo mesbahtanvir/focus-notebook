@@ -216,22 +216,8 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Time Range Selector */}
-      <div className="flex justify-center gap-2">
-        {(['7d', '30d', '90d'] as TimeRange[]).map((range) => (
-          <button
-            key={range}
-            onClick={() => setTimeRange(range)}
-            className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-              timeRange === range
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
-            }`}
-          >
-            {range === '7d' ? 'Last 7 Days' : range === '30d' ? 'Last 30 Days' : 'Last 90 Days'}
-          </button>
-        ))}
-      </div>
+      {/* Time Range Selector - Hidden to reduce panic, but keeping internal functionality */}
+      {/* Data is still filtered by time range (default 30d), just not showing the selector UI */}
 
       {/* Summary Section */}
       <Card className="border-4 border-blue-200 shadow-xl bg-gradient-to-br from-white to-blue-50 dark:from-gray-900 dark:to-blue-950">

@@ -71,7 +71,7 @@ const COMMON_EMOTIONS = EMOTIONS.filter(e => e.isCommon);
 const ALL_EMOTIONS = EMOTIONS;
 
 export default function MoodTrackerPage() {
-  const moods = useMoods((s) => s.moods);
+  const moods = useMoods((s) => s.moods) || [];
   const addMood = useMoods((s) => s.add);
 
   const [emotionLevels, setEmotionLevels] = useState<Record<string, number>>({});
@@ -83,7 +83,7 @@ export default function MoodTrackerPage() {
 
   const displayedEmotions = showAllEmotions ? ALL_EMOTIONS : COMMON_EMOTIONS;
 
-  const recent = useMemo(() => moods.slice(0, 5), [moods]);
+  const recent = useMemo(() => Array.isArray(moods) ? moods.slice(0, 5) : [], [moods]);
 
   const updateEmotionLevel = (emotionId: string, level: number) => {
     setEmotionLevels(prev => ({

@@ -7,6 +7,7 @@ import { useProcessQueue } from "@/store/useProcessQueue";
 import { manualProcessor } from "@/lib/thoughtProcessor/manualProcessor";
 import { approvalHandler } from "@/lib/thoughtProcessor/approvalHandler";
 import { ProcessingApprovalDialog } from "@/components/ProcessingApprovalDialog";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, 
@@ -42,6 +43,20 @@ function ThoughtsPageContent() {
   const thoughts = useThoughts((s) => s.thoughts);
   const queue = useProcessQueue((s) => s.queue);
   const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  const [showNewThought, setShowNewThought] = useState(false);
+  const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingThoughtId, setProcessingThoughtId] = useState<string | null>(null);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [currentApprovalItem, setCurrentApprovalItem] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [pendingImportThoughts, setPendingImportThoughts] = useState<any[]>([]);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Date formatting function
   const formatDate = (date: any): string => {
@@ -64,19 +79,6 @@ function ThoughtsPageContent() {
       return 'Invalid date';
     }
   };
-  const [showNewThought, setShowNewThought] = useState(false);
-  const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processingThoughtId, setProcessingThoughtId] = useState<string | null>(null);
-  const router = useRouter();
-  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
-  const [currentApprovalItem, setCurrentApprovalItem] = useState<string | null>(null);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [pendingImportThoughts, setPendingImportThoughts] = useState<any[]>([]);
-  const [showErrorModal, setShowErrorModal] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
 
   // Auto-open thought detail if navigating from tasks page
   useEffect(() => {
@@ -375,24 +377,26 @@ function ThoughtsPageContent() {
                             </span>
                           )}
                           
-                          {thought.tags && Array.isArray(thought.tags) && thought.tags.filter(t => t !== 'processed').length > 0 && (
+                          {thought.tags && Array.isArray(thought.tags) && thought.tags.filter((t) => t && t !== 'processed').length > 0 && (
                             <span className="text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
                               <Tag className="h-3 w-3" />
-                              {thought.tags.filter(t => t !== 'processed').join(', ')}
+                              {thought.tags.filter((t) => t && t !== 'processed').join(', ')}
                             </span>
                           )}
                           
-                          {thought.tags?.includes('processed') && (
+                          {thought.tags && Array.isArray(thought.tags) && thought.tags.includes('processed') && (
                             <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-sm flex items-center gap-1">
                               <CheckCircle2 className="h-3 w-3" />
                               Processed
                             </span>
                           )}
                           
-                          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 ml-auto flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(thought.createdAt)}
-                          </span>
+                          {thought.createdAt && (
+                            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 ml-auto flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatDate(thought.createdAt)}
+                            </span>
+                          )}
                         </div>
                         
                         {/* Process Now Button for unprocessed thoughts */}
@@ -595,10 +599,22 @@ function NewThoughtModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-export default function ThoughtsPage() {
+function ThoughtsPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
-      <ThoughtsPageContent />
-    </Suspense>
+    <ErrorBoundary fallback={
+      <div className="p-4 text-red-600">
+        Something went wrong. Please refresh the page or try again later.
+      </div>
+    }>
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      }>
+        <ThoughtsPageContent />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
+
+export default ThoughtsPage;
