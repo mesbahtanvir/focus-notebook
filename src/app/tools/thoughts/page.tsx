@@ -99,9 +99,9 @@ function ThoughtsPageContent() {
   // Auto-navigate to detail page when new items need approval
   useEffect(() => {
     if (awaitingApproval.length > 0 && !showApprovalDialog && !currentApprovalItem) {
-      const firstItem = awaitingApproval[0];
-      // Navigate to thought detail page with AI suggestions
-      router.push(`/tools/thoughts/${firstItem.thoughtId}`);
+      // const firstItem = awaitingApproval[0];
+      // // Navigate to thought detail page with AI suggestions
+      // router.push(`/tools/thoughts/${firstItem.thoughtId}`);
     }
   }, [awaitingApproval, showApprovalDialog, currentApprovalItem, router]);
 
