@@ -10,8 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { ConfirmModal } from "@/components/ConfirmModal";
-import { 
-  Target, 
+import {
+  Target,
   Plus,
   Calendar,
   CheckCircle2,
@@ -28,8 +28,11 @@ import {
   Milestone,
   Search
 } from "lucide-react";
+import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 
 export default function ProjectsPage() {
+  useTrackToolUsage('projects');
+
   const router = useRouter();
   const { user } = useAuth();
   const projects = useProjects((s) => s.projects);

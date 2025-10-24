@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { Sparkles, Lock, MessageSquare, Lightbulb, Trash2, Timer, Play, Coffee, ShoppingBag, MapPin, Brain, Rocket, Heart, Zap } from "lucide-react";
 import { ThoughtDetailModal } from "@/components/ThoughtDetailModal";
+import { MostUsedTools } from "@/components/MostUsedTools";
 
 // Disable static generation for now
 export const dynamic = 'force-dynamic';
@@ -73,6 +74,9 @@ export default function Page() {
           </Link>
         </motion.div>
       )}
+
+      {/* Most Used Tools */}
+      {user && <MostUsedTools />}
 
       <section className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-4 border-purple-200 dark:border-purple-800 shadow-xl overflow-hidden">
         <div className="p-6">

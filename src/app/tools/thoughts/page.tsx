@@ -9,8 +9,8 @@ import { approvalHandler } from "@/lib/thoughtProcessor/approvalHandler";
 import { ProcessingApprovalDialog } from "@/components/ProcessingApprovalDialog";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Plus, 
+import {
+  Plus,
   Brain,
   Heart,
   Frown,
@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { ErrorModal } from '@/components/ErrorModal';
 import { ThoughtDetailModal } from "@/components/ThoughtDetailModal";
+import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import {
   ToolPageLayout,
   ToolHeader,
@@ -36,6 +37,8 @@ import {
 } from "@/components/tools";
 
 function ThoughtsPageContent() {
+  useTrackToolUsage('thoughts');
+
   const thoughts = useThoughts((s) => s.thoughts);
   const queue = useProcessQueue((s) => s.queue);
   const searchParams = useSearchParams();

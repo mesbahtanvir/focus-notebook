@@ -11,8 +11,11 @@ import {
 import Link from "next/link";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { GoalFormModal } from "@/components/GoalFormModal";
+import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 
 export default function GoalsPage() {
+  useTrackToolUsage('goals');
+
   const { user } = useAuth();
   const goals = useGoals((s) => s.goals);
   const subscribe = useGoals((s) => s.subscribe);

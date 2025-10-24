@@ -6,10 +6,10 @@ import { useThoughts } from '@/store/useThoughts';
 import { useProjects } from '@/store/useProjects';
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Plus, 
-  Filter, 
-  SortAsc, 
+import {
+  Plus,
+  Filter,
+  SortAsc,
   Calendar,
   CheckCircle2,
   Circle,
@@ -27,6 +27,7 @@ import { getNotesPreview } from "@/lib/formatNotes";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { TaskInput } from "@/components/TaskInput";
 import { SourceBadge } from "@/components/SourceBadge";
+import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import Link from "next/link";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 
@@ -34,6 +35,8 @@ type SortOption = 'priority' | 'dueDate' | 'createdAt' | 'title';
 type ViewMode = 'list' | 'kanban';
 
 function TasksPageContent() {
+  useTrackToolUsage('tasks');
+
   const tasks = useTasks((s) => s.tasks);
   const thoughts = useThoughts((s) => s.thoughts);
   const projects = useProjects((s) => s.projects);

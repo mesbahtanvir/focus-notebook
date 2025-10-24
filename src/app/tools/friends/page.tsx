@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AnimatePresence } from "framer-motion";
 import { FriendCard } from "@/components/FriendCard";
 import { FriendModal } from "@/components/FriendModal";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import {
   Users,
   Plus,
@@ -14,6 +15,7 @@ import {
   Shield,
   Star,
   Search,
+  UserX
 } from "lucide-react";
 
 export default function FriendsPage() {
@@ -29,6 +31,7 @@ export default function FriendsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterEnergy, setFilterEnergy] = useState<'all' | EnergyLevel>('all');
   const [filterPriority, setFilterPriority] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  const [deleteConfirm, setDeleteConfirm] = useState<{show: boolean; id: string; name: string}>({show: false, id: '', name: ''});
 
   // Subscribe to Firebase
   useEffect(() => {
@@ -67,10 +70,13 @@ export default function FriendsPage() {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Remove this person from your list? Your notes will not be deleted.')) {
-      await deleteFriend(id);
-    }
+  const handleDelete = (friend: Friend) => {
+    setDeleteConfirm({show: true, id: friend.id, name: friend.name});
+  };
+
+  const confirmDelete = async () => {
+    await deleteFriend(deleteConfirm.id);
+    setDeleteConfirm({show: false, id: '', name: ''});
   };
 
   return (
@@ -186,14 +192,14 @@ export default function FriendsPage() {
                 key={friend.id}
                 friend={friend}
                 onEdit={() => handleEdit(friend)}
-                onDelete={() => handleDelete(friend.id)}
+                onDelete={() => handleDelete(friend)}
               />
             ))}
           </AnimatePresence>
         </div>
       )}
 
-      {/* Modal */}
+      {/* Friend Modal */}
       {showModal && (
         <FriendModal
           friend={editingFriend}
@@ -212,6 +218,19 @@ export default function FriendsPage() {
           }}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirm.show}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirm({show: false, id: '', name: ''})}
+        title={`Remove ${deleteConfirm.name}?`}
+        message="This will remove this person from your list. Your notes and thoughts will not be deleted."
+        confirmText="Remove Person"
+        cancelText="Keep"
+        variant="warning"
+        icon={<UserX className="h-8 w-8" />}
+      />
     </div>
   );
 }

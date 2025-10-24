@@ -13,8 +13,11 @@ import { FocusSession as FocusSessionType } from "@/store/useFocus";
 import { formatDateTime } from "@/lib/formatDateTime";
 import { useAuth } from "@/contexts/AuthContext";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
+import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 
 function FocusPageContent() {
+  useTrackToolUsage('focus');
+
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const tasks = useTasks((s) => s.tasks);
