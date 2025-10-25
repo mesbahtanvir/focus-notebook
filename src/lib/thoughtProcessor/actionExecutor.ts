@@ -67,6 +67,60 @@ export class ActionExecutor {
   private async createTask(action: ProcessAction, queueItem: ProcessQueueItem) {
     const { useTasks } = await import('@/store/useTasks');
     const addTask = useTasks.getState().add;
+    const tasks = useTasks.getState().tasks;
+
+    // DEDUPLICATION CHECK: Check if task from this queue + action already exists
+    const duplicateTask = tasks.find(task => {
+      // Check if task has metadata in notes
+      if (!task.notes) return false;
+
+      try {
+        const taskMetadata = JSON.parse(task.notes);
+        // If task was created from this exact queue item and action, skip
+        if (
+          taskMetadata.processQueueId === queueItem.id &&
+          taskMetadata.sourceThoughtId === action.thoughtId &&
+          taskMetadata.createdBy === 'thought-processor' &&
+          task.title === action.data.title
+        ) {
+          return true;
+        }
+      } catch {
+        // Not JSON metadata, check by title + thoughtId
+      }
+
+      // Alternative check: same title + thoughtId within last 5 minutes
+      if (task.thoughtId === action.thoughtId && task.title === action.data.title) {
+        const taskCreatedAt = typeof task.createdAt === 'string'
+          ? new Date(task.createdAt)
+          : task.createdAt?.toDate ? task.createdAt.toDate() : null;
+
+        if (taskCreatedAt) {
+          const timeDiff = Date.now() - taskCreatedAt.getTime();
+          if (timeDiff < 5 * 60 * 1000) { // 5 minutes
+            return true;
+          }
+        }
+      }
+
+      return false;
+    });
+
+    if (duplicateTask) {
+      this.log('Task already exists, skipping creation', {
+        existingTaskId: duplicateTask.id,
+        title: action.data.title,
+        queueId: queueItem.id
+      });
+
+      // Track the existing task for revert
+      if (!action.createdItems) {
+        action.createdItems = { taskIds: [], noteIds: [] };
+      }
+      action.createdItems.taskIds = [duplicateTask.id];
+
+      return; // Skip creation
+    }
 
     const metadata = {
       sourceThoughtId: action.thoughtId,
@@ -83,7 +137,7 @@ export class ActionExecutor {
         type: action.data.recurrence.type,
         frequency: action.data.recurrence.frequency || 1
       };
-      
+
       // Add recurrence reasoning to metadata
       if (action.data.recurrence.reasoning) {
         metadata.aiReasoning = `${metadata.aiReasoning}\nRecurrence: ${action.data.recurrence.reasoning}`;
@@ -97,6 +151,7 @@ export class ActionExecutor {
       priority: action.data.priority || 'medium',
       status: 'active',
       recurrence,
+      thoughtId: action.thoughtId, // Link to the source thought
       notes: JSON.stringify(metadata), // Store metadata in notes field
     });
 
@@ -107,10 +162,10 @@ export class ActionExecutor {
     action.createdItems.taskIds = [taskId];
     queueItem.revertData.createdItems.taskIds.push(taskId);
 
-    this.log('Task created', { 
-      taskId, 
-      title: action.data.title, 
-      recurrence: recurrence ? recurrence.type : 'none' 
+    this.log('Task created', {
+      taskId,
+      title: action.data.title,
+      recurrence: recurrence ? recurrence.type : 'none'
     });
   }
 

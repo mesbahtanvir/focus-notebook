@@ -3,19 +3,22 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useTasks, Task, TaskCategory, TaskPriority, TaskStatus, RecurrenceType, TaskStep } from "@/store/useTasks";
+import { useThoughts } from "@/store/useThoughts";
 import { FormattedNotes } from "@/lib/formatNotes";
-import { SourceInfo } from "@/components/SourceBadge";
 import { TaskSteps } from "@/components/TaskSteps";
-import { 
-  X, 
-  Calendar, 
-  Clock, 
-  Tag, 
+import Link from "next/link";
+import {
+  X,
+  Calendar,
+  Clock,
+  Tag,
   Trash2,
   Save,
   AlertCircle,
   Repeat,
-  ListChecks
+  ListChecks,
+  MessageCircle,
+  ExternalLink
 } from "lucide-react";
 
 interface TaskDetailModalProps {
@@ -24,9 +27,45 @@ interface TaskDetailModalProps {
 }
 
 export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
+  // Helper functions to extract thoughtId and parse metadata from task notes
+  const getMetadataFromNotes = (notes?: string): any => {
+    if (!notes) return null;
+    try {
+      const parsed = JSON.parse(notes);
+      // Check if it's metadata (has sourceThoughtId, createdBy, etc.)
+      if (parsed.sourceThoughtId || parsed.createdBy === 'thought-processor') {
+        return parsed;
+      }
+    } catch {
+      // Not JSON, regular notes
+    }
+    return null;
+  };
+
+  const getThoughtIdFromTask = (task: Task): string => {
+    // First check the thoughtId field
+    if (task.thoughtId) {
+      return task.thoughtId;
+    }
+
+    // Then check if it's in the notes as metadata
+    const metadata = getMetadataFromNotes(task.notes);
+    return metadata?.sourceThoughtId || '';
+  };
+
+  const getUserNotesFromTask = (task: Task): string => {
+    // If notes contain metadata, return empty string (metadata shouldn't be edited)
+    const metadata = getMetadataFromNotes(task.notes);
+    if (metadata) {
+      return metadata.userNotes || '';
+    }
+    // Otherwise return the notes as-is
+    return task.notes || '';
+  };
+
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
-  const [notes, setNotes] = useState(task.notes || '');
+  const [notes, setNotes] = useState(getUserNotesFromTask(task));
   const [category, setCategory] = useState<TaskCategory>(task.category || 'mastery');
   const [priority, setPriority] = useState<TaskPriority>(task.priority);
   const [status, setStatus] = useState<TaskStatus>(task.status);
@@ -36,10 +75,15 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>(task.recurrence?.type || 'none');
   const [recurrenceFrequency, setRecurrenceFrequency] = useState(task.recurrence?.frequency || 0);
   const [steps, setSteps] = useState<TaskStep[]>(task.steps || []);
+  const [selectedThoughtId, setSelectedThoughtId] = useState<string>(getThoughtIdFromTask(task));
 
   const updateTask = useTasks((s) => s.updateTask);
   const deleteTask = useTasks((s) => s.deleteTask);
   const toggleTask = useTasks((s) => s.toggle);
+
+  const thoughts = useThoughts((s) => s.thoughts);
+  const currentThoughtId = isEditing ? selectedThoughtId : getThoughtIdFromTask(task);
+  const linkedThought = thoughts.find(t => t.id === currentThoughtId);
 
   const handleSave = async () => {
     const tags = tagsInput
@@ -52,9 +96,26 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
       frequency: recurrenceFrequency || undefined,
     } : undefined;
 
+    // Handle notes field carefully to preserve metadata if it exists
+    let notesToSave: string | undefined;
+    const existingMetadata = getMetadataFromNotes(task.notes);
+
+    if (existingMetadata) {
+      // If task has metadata, preserve it and add user notes
+      notesToSave = JSON.stringify({
+        ...existingMetadata,
+        userNotes: notes || undefined,
+        // Update sourceThoughtId if changed
+        sourceThoughtId: selectedThoughtId || existingMetadata.sourceThoughtId,
+      });
+    } else {
+      // No metadata, just save regular notes
+      notesToSave = notes || undefined;
+    }
+
     await updateTask(task.id, {
       title,
-      notes,
+      notes: notesToSave,
       category,
       priority,
       status,
@@ -63,6 +124,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
       tags: tags.length > 0 ? tags : undefined,
       recurrence: recurrenceConfig,
       steps: steps.length > 0 ? steps : undefined,
+      thoughtId: selectedThoughtId || undefined,
     });
     setIsEditing(false);
   };
@@ -310,6 +372,56 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
             )}
           </div>
 
+          {/* Linked Thought */}
+          <div>
+            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+              <MessageCircle className="h-4 w-4" />
+              Linked Thought
+            </label>
+            {isEditing ? (
+              <div className="space-y-2">
+                <select
+                  value={selectedThoughtId}
+                  onChange={(e) => setSelectedThoughtId(e.target.value)}
+                  className="input w-full"
+                >
+                  <option value="">No linked thought</option>
+                  {thoughts.map((thought) => (
+                    <option key={thought.id} value={thought.id}>
+                      {thought.text.length > 80 ? `${thought.text.slice(0, 80)}...` : thought.text}
+                    </option>
+                  ))}
+                </select>
+                {selectedThoughtId && (
+                  <p className="text-xs text-muted-foreground">
+                    This task will be linked to the selected thought
+                  </p>
+                )}
+              </div>
+            ) : linkedThought ? (
+              <Link
+                href={`/tools/thoughts?id=${linkedThought.id}`}
+                className="flex items-center gap-2 p-3 rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border border-indigo-200 dark:border-indigo-900 hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-950/50 dark:hover:to-purple-950/50 transition-colors group"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <MessageCircle className="h-4 w-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    <span className="text-sm font-semibold text-indigo-900 dark:text-indigo-100">
+                      From Thought
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
+                    {linkedThought.text}
+                  </p>
+                </div>
+                <ExternalLink className="h-4 w-4 text-indigo-600 dark:text-indigo-400 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </Link>
+            ) : (
+              <span className="text-muted-foreground">No linked thought</span>
+            )}
+          </div>
+
           {/* Recurrence */}
           <div>
             <label className="block text-sm font-medium mb-2 flex items-center gap-2">
@@ -392,20 +504,45 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                 placeholder="Add notes or description..."
                 className="input w-full min-h-[120px]"
               />
-            ) : task.notes ? (
-              <FormattedNotes notes={task.notes} className="text-gray-700 dark:text-gray-300" />
+            ) : notes ? (
+              <FormattedNotes notes={notes} className="text-gray-700 dark:text-gray-300" />
             ) : (
               <p className="text-sm text-muted-foreground">No notes</p>
             )}
           </div>
+
+          {/* AI Generated Task Info */}
+          {!isEditing && getMetadataFromNotes(task.notes) && (() => {
+            const metadata = getMetadataFromNotes(task.notes);
+            return (
+              <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                  AI Generated Task
+                </h4>
+                <div className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
+                  {metadata.aiReasoning && (
+                    <div>
+                      <span className="font-medium">AI Reasoning: </span>
+                      <span>{metadata.aiReasoning}</span>
+                    </div>
+                  )}
+                  {metadata.processedAt && (
+                    <div className="text-xs text-blue-600 dark:text-blue-300">
+                      Generated: {new Date(metadata.processedAt).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Metadata */}
           <div className="pt-4 border-t space-y-2 text-sm text-muted-foreground">
             <div>
               Created: {task.createdAt && typeof task.createdAt === 'object' && 'toDate' in task.createdAt
                 ? task.createdAt.toDate().toLocaleString()
-                : task.createdAt 
-                  ? new Date(task.createdAt).toLocaleString() 
+                : task.createdAt
+                  ? new Date(task.createdAt).toLocaleString()
                   : 'N/A'}
             </div>
             {task.completedAt && (

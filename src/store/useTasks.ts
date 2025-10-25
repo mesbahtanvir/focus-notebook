@@ -182,19 +182,19 @@ export const useTasks = create<State>((set, get) => ({
   add: async (task) => {
     const userId = auth.currentUser?.uid
     if (!userId) throw new Error('Not authenticated')
-    
+
     const taskId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    
+
     const newTask: Omit<Task, 'id'> = {
+      ...task, // Spread all fields from the input task
       title: task.title || 'Untitled Task',
       done: false,
       status: task.status || 'active',
       priority: task.priority || 'medium',
-      category: task.category,
-      createdAt: new Date().toISOString(),
       focusEligible: task.focusEligible !== undefined ? task.focusEligible : true,
+      createdAt: new Date().toISOString(),
     }
-    
+
     await createAt(`users/${userId}/tasks/${taskId}`, newTask)
     return taskId
   },

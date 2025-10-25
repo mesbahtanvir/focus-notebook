@@ -547,12 +547,27 @@ function TaskGroup({
                       </span>
                     )}
 
-                    {task.thoughtId && (() => {
-                      const thought = thoughts.find(t => t.id === task.thoughtId);
+                    {(() => {
+                      // Check for thoughtId in field or in metadata (for backward compatibility)
+                      let thoughtId = task.thoughtId;
+                      if (!thoughtId && task.notes) {
+                        try {
+                          const metadata = JSON.parse(task.notes);
+                          if (metadata.sourceThoughtId) {
+                            thoughtId = metadata.sourceThoughtId;
+                          }
+                        } catch {
+                          // Not JSON, ignore
+                        }
+                      }
+
+                      if (!thoughtId) return null;
+
+                      const thought = thoughts.find(t => t.id === thoughtId);
                       if (!thought) return null;
                       return (
                         <Link
-                          href={`/tools/thoughts?id=${task.thoughtId}`}
+                          href={`/tools/thoughts?id=${thoughtId}`}
                           className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm flex items-center gap-1 shrink-0 hover:from-indigo-600 hover:to-purple-700 transition-colors"
                           onClick={(e) => e.stopPropagation()}
                         >

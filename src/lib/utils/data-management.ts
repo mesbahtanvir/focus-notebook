@@ -20,10 +20,25 @@ export interface ExportedData {
   };
 }
 
+export interface ExportOptions {
+  tasks?: boolean;
+  goals?: boolean;
+  projects?: boolean;
+  thoughts?: boolean;
+  moods?: boolean;
+}
+
 /**
  * Export all user data to a JSON file
  */
 export async function exportAllData(): Promise<ExportedData> {
+  return exportData({ tasks: true, goals: true, projects: true, thoughts: true, moods: true });
+}
+
+/**
+ * Export selected user data to a JSON file
+ */
+export async function exportData(options: ExportOptions): Promise<ExportedData> {
   const userId = auth.currentUser?.uid;
   if (!userId) throw new Error('Not authenticated');
 
@@ -39,11 +54,11 @@ export async function exportAllData(): Promise<ExportedData> {
     exportedAt: new Date().toISOString(),
     userId,
     data: {
-      tasks: tasksState.tasks,
-      goals: goalsState.goals,
-      projects: projectsState.projects,
-      thoughts: thoughtsState.thoughts,
-      moods: moodsState.moods,
+      tasks: options.tasks ? tasksState.tasks : [],
+      goals: options.goals ? goalsState.goals : [],
+      projects: options.projects ? projectsState.projects : [],
+      thoughts: options.thoughts ? thoughtsState.thoughts : [],
+      moods: options.moods ? moodsState.moods : [],
     },
   };
 

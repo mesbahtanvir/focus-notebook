@@ -11,7 +11,8 @@ import { useToast } from "@/hooks/use-toast"
 import { useSettings, AIModel } from '@/store/useSettings'
 import { Key, Eye, EyeOff, Check, X, ExternalLink, Brain, Download, Trash2, Database, AlertTriangle, Upload, FileJson } from 'lucide-react'
 import Link from 'next/link'
-import { exportAllData, downloadDataAsFile, deleteAllUserData, getDataStats, importDataFromFile } from '@/lib/utils/data-management'
+import { exportAllData, exportData, downloadDataAsFile, deleteAllUserData, getDataStats, importDataFromFile, ExportOptions } from '@/lib/utils/data-management'
+import { DataMigration } from '@/components/DataMigration'
 
 type SettingsFormValues = {
   allowBackgroundProcessing: boolean;
@@ -41,6 +42,13 @@ export default function SettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [dataStats, setDataStats] = useState({ tasks: 0, goals: 0, projects: 0, thoughts: 0, moods: 0, total: 0 });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [exportOptions, setExportOptions] = useState<ExportOptions>({
+    tasks: true,
+    goals: true,
+    projects: true,
+    thoughts: true,
+    moods: true,
+  });
   
 
   // Load saved settings from localStorage on component mount
@@ -107,15 +115,24 @@ export default function SettingsPage() {
     });
   };
   
-  // Export all data
+  // Export data
   const handleExportData = async () => {
     try {
       setIsExporting(true);
-      const data = await exportAllData();
+      const data = await exportData(exportOptions);
+
+      // Count selected items
+      const selectedCount =
+        (exportOptions.tasks ? dataStats.tasks : 0) +
+        (exportOptions.goals ? dataStats.goals : 0) +
+        (exportOptions.projects ? dataStats.projects : 0) +
+        (exportOptions.thoughts ? dataStats.thoughts : 0) +
+        (exportOptions.moods ? dataStats.moods : 0);
+
       downloadDataAsFile(data);
       toast({
         title: 'Data Exported Successfully',
-        description: `Exported ${dataStats.total} items to JSON file.`,
+        description: `Exported ${selectedCount} items to JSON file.`,
       });
     } catch (error) {
       console.error('Export failed:', error);
@@ -487,21 +504,80 @@ export default function SettingsPage() {
                 {/* Action Buttons */}
                 <div className="space-y-3">
                   {/* Export Data */}
-                  <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-green-200 dark:border-green-800">
-                    <div className="flex-1">
-                      <div className="font-semibold text-gray-900 dark:text-gray-100">Export All Data</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Download all your data as a JSON file for backup
+                  <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900 dark:text-gray-100">Export Data</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          Select which data to export as a JSON file
+                        </div>
                       </div>
                     </div>
-                    <Button
-                      onClick={handleExportData}
-                      disabled={isExporting || dataStats.total === 0}
-                      className="ml-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      {isExporting ? 'Exporting...' : 'Export'}
-                    </Button>
+
+                    {/* Export Options Checkboxes */}
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 p-3 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={exportOptions.tasks}
+                          onChange={(e) => setExportOptions({ ...exportOptions, tasks: e.target.checked })}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm font-medium">Tasks ({dataStats.tasks})</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={exportOptions.goals}
+                          onChange={(e) => setExportOptions({ ...exportOptions, goals: e.target.checked })}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm font-medium">Goals ({dataStats.goals})</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={exportOptions.projects}
+                          onChange={(e) => setExportOptions({ ...exportOptions, projects: e.target.checked })}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm font-medium">Projects ({dataStats.projects})</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={exportOptions.thoughts}
+                          onChange={(e) => setExportOptions({ ...exportOptions, thoughts: e.target.checked })}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm font-medium">Thoughts ({dataStats.thoughts})</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={exportOptions.moods}
+                          onChange={(e) => setExportOptions({ ...exportOptions, moods: e.target.checked })}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm font-medium">Moods ({dataStats.moods})</span>
+                      </label>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        {Object.values(exportOptions).filter(Boolean).length === 0
+                          ? 'Please select at least one data type'
+                          : `Selected: ${Object.entries(exportOptions).filter(([_, v]) => v).map(([k]) => k).join(', ')}`}
+                      </div>
+                      <Button
+                        onClick={handleExportData}
+                        disabled={isExporting || dataStats.total === 0 || Object.values(exportOptions).filter(Boolean).length === 0}
+                        className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        {isExporting ? 'Exporting...' : 'Export Selected'}
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Import Data */}
@@ -642,6 +718,11 @@ export default function SettingsPage() {
 
           </CardContent>
       </Card>
+
+      {/* Data Migration Component */}
+      <div className="mt-6">
+        <DataMigration />
+      </div>
 
     </div>
   );

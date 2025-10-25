@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { collection, query, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore'
+import { collection, query, orderBy, limit, startAfter, getDocs, getCountFromServer, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebaseClient'
 import { createAt, updateAt, deleteAt } from '@/lib/data/gateway'
 import { subscribeCol } from '@/lib/data/subscribe'
@@ -29,6 +29,7 @@ export interface Thought {
 
 type State = {
   thoughts: Thought[]
+  totalCount: number
   isLoading: boolean
   fromCache: boolean
   hasPendingWrites: boolean
@@ -39,6 +40,7 @@ type State = {
   isLoadingMore: boolean
   subscribe: (userId: string, pageSize?: number) => void
   loadMore: (userId: string) => Promise<void>
+  fetchTotalCount: (userId: string) => Promise<void>
   add: (data: Omit<Thought, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>) => Promise<void>
   updateThought: (id: string, updates: Partial<Omit<Thought, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>>) => Promise<void>
   deleteThought: (id: string) => Promise<void>
@@ -46,6 +48,7 @@ type State = {
 
 export const useThoughts = create<State>((set, get) => ({
   thoughts: [],
+  totalCount: 0,
   isLoading: true,
   fromCache: false,
   hasPendingWrites: false,
@@ -78,9 +81,22 @@ export const useThoughts = create<State>((set, get) => ({
         hasMore: thoughts.length === pageSize,
         pageSize,
       })
+
+      // Fetch total count after loading thoughts
+      get().fetchTotalCount(userId)
     })
 
     set({ unsubscribe: unsub })
+  },
+
+  fetchTotalCount: async (userId: string) => {
+    try {
+      const thoughtsRef = collection(db, `users/${userId}/thoughts`)
+      const snapshot = await getCountFromServer(thoughtsRef)
+      set({ totalCount: snapshot.data().count })
+    } catch (error) {
+      console.error('Error fetching total count:', error)
+    }
   },
 
   loadMore: async (userId: string) => {
@@ -136,6 +152,9 @@ export const useThoughts = create<State>((set, get) => ({
     }
 
     await createAt(`users/${userId}/thoughts/${id}`, newThought)
+
+    // Refresh total count after adding
+    get().fetchTotalCount(userId)
   },
 
 
@@ -151,5 +170,8 @@ export const useThoughts = create<State>((set, get) => ({
     if (!userId) throw new Error('Not authenticated')
 
     await deleteAt(`users/${userId}/thoughts/${id}`)
+
+    // Refresh total count after deleting
+    get().fetchTotalCount(userId)
   },
 }))

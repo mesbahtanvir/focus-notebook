@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect, Suspense } from "react";
+import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import { useThoughts, Thought } from "@/store/useThoughts";
 import { useProcessQueue } from "@/store/useProcessQueue";
 import { manualProcessor } from "@/lib/thoughtProcessor/manualProcessor";
@@ -40,11 +41,16 @@ import {
 function ThoughtsPageContent() {
   useTrackToolUsage('thoughts');
 
+  const { user } = useAuth();
   const thoughts = useThoughts((s) => s.thoughts);
+  const totalCount = useThoughts((s) => s.totalCount);
+  const hasMoreInStore = useThoughts((s) => s.hasMore);
+  const isLoadingMore = useThoughts((s) => s.isLoadingMore);
+  const loadMore = useThoughts((s) => s.loadMore);
   const queue = useProcessQueue((s) => s.queue);
   const searchParams = useSearchParams();
   const router = useRouter();
-  
+
   const [showNewThought, setShowNewThought] = useState(false);
   const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -55,6 +61,9 @@ function ThoughtsPageContent() {
   const [errorMessage, setErrorMessage] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Ref for infinite scroll observer (for loading more from Firestore)
+  const loadMoreObserverRef = useRef<HTMLDivElement>(null);
 
   // Date formatting function
   const formatDate = (date: any): string => {
@@ -88,6 +97,25 @@ function ThoughtsPageContent() {
       }
     }
   }, [searchParams, thoughts]);
+
+  // Infinite scroll: Load more thoughts from Firestore when scrolling near bottom
+  useEffect(() => {
+    if (!loadMoreObserverRef.current || !user?.uid) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && hasMoreInStore && !isLoadingMore) {
+          loadMore(user.uid);
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    observer.observe(loadMoreObserverRef.current);
+
+    return () => observer.disconnect();
+  }, [user?.uid, hasMoreInStore, isLoadingMore, loadMore]);
 
   // Get awaiting approval items
   const awaitingApproval = useMemo(() => {
@@ -126,13 +154,14 @@ function ThoughtsPageContent() {
     if (!thoughts || !Array.isArray(thoughts)) {
       return { total: 0, analyzed: 0, unprocessed: 0 };
     }
-    
-    const total = thoughts.length;
+
+    // Use totalCount from store for accurate total, calculate others from loaded thoughts
+    const total = totalCount;
     const analyzed = thoughts.filter(t => t && t.cbtAnalysis).length;
     const unprocessed = thoughts.filter(t => t && !t.tags?.includes('processed')).length;
 
     return { total, analyzed, unprocessed };
-  }, [thoughts]);
+  }, [thoughts, totalCount]);
 
   const handleProcessThought = async (thoughtId: string) => {
     setIsProcessing(true);
@@ -347,6 +376,18 @@ function ThoughtsPageContent() {
             {hasMore && (
               <div ref={observerTarget} className="flex justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+              </div>
+            )}
+
+            {/* Load more from Firestore trigger */}
+            {hasMoreInStore && (
+              <div ref={loadMoreObserverRef} className="flex justify-center py-4">
+                {isLoadingMore && (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Loading more thoughts...</span>
+                  </div>
+                )}
               </div>
             )}
           </ToolList>
