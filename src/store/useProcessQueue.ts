@@ -15,6 +15,7 @@ export interface ProcessAction {
     taskIds?: string[];
     noteIds?: string[];
     projectIds?: string[];
+    moodIds?: string[];
   };
   aiReasoning?: string;
   error?: string;

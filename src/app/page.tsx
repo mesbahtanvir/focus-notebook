@@ -24,9 +24,6 @@ export default function Page() {
   const thoughts = useThoughts((s) => s.thoughts);
   const addThought = useThoughts((s) => s.add);
   const deleteThought = useThoughts((s) => s.deleteThought);
-  const loadMore = useThoughts((s) => s.loadMore);
-  const hasMore = useThoughts((s) => s.hasMore);
-  const isLoadingMore = useThoughts((s) => s.isLoadingMore);
   // Tasks store (for New Task button only; TaskList handles its own reads)
   const tasks = useTasks((s) => s.tasks);
   const addTask = useTasks((s) => s.add);
@@ -44,10 +41,6 @@ export default function Page() {
     return showAll ? thoughts : thoughts.slice(0, 3);
   }, [thoughts, showAll]);
 
-  const handleLoadMore = async () => {
-    if (!user?.uid || isLoadingMore || !hasMore) return;
-    await loadMore(user.uid);
-  };
 
   const onSubmit = async (data: FormValues) => {
     if (!data.text?.trim()) return;
@@ -148,18 +141,6 @@ export default function Page() {
             ))}
           </ul>
 
-          {/* Load More Button */}
-          {showAll && hasMore && (
-            <div className="mt-4 flex justify-center">
-              <button
-                onClick={handleLoadMore}
-                disabled={isLoadingMore}
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-              >
-                {isLoadingMore ? 'Loading...' : 'Load More'}
-              </button>
-            </div>
-          )}
         </div>
       </section>
 

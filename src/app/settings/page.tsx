@@ -241,7 +241,7 @@ export default function SettingsPage() {
       await deleteAllUserData();
       
       // Update stats after deletion
-      setDataStats({ tasks: 0, goals: 0, projects: 0, thoughts: 0, moods: 0, total: 0 });
+      setDataStats({ tasks: 0, goals: 0, projects: 0, thoughts: 0, moods: 0, focusSessions: 0, total: 0 });
       setShowDeleteConfirm(false);
       
       toast({
