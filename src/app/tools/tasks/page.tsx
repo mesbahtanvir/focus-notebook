@@ -21,13 +21,15 @@ import {
   ChevronDown,
   MessageCircle,
   Target,
-  Search
+  Search,
+  Loader2
 } from "lucide-react";
 import { getNotesPreview } from "@/lib/formatNotes";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { TaskInput } from "@/components/TaskInput";
 import { SourceBadge } from "@/components/SourceBadge";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import Link from "next/link";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 
@@ -51,6 +53,7 @@ function TasksPageContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   // Auto-open task detail if navigating from notes page
   useEffect(() => {
@@ -169,6 +172,18 @@ function TasksPageContent() {
       case 'medium': return <Circle className="h-4 w-4" />;
       case 'low': return <Circle className="h-4 w-4" />;
     }
+  };
+
+  const toggleGroupCollapse = (groupKey: string) => {
+    setCollapsedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupKey)) {
+        newSet.delete(groupKey);
+      } else {
+        newSet.add(groupKey);
+      }
+      return newSet;
+    });
   };
 
   return (
@@ -327,160 +342,20 @@ function TasksPageContent() {
         )}
 
         {/* Render each frequency group */}
-        {Object.entries(groupedTasks).map(([frequency, groupTasks]) => {
-          if (groupTasks.length === 0) return null;
-
-          const groupTitles: Record<string, string> = {
-            'one-time': '📋 One-Time Tasks',
-            'daily': '🌅 Daily Tasks',
-            'workweek': '💼 Workweek Tasks (Mon-Fri)',
-            'weekly': '📅 Weekly Tasks',
-            'monthly': '📆 Monthly Tasks'
-          };
-
-          const groupColors: Record<string, string> = {
-            'one-time': 'from-gray-500 to-slate-600',
-            'daily': 'from-orange-500 to-amber-600',
-            'workweek': 'from-blue-500 to-indigo-600',
-            'weekly': 'from-green-500 to-emerald-600',
-            'monthly': 'from-purple-500 to-violet-600'
-          };
-
-          return (
-            <div key={frequency} className="space-y-3">
-              <div className="flex items-center gap-3">
-                <h2 className={`text-lg font-bold bg-gradient-to-r ${groupColors[frequency]} bg-clip-text text-transparent`}>
-                  {groupTitles[frequency]}
-                </h2>
-                <span className="text-sm text-muted-foreground">
-                  ({groupTasks.length})
-                </span>
-              </div>
-
-              <AnimatePresence>
-                {groupTasks.map((task) => (
-                  <motion.div
-                    key={task.id}
-                    layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className={`p-4 rounded-xl cursor-pointer transition-all transform hover:scale-[1.02] hover:shadow-xl border-2 ${
-                      task.done 
-                        ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-300 dark:border-green-800' 
-                        : task.category === 'mastery'
-                        ? 'bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/20 dark:via-indigo-950/20 dark:to-purple-950/20 border-blue-300 dark:border-blue-800'
-                        : 'bg-gradient-to-r from-pink-50 via-rose-50 to-red-50 dark:from-pink-950/20 dark:via-rose-950/20 dark:to-red-950/20 border-pink-300 dark:border-pink-800'
-                    }`}
-                    onClick={() => setSelectedTask(task)}
-                  >
-                    <div className="flex items-center gap-3">
-                      {/* Visual indicator only - not clickable */}
-                      <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 shadow-md ${
-                        task.done 
-                          ? 'bg-gradient-to-br from-green-400 to-emerald-500 border-green-600 dark:from-green-600 dark:to-emerald-700 dark:border-green-500' 
-                          : 'bg-white dark:bg-gray-800 border-gray-400 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
-                      }`}>
-                        {task.done && <CheckCircle2 className="h-4 w-4 text-white" />}
-                      </div>
-                      
-                      {/* Single line with all info */}
-                      <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                        <h3 className={`font-medium shrink-0 ${task.done && !task.recurrence ? 'line-through text-muted-foreground' : ''}`}>
-                          {task.title}
-                        </h3>
-                        
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 shrink-0 ${getPriorityColor(task.priority)}`}>
-                          {getPriorityIcon(task.priority)}
-                          {task.priority}
-                        </span>
-                        
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold shadow-sm shrink-0 ${
-                          task.category === "mastery"
-                            ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0"
-                            : "bg-gradient-to-r from-pink-500 to-rose-600 text-white border-0"
-                        }`}>
-                          {task.category === "mastery" ? "🧠 " : "💝 "}{task.category}
-                        </span>
-                        
-                        {task.focusEligible !== false && (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm shrink-0">
-                            🎯 Focus
-                          </span>
-                        )}
-                        
-                        {task.done && task.recurrence && task.recurrence.type !== 'none' && (
-                          <span className="text-xs px-2.5 py-1 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold shadow-sm shrink-0">
-                            ✓ Done today
-                          </span>
-                        )}
-                        
-                        {task.recurrence && task.recurrence.type !== 'none' && (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-purple-500 to-violet-600 text-white shadow-sm flex items-center gap-1 shrink-0">
-                            <Repeat className="h-3 w-3" />
-                            {task.recurrence.type}
-                            {task.recurrence.frequency && ` (${task.completionCount || 0}/${task.recurrence.frequency})`}
-                          </span>
-                        )}
-                        
-                        {task.dueDate && (
-                          <span className="text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 shadow-sm">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(task.dueDate).toLocaleDateString()}
-                          </span>
-                        )}
-                        
-                        {task.estimatedMinutes && (
-                          <span className="text-xs font-semibold bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 shadow-sm">
-                            <Clock className="h-3 w-3" />
-                            {task.estimatedMinutes}m
-                          </span>
-                        )}
-                        
-                        {task.tags && Array.isArray(task.tags) && task.tags.length > 0 && (
-                          <span className="text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 shadow-sm">
-                            <Tag className="h-3 w-3" />
-                            {task.tags.join(', ')}
-                          </span>
-                        )}
-                        
-                        {task.thoughtId && (() => {
-                          const thought = thoughts.find(t => t.id === task.thoughtId);
-                          if (!thought) return null;
-                          return (
-                            <Link
-                              href={`/tools/thoughts?id=${task.thoughtId}`}
-                              className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm flex items-center gap-1 shrink-0 hover:from-indigo-600 hover:to-purple-700 transition-colors"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MessageCircle className="h-3 w-3" />
-                              From Thought
-                            </Link>
-                          );
-                        })()}
-                        
-                        {task.projectId && (() => {
-                          const project = projects.find(p => p.id === task.projectId);
-                          if (!project) return null;
-                          return (
-                            <Link
-                              href={`/tools/projects/${task.projectId}`}
-                              className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm flex items-center gap-1 shrink-0 hover:from-green-600 hover:to-emerald-700 transition-colors"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Target className="h-3 w-3" />
-                              {project.title}
-                            </Link>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          );
-        })}
+        {Object.entries(groupedTasks).map(([frequency, groupTasks]) => (
+          <TaskGroup
+            key={frequency}
+            frequency={frequency}
+            tasks={groupTasks}
+            isCollapsed={collapsedGroups.has(frequency)}
+            onToggle={() => toggleGroupCollapse(frequency)}
+            onTaskClick={setSelectedTask}
+            thoughts={thoughts}
+            projects={projects}
+            getPriorityColor={getPriorityColor}
+            getPriorityIcon={getPriorityIcon}
+          />
+        ))}
       </div>
 
       {/* New Task Modal */}
@@ -521,6 +396,200 @@ function TasksPageContent() {
         onClick={() => setShowNewTask(true)}
         title="New Task"
       />
+    </div>
+  );
+}
+
+// Task Group Component with Infinite Scroll
+function TaskGroup({
+  frequency,
+  tasks,
+  isCollapsed,
+  onToggle,
+  onTaskClick,
+  thoughts,
+  projects,
+  getPriorityColor,
+  getPriorityIcon
+}: {
+  frequency: string;
+  tasks: Task[];
+  isCollapsed: boolean;
+  onToggle: () => void;
+  onTaskClick: (task: Task) => void;
+  thoughts: any[];
+  projects: any[];
+  getPriorityColor: (priority: TaskPriority) => string;
+  getPriorityIcon: (priority: TaskPriority) => React.ReactNode;
+}) {
+  const { displayedItems, hasMore, observerTarget } = useInfiniteScroll(tasks, {
+    initialItemsPerPage: 15,
+    threshold: 0.8
+  });
+
+  if (tasks.length === 0) return null;
+
+  const groupTitles: Record<string, string> = {
+    'one-time': '📋 One-Time Tasks',
+    'daily': '🌅 Daily Tasks',
+    'workweek': '💼 Workweek Tasks (Mon-Fri)',
+    'weekly': '📅 Weekly Tasks',
+    'monthly': '📆 Monthly Tasks'
+  };
+
+  const groupColors: Record<string, string> = {
+    'one-time': 'from-gray-500 to-slate-600',
+    'daily': 'from-orange-500 to-amber-600',
+    'workweek': 'from-blue-500 to-indigo-600',
+    'weekly': 'from-green-500 to-emerald-600',
+    'monthly': 'from-purple-500 to-violet-600'
+  };
+
+  return (
+    <div className="space-y-3">
+      <button
+        onClick={onToggle}
+        className="flex items-center gap-3 w-full hover:opacity-80 transition-opacity"
+      >
+        <ChevronDown className={`h-5 w-5 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
+        <h2 className={`text-lg font-bold bg-gradient-to-r ${groupColors[frequency]} bg-clip-text text-transparent`}>
+          {groupTitles[frequency]}
+        </h2>
+        <span className="text-sm text-muted-foreground">
+          ({tasks.length})
+        </span>
+      </button>
+
+      {!isCollapsed && (
+        <>
+          <AnimatePresence>
+            {displayedItems.map((task) => (
+              <motion.div
+                key={task.id}
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className={`p-4 rounded-xl cursor-pointer transition-all transform hover:scale-[1.02] hover:shadow-xl border-2 ${
+                  task.done
+                    ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-300 dark:border-green-800'
+                    : task.category === 'mastery'
+                    ? 'bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/20 dark:via-indigo-950/20 dark:to-purple-950/20 border-blue-300 dark:border-blue-800'
+                    : 'bg-gradient-to-r from-pink-50 via-rose-50 to-red-50 dark:from-pink-950/20 dark:via-rose-950/20 dark:to-red-950/20 border-pink-300 dark:border-pink-800'
+                }`}
+                onClick={() => onTaskClick(task)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 shadow-md ${
+                    task.done
+                      ? 'bg-gradient-to-br from-green-400 to-emerald-500 border-green-600 dark:from-green-600 dark:to-emerald-700 dark:border-green-500'
+                      : 'bg-white dark:bg-gray-800 border-gray-400 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
+                  }`}>
+                    {task.done && <CheckCircle2 className="h-4 w-4 text-white" />}
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                    <h3 className={`font-medium shrink-0 ${task.done && !task.recurrence ? 'line-through text-muted-foreground' : ''}`}>
+                      {task.title}
+                    </h3>
+
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 shrink-0 ${getPriorityColor(task.priority)}`}>
+                      {getPriorityIcon(task.priority)}
+                      {task.priority}
+                    </span>
+
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold shadow-sm shrink-0 ${
+                      task.category === "mastery"
+                        ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0"
+                        : "bg-gradient-to-r from-pink-500 to-rose-600 text-white border-0"
+                    }`}>
+                      {task.category === "mastery" ? "🧠 " : "💝 "}{task.category}
+                    </span>
+
+                    {task.focusEligible !== false && (
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm shrink-0">
+                        🎯 Focus
+                      </span>
+                    )}
+
+                    {task.done && task.recurrence && task.recurrence.type !== 'none' && (
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold shadow-sm shrink-0">
+                        ✓ Done today
+                      </span>
+                    )}
+
+                    {task.recurrence && task.recurrence.type !== 'none' && (
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-purple-500 to-violet-600 text-white shadow-sm flex items-center gap-1 shrink-0">
+                        <Repeat className="h-3 w-3" />
+                        {task.recurrence.type}
+                        {task.recurrence.frequency && ` (${task.completionCount || 0}/${task.recurrence.frequency})`}
+                      </span>
+                    )}
+
+                    {task.dueDate && (
+                      <span className="text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 shadow-sm">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(task.dueDate).toLocaleDateString()}
+                      </span>
+                    )}
+
+                    {task.estimatedMinutes && (
+                      <span className="text-xs font-semibold bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 shadow-sm">
+                        <Clock className="h-3 w-3" />
+                        {task.estimatedMinutes}m
+                      </span>
+                    )}
+
+                    {task.tags && Array.isArray(task.tags) && task.tags.length > 0 && (
+                      <span className="text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 shadow-sm">
+                        <Tag className="h-3 w-3" />
+                        {task.tags.join(', ')}
+                      </span>
+                    )}
+
+                    {task.thoughtId && (() => {
+                      const thought = thoughts.find(t => t.id === task.thoughtId);
+                      if (!thought) return null;
+                      return (
+                        <Link
+                          href={`/tools/thoughts?id=${task.thoughtId}`}
+                          className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm flex items-center gap-1 shrink-0 hover:from-indigo-600 hover:to-purple-700 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MessageCircle className="h-3 w-3" />
+                          From Thought
+                        </Link>
+                      );
+                    })()}
+
+                    {task.projectId && (() => {
+                      const project = projects.find(p => p.id === task.projectId);
+                      if (!project) return null;
+                      return (
+                        <Link
+                          href={`/tools/projects/${task.projectId}`}
+                          className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm flex items-center gap-1 shrink-0 hover:from-green-600 hover:to-emerald-700 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Target className="h-3 w-3" />
+                          {project.title}
+                        </Link>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          {/* Infinite scroll trigger */}
+          {hasMore && (
+            <div ref={observerTarget} className="flex justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

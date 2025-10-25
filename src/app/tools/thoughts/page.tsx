@@ -25,6 +25,7 @@ import {
 import { ErrorModal } from '@/components/ErrorModal';
 import { ThoughtDetailModal } from "@/components/ThoughtDetailModal";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import {
   ToolPageLayout,
   ToolHeader,
@@ -104,7 +105,7 @@ function ThoughtsPageContent() {
 
   const filteredThoughts = useMemo(() => {
     if (!thoughts || !Array.isArray(thoughts)) return [];
-    
+
     // Sort by created date, newest first
     const sorted = [...thoughts].sort((a, b) => {
       const dateA = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -114,6 +115,12 @@ function ThoughtsPageContent() {
 
     return sorted;
   }, [thoughts]);
+
+  // Use infinite scroll
+  const { displayedItems, hasMore, observerTarget } = useInfiniteScroll(filteredThoughts, {
+    initialItemsPerPage: 20,
+    threshold: 0.8
+  });
 
   const thoughtStats = useMemo(() => {
     if (!thoughts || !Array.isArray(thoughts)) {
@@ -275,7 +282,7 @@ function ThoughtsPageContent() {
         ) : (
           <ToolList>
             <AnimatePresence>
-              {filteredThoughts.map((thought) => {
+              {displayedItems.map((thought) => {
                 if (!thought || !thought.id) return null;
                 
                 return (
@@ -335,6 +342,13 @@ function ThoughtsPageContent() {
                 );
               })}
             </AnimatePresence>
+
+            {/* Infinite scroll trigger */}
+            {hasMore && (
+              <div ref={observerTarget} className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+              </div>
+            )}
           </ToolList>
         )}
       </ToolContent>

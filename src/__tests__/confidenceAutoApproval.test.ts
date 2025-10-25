@@ -92,10 +92,10 @@ describe('Confidence-based Auto-Approval', () => {
     jest.restoreAllMocks();
   });
 
-  it('auto-approves high confidence suggestions (>= 85%)', async () => {
+  it('auto-approves high confidence suggestions (>= 98%)', async () => {
     const mockResponse = {
       result: {
-        confidence: 0.95,
+        confidence: 0.99,
         actions: [
           {
             type: 'createTask',
@@ -134,7 +134,7 @@ describe('Confidence-based Auto-Approval', () => {
     // but we can verify that the queue status wasn't set to 'awaiting-approval'
   });
 
-  it('requires approval for low confidence suggestions (< 85%)', async () => {
+  it('requires approval for low confidence suggestions (< 98%)', async () => {
     const { useProcessQueue } = require('@/store/useProcessQueue');
     const updateQueueItem = jest.fn();
     useProcessQueue.getState.mockReturnValue({
@@ -175,10 +175,10 @@ describe('Confidence-based Auto-Approval', () => {
     );
   });
 
-  it('uses 85% as the confidence threshold', async () => {
-    const mockResponse85 = {
+  it('uses 98% as the confidence threshold', async () => {
+    const mockResponse98 = {
       result: {
-        confidence: 0.85, // Exactly 85%
+        confidence: 0.98, // Exactly 98%
         actions: [
           {
             type: 'createTask',
@@ -193,13 +193,13 @@ describe('Confidence-based Auto-Approval', () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => mockResponse85,
+      json: async () => mockResponse98,
     });
 
     const result = await processor.processThought('thought-1');
 
     expect(result.success).toBe(true);
-    // 85% should trigger auto-approval (>= threshold)
+    // 98% should trigger auto-approval (>= threshold)
   });
 
   it('defaults to 0 confidence if not provided', async () => {
@@ -234,7 +234,7 @@ describe('Confidence-based Auto-Approval', () => {
     const result = await processor.processThought('thought-1');
 
     expect(result.success).toBe(true);
-    // Should require approval (0 < 85%)
+    // Should require approval (0 < 98%)
     expect(updateQueueItem).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({
@@ -276,7 +276,7 @@ describe('Confidence-based Auto-Approval', () => {
     );
   });
 
-  it('handles edge case of confidence = 0.84', async () => {
+  it('handles edge case of confidence = 0.97', async () => {
     const { useProcessQueue } = require('@/store/useProcessQueue');
     const updateQueueItem = jest.fn();
     useProcessQueue.getState.mockReturnValue({
@@ -287,7 +287,7 @@ describe('Confidence-based Auto-Approval', () => {
 
     const mockResponse = {
       result: {
-        confidence: 0.84, // Just below threshold
+        confidence: 0.97, // Just below threshold
         actions: [
           {
             type: 'createTask',
@@ -308,7 +308,7 @@ describe('Confidence-based Auto-Approval', () => {
     const result = await processor.processThought('thought-1');
 
     expect(result.success).toBe(true);
-    // Should require approval (< 85%)
+    // Should require approval (< 98%)
     expect(updateQueueItem).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({

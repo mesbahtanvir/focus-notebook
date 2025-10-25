@@ -25,6 +25,8 @@ import { FormattedNotes, getNotesPreview } from "@/lib/formatNotes";
 import Link from "next/link";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { Loader2 } from "lucide-react";
 
 type FilterType = 'all';
 
@@ -68,17 +70,23 @@ export default function DocumentsPage() {
     // Search in title and notes
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(doc => 
+      filtered = filtered.filter(doc =>
         doc.title.toLowerCase().includes(query) ||
         doc.notes.toLowerCase().includes(query)
       );
     }
 
     // Sort by creation date (newest first)
-    return filtered.sort((a, b) => 
+    return filtered.sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }, [tasksWithNotes, searchQuery]);
+
+  // Use infinite scroll
+  const { displayedItems, hasMore, observerTarget } = useInfiniteScroll(filteredDocuments, {
+    initialItemsPerPage: 15,
+    threshold: 0.8
+  });
 
   const stats = useMemo(() => {
     const total = tasksWithNotes.length;
@@ -236,7 +244,7 @@ export default function DocumentsPage() {
         )}
 
         <AnimatePresence>
-          {filteredDocuments.map((doc) => (
+          {displayedItems.map((doc) => (
             <motion.div
               key={doc.id}
               layout
@@ -382,6 +390,13 @@ export default function DocumentsPage() {
             </motion.div>
           ))}
         </AnimatePresence>
+
+        {/* Infinite scroll trigger */}
+        {hasMore && (
+          <div ref={observerTarget} className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+          </div>
+        )}
       </div>
 
       <FloatingActionButton

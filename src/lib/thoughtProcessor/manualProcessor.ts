@@ -149,11 +149,11 @@ export class ManualProcessor {
 
       // Check confidence level for auto-approval
       const confidence = result.confidence || 0;
-      const HIGH_CONFIDENCE_THRESHOLD = 0.85; // 85% or higher
+      const HIGH_CONFIDENCE_THRESHOLD = 0.98; // 98% or higher
 
       if (confidence >= HIGH_CONFIDENCE_THRESHOLD && actions.length > 0) {
         // High confidence: auto-approve and execute
-        console.log(`✨ High confidence (${confidence}) - Auto-approving actions`);
+        console.log(`✨ High confidence (${(confidence * 100).toFixed(1)}%) - Auto-approving actions`);
 
         // Import approval handler dynamically to avoid circular dependencies
         const { approvalHandler } = await import('./approvalHandler');
@@ -168,7 +168,7 @@ export class ManualProcessor {
         }
       } else {
         // Lower confidence: request user approval
-        console.log(`⚠️  Lower confidence (${confidence}) - Awaiting user approval`);
+        console.log(`⚠️  Lower confidence (${(confidence * 100).toFixed(1)}%) - Awaiting user approval`);
         updateQueueItem(queueId, {
           status: 'awaiting-approval'
         });

@@ -29,6 +29,8 @@ import {
   Search
 } from "lucide-react";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { Loader2 } from "lucide-react";
 
 export default function ProjectsPage() {
   useTrackToolUsage('projects');
@@ -70,6 +72,12 @@ export default function ProjectsPage() {
       return true;
     }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [projects, filterTimeframe, filterStatus, searchQuery]);
+
+  // Use infinite scroll
+  const { displayedItems, hasMore, observerTarget } = useInfiniteScroll(filteredProjects, {
+    initialItemsPerPage: 10,
+    threshold: 0.8
+  });
 
   const stats = useMemo(() => {
     const total = projects.length;
@@ -166,7 +174,7 @@ export default function ProjectsPage() {
         )}
 
         <AnimatePresence>
-          {filteredProjects.map((project) => {
+          {displayedItems.map((project) => {
             const linkedThoughts = getProjectThoughts(project.id);
             const linkedTasks = getProjectTasks(project.id);
             
@@ -267,6 +275,13 @@ export default function ProjectsPage() {
             );
           })}
         </AnimatePresence>
+
+        {/* Infinite scroll trigger */}
+        {hasMore && (
+          <div ref={observerTarget} className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-green-500" />
+          </div>
+        )}
       </div>
 
       {/* New Project Modal */}

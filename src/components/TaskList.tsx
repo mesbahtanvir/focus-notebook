@@ -3,10 +3,14 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useTasks, Task } from "@/store/useTasks";
+import { useThoughts } from "@/store/useThoughts";
 import { isTodayISO } from "@/lib/utils/date";
+import Link from "next/link";
+import { MessageCircle } from "lucide-react";
 
 export default function TaskList() {
   const tasks = useTasks((s) => s.tasks);
+  const thoughts = useThoughts((s) => s.thoughts);
   const toggle = useTasks((s) => s.toggle);
   const prefersReducedMotion = useReducedMotion();
   const [showCompleted, setShowCompleted] = useState(false);
@@ -118,6 +122,20 @@ export default function TaskList() {
                           {new Date(t.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       )}
+                      {t.thoughtId && (() => {
+                        const thought = thoughts.find(th => th.id === t.thoughtId);
+                        if (!thought) return null;
+                        return (
+                          <Link
+                            href={`/tools/thoughts?id=${t.thoughtId}`}
+                            className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition-colors flex items-center gap-1"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MessageCircle className="h-3 w-3" />
+                            From Thought
+                          </Link>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
