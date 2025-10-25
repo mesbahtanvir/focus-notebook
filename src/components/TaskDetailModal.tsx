@@ -7,6 +7,7 @@ import { useThoughts } from "@/store/useThoughts";
 import { useProjects } from "@/store/useProjects";
 import { FormattedNotes } from "@/lib/formatNotes";
 import { TaskSteps } from "@/components/TaskSteps";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import Link from "next/link";
 import {
   X,
@@ -80,6 +81,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
   const [steps, setSteps] = useState<TaskStep[]>(task.steps || []);
   const [selectedThoughtId, setSelectedThoughtId] = useState<string>(getThoughtIdFromTask(task));
   const [selectedProjectId, setSelectedProjectId] = useState<string>(task.projectId || '');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const updateTask = useTasks((s) => s.updateTask);
   const deleteTask = useTasks((s) => s.deleteTask);
@@ -137,10 +139,9 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
   };
 
   const handleDelete = async () => {
-    if (confirm('Are you sure you want to delete this task?')) {
-      await deleteTask(task.id);
-      onClose();
-    }
+    await deleteTask(task.id);
+    setShowDeleteConfirm(false);
+    onClose();
   };
 
   const getPriorityColor = (p: TaskPriority) => {
@@ -197,7 +198,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                   Edit
                 </button>
                 <button
-                  onClick={handleDelete}
+                  onClick={() => setShowDeleteConfirm(true)}
                   className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -625,6 +626,18 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
           </div>
         </div>
       </motion.div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+        title="Delete Task?"
+        message={`Are you sure you want to delete "${task.title}"? This action cannot be undone.`}
+        confirmText="Delete Task"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

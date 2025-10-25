@@ -268,7 +268,24 @@ export default function ProjectsPage() {
                   </div>
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
-                    {new Date(project.createdAt).toLocaleDateString()}
+                    {(() => {
+                      try {
+                        if (!project.createdAt) return 'N/A';
+                        const dateValue = project.createdAt as any;
+                        if (typeof dateValue === 'object' && dateValue !== null && 'toDate' in dateValue) {
+                          return dateValue.toDate().toLocaleDateString();
+                        }
+                        if (typeof dateValue === 'string') {
+                          return new Date(dateValue).toLocaleDateString();
+                        }
+                        if (typeof dateValue === 'object' && dateValue !== null && 'seconds' in dateValue) {
+                          return new Date(dateValue.seconds * 1000).toLocaleDateString();
+                        }
+                        return new Date(dateValue).toLocaleDateString();
+                      } catch {
+                        return 'Invalid date';
+                      }
+                    })()}
                   </div>
                 </div>
               </motion.div>

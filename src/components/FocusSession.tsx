@@ -251,10 +251,37 @@ export function FocusSession() {
                 </div>
               </div>
 
-              {/* Task Description */}
-              {currentFocusTask.task.notes && (
-                <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                  <FormattedNotes notes={currentFocusTask.task.notes} className="text-gray-700 dark:text-gray-300 text-sm" />
+              {/* Task Steps */}
+              {currentFocusTask.task.steps && currentFocusTask.task.steps.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Steps:</h3>
+                  <div className="space-y-2">
+                    {currentFocusTask.task.steps.map((step, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex items-start gap-3 p-3 rounded-lg transition-all ${
+                          step.completed
+                            ? 'bg-green-50 dark:bg-green-950/20 border-2 border-green-200 dark:border-green-800'
+                            : 'bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700'
+                        }`}
+                      >
+                        <div className={`mt-0.5 flex items-center justify-center w-5 h-5 rounded-full border-2 flex-shrink-0 ${
+                          step.completed
+                            ? 'bg-green-500 border-green-600 dark:bg-green-600 dark:border-green-500'
+                            : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
+                        }`}>
+                          {step.completed && <Check className="h-3 w-3 text-white" />}
+                        </div>
+                        <span className={`flex-1 text-sm ${
+                          step.completed
+                            ? 'line-through text-gray-500 dark:text-gray-500'
+                            : 'text-gray-800 dark:text-gray-200'
+                        }`}>
+                          {step.text}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

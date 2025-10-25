@@ -27,6 +27,7 @@ import {
   User
 } from "lucide-react";
 import { TaskModal } from "@/components/TaskModal";
+import { TaskDetailModal } from "@/components/TaskDetailModal";
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -48,6 +49,7 @@ export default function ProjectDetailPage() {
   const thoughts = useThoughts((s) => s.thoughts);
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   useEffect(() => {
     if (user?.uid) {
@@ -413,27 +415,19 @@ export default function ProjectDetailPage() {
                   key={task.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`p-4 rounded-xl border-2 transition-all ${
+                  onClick={() => setSelectedTask(task)}
+                  className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
                     task.done
                       ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
-                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-cyan-300 dark:hover:border-cyan-700"
+                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-cyan-400 dark:hover:border-cyan-600 hover:shadow-lg"
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    <button
-                      onClick={() => handleToggleTaskComplete(task.id, task.done)}
-                      className={`mt-1 flex-shrink-0 transition-all ${
-                        task.done
-                          ? "text-green-600 dark:text-green-400"
-                          : "text-gray-400 dark:text-gray-600 hover:text-cyan-600 dark:hover:text-cyan-400"
-                      }`}
-                    >
-                      {task.done ? (
+                    {task.done && (
+                      <div className="mt-1 flex-shrink-0 text-green-600 dark:text-green-400">
                         <CheckCircle2 className="h-6 w-6" />
-                      ) : (
-                        <Circle className="h-6 w-6" />
-                      )}
-                    </button>
+                      </div>
+                    )}
 
                     <div className="flex-1 min-w-0">
                       <h4
@@ -487,6 +481,14 @@ export default function ProjectDetailPage() {
         projectId={projectId}
         projectTitle={project.title}
       />
+
+      {/* Task Detail Modal */}
+      {selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          onClose={() => setSelectedTask(null)}
+        />
+      )}
     </div>
   );
 }

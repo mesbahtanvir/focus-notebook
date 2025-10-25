@@ -24,6 +24,7 @@ export default function GoalsPage() {
   const deleteGoal = useGoals((s) => s.deleteGoal);
   const toggleStatus = useGoals((s) => s.toggleStatus);
   
+  const projects = useProjects((s) => s.projects);
   const getProjectsByGoal = useProjects((s) => s.getProjectsByGoal);
   const subscribeProjects = useProjects((s) => s.subscribe);
 
