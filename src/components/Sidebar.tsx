@@ -102,7 +102,7 @@ export default function Sidebar() {
         onTouchEnd={onTouchEnd}
         className={`
           fixed lg:static inset-y-0 left-0 z-40
-          flex flex-col h-screen
+          flex flex-col h-[100dvh] lg:h-screen
           bg-gradient-to-b from-white via-purple-50 to-pink-50
           border-r-4 border-purple-200 shadow-2xl
           transition-all duration-300 ease-in-out
