@@ -2,9 +2,16 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MostUsedTools } from '@/components/MostUsedTools';
 
+// Define the ToolUsageRecord type for tests
+type ToolUsageRecord = {
+  toolName: string;
+  clickCount: number;
+  lastAccessed: string;
+};
+
 // Mock dependencies
 const mockSubscribe = jest.fn();
-const mockGetMostUsedTools = jest.fn(() => []);
+const mockGetMostUsedTools = jest.fn<ToolUsageRecord[], [number?]>(() => []);
 const mockTrackToolClick = jest.fn();
 
 jest.mock('@/store/useToolUsage', () => ({
