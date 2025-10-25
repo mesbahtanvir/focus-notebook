@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { collection, query, orderBy } from 'firebase/firestore'
+import { collection, query, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebaseClient'
 import { createAt, updateAt, deleteAt } from '@/lib/data/gateway'
 import { subscribeCol } from '@/lib/data/subscribe'
@@ -33,7 +33,12 @@ type State = {
   fromCache: boolean
   hasPendingWrites: boolean
   unsubscribe: (() => void) | null
-  subscribe: (userId: string) => void
+  lastDoc: QueryDocumentSnapshot<DocumentData> | null
+  hasMore: boolean
+  pageSize: number
+  isLoadingMore: boolean
+  subscribe: (userId: string, pageSize?: number) => void
+  loadMore: (userId: string) => Promise<void>
   add: (data: Omit<Thought, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>) => Promise<void>
   updateThought: (id: string, updates: Partial<Omit<Thought, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>>) => Promise<void>
   deleteThought: (id: string) => Promise<void>
@@ -45,30 +50,78 @@ export const useThoughts = create<State>((set, get) => ({
   fromCache: false,
   hasPendingWrites: false,
   unsubscribe: null,
+  lastDoc: null,
+  hasMore: true,
+  pageSize: 10,
+  isLoadingMore: false,
 
-  subscribe: (userId: string) => {
+  subscribe: (userId: string, pageSize = 10) => {
     // Unsubscribe from previous subscription if any
     const currentUnsub = get().unsubscribe
     if (currentUnsub) {
       currentUnsub()
     }
 
-    // Subscribe to thoughts collection
+    // Subscribe to thoughts collection with pagination
     const thoughtsQuery = query(
       collection(db, `users/${userId}/thoughts`),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(pageSize)
     )
 
     const unsub = subscribeCol<Thought>(thoughtsQuery, (thoughts, meta) => {
-      set({ 
-        thoughts, 
+      set({
+        thoughts,
         isLoading: false,
         fromCache: meta.fromCache,
         hasPendingWrites: meta.hasPendingWrites,
+        hasMore: thoughts.length === pageSize,
+        pageSize,
       })
     })
 
     set({ unsubscribe: unsub })
+  },
+
+  loadMore: async (userId: string) => {
+    const { thoughts, pageSize, isLoadingMore, hasMore } = get()
+
+    if (isLoadingMore || !hasMore) return
+
+    set({ isLoadingMore: true })
+
+    try {
+      // Get the last document from current thoughts
+      const lastThought = thoughts[thoughts.length - 1]
+      if (!lastThought) {
+        set({ isLoadingMore: false, hasMore: false })
+        return
+      }
+
+      // Create query for next page
+      const thoughtsRef = collection(db, `users/${userId}/thoughts`)
+      const nextQuery = query(
+        thoughtsRef,
+        orderBy('createdAt', 'desc'),
+        startAfter(lastThought.createdAt),
+        limit(pageSize)
+      )
+
+      const snapshot = await getDocs(nextQuery)
+      const newThoughts = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Thought[]
+
+      set({
+        thoughts: [...thoughts, ...newThoughts],
+        hasMore: newThoughts.length === pageSize,
+        isLoadingMore: false,
+      })
+    } catch (error) {
+      console.error('Error loading more thoughts:', error)
+      set({ isLoadingMore: false })
+    }
   },
 
   add: async (data) => {

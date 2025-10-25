@@ -24,6 +24,9 @@ export default function Page() {
   const thoughts = useThoughts((s) => s.thoughts);
   const addThought = useThoughts((s) => s.add);
   const deleteThought = useThoughts((s) => s.deleteThought);
+  const loadMore = useThoughts((s) => s.loadMore);
+  const hasMore = useThoughts((s) => s.hasMore);
+  const isLoadingMore = useThoughts((s) => s.isLoadingMore);
   // Tasks store (for New Task button only; TaskList handles its own reads)
   const tasks = useTasks((s) => s.tasks);
   const addTask = useTasks((s) => s.add);
@@ -36,16 +39,15 @@ export default function Page() {
     [tasks]
   );
 
+  // Thoughts are already sorted by createdAt desc from Firestore query
   const recentThoughts = useMemo(() => {
-    const sorted = [...thoughts];
-    // If tasks have createdAt, sort by it desc; otherwise rely on insertion order
-    sorted.sort((a: any, b: any) => {
-      const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return bd - ad;
-    });
-    return sorted.slice(0, 3);
-  }, [thoughts]);
+    return showAll ? thoughts : thoughts.slice(0, 3);
+  }, [thoughts, showAll]);
+
+  const handleLoadMore = async () => {
+    if (!user?.uid || isLoadingMore || !hasMore) return;
+    await loadMore(user.uid);
+  };
 
   const onSubmit = async (data: FormValues) => {
     if (!data.text?.trim()) return;
@@ -97,23 +99,31 @@ export default function Page() {
       <section className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl overflow-hidden">
         <div className="px-6 py-4 bg-gradient-to-r from-blue-100 via-cyan-100 to-teal-100 dark:from-blue-900 dark:via-cyan-900 dark:to-teal-900 border-b-4 border-blue-200 dark:border-blue-800 flex items-center justify-between">
           <h2 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">💭 Thoughts</h2>
-          {thoughts.length > 3 && (
+          {thoughts.length > 3 && !showAll && (
             <button
               className="text-sm font-medium px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-md"
-              onClick={() => setShowAll((v) => !v)}
+              onClick={() => setShowAll(true)}
             >
-              {showAll ? 'Less' : 'All'}
+              Show All
+            </button>
+          )}
+          {showAll && (
+            <button
+              className="text-sm font-medium px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-md"
+              onClick={() => setShowAll(false)}
+            >
+              Show Less
             </button>
           )}
         </div>
         <div className="p-6">
           <ul className="space-y-2">
-            {(showAll ? thoughts : recentThoughts).length === 0 && (
+            {recentThoughts.length === 0 && (
               <li className="text-center py-8 text-sm text-gray-400">
                 No thoughts yet
               </li>
             )}
-            {(showAll ? thoughts : recentThoughts).map((t) => (
+            {recentThoughts.map((t) => (
               <motion.li
                 key={t.id}
                 initial={{ opacity: 0 }}
@@ -137,6 +147,19 @@ export default function Page() {
               </motion.li>
             ))}
           </ul>
+
+          {/* Load More Button */}
+          {showAll && hasMore && (
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              >
+                {isLoadingMore ? 'Loading...' : 'Load More'}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 

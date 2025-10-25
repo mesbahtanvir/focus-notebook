@@ -11,7 +11,6 @@ import { motion } from "framer-motion";
 import { getTimeOfDayCategory } from "@/lib/formatDateTime";
 import { useAuth } from "@/contexts/AuthContext";
 
-type TimeRange = '7d' | '30d' | '90d';
 type SummaryPeriod = 'today' | 'week' | 'month';
 
 export default function DashboardPage() {
@@ -20,7 +19,6 @@ export default function DashboardPage() {
   const moods = useMoods((s) => s.moods);
   const sessions = useFocus((s) => s.sessions);
   const subscribe = useFocus((s) => s.subscribe);
-  const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>('today');
 
   useEffect(() => {
@@ -29,23 +27,27 @@ export default function DashboardPage() {
     }
   }, [user?.uid, subscribe]);
 
-  const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
-
   // Generate analytics data
   const analytics = useMemo(() => {
     const now = new Date();
-    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
-    // Summary period calculations
-    let summaryStartDate = new Date();
+    // Use summaryPeriod for all date range calculations
+    let startDate = new Date();
+    let days = 1;
+
     if (summaryPeriod === 'today') {
-      summaryStartDate.setHours(0, 0, 0, 0);
+      startDate.setHours(0, 0, 0, 0);
+      days = 1;
     } else if (summaryPeriod === 'week') {
       const dayOfWeek = now.getDay();
-      summaryStartDate = new Date(now.getTime() - dayOfWeek * 24 * 60 * 60 * 1000);
-      summaryStartDate.setHours(0, 0, 0, 0);
+      startDate = new Date(now.getTime() - dayOfWeek * 24 * 60 * 60 * 1000);
+      startDate.setHours(0, 0, 0, 0);
+      days = 7;
     } else {
-      summaryStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      // Calculate days in current month
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      days = lastDay.getDate();
     }
 
     // Mood trends
@@ -77,23 +79,7 @@ export default function DashboardPage() {
       focusData.push({ date, minutes: totalMinutes });
     }
 
-    // Task completion trends by category
-    const taskData = [];
-    for (let i = 0; i < days; i++) {
-      const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
-      const completedTasks = tasks.filter(t => {
-        if (!t.completedAt) return false;
-        const taskDate = new Date(t.completedAt);
-        return taskDate.toDateString() === date.toDateString();
-      });
-      taskData.push({ date, total: completedTasks.length });
-    }
-
-    // Overall statistics
-    const totalFocusTime = sessions.reduce((sum, s) => {
-      return sum + (s.tasks || []).reduce((t, task) => t + task.timeSpent, 0);
-    }, 0);
-
+    // Overall statistics - filter all data by startDate
     const completedTasks = tasks.filter(t => t.completedAt && new Date(t.completedAt) >= startDate);
 
     const recentMoods = moods.filter(m => new Date(m.createdAt) >= startDate);
@@ -101,28 +87,34 @@ export default function DashboardPage() {
       ? recentMoods.reduce((sum, m) => sum + m.value, 0) / recentMoods.length
       : 0;
 
+    const totalFocusTime = sessions
+      .filter(s => new Date(s.startTime) >= startDate)
+      .reduce((sum, s) => {
+        return sum + (s.tasks || []).reduce((t, task) => t + task.timeSpent, 0);
+      }, 0);
+
     const totalTaskTime = completedTasks.reduce((sum, t) => {
       return sum + (t.estimatedMinutes || 0);
     }, 0);
 
-    // Summary stats
-    const summaryTasks = tasks.filter(t => {
-      if (!t.completedAt) return false;
-      const taskDate = new Date(t.completedAt);
-      return taskDate >= summaryStartDate;
-    });
+    // Task completion trends by category
+    const taskData = [];
+    for (let i = 0; i < days; i++) {
+      const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+      const dayCompletedTasks = tasks.filter(t => {
+        if (!t.completedAt) return false;
+        const taskDate = new Date(t.completedAt);
+        return taskDate.toDateString() === date.toDateString();
+      });
+      taskData.push({ date, total: dayCompletedTasks.length });
+    }
 
+    // Summary stats (same as overall stats since we're using unified date range)
+    const summaryTasks = completedTasks;
     const summaryMastery = summaryTasks.filter(t => t.category === 'mastery').length;
     const summaryPleasure = summaryTasks.filter(t => t.category === 'pleasure').length;
-
-    const summaryMoods = moods.filter(m => new Date(m.createdAt) >= summaryStartDate);
-    const summaryAvgMood = summaryMoods.length > 0
-      ? summaryMoods.reduce((sum, m) => sum + m.value, 0) / summaryMoods.length
-      : 0;
-
-    const summaryFocusTime = sessions
-      .filter(s => new Date(s.startTime) >= summaryStartDate)
-      .reduce((sum, s) => sum + (s.tasks || []).reduce((t, task) => t + task.timeSpent, 0), 0);
+    const summaryAvgMood = avgMood;
+    const summaryFocusTime = totalFocusTime;
 
     // Mastery vs Pleasure trends
     const categoryData = [];
@@ -195,34 +187,38 @@ export default function DashboardPage() {
         pleasure: summaryPleasure,
         avgMood: summaryAvgMood,
         focusTime: Math.round(summaryFocusTime / 60),
-      }
+      },
+      period: summaryPeriod,
+      days,
     };
-  }, [tasks, moods, sessions, days, summaryPeriod]);
+  }, [tasks, moods, sessions, summaryPeriod]);
 
   return (
-    <div className="container mx-auto py-6 md:py-8 space-y-6 px-4 md:px-0 max-w-7xl">
-      {/* Header Section */}
-      <div className="text-center space-y-3">
-        <div className="flex justify-center">
-          <div className="p-3 bg-gradient-to-r from-blue-100 to-cyan-100 rounded-full">
-            <BarChart3 className="h-10 w-10 text-blue-600" />
-          </div>
+    <div className="container mx-auto py-6 md:py-8 px-4 md:px-0 max-w-7xl">
+      {/* Sticky Period Selector */}
+      <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 pb-4 mb-2">
+        <div className="flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 shadow-md">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-2">Period:</span>
+          {(['today', 'week', 'month'] as SummaryPeriod[]).map((period) => (
+            <button
+              key={period}
+              onClick={() => setSummaryPeriod(period)}
+              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                summaryPeriod === period
+                  ? 'bg-blue-600 text-white shadow-lg scale-105'
+                  : 'bg-white/70 dark:bg-gray-800/70 hover:bg-white dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              {period === 'today' ? 'Today' : period === 'week' ? 'This Week' : 'This Month'}
+            </button>
+          ))}
         </div>
-        <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600 bg-clip-text text-transparent">
-          📊 Dashboard
-        </h1>
-        <p className="text-gray-600 text-base md:text-lg max-w-2xl mx-auto">
-          Comprehensive analytics and insights
-        </p>
       </div>
 
-      {/* Time Range Selector - Hidden to reduce panic, but keeping internal functionality */}
-      {/* Data is still filtered by time range (default 30d), just not showing the selector UI */}
-
-      {/* Summary Section */}
-      <Card className="border-4 border-blue-200 shadow-xl bg-gradient-to-br from-white to-blue-50 dark:from-gray-900 dark:to-blue-950">
-        <CardHeader className="bg-gradient-to-r from-blue-100 via-cyan-100 to-teal-100 dark:from-blue-900 dark:via-cyan-900 dark:to-teal-900 border-b-4 border-blue-200 dark:border-blue-800">
-          <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="space-y-6">
+        {/* Summary Section */}
+        <Card className="border-4 border-blue-200 shadow-xl bg-gradient-to-br from-white to-blue-50 dark:from-gray-900 dark:to-blue-950">
+          <CardHeader className="bg-gradient-to-r from-blue-100 via-cyan-100 to-teal-100 dark:from-blue-900 dark:via-cyan-900 dark:to-teal-900 border-b-4 border-blue-200 dark:border-blue-800">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg shadow-md">
                 <TrendingUp className="h-5 w-5 text-white" />
@@ -236,25 +232,7 @@ export default function DashboardPage() {
                 </CardDescription>
               </div>
             </div>
-            
-            {/* Period Selector */}
-            <div className="flex gap-2">
-              {(['today', 'week', 'month'] as SummaryPeriod[]).map((period) => (
-                <button
-                  key={period}
-                  onClick={() => setSummaryPeriod(period)}
-                  className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-all ${
-                    summaryPeriod === period
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800'
-                  }`}
-                >
-                  {period === 'today' ? 'Today' : period === 'week' ? 'This Week' : 'This Month'}
-                </button>
-              ))}
-            </div>
-          </div>
-        </CardHeader>
+          </CardHeader>
         <CardContent className="p-4 md:p-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center p-4 rounded-lg bg-white/50 dark:bg-gray-800/50">
@@ -296,7 +274,7 @@ export default function DashboardPage() {
           icon={<Target className="h-6 w-6" />}
           title="Tasks Completed"
           value={analytics.stats.completedTasks.toString()}
-          subtitle={`Last ${days} days`}
+          subtitle={analytics.period === 'today' ? 'Today' : analytics.period === 'week' ? 'This Week' : 'This Month'}
           gradient="from-green-500 to-emerald-500"
         />
         <StatsCard
@@ -389,6 +367,7 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
