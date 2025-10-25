@@ -3,10 +3,7 @@
 import { useState, useMemo, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useThoughts, Thought } from "@/store/useThoughts";
-import { useProcessQueue } from "@/store/useProcessQueue";
-import { manualProcessor } from "@/lib/thoughtProcessor/manualProcessor";
-import { approvalHandler } from "@/lib/thoughtProcessor/approvalHandler";
-import { ProcessingApprovalDialog } from "@/components/ProcessingApprovalDialog";
+import { ThoughtProcessingService } from "@/services/thoughtProcessingService";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -41,7 +38,6 @@ function ThoughtsPageContent() {
   useTrackToolUsage('thoughts');
 
   const thoughts = useThoughts((s) => s.thoughts);
-  const queue = useProcessQueue((s) => s.queue);
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -49,8 +45,6 @@ function ThoughtsPageContent() {
   const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingThoughtId, setProcessingThoughtId] = useState<string | null>(null);
-  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
-  const [currentApprovalItem, setCurrentApprovalItem] = useState<string | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -89,19 +83,7 @@ function ThoughtsPageContent() {
     }
   }, [searchParams, thoughts]);
 
-  // Get awaiting approval items
-  const awaitingApproval = useMemo(() => {
-    return queue.filter(q => q.status === 'awaiting-approval');
-  }, [queue]);
-
-  // Auto-navigate to detail page when new items need approval
-  useEffect(() => {
-    if (awaitingApproval.length > 0 && !showApprovalDialog && !currentApprovalItem) {
-      // const firstItem = awaitingApproval[0];
-      // // Navigate to thought detail page with AI suggestions
-      // router.push(`/tools/thoughts/${firstItem.thoughtId}`);
-    }
-  }, [awaitingApproval, showApprovalDialog, currentApprovalItem, router]);
+  // Approval system removed - actions are executed instantly
 
   const filteredThoughts = useMemo(() => {
     if (!thoughts || !Array.isArray(thoughts)) return [];
@@ -138,7 +120,7 @@ function ThoughtsPageContent() {
     setIsProcessing(true);
     setProcessingThoughtId(thoughtId);
     
-    const result = await manualProcessor.processThought(thoughtId);
+    const result = await ThoughtProcessingService.processThought(thoughtId);
     
     if (result.success) {
       // Success - thought will be updated by the processor
@@ -155,46 +137,7 @@ function ThoughtsPageContent() {
   };
 
 
-  const handleApprove = async (approvedActionIds: string[]) => {
-    if (!currentApprovalItem) return;
-    
-    const result = await approvalHandler.approveAndExecute(currentApprovalItem, approvedActionIds);
-    
-    if (result.success) {
-      setShowApprovalDialog(false);
-      setCurrentApprovalItem(null);
-      
-      // Show next approval if any
-      setTimeout(() => {
-        if (awaitingApproval.length > 1) {
-          const nextItem = awaitingApproval.find(q => q.id !== currentApprovalItem);
-          if (nextItem) {
-            setCurrentApprovalItem(nextItem.id);
-            setShowApprovalDialog(true);
-          }
-        }
-      }, 100);
-    }
-  };
-
-  const handleReject = async () => {
-    if (!currentApprovalItem) return;
-    
-    await approvalHandler.rejectProcessing(currentApprovalItem);
-    setShowApprovalDialog(false);
-    setCurrentApprovalItem(null);
-    
-    // Show next approval if any
-    setTimeout(() => {
-      if (awaitingApproval.length > 1) {
-        const nextItem = awaitingApproval.find(q => q.id !== currentApprovalItem);
-        if (nextItem) {
-          setCurrentApprovalItem(nextItem.id);
-          setShowApprovalDialog(true);
-        }
-      }
-    }, 100);
-  };
+  // Approval is no longer needed - actions are executed instantly
 
 
 
@@ -209,22 +152,7 @@ function ThoughtsPageContent() {
         ]}
       />
 
-      {(awaitingApproval.length > 0 || thoughtStats.unprocessed > 0) && (
-        <div className="flex flex-wrap items-center gap-2">
-          {awaitingApproval.length > 0 && (
-            <button
-              onClick={() => {
-                setCurrentApprovalItem(awaitingApproval[0].id);
-                setShowApprovalDialog(true);
-              }}
-              className="px-4 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 text-white text-sm font-semibold hover:from-orange-600 hover:to-amber-600 transition-all flex items-center gap-2 shadow-sm hover:shadow-md hover:-translate-y-0.5 animate-pulse"
-            >
-              <Bell className="h-4 w-4" />
-              Review ({awaitingApproval.length})
-            </button>
-          )}
-        </div>
-      )}
+      {/* Approval system removed - actions are executed instantly */}
 
 
       <ToolContent>
@@ -325,14 +253,7 @@ function ThoughtsPageContent() {
         />
       )}
 
-      {/* Approval Dialog */}
-      {showApprovalDialog && currentApprovalItem && (
-        <ProcessingApprovalDialog
-          queueItem={queue.find(q => q.id === currentApprovalItem)!}
-          onApprove={handleApprove}
-          onReject={handleReject}
-        />
-      )}
+      {/* Approval Dialog removed - actions are executed instantly */}
 
 
       {/* Error Modal */}

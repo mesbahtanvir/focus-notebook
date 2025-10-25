@@ -85,6 +85,23 @@ export async function POST(request: NextRequest) {
 
     console.log('💡 OpenAI response received successfully');
     console.log('📊 Tokens used:', data.usage);
+
+    // Track token usage
+    if (data.usage) {
+      try {
+        const { useTokenUsage } = await import('@/store/useTokenUsage');
+        useTokenUsage.getState().addUsage({
+          model: selectedModel,
+          promptTokens: data.usage.prompt_tokens || 0,
+          completionTokens: data.usage.completion_tokens || 0,
+          totalTokens: data.usage.total_tokens || 0,
+          endpoint: '/api/chat',
+        });
+        console.log('📊 Token usage tracked:', data.usage);
+      } catch (error) {
+        console.warn('⚠️ Failed to track token usage:', error);
+      }
+    }
     
     return NextResponse.json({ message: assistantMessage });
 

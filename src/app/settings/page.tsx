@@ -13,6 +13,7 @@ import { Key, Eye, EyeOff, Check, X, ExternalLink, Brain, Download, Trash2, Data
 import Link from 'next/link'
 import { exportAllData, exportData, downloadDataAsFile, deleteAllUserData, getDataStats, importDataFromFile, ExportOptions, ImportProgress } from '@/lib/utils/data-management'
 import { DataMigration } from '@/components/DataMigration'
+import { TokenUsageDashboard } from '@/components/TokenUsageDashboard'
 
 type SettingsFormValues = {
   allowBackgroundProcessing: boolean;
@@ -772,6 +773,11 @@ export default function SettingsPage() {
       {/* Data Migration Component */}
       <div className="mt-6">
         <DataMigration />
+      </div>
+
+      {/* Token Usage Dashboard */}
+      <div className="mt-6">
+        <TokenUsageDashboard />
       </div>
 
     </div>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { thought, apiKey, toolDescriptions, model, personNames } = await request.json();
+    const { thought, apiKey, model, context } = await request.json();
     const selectedModel = model || 'gpt-3.5-turbo'; // Default to cheapest model
 
     // Validate API key
@@ -29,15 +29,37 @@ export async function POST(request: NextRequest) {
     console.log('🤖 Processing thought:', thought.id);
     console.log('💭 Thought text:', thought.text);
 
-    // Build the prompt
-    const personNamesContext = personNames && personNames.length > 0
-      ? `\n\nKnown People in User's Network:\n${personNames.join(', ')}`
-      : '';
+    // Build user context section
+    const userContextSection = context ? `
+
+User's Current Data Context:
+${context.goals && context.goals.length > 0 ? `\nGoals (${context.goals.length}):
+${context.goals.map((goal: any) => `- ${goal.title} (${goal.status})`).join('\n')}` : ''}
+
+${context.projects && context.projects.length > 0 ? `\nProjects (${context.projects.length}):
+${context.projects.map((project: any) => `- ${project.title} (${project.status}) - ${project.description}`).join('\n')}` : ''}
+
+${context.tasks && context.tasks.length > 0 ? `\nRecent Tasks (${context.tasks.length}):
+${context.tasks.slice(0, 10).map((task: any) => `- ${task.title} (${task.status}) - ${task.category}`).join('\n')}` : ''}
+
+${context.moods && context.moods.length > 0 ? `\nRecent Moods (${context.moods.length}):
+${context.moods.slice(0, 5).map((mood: any) => `- ${mood.mood} (${mood.intensity}/10) - ${mood.notes || 'No notes'}`).join('\n')}` : ''}
+
+${context.friends && context.friends.length > 0 ? `\nFriends/Contacts (${context.friends.length}):
+${context.friends.map((friend: any) => `- ${friend.name} (${friend.relationship})`).join('\n')}` : ''}` : '';
 
     const prompt = `You are an intelligent thought processor for a productivity and mental wellness app.
 
-Available Tools:
-${toolDescriptions}${personNamesContext}
+Available Actions:
+- createTask: Create a new task
+- createProject: Create a new project
+- createGoal: Create a new goal
+- createMoodEntry: Create a mood entry
+- addTag: Add a tag to the thought
+- enhanceThought: Improve the thought text
+- linkToProject: Link thought to existing project
+
+${userContextSection}
 
 User Thought:
 Text: "${thought.text}"
@@ -45,53 +67,36 @@ Type: ${thought.type || 'neutral'}
 Current Tags: ${thought.tags?.join(', ') || 'none'}
 Created: ${thought.createdAt}
 
-Analyze this thought and suggest helpful actions. Use the tool examples and keywords above to guide your decision. Consider:
+Analyze this thought and suggest helpful actions. Consider:
 1. **Thought Enhancement**: Can the text be improved for clarity or grammar?
-2. **Relevant Tools**: Which tools would help process this thought? Match against example thoughts and keywords.
+2. **Existing Data Context**: Review the user's current goals, projects, tasks, and moods to determine if this thought should:
+   - Link to an existing project/goal (use linkToProject action)
+   - Create a new project/goal (use createProject action)
+   - Add to an existing task or create a new one
+   - Relate to recent mood patterns
 3. **Specific Actions**: What should be created or updated?
-4. **Task Frequency**: If creating a task, should it recur? (daily, weekly, monthly, workweek, none)
-5. **Mood Recognition**: If this is clearly an emotional expression, create a mood entry with intensity
-6. **Reasoning**: Why are these suggestions appropriate?
-
-IMPORTANT: Match the thought against the tool examples and keywords provided above. For example:
-- "I am sooo sad right now" → Mood Tracker tool (matches keywords: sad, feeling, so)
-- "I need to buy groceries" → Tasks tool (matches keywords: need to, buy)
-- "Ideas for new features" → Brainstorming tool (matches keywords: ideas)
+4. **Mood Recognition**: If this is clearly an emotional expression, create a mood entry with intensity
 
 Respond ONLY with valid JSON (no markdown, no code blocks):
 {
-  "thoughtEnhancement": {
-    "improvedText": "improved version or null if no changes needed",
-    "changes": "description of what was improved",
-    "shouldApply": true or false
-  },
-  "suggestedTools": ["tasks", "brainstorming"],
   "actions": [
     {
       "type": "createTask",
-      "tool": "tasks",
       "data": {
         "title": "specific task title",
         "category": "health | wealth | mastery | connection",
         "estimatedTime": 30,
-        "priority": "medium",
-        "recurrence": {
-          "type": "none | daily | weekly | workweek | monthly",
-          "frequency": 1,
-          "reasoning": "why this frequency makes sense"
-        }
+        "priority": "medium"
       },
       "reasoning": "why this task should be created"
     },
     {
       "type": "addTag",
-      "tool": "system",
       "data": { "tag": "research" },
       "reasoning": "why this tag is appropriate"
     },
     {
       "type": "createMoodEntry",
-      "tool": "mood",
       "data": {
         "mood": "sad",
         "intensity": 9,
@@ -101,7 +106,6 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
     },
     {
       "type": "createProject",
-      "tool": "projects",
       "data": {
         "title": "Better Physique",
         "description": "Achieve great physical fitness and body composition",
@@ -111,57 +115,15 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
       },
       "reasoning": "Clear long-term goal with 2 year timeframe"
     }
-  ],
-  "confidence": 0.95,
-  "processingComplexity": "simple"
+  ]
 }
 
 Rules:
 - Only suggest actions that are truly helpful
 - Don't create tasks for vague thoughts
 - Use appropriate categories: health, wealth, mastery, connection
-- For recurring tasks: daily (every day), workweek (Mon-Fri), weekly (once per week), monthly
-- Examples: "exercise daily" → daily, "weekly review" → weekly, "check email" → workweek
-- One-time tasks should have recurrence.type = "none"
 - Be conservative with task creation
-- Enhance text only if there are clear improvements
-- Consider the thought type and existing tags
-
-MOOD RECOGNITION RULES:
-- If thought clearly expresses emotion (contains "I feel", "I am", "so sad", "really happy", etc.), create a mood entry
-- Estimate intensity 1-10 based on language intensity:
-  * Words like "a bit", "slightly", "somewhat" → 3-4
-  * Neutral expressions → 5
-  * Words like "really", "very" → 6-7
-  * Words like "so", "sooo", "extremely", "really really" → 8-10
-- Examples:
-  * "I am sooo sad right now" → intensity: 9 (multiple 'o's indicate strong emotion)
-  * "Feeling a bit down" → intensity: 4
-  * "I'm extremely happy!" → intensity: 9
-  * "Kind of stressed" → intensity: 5
-
-PROJECT/GOAL RECOGNITION RULES:
-- If thought expresses a long-term aspiration (months-years), create a project with timeframe "long-term"
-- If thought expresses a short-term goal (weeks-months), create a project with timeframe "short-term"
-- Look for time indicators: "in 2 years", "by next year", "within 6 months"
-- Extract target date if mentioned
-- If thought mentions HOW to achieve a goal or relates to existing goal, use "linkToProject" instead
-- Examples:
-  * "I want to have a great physique in 2 years" → createProject (long-term, health, target: 2 years from now)
-  * "How can I achieve great physique in 2 years" → linkToProject (link to "Better Physique" project) + createTask + addTag: brainstorm
-  * "Goal: Learn Spanish fluently" → createProject (long-term, mastery)
-  * "Ideas for improving my fitness routine" → linkToProject (link to fitness-related project) + addTag: brainstorm
-
-PERSON NAME DETECTION RULES:
-- If the thought mentions any person from the "Known People in User's Network" list, automatically add their name as a tag
-- Check for exact matches (case-insensitive) of person names in the thought text
-- If multiple people are mentioned, add all their names as tags
-- Use the addTag action with type "addTag", tool "system", data: { "tag": "PersonName" }
-- Examples:
-  * Thought: "Had a great conversation with John today" + Known People: ["John", "Sarah"] → addTag: "John"
-  * Thought: "Meeting with Sarah and John tomorrow" + Known People: ["John", "Sarah"] → addTag: "Sarah" AND addTag: "John"
-  * Thought: "John mentioned an interesting project idea" + Known People: ["John"] → addTag: "John"
-- This helps users track thoughts related to specific people in their network`;
+- Consider existing user data when making decisions`;
 
     // Call OpenAI API
     console.log('📤 Calling OpenAI API');
@@ -207,6 +169,24 @@ PERSON NAME DETECTION RULES:
     let aiResponse = data.choices[0]?.message?.content;
 
     console.log('🤖 Raw AI response:', aiResponse);
+
+    // Track token usage
+    if (data.usage) {
+      try {
+        const { useTokenUsage } = await import('@/store/useTokenUsage');
+        useTokenUsage.getState().addUsage({
+          model: selectedModel,
+          promptTokens: data.usage.prompt_tokens || 0,
+          completionTokens: data.usage.completion_tokens || 0,
+          totalTokens: data.usage.total_tokens || 0,
+          endpoint: '/api/process-thought',
+          thoughtId: thought.id,
+        });
+        console.log('📊 Token usage tracked:', data.usage);
+      } catch (error) {
+        console.warn('⚠️ Failed to track token usage:', error);
+      }
+    }
 
     // Clean up response - remove markdown code blocks if present
     if (aiResponse) {
