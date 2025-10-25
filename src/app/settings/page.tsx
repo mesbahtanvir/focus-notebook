@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useSettings, AIModel } from '@/store/useSettings'
 import { Key, Eye, EyeOff, Check, X, ExternalLink, Brain, Download, Trash2, Database, AlertTriangle, Upload, FileJson } from 'lucide-react'
 import Link from 'next/link'
-import { exportAllData, exportData, downloadDataAsFile, deleteAllUserData, getDataStats, importDataFromFile, ExportOptions } from '@/lib/utils/data-management'
+import { exportAllData, exportData, downloadDataAsFile, deleteAllUserData, getDataStats, importDataFromFile, ExportOptions, ImportProgress } from '@/lib/utils/data-management'
 import { DataMigration } from '@/components/DataMigration'
 
 type SettingsFormValues = {
@@ -40,14 +40,16 @@ export default function SettingsPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [dataStats, setDataStats] = useState({ tasks: 0, goals: 0, projects: 0, thoughts: 0, moods: 0, total: 0 });
+  const [dataStats, setDataStats] = useState({ tasks: 0, goals: 0, projects: 0, thoughts: 0, moods: 0, focusSessions: 0, total: 0 });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const [exportOptions, setExportOptions] = useState<ExportOptions>({
     tasks: true,
     goals: true,
     projects: true,
     thoughts: true,
     moods: true,
+    focusSessions: true,
   });
   
 
@@ -127,7 +129,8 @@ export default function SettingsPage() {
         (exportOptions.goals ? dataStats.goals : 0) +
         (exportOptions.projects ? dataStats.projects : 0) +
         (exportOptions.thoughts ? dataStats.thoughts : 0) +
-        (exportOptions.moods ? dataStats.moods : 0);
+        (exportOptions.moods ? dataStats.moods : 0) +
+        (exportOptions.focusSessions ? dataStats.focusSessions : 0);
 
       downloadDataAsFile(data);
       toast({
@@ -172,20 +175,34 @@ export default function SettingsPage() {
       });
       return;
     }
-    
+
     try {
       setIsImporting(true);
-      const result = await importDataFromFile(selectedFile);
-      
+      setImportProgress({ currentCollection: 'Starting...', currentItem: 0, totalItems: 0, percentage: 0 });
+
+      const result = await importDataFromFile(selectedFile, (progress) => {
+        setImportProgress(progress);
+      });
+
       if (result.success) {
+        const importedItems = [
+          result.stats.tasks > 0 && `${result.stats.tasks} tasks`,
+          result.stats.goals > 0 && `${result.stats.goals} goals`,
+          result.stats.projects > 0 && `${result.stats.projects} projects`,
+          result.stats.thoughts > 0 && `${result.stats.thoughts} thoughts`,
+          result.stats.moods > 0 && `${result.stats.moods} moods`,
+          result.stats.focusSessions > 0 && `${result.stats.focusSessions} focus sessions`,
+        ].filter(Boolean).join(', ');
+
         toast({
           title: 'Data Imported Successfully',
-          description: `Imported ${result.stats.tasks} tasks, ${result.stats.goals} goals, ${result.stats.projects} projects, ${result.stats.thoughts} thoughts, and ${result.stats.moods} moods.`,
+          description: `Imported ${importedItems}.`,
         });
-        
+
         // Reset file input
         setSelectedFile(null);
-        
+        setImportProgress(null);
+
         // Refresh stats after import
         setTimeout(() => {
           const newStats = getDataStats();
@@ -202,9 +219,11 @@ export default function SettingsPage() {
           description: result.error || 'Failed to import data. Please check the file format.',
           variant: 'destructive',
         });
+        setImportProgress(null);
       }
     } catch (error) {
       console.error('Import failed:', error);
+      setImportProgress(null);
       toast({
         title: 'Import Failed',
         description: error instanceof Error ? error.message : 'Failed to import data. Please try again.',
@@ -561,6 +580,15 @@ export default function SettingsPage() {
                         />
                         <span className="text-sm font-medium">Moods ({dataStats.moods})</span>
                       </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={exportOptions.focusSessions}
+                          onChange={(e) => setExportOptions({ ...exportOptions, focusSessions: e.target.checked })}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm font-medium">Focus Sessions ({dataStats.focusSessions})</span>
+                      </label>
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -627,9 +655,31 @@ export default function SettingsPage() {
                       </Button>
                     </div>
                     
-                    {selectedFile && (
+                    {selectedFile && !isImporting && (
                       <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs text-blue-800 dark:text-blue-200">
                         <strong>Ready to import:</strong> {selectedFile.name} ({(selectedFile.size / 1024).toFixed(2)} KB)
+                      </div>
+                    )}
+
+                    {importProgress && (
+                      <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                            Importing {importProgress.currentCollection}...
+                          </span>
+                          <span className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                            {importProgress.percentage}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-blue-200 dark:bg-blue-900 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="bg-gradient-to-r from-blue-500 to-cyan-500 h-full transition-all duration-300 ease-out"
+                            style={{ width: `${importProgress.percentage}%` }}
+                          />
+                        </div>
+                        <div className="mt-2 text-xs text-blue-700 dark:text-blue-300">
+                          {importProgress.currentItem} of {importProgress.totalItems} items imported
+                        </div>
                       </div>
                     )}
                   </div>

@@ -60,7 +60,10 @@ export default function ProjectDetailPage() {
 
   const linkedTasks = useMemo(() => {
     if (!project) return [];
-    return tasks.filter((t) => project.linkedTaskIds.includes(t.id));
+    // Include tasks that are either in linkedTaskIds OR have projectId matching this project
+    return tasks.filter((t) =>
+      project.linkedTaskIds.includes(t.id) || t.projectId === project.id
+    );
   }, [project, tasks]);
 
   const linkedGoal = useMemo(() => {
@@ -70,7 +73,18 @@ export default function ProjectDetailPage() {
 
   const linkedThoughts = useMemo(() => {
     if (!project) return [];
-    return thoughts.filter((t) => project.linkedThoughtIds.includes(t.id));
+    // Include thoughts that are either in linkedThoughtIds OR connected via AI processing
+    return thoughts.filter((t) => {
+      if (project.linkedThoughtIds.includes(t.id)) return true;
+
+      // Check if thought created this project (via AI processing)
+      try {
+        const projectNotes = project.notes ? JSON.parse(project.notes) : null;
+        if (projectNotes?.sourceThoughtId === t.id) return true;
+      } catch {}
+
+      return false;
+    });
   }, [project, thoughts]);
 
   const stats = useMemo(() => {

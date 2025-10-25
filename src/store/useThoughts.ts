@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { collection, query, orderBy, limit, startAfter, getDocs, getCountFromServer, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore'
+import { collection, query, orderBy } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebaseClient'
 import { createAt, updateAt, deleteAt } from '@/lib/data/gateway'
 import { subscribeCol } from '@/lib/data/subscribe'
@@ -29,18 +29,11 @@ export interface Thought {
 
 type State = {
   thoughts: Thought[]
-  totalCount: number
   isLoading: boolean
   fromCache: boolean
   hasPendingWrites: boolean
   unsubscribe: (() => void) | null
-  lastDoc: QueryDocumentSnapshot<DocumentData> | null
-  hasMore: boolean
-  pageSize: number
-  isLoadingMore: boolean
-  subscribe: (userId: string, pageSize?: number) => void
-  loadMore: (userId: string) => Promise<void>
-  fetchTotalCount: (userId: string) => Promise<void>
+  subscribe: (userId: string) => void
   add: (data: Omit<Thought, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>) => Promise<void>
   updateThought: (id: string, updates: Partial<Omit<Thought, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>>) => Promise<void>
   deleteThought: (id: string) => Promise<void>
@@ -48,28 +41,22 @@ type State = {
 
 export const useThoughts = create<State>((set, get) => ({
   thoughts: [],
-  totalCount: 0,
   isLoading: true,
   fromCache: false,
   hasPendingWrites: false,
   unsubscribe: null,
-  lastDoc: null,
-  hasMore: true,
-  pageSize: 10,
-  isLoadingMore: false,
 
-  subscribe: (userId: string, pageSize = 10) => {
+  subscribe: (userId: string) => {
     // Unsubscribe from previous subscription if any
     const currentUnsub = get().unsubscribe
     if (currentUnsub) {
       currentUnsub()
     }
 
-    // Subscribe to thoughts collection with pagination
+    // Subscribe to ALL thoughts (no pagination)
     const thoughtsQuery = query(
       collection(db, `users/${userId}/thoughts`),
-      orderBy('createdAt', 'desc'),
-      limit(pageSize)
+      orderBy('createdAt', 'desc')
     )
 
     const unsub = subscribeCol<Thought>(thoughtsQuery, (thoughts, meta) => {
@@ -78,73 +65,10 @@ export const useThoughts = create<State>((set, get) => ({
         isLoading: false,
         fromCache: meta.fromCache,
         hasPendingWrites: meta.hasPendingWrites,
-        hasMore: thoughts.length === pageSize,
-        pageSize,
       })
-
-      // Fetch total count after loading thoughts
-      get().fetchTotalCount(userId)
     })
 
     set({ unsubscribe: unsub })
-  },
-
-  fetchTotalCount: async (userId: string) => {
-    try {
-      const thoughtsRef = collection(db, `users/${userId}/thoughts`)
-      const countQuery = query(thoughtsRef)
-      const snapshot = await getCountFromServer(countQuery)
-      const count = snapshot.data().count
-      console.log('[useThoughts] Total count fetched:', count)
-      set({ totalCount: count })
-    } catch (error) {
-      console.error('[useThoughts] Error fetching total count:', error)
-      // Fallback to current thoughts length if count query fails
-      const currentCount = get().thoughts.length
-      console.warn('[useThoughts] Using fallback count:', currentCount)
-      set({ totalCount: currentCount })
-    }
-  },
-
-  loadMore: async (userId: string) => {
-    const { thoughts, pageSize, isLoadingMore, hasMore } = get()
-
-    if (isLoadingMore || !hasMore) return
-
-    set({ isLoadingMore: true })
-
-    try {
-      // Get the last document from current thoughts
-      const lastThought = thoughts[thoughts.length - 1]
-      if (!lastThought) {
-        set({ isLoadingMore: false, hasMore: false })
-        return
-      }
-
-      // Create query for next page
-      const thoughtsRef = collection(db, `users/${userId}/thoughts`)
-      const nextQuery = query(
-        thoughtsRef,
-        orderBy('createdAt', 'desc'),
-        startAfter(lastThought.createdAt),
-        limit(pageSize)
-      )
-
-      const snapshot = await getDocs(nextQuery)
-      const newThoughts = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Thought[]
-
-      set({
-        thoughts: [...thoughts, ...newThoughts],
-        hasMore: newThoughts.length === pageSize,
-        isLoadingMore: false,
-      })
-    } catch (error) {
-      console.error('Error loading more thoughts:', error)
-      set({ isLoadingMore: false })
-    }
   },
 
   add: async (data) => {
@@ -159,9 +83,6 @@ export const useThoughts = create<State>((set, get) => ({
     }
 
     await createAt(`users/${userId}/thoughts/${id}`, newThought)
-
-    // Refresh total count after adding
-    get().fetchTotalCount(userId)
   },
 
 
@@ -177,8 +98,5 @@ export const useThoughts = create<State>((set, get) => ({
     if (!userId) throw new Error('Not authenticated')
 
     await deleteAt(`users/${userId}/thoughts/${id}`)
-
-    // Refresh total count after deleting
-    get().fetchTotalCount(userId)
   },
 }))

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useTasks, Task, TaskCategory, TaskPriority, TaskStatus, RecurrenceType, TaskStep } from "@/store/useTasks";
 import { useThoughts } from "@/store/useThoughts";
+import { useProjects } from "@/store/useProjects";
 import { FormattedNotes } from "@/lib/formatNotes";
 import { TaskSteps } from "@/components/TaskSteps";
 import Link from "next/link";
@@ -18,7 +19,9 @@ import {
   Repeat,
   ListChecks,
   MessageCircle,
-  ExternalLink
+  ExternalLink,
+  Target,
+  Link2
 } from "lucide-react";
 
 interface TaskDetailModalProps {
@@ -76,14 +79,17 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
   const [recurrenceFrequency, setRecurrenceFrequency] = useState(task.recurrence?.frequency || 0);
   const [steps, setSteps] = useState<TaskStep[]>(task.steps || []);
   const [selectedThoughtId, setSelectedThoughtId] = useState<string>(getThoughtIdFromTask(task));
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(task.projectId || '');
 
   const updateTask = useTasks((s) => s.updateTask);
   const deleteTask = useTasks((s) => s.deleteTask);
   const toggleTask = useTasks((s) => s.toggle);
 
   const thoughts = useThoughts((s) => s.thoughts);
+  const projects = useProjects((s) => s.projects);
   const currentThoughtId = isEditing ? selectedThoughtId : getThoughtIdFromTask(task);
   const linkedThought = thoughts.find(t => t.id === currentThoughtId);
+  const linkedProject = projects.find(p => p.id === (isEditing ? selectedProjectId : task.projectId));
 
   const handleSave = async () => {
     const tags = tagsInput
@@ -125,6 +131,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
       recurrence: recurrenceConfig,
       steps: steps.length > 0 ? steps : undefined,
       thoughtId: selectedThoughtId || undefined,
+      projectId: selectedProjectId || undefined,
     });
     setIsEditing(false);
   };
@@ -401,24 +408,87 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
             ) : linkedThought ? (
               <Link
                 href={`/tools/thoughts?id=${linkedThought.id}`}
-                className="flex items-center gap-2 p-3 rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border border-indigo-200 dark:border-indigo-900 hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-950/50 dark:hover:to-purple-950/50 transition-colors group"
+                className="block p-4 rounded-xl bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-950/40 dark:via-purple-950/40 dark:to-pink-950/40 border-2 border-indigo-300 dark:border-indigo-800 hover:border-indigo-400 dark:hover:border-indigo-600 hover:shadow-lg transition-all duration-200 group"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <MessageCircle className="h-4 w-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                    <span className="text-sm font-semibold text-indigo-900 dark:text-indigo-100">
-                      From Thought
-                    </span>
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg shadow-md group-hover:scale-110 transition-transform">
+                    <MessageCircle className="h-5 w-5 text-white" />
                   </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
-                    {linkedThought.text}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+                        From Thought
+                      </span>
+                      <ExternalLink className="h-3 w-3 text-indigo-600 dark:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <p className="text-sm text-indigo-900 dark:text-indigo-100 line-clamp-3 leading-relaxed">
+                      {linkedThought.text}
+                    </p>
+                  </div>
                 </div>
-                <ExternalLink className="h-4 w-4 text-indigo-600 dark:text-indigo-400 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
               </Link>
             ) : (
               <span className="text-muted-foreground">No linked thought</span>
+            )}
+          </div>
+
+          {/* Linked Project */}
+          <div>
+            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Linked Project
+            </label>
+            {isEditing ? (
+              <div className="space-y-2">
+                <select
+                  value={selectedProjectId}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  className="input w-full"
+                >
+                  <option value="">No linked project</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.title}
+                    </option>
+                  ))}
+                </select>
+                {selectedProjectId && (
+                  <p className="text-xs text-muted-foreground">
+                    This task will be linked to the selected project
+                  </p>
+                )}
+              </div>
+            ) : linkedProject ? (
+              <Link
+                href={`/tools/projects/${linkedProject.id}`}
+                className="block p-4 rounded-xl bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/40 dark:via-teal-950/40 dark:to-cyan-950/40 border-2 border-emerald-300 dark:border-emerald-800 hover:border-emerald-400 dark:hover:border-emerald-600 hover:shadow-lg transition-all duration-200 group"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg shadow-md group-hover:scale-110 transition-transform">
+                    <Target className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                        Project
+                      </span>
+                      <ExternalLink className="h-3 w-3 text-emerald-600 dark:text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <p className="text-base font-bold text-emerald-900 dark:text-emerald-100 mb-1">
+                      {linkedProject.title}
+                    </p>
+                    {linkedProject.objective && (
+                      <p className="text-sm text-emerald-800 dark:text-emerald-200 line-clamp-2">
+                        {linkedProject.objective}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ) : (
+              <span className="text-muted-foreground">No linked project</span>
             )}
           </div>
 

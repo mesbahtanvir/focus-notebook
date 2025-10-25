@@ -311,7 +311,7 @@ export class ActionExecutor {
 
     // Track for revert
     if (!action.createdItems) {
-      action.createdItems = { taskIds: [], noteIds: [], projectIds: [] };
+      action.createdItems = { taskIds: [], noteIds: [], projectIds: [], moodIds: [] };
     }
     action.createdItems.projectIds = [projectId];
     queueItem.revertData.createdItems.projectIds.push(projectId);

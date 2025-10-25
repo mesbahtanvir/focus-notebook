@@ -32,6 +32,7 @@ export interface RevertData {
     taskIds: string[];
     noteIds: string[];
     projectIds: string[];
+    moodIds: string[];
   };
   thoughtChanges: {
     textChanged: boolean;

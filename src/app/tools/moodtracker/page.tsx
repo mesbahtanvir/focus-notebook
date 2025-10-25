@@ -6,9 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useMoods, type MoodEntry } from "@/store/useMoods";
 import { useThoughts } from "@/store/useThoughts";
-import { X, Trash2, ExternalLink } from "lucide-react";
+import { X, Trash2, ExternalLink, Brain } from "lucide-react";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
+import Link from "next/link";
 
 // Emotion definitions with categories
 type Emotion = {
@@ -426,32 +427,50 @@ function MoodDetailModal({ mood, onClose }: { mood: MoodEntry; onClose: () => vo
                 {mood.value}/10
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400">
-                {new Date(mood.createdAt).toLocaleString()}
+                {(() => {
+                  try {
+                    if (!mood.createdAt) return 'No date';
+                    if (typeof mood.createdAt === 'object' && 'toDate' in mood.createdAt) {
+                      return mood.createdAt.toDate().toLocaleString();
+                    }
+                    if (typeof mood.createdAt === 'string') {
+                      return new Date(mood.createdAt).toLocaleString();
+                    }
+                    if (typeof mood.createdAt === 'object' && 'seconds' in mood.createdAt) {
+                      return new Date(mood.createdAt.seconds * 1000).toLocaleString();
+                    }
+                    return new Date(mood.createdAt).toLocaleString();
+                  } catch {
+                    return 'Invalid date';
+                  }
+                })()}
               </div>
             </div>
           </div>
 
           {/* Source Information */}
-          {mood.metadata?.sourceThoughtId && (
-            <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-xl border border-blue-200 dark:border-blue-800">
+          {mood.metadata?.sourceThoughtId && sourceThought && (
+            <Link
+              href={`/tools/thoughts?id=${sourceThought.id}`}
+              className="block p-4 rounded-xl bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-950/40 dark:via-purple-950/40 dark:to-pink-950/40 border-2 border-indigo-300 dark:border-indigo-800 hover:border-indigo-400 dark:hover:border-indigo-600 hover:shadow-lg transition-all duration-200 group"
+            >
               <div className="flex items-start gap-3">
-                <ExternalLink className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <div className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-                    Created from Thought
+                <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg shadow-md group-hover:scale-110 transition-transform">
+                  <Brain className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+                      Created from Thought
+                    </span>
+                    <ExternalLink className="h-3 w-3 text-indigo-600 dark:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  {sourceThought ? (
-                    <div className="text-sm text-blue-700 dark:text-blue-300 p-2 bg-white/50 dark:bg-blue-900/20 rounded">
-                      {sourceThought.text}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-blue-600 dark:text-blue-400">
-                      Thought ID: {mood.metadata.sourceThoughtId}
-                    </div>
-                  )}
+                  <p className="text-sm text-indigo-900 dark:text-indigo-100 line-clamp-3 leading-relaxed">
+                    {sourceThought.text}
+                  </p>
                 </div>
               </div>
-            </div>
+            </Link>
           )}
 
           {mood.metadata?.createdBy && (

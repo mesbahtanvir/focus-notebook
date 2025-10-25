@@ -58,7 +58,8 @@ export class ManualProcessor {
           createdItems: {
             taskIds: [],
             noteIds: [],
-            projectIds: []
+            projectIds: [],
+            moodIds: []
           },
           thoughtChanges: {
             textChanged: false,

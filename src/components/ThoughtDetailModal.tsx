@@ -7,9 +7,10 @@ import { useProcessQueue } from "@/store/useProcessQueue";
 import { actionExecutor } from "@/lib/thoughtProcessor/actionExecutor";
 import { cascadingDelete } from "@/lib/thoughtProcessor/cascadingDelete";
 import { approvalHandler } from "@/lib/thoughtProcessor/approvalHandler";
+import { manualProcessor } from "@/lib/thoughtProcessor/manualProcessor";
 import { RevertProcessingDialog } from "./RevertProcessingDialog";
-import { 
-  X, 
+import {
+  X,
   Trash2,
   Save,
   Brain,
@@ -25,7 +26,9 @@ import {
   Check,
   RefreshCw,
   Target,
-  Link as LinkIcon
+  Link as LinkIcon,
+  AlertCircle,
+  Key
 } from "lucide-react";
 
 interface ThoughtDetailModalProps {
@@ -43,6 +46,9 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
     return '';
   });
   const [showRevertDialog, setShowRevertDialog] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
 
   const updateThought = useThoughts((s) => s.updateThought);
   const deleteThought = useThoughts((s) => s.deleteThought);
@@ -142,9 +148,34 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   
   const handleRejectActions = async () => {
     if (!awaitingQueueItem) return;
-    
+
     await approvalHandler.rejectProcessing(awaitingQueueItem.id);
     onClose();
+  };
+
+  const handleProcessNow = async () => {
+    if (isProcessed) {
+      setErrorMessage('This thought has already been processed');
+      setShowErrorModal(true);
+      return;
+    }
+
+    setIsProcessing(true);
+
+    const result = await manualProcessor.processThought(thought.id);
+
+    if (result.success) {
+      // Success - actions are now awaiting approval in the queue
+      // The approval UI will show automatically when queue updates
+    } else {
+      const needsApiKey = result.error === 'OpenAI API key not configured';
+      setErrorMessage(needsApiKey
+        ? 'Please configure your OpenAI API key in Settings to enable AI-powered thought processing.'
+        : `Failed to process: ${result.error || 'Unknown error'}`);
+      setShowErrorModal(true);
+    }
+
+    setIsProcessing(false);
   };
 
   const formatDate = (date: any): string => {
@@ -220,6 +251,26 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {!isProcessed && !awaitingQueueItem && (
+                <button
+                  onClick={handleProcessNow}
+                  disabled={isProcessing}
+                  className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Process this thought with AI"
+                >
+                  {isProcessing ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Process Now
+                    </>
+                  )}
+                </button>
+              )}
               {isProcessed && completedQueueItem && (
                 <button
                   onClick={() => setShowRevertDialog(true)}
@@ -484,6 +535,56 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
           onConfirm={handleRevert}
           onCancel={() => setShowRevertDialog(false)}
         />
+      )}
+
+      {/* Error Modal */}
+      {showErrorModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60]" onClick={() => setShowErrorModal(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/90 dark:to-orange-950/90 rounded-2xl shadow-2xl border-4 border-red-300 dark:border-red-700 max-w-md w-full mx-4 p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <div className="p-3 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl shadow-lg">
+                  {errorMessage?.includes('API key') ? (
+                    <Key className="h-6 w-6 text-white" />
+                  ) : (
+                    <AlertCircle className="h-6 w-6 text-white" />
+                  )}
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-red-900 dark:text-red-100 mb-2">
+                  {errorMessage?.includes('API key') ? 'API Key Required' : 'Processing Failed'}
+                </h3>
+                <p className="text-red-800 dark:text-red-200 mb-4 leading-relaxed">
+                  {errorMessage}
+                </p>
+                <div className="flex gap-2">
+                  {errorMessage?.includes('API key') && (
+                    <a
+                      href="/settings"
+                      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2 text-sm font-semibold"
+                    >
+                      <Key className="h-4 w-4" />
+                      Go to Settings
+                    </a>
+                  )}
+                  <button
+                    onClick={() => setShowErrorModal(false)}
+                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors text-sm font-semibold"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
       )}
     </div>
   );
