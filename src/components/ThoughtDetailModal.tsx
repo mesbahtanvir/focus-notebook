@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useThoughts, Thought } from "@/store/useThoughts";
+import { useTasks } from "@/store/useTasks";
+import { useProjects } from "@/store/useProjects";
+import { useMoods } from "@/store/useMoods";
 import { ThoughtProcessingService } from "@/services/thoughtProcessingService";
+import { ConfirmModal } from "@/components/ConfirmModal";
+import Link from "next/link";
 import {
   X,
   Trash2,
@@ -14,6 +19,12 @@ import {
   Tag,
   CheckCircle2,
   Loader2,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  ListChecks,
+  Target,
+  Smile,
 } from "lucide-react";
 
 interface ThoughtDetailModalProps {
@@ -35,11 +46,39 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAIResources, setShowAIResources] = useState(false);
 
   const updateThought = useThoughts((s) => s.updateThought);
   const deleteThought = useThoughts((s) => s.deleteThought);
   
+  const tasks = useTasks((s) => s.tasks);
+  const projects = useProjects((s) => s.projects);
+  const moods = useMoods((s) => s.moods);
+  
   const isProcessed = Array.isArray(thought.tags) && thought.tags.includes('processed');
+
+  // Find AI-created resources linked to this thought
+  const aiCreatedResources = useMemo(() => {
+    const linkedTasks = tasks.filter(t => t.thoughtId === thought.id);
+    const linkedProjects = projects.filter(p => {
+      // Check if project was created from this thought
+      try {
+        const projectNotes = p.notes ? JSON.parse(p.notes) : null;
+        return projectNotes?.sourceThoughtId === thought.id;
+      } catch {
+        return false;
+      }
+    });
+    const linkedMoods = moods.filter(m => m.metadata?.sourceThoughtId === thought.id);
+    
+    return {
+      tasks: linkedTasks,
+      projects: linkedProjects,
+      moods: linkedMoods,
+      total: linkedTasks.length + linkedProjects.length + linkedMoods.length,
+    };
+  }, [thought.id, tasks, projects, moods]);
 
   const handleSave = async () => {
     const tags = tagsInput
@@ -55,10 +94,9 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   };
 
   const handleDelete = async () => {
-    if (confirm('Are you sure you want to delete this thought?\n\nThis cannot be undone.')) {
-      await deleteThought(thought.id);
-      onClose();
-    }
+    await deleteThought(thought.id);
+    setShowDeleteConfirm(false);
+    onClose();
   };
 
   const handleProcessNow = async () => {
@@ -164,7 +202,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                 </button>
               )}
               <button
-                onClick={handleDelete}
+                onClick={() => setShowDeleteConfirm(true)}
                 className="p-2.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg transition-colors"
               >
                 <Trash2 className="h-5 w-5" />
@@ -276,6 +314,144 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                   </div>
                 )}
               </div>
+
+              {/* AI-Created Resources Section */}
+              {aiCreatedResources.total > 0 && (
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => setShowAIResources(!showAIResources)}
+                    className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-2 border-indigo-200 dark:border-indigo-800 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg">
+                        <Sparkles className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                          AI-Created Resources
+                        </h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          {aiCreatedResources.total} item{aiCreatedResources.total !== 1 ? 's' : ''} created from this thought
+                        </p>
+                      </div>
+                    </div>
+                    {showAIResources ? (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    )}
+                  </button>
+
+                  {showAIResources && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-4 space-y-4"
+                    >
+                      {/* Tasks */}
+                      {aiCreatedResources.tasks.length > 0 && (
+                        <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 border-2 border-blue-200 dark:border-blue-800 p-4">
+                          <h4 className="font-bold text-blue-800 dark:text-blue-200 mb-3 flex items-center gap-2">
+                            <ListChecks className="h-4 w-4" />
+                            Tasks ({aiCreatedResources.tasks.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {aiCreatedResources.tasks.map((task) => (
+                              <Link
+                                key={task.id}
+                                href={`/tools/tasks?id=${task.id}`}
+                                className="block p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-700 hover:border-blue-400 dark:hover:border-blue-500 transition-all hover:shadow-md"
+                              >
+                                <div className="flex items-center gap-2">
+                                  {task.done ? (
+                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                  ) : (
+                                    <div className="h-4 w-4 rounded-full border-2 border-gray-400" />
+                                  )}
+                                  <span className={`text-sm font-medium ${task.done ? 'line-through text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>
+                                    {task.title}
+                                  </span>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Projects */}
+                      {aiCreatedResources.projects.length > 0 && (
+                        <div className="rounded-lg bg-green-50 dark:bg-green-950/20 border-2 border-green-200 dark:border-green-800 p-4">
+                          <h4 className="font-bold text-green-800 dark:text-green-200 mb-3 flex items-center gap-2">
+                            <Target className="h-4 w-4" />
+                            Projects ({aiCreatedResources.projects.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {aiCreatedResources.projects.map((project) => (
+                              <Link
+                                key={project.id}
+                                href={`/tools/projects/${project.id}`}
+                                className="block p-3 bg-white dark:bg-gray-800 rounded-lg border border-green-200 dark:border-green-700 hover:border-green-400 dark:hover:border-green-500 transition-all hover:shadow-md"
+                              >
+                                <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  {project.title}
+                                </div>
+                                {project.objective && (
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-1">
+                                    {project.objective}
+                                  </div>
+                                )}
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Moods */}
+                      {aiCreatedResources.moods.length > 0 && (
+                        <div className="rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border-2 border-yellow-200 dark:border-yellow-800 p-4">
+                          <h4 className="font-bold text-yellow-800 dark:text-yellow-200 mb-3 flex items-center gap-2">
+                            <Smile className="h-4 w-4" />
+                            Mood Entries ({aiCreatedResources.moods.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {aiCreatedResources.moods.map((mood) => (
+                              <div
+                                key={mood.id}
+                                className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-yellow-200 dark:border-yellow-700"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
+                                    {mood.value}/10
+                                  </span>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    {(() => {
+                                      try {
+                                        if (!mood.createdAt) return 'N/A';
+                                        if (typeof mood.createdAt === 'object' && 'toDate' in mood.createdAt) {
+                                          return mood.createdAt.toDate().toLocaleDateString();
+                                        }
+                                        return new Date(mood.createdAt).toLocaleDateString();
+                                      } catch {
+                                        return 'N/A';
+                                      }
+                                    })()}
+                                  </span>
+                                </div>
+                                {mood.note && (
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">
+                                    {mood.note}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -338,6 +514,18 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
           </motion.div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+        title="Delete Thought?"
+        message={`Are you sure you want to delete this thought? This action cannot be undone.`}
+        confirmText="Delete Thought"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

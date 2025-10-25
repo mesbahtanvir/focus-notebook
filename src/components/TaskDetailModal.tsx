@@ -22,7 +22,8 @@ import {
   MessageCircle,
   ExternalLink,
   Target,
-  Link2
+  Link2,
+  CheckCircle2
 } from "lucide-react";
 
 interface TaskDetailModalProps {
@@ -164,13 +165,17 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
         {/* Header */}
         <div className="sticky top-0 bg-background border-b p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={task.done}
-              onChange={() => toggleTask(task.id)}
-              className="h-5 w-5 rounded"
-            />
+            {task.done && (
+              <div className="text-green-600 dark:text-green-400">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+            )}
             <h2 className="text-xl font-bold">Task Details</h2>
+            {task.done && (
+              <span className="text-xs px-2 py-1 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 font-semibold">
+                Completed
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {isEditing ? (

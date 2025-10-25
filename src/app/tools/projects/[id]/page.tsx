@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { TaskModal } from "@/components/TaskModal";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
+import { ConfirmModal } from "@/components/ConfirmModal";
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -50,6 +51,7 @@ export default function ProjectDetailPage() {
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (user?.uid) {
@@ -134,10 +136,9 @@ export default function ProjectDetailPage() {
   };
 
   const handleDeleteProject = async () => {
-    if (confirm("Are you sure you want to delete this project? This cannot be undone.")) {
-      await deleteProject(projectId);
-      router.push("/tools/projects");
-    }
+    await deleteProject(projectId);
+    setShowDeleteConfirm(false);
+    router.push("/tools/projects");
   };
 
   if (!project) {
@@ -230,7 +231,7 @@ export default function ProjectDetailPage() {
               <Edit3 className="h-5 w-5" />
             </button>
             <button
-              onClick={handleDeleteProject}
+              onClick={() => setShowDeleteConfirm(true)}
               className="p-2.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg transition-colors"
               title="Delete Project"
             >
@@ -489,6 +490,18 @@ export default function ProjectDetailPage() {
           onClose={() => setSelectedTask(null)}
         />
       )}
+
+      {/* Delete Project Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onConfirm={handleDeleteProject}
+        onCancel={() => setShowDeleteConfirm(false)}
+        title="Delete Project?"
+        message={`Are you sure you want to delete "${project.title}"? All linked tasks and data will remain, but this project will be permanently removed.`}
+        confirmText="Delete Project"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }
