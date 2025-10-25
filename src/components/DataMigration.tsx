@@ -78,8 +78,8 @@ export function DataMigration() {
               <p className="font-medium mb-1">Task-Thought Linking Migration</p>
               <p>
                 This migration updates tasks created from thoughts to properly display the
-                "From Thought" badge. If you have tasks that were created from AI suggestions
-                but don't show their source thought, run this migration.
+                &quot;From Thought&quot; badge. If you have tasks that were created from AI suggestions
+                but don&apos;t show their source thought, run this migration.
               </p>
             </div>
           </div>
