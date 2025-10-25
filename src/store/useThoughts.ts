@@ -92,10 +92,17 @@ export const useThoughts = create<State>((set, get) => ({
   fetchTotalCount: async (userId: string) => {
     try {
       const thoughtsRef = collection(db, `users/${userId}/thoughts`)
-      const snapshot = await getCountFromServer(thoughtsRef)
-      set({ totalCount: snapshot.data().count })
+      const countQuery = query(thoughtsRef)
+      const snapshot = await getCountFromServer(countQuery)
+      const count = snapshot.data().count
+      console.log('[useThoughts] Total count fetched:', count)
+      set({ totalCount: count })
     } catch (error) {
-      console.error('Error fetching total count:', error)
+      console.error('[useThoughts] Error fetching total count:', error)
+      // Fallback to current thoughts length if count query fails
+      const currentCount = get().thoughts.length
+      console.warn('[useThoughts] Using fallback count:', currentCount)
+      set({ totalCount: currentCount })
     }
   },
 
