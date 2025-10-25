@@ -75,9 +75,6 @@ export default function Page() {
         </motion.div>
       )}
 
-      {/* Most Used Tools */}
-      {user && <MostUsedTools />}
-
       <section className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-4 border-purple-200 dark:border-purple-800 shadow-xl overflow-hidden">
         <div className="p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="flex gap-2">
@@ -193,6 +190,9 @@ export default function Page() {
           </div>
         </div>
       </section>
+
+      {/* Most Used Tools */}
+      {user && <MostUsedTools />}
 
       {/* Errands Preview Section */}
       <section className="rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border-4 border-orange-200 dark:border-orange-800 shadow-xl overflow-hidden">

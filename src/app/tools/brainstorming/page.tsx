@@ -20,6 +20,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -31,6 +32,7 @@ export default function BrainstormingPage() {
   useTrackToolUsage('brainstorming');
 
   const thoughts = useThoughts((s) => s.thoughts);
+  const addThought = useThoughts((s) => s.add);
   const updateThought = useThoughts((s) => s.updateThought);
   const settings = useSettings((s) => s.settings);
   const hasApiKey = useSettings((s) => s.hasApiKey);
@@ -42,6 +44,8 @@ export default function BrainstormingPage() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showApiKeyWarning, setShowApiKeyWarning] = useState(false);
+  const [showNewIdeaPrompt, setShowNewIdeaPrompt] = useState(false);
+  const [newIdeaText, setNewIdeaText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get thoughts with brainstorm tag
@@ -526,6 +530,84 @@ export default function BrainstormingPage() {
           </div>
         </div>
       )}
+
+      {/* New Idea Modal */}
+      <AnimatePresence>
+        {showNewIdeaPrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setShowNewIdeaPrompt(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-lg w-full shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 rounded-lg">
+                  <Lightbulb className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <h2 className="text-xl font-bold">New Brainstorming Idea</h2>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">What do you want to brainstorm about?</label>
+                  <textarea
+                    value={newIdeaText}
+                    onChange={(e) => setNewIdeaText(e.target.value)}
+                    placeholder="Enter your idea or topic..."
+                    className="w-full min-h-[100px] p-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-yellow-500 dark:focus:border-yellow-600 focus:ring-2 focus:ring-yellow-200 dark:focus:ring-yellow-900 resize-none bg-white dark:bg-gray-900"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => {
+                      setShowNewIdeaPrompt(false);
+                      setNewIdeaText("");
+                    }}
+                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!newIdeaText.trim()) return;
+
+                      await addThought({
+                        text: newIdeaText.trim(),
+                        tags: ['brainstorm'],
+                      });
+
+                      setShowNewIdeaPrompt(false);
+                      setNewIdeaText("");
+                    }}
+                    disabled={!newIdeaText.trim()}
+                    className="px-6 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create & Start
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* FAB for creating new brainstorming session */}
+      <FloatingActionButton
+        onClick={() => setShowNewIdeaPrompt(true)}
+        title="New Brainstorming Session"
+        icon={<Plus className="h-6 w-6" />}
+      />
     </div>
   );
 }

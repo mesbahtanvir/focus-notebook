@@ -104,13 +104,22 @@ export const useToolUsage = create<State>((set, get) => ({
 
   getMostUsedTools: (limit = 5) => {
     const records = get().usageRecords;
-    return records
+
+    // Deduplicate by toolName, keeping the highest click count
+    const deduped = new Map<ToolName, ToolUsageStats>();
+    records.forEach(r => {
+      const existing = deduped.get(r.toolName);
+      if (!existing || r.clickCount > existing.clickCount) {
+        deduped.set(r.toolName, {
+          toolName: r.toolName,
+          clickCount: r.clickCount,
+          lastAccessed: r.lastAccessed,
+        });
+      }
+    });
+
+    return Array.from(deduped.values())
       .sort((a, b) => b.clickCount - a.clickCount)
-      .slice(0, limit)
-      .map(r => ({
-        toolName: r.toolName,
-        clickCount: r.clickCount,
-        lastAccessed: r.lastAccessed,
-      }));
+      .slice(0, limit);
   },
 }));

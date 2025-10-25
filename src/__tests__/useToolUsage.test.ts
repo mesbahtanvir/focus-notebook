@@ -145,18 +145,17 @@ describe('useToolUsage', () => {
   it('limits most used tools to specified count', () => {
     const { result } = renderHook(() => useToolUsage());
 
+    const toolNames = ['tasks', 'thoughts', 'goals', 'projects', 'focus', 'brainstorming', 'notes', 'friends', 'moodtracker', 'cbt'] as const;
+
     act(() => {
-      // Add 10 tools using setState
-      const records = [];
-      for (let i = 0; i < 10; i++) {
-        records.push({
-          id: `tool-${i}`,
-          toolName: 'tasks' as const,
-          clickCount: i * 10,
-          lastAccessed: '2025-01-01T00:00:00.000Z',
-          createdAt: '2025-01-01T00:00:00.000Z',
-        });
-      }
+      // Add 10 different tools using setState
+      const records = toolNames.map((toolName, i) => ({
+        id: `tool-${i}`,
+        toolName,
+        clickCount: i * 10,
+        lastAccessed: '2025-01-01T00:00:00.000Z',
+        createdAt: '2025-01-01T00:00:00.000Z',
+      }));
       useToolUsage.setState({ usageRecords: records });
     });
 
