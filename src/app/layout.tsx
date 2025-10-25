@@ -1,8 +1,15 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { DIProvider } from '@/contexts/DIContext'
 import Layout from '@/components/Layout'
 import { FirestoreSubscriber } from '@/components/FirestoreSubscriber'
+import { initializeContainer } from '@/di/setup'
+
+// Initialize dependency injection container
+if (typeof window !== 'undefined') {
+  initializeContainer()
+}
 
 export const metadata: Metadata = {
   title: 'Focus Notebook',
@@ -24,12 +31,14 @@ export default function RootLayout({
   return (
     <html lang="en" className="light">
       <body className="font-sans antialiased">
-        <AuthProvider>
-          <FirestoreSubscriber />
-          <Layout>
-            {children}
-          </Layout>
-        </AuthProvider>
+        <DIProvider>
+          <AuthProvider>
+            <FirestoreSubscriber />
+            <Layout>
+              {children}
+            </Layout>
+          </AuthProvider>
+        </DIProvider>
       </body>
     </html>
   )
