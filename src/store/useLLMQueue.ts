@@ -217,6 +217,10 @@ export const useLLMQueue = create<State>()(
 
 // Helper functions for processing different request types
 async function processThoughtRequest(request: LLMRequest) {
+  // Import settings dynamically to get API key
+  const { useSettings } = await import('./useSettings');
+  const settings = useSettings.getState().settings;
+  
   const response = await fetch('/api/process-thought', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -228,6 +232,8 @@ async function processThoughtRequest(request: LLMRequest) {
         createdAt: new Date().toISOString(),
       },
       context: request.input.context,
+      apiKey: settings.openaiApiKey,
+      model: settings.aiModel || 'gpt-3.5-turbo',
     }),
   });
 
@@ -245,12 +251,18 @@ async function processThoughtRequest(request: LLMRequest) {
 }
 
 async function processBrainstormingRequest(request: LLMRequest) {
+  // Import settings dynamically to get API key
+  const { useSettings } = await import('./useSettings');
+  const settings = useSettings.getState().settings;
+  
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       messages: request.input.context?.messages || [],
       context: request.input.context,
+      apiKey: settings.openaiApiKey,
+      model: settings.aiModel || 'gpt-3.5-turbo',
     }),
   });
 
