@@ -155,22 +155,22 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-background rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-gradient-to-br from-white to-blue-50 dark:from-gray-900 dark:to-blue-950/30 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden border-4 border-blue-200 dark:border-blue-800"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-background border-b p-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-gradient-to-r from-blue-100 via-indigo-100 to-purple-100 dark:from-blue-900/50 dark:via-indigo-900/50 dark:to-purple-900/50 border-b-4 border-blue-200 dark:border-blue-800 p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {task.done && (
               <div className="text-green-600 dark:text-green-400">
                 <CheckCircle2 className="h-6 w-6" />
               </div>
             )}
-            <h2 className="text-xl font-bold">Task Details</h2>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">Task Details</h2>
             {task.done && (
               <span className="text-xs px-2 py-1 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 font-semibold">
                 Completed
@@ -182,14 +182,14 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
               <>
                 <button
                   onClick={handleSave}
-                  className="btn-primary flex items-center gap-2"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold shadow-lg transition-all flex items-center gap-2"
                 >
                   <Save className="h-4 w-4" />
                   Save
                 </button>
                 <button
                   onClick={() => setIsEditing(false)}
-                  className="px-3 py-2 text-sm rounded hover:bg-accent"
+                  className="px-4 py-2 rounded-xl bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold transition-all"
                 >
                   Cancel
                 </button>
@@ -537,13 +537,53 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                 )}
               </div>
             ) : task.recurrence && task.recurrence.type !== 'none' ? (
-              <div className="space-y-2">
-                <span className="capitalize">{task.recurrence.type}</span>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Repeat className="h-4 w-4 text-purple-600" />
+                  <span className="capitalize font-semibold">{task.recurrence.type}</span>
+                </div>
                 {task.recurrence.frequency && (
                   <div className="text-sm">
                     <span className="text-muted-foreground">Progress: </span>
-                    <span className="font-medium">{task.completionCount || 0} / {task.recurrence.frequency}</span>
+                    <span className="font-bold text-purple-600">{task.completionCount || 0} / {task.recurrence.frequency}</span>
                     <span className="text-muted-foreground"> times</span>
+                  </div>
+                )}
+                
+                {/* Completion History */}
+                {task.completionHistory && task.completionHistory.length > 0 && (
+                  <div className="mt-3 p-4 rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-2 border-purple-200 dark:border-purple-800">
+                    <h4 className="text-sm font-bold text-purple-800 dark:text-purple-200 mb-3 flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Completion History ({task.completionHistory.length})
+                    </h4>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {task.completionHistory
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .map((completion, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-700"
+                          >
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="h-3 w-3 text-green-600" />
+                              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                {new Date(completion.date).toLocaleDateString('en-US', { 
+                                  weekday: 'short', 
+                                  month: 'short', 
+                                  day: 'numeric' 
+                                })}
+                              </span>
+                            </div>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {new Date(completion.completedAt).toLocaleTimeString('en-US', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
                   </div>
                 )}
               </div>

@@ -9,6 +9,7 @@ import {
   Target, CheckCircle2, Trash2, Edit2, PlayCircle, PauseCircle, Archive, ChevronDown, ChevronUp, Search
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { GoalFormModal } from "@/components/GoalFormModal";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
@@ -17,6 +18,7 @@ export default function GoalsPage() {
   useTrackToolUsage('goals');
 
   const { user } = useAuth();
+  const router = useRouter();
   const goals = useGoals((s) => s.goals);
   const subscribe = useGoals((s) => s.subscribe);
   const addGoal = useGoals((s) => s.add);
@@ -133,7 +135,8 @@ export default function GoalsPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="card p-6 hover:shadow-lg transition-shadow"
+                className="card p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => router.push(`/tools/goals/${goal.id}`)}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
@@ -175,7 +178,7 @@ export default function GoalsPage() {
                         )}
                       </div>
                       {/* Quick Project Creation */}
-                      <div className="flex gap-2">
+                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="text"
                           id={`project-input-${goal.id}`}
@@ -229,7 +232,7 @@ export default function GoalsPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 ml-4">
+                  <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => toggleStatus(goal.id)}
                       className="p-2 rounded-lg hover:bg-green-100 dark:hover:bg-green-950/40 text-green-600 transition-colors"

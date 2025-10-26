@@ -48,13 +48,17 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const [successMessage, setSuccessMessage] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAIResources, setShowAIResources] = useState(false);
+  const [showRevertConfirm, setShowRevertConfirm] = useState(false);
 
   const updateThought = useThoughts((s) => s.updateThought);
   const deleteThought = useThoughts((s) => s.deleteThought);
   
   const tasks = useTasks((s) => s.tasks);
+  const deleteTask = useTasks((s) => s.deleteTask);
   const projects = useProjects((s) => s.projects);
+  const deleteProject = useProjects((s) => s.delete);
   const moods = useMoods((s) => s.moods);
+  const deleteMood = useMoods((s) => s.delete);
   
   const isProcessed = Array.isArray(thought.tags) && thought.tags.includes('processed');
 
@@ -97,6 +101,25 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
     await deleteThought(thought.id);
     setShowDeleteConfirm(false);
     onClose();
+  };
+
+  const handleRevertProcessing = async () => {
+    // Delete all AI-created resources
+    for (const task of aiCreatedResources.tasks) {
+      await deleteTask(task.id);
+    }
+    for (const project of aiCreatedResources.projects) {
+      await deleteProject(project.id);
+    }
+    for (const mood of aiCreatedResources.moods) {
+      await deleteMood(mood.id);
+    }
+
+    // Remove 'processed' tag from thought
+    const updatedTags = (thought.tags || []).filter(t => t !== 'processed');
+    await updateThought(thought.id, { tags: updatedTags });
+
+    setShowRevertConfirm(false);
   };
 
   const handleProcessNow = async () => {
@@ -185,7 +208,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                 <button
                   onClick={handleProcessNow}
                   disabled={isProcessing}
-                  className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
                   title="Process this thought with AI"
                 >
                   {isProcessing ? (
@@ -199,6 +222,40 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                       Process Now
                     </>
                   )}
+                </button>
+              )}
+              {isEditing ? (
+                <>
+                  <button
+                    onClick={handleSave}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold shadow-lg transition-all flex items-center gap-2 transform hover:scale-105 active:scale-95"
+                  >
+                    <Save className="h-4 w-4" />
+                    Save
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsEditing(false);
+                      setText(thought.text);
+                      setTagsInput(() => {
+                        if (!thought.tags) return '';
+                        if (Array.isArray(thought.tags)) return thought.tags.join(', ');
+                        if (typeof thought.tags === 'string') return thought.tags;
+                        return '';
+                      });
+                    }}
+                    className="px-4 py-2 rounded-xl bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold transition-all"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="p-2.5 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-lg transition-colors"
+                  title="Edit thought"
+                >
+                  <Edit3 className="h-5 w-5" />
                 </button>
               )}
               <button
@@ -223,20 +280,10 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
             <div className="space-y-6">
               {/* Thought Text */}
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Brain className="h-5 w-5 text-purple-600" />
-                    Thought Content
-                  </h3>
-                  {!isEditing && (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                    >
-                      <Edit3 className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+                  <Brain className="h-5 w-5 text-purple-600" />
+                  Thought Content
+                </h3>
                 
                 {isEditing ? (
                   <div className="space-y-3">
@@ -318,7 +365,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
               {/* Processing Status Summary */}
               {isProcessed && (
                 <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <div className="p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-2 border-green-200 dark:border-green-800">
+                  <div className="p-5 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-2 border-green-200 dark:border-green-800 shadow-md">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg shadow-md">
@@ -329,20 +376,18 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                             AI Processing Complete
                           </h3>
                           <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                            This thought has been analyzed and actions have been created
+                            {aiCreatedResources.total > 0 
+                              ? `Created ${aiCreatedResources.tasks.length} task(s), ${aiCreatedResources.projects.length} project(s), ${aiCreatedResources.moods.length} mood(s)`
+                              : 'This thought has been analyzed'}
                           </p>
                         </div>
                       </div>
                       <button
-                        onClick={async () => {
-                          // Revert processing by removing the 'processed' tag
-                          const updatedTags = (thought.tags || []).filter(t => t !== 'processed');
-                          await updateThought(thought.id, { tags: updatedTags });
-                        }}
-                        className="px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border-2 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all text-sm font-semibold"
-                        title="Mark as unprocessed to process again"
+                        onClick={() => setShowRevertConfirm(true)}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold shadow-lg transition-all text-sm transform hover:scale-105 active:scale-95"
+                        title="Delete all AI-created resources and mark as unprocessed"
                       >
-                        Revert
+                        Revert All
                       </button>
                     </div>
                   </div>
@@ -559,6 +604,18 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
         confirmText="Delete Thought"
         cancelText="Cancel"
         variant="danger"
+      />
+
+      {/* Revert Processing Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showRevertConfirm}
+        onConfirm={handleRevertProcessing}
+        onCancel={() => setShowRevertConfirm(false)}
+        title="Revert AI Processing?"
+        message={`This will delete ${aiCreatedResources.total} AI-created resource(s) (${aiCreatedResources.tasks.length} tasks, ${aiCreatedResources.projects.length} projects, ${aiCreatedResources.moods.length} moods) and mark this thought as unprocessed. This action cannot be undone.`}
+        confirmText="Revert & Delete All"
+        cancelText="Cancel"
+        variant="warning"
       />
     </div>
   );

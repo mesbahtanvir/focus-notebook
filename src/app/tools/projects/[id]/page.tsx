@@ -29,6 +29,29 @@ import {
 import { TaskModal } from "@/components/TaskModal";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import Link from "next/link";
+
+// Helper function to format time until deadline
+function formatTimeUntil(targetDate: string): { value: number; unit: string; isOverdue: boolean } {
+  const target = new Date(targetDate);
+  const today = new Date();
+  const diffTime = target.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  const isOverdue = diffDays < 0;
+  const absDays = Math.abs(diffDays);
+  
+  // Calculate years, months, days
+  if (absDays >= 365) {
+    const years = Math.floor(absDays / 365);
+    return { value: years, unit: years === 1 ? 'year' : 'years', isOverdue };
+  } else if (absDays >= 30) {
+    const months = Math.floor(absDays / 30);
+    return { value: months, unit: months === 1 ? 'month' : 'months', isOverdue };
+  } else {
+    return { value: absDays, unit: absDays === 1 ? 'day' : 'days', isOverdue };
+  }
+}
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -287,21 +310,26 @@ export default function ProjectDetailPage() {
             <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
             <div className="text-xs font-semibold text-green-600 dark:text-green-400">Deadline</div>
           </div>
-          {stats.daysUntilTarget !== null ? (
-            <>
-              <div className={`text-2xl font-bold ${
-                stats.daysUntilTarget < 0
-                  ? "text-red-700 dark:text-red-300"
-                  : stats.daysUntilTarget < 7
-                  ? "text-orange-700 dark:text-orange-300"
-                  : "text-green-700 dark:text-green-300"
-              }`}>
-                {Math.abs(stats.daysUntilTarget)}
-              </div>
-              <div className="text-xs text-green-600 dark:text-green-400 mt-1">
-                {stats.daysUntilTarget < 0 ? "days overdue" : "days left"}
-              </div>
-            </>
+          {project.targetDate ? (
+            (() => {
+              const timeInfo = formatTimeUntil(project.targetDate);
+              return (
+                <>
+                  <div className={`text-2xl font-bold ${
+                    timeInfo.isOverdue
+                      ? "text-red-700 dark:text-red-300"
+                      : timeInfo.value === 0 || (timeInfo.unit === 'days' && timeInfo.value < 7)
+                      ? "text-orange-700 dark:text-orange-300"
+                      : "text-green-700 dark:text-green-300"
+                  }`}>
+                    {timeInfo.value}
+                  </div>
+                  <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                    {timeInfo.unit} {timeInfo.isOverdue ? "overdue" : "left"}
+                  </div>
+                </>
+              );
+            })()
           ) : (
             <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">No deadline</div>
           )}
@@ -314,15 +342,30 @@ export default function ProjectDetailPage() {
         <div className="space-y-6">
           {/* Linked Goal */}
           {linkedGoal && (
-            <div className="rounded-xl p-6 bg-white dark:bg-gray-900 border-2 border-purple-200 dark:border-purple-800 shadow-md">
+            <div className="rounded-xl p-6 bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30 border-2 border-purple-200 dark:border-purple-800 shadow-md">
               <div className="flex items-center gap-2 mb-3">
                 <Flag className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                 <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">Linked Goal</h3>
               </div>
-              <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
-                <div className="font-semibold text-purple-700 dark:text-purple-300">{linkedGoal.title}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{linkedGoal.objective}</div>
-              </div>
+              <Link
+                href="/tools/goals"
+                className="block p-4 rounded-lg bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border-2 border-purple-200 dark:border-purple-800 hover:border-purple-400 dark:hover:border-purple-600 transition-all hover:shadow-lg cursor-pointer group"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <div className="font-bold text-purple-700 dark:text-purple-300 text-lg group-hover:text-purple-800 dark:group-hover:text-purple-200 transition-colors">
+                      {linkedGoal.title}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{linkedGoal.objective}</div>
+                  </div>
+                  <div className="text-purple-400 dark:text-purple-500 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                    <Flag className="h-5 w-5" />
+                  </div>
+                </div>
+                <div className="text-xs text-purple-600 dark:text-purple-400 mt-3 flex items-center gap-1 font-medium">
+                  Click to view goal →
+                </div>
+              </Link>
             </div>
           )}
 

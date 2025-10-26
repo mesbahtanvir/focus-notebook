@@ -23,6 +23,12 @@ export interface TaskStep {
   completed: boolean
 }
 
+export interface TaskCompletion {
+  date: string // ISO date string (YYYY-MM-DD)
+  completedAt: string // ISO timestamp
+  note?: string // Optional note for this specific completion
+}
+
 export interface Task {
   id: string
   title: string
@@ -42,8 +48,9 @@ export interface Task {
   estimatedMinutes?: number
   actualMinutes?: number
   recurrence?: RecurrenceConfig
-  parentTaskId?: string // For tracking recurring task instances
+  parentTaskId?: string // DEPRECATED - For backward compatibility with old recurring task instances
   completionCount?: number // Track how many times completed this period
+  completionHistory?: TaskCompletion[] // Track when task was completed (for recurring tasks)
   projectId?: string // Link to project
   thoughtId?: string // Link to thought that created this task
   focusEligible?: boolean // Can be done during a focus session (laptop/notebook work)
@@ -170,10 +177,11 @@ export const useTasks = create<State>((set, get) => ({
         hasPendingWrites: meta.hasPendingWrites,
       })
       
+      // DISABLED: Recurring tasks now track completions by date instead of creating instances
       // Generate missing recurring tasks (only on first load, not from cache)
-      if (!meta.fromCache && tasks.length > 0) {
-        await generateMissingRecurringTasks(tasks, userId)
-      }
+      // if (!meta.fromCache && tasks.length > 0) {
+      //   await generateMissingRecurringTasks(tasks, userId)
+      // }
     })
     
     set({ unsubscribe: unsub })
@@ -208,16 +216,45 @@ export const useTasks = create<State>((set, get) => ({
     
     const isRecurring = task.recurrence && task.recurrence.type !== 'none'
     const nowDone = !task.done
+    const today = getDateString(new Date())
     
-    const updates: Partial<Task> = {
-      done: nowDone,
-      // Recurring tasks stay 'active' even when done, non-recurring become 'completed'
-      status: (nowDone && !isRecurring) ? 'completed' : 'active',
-      completedAt: nowDone ? new Date().toISOString() : undefined,
-      // Increment count every time task is marked as done
-      completionCount: nowDone && isRecurring
-        ? (task.completionCount || 0) + 1 
-        : task.completionCount,
+    let updates: Partial<Task> = {}
+    
+    if (isRecurring) {
+      // For recurring tasks, track completion by date
+      const completionHistory = task.completionHistory || []
+      const todayCompletion = completionHistory.find(c => c.date === today)
+      
+      if (nowDone && !todayCompletion) {
+        // Add today's completion
+        updates = {
+          done: true, // Mark as done for today
+          completedAt: new Date().toISOString(),
+          completionHistory: [
+            ...completionHistory,
+            {
+              date: today,
+              completedAt: new Date().toISOString(),
+            }
+          ],
+          completionCount: (task.completionCount || 0) + 1,
+        }
+      } else if (!nowDone && todayCompletion) {
+        // Remove today's completion
+        updates = {
+          done: false,
+          completedAt: undefined,
+          completionHistory: completionHistory.filter(c => c.date !== today),
+          completionCount: Math.max(0, (task.completionCount || 0) - 1),
+        }
+      }
+    } else {
+      // For one-time tasks, simple toggle
+      updates = {
+        done: nowDone,
+        status: nowDone ? 'completed' : 'active',
+        completedAt: nowDone ? new Date().toISOString() : undefined,
+      }
     }
     
     await updateAt(`users/${userId}/tasks/${id}`, updates)
