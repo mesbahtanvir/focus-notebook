@@ -3,15 +3,19 @@
 import { useState, useMemo } from "react";
 import { useThoughts, Thought } from "@/store/useThoughts";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, CheckCircle, ArrowLeft, Lightbulb, AlertCircle, TrendingUp, Heart } from "lucide-react";
+import { Brain, CheckCircle, ArrowLeft, Lightbulb, AlertCircle, TrendingUp, Heart, Plus } from "lucide-react";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 
 export default function CBTPage() {
   useTrackToolUsage('cbt');
 
   const thoughts = useThoughts((s) => s.thoughts);
+  const addThought = useThoughts((s) => s.add);
   const updateThought = useThoughts((s) => s.updateThought);
   const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
+  const [showNewCBTPrompt, setShowNewCBTPrompt] = useState(false);
+  const [newCBTText, setNewCBTText] = useState("");
 
   // Filter thoughts with "cbt" tag but not "cbt-processed"
   const unprocessedThoughts = useMemo(() => {
@@ -308,6 +312,99 @@ export default function CBTPage() {
           </div>
         )}
       </div>
+
+      {/* New CBT Thought Modal */}
+      <AnimatePresence>
+        {showNewCBTPrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowNewCBTPrompt(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-800 dark:to-purple-950/30 rounded-2xl p-6 max-w-lg w-full shadow-2xl border-4 border-purple-200 dark:border-purple-800"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl shadow-lg">
+                  <Brain className="h-6 w-6 text-white" />
+                </div>
+                <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  New CBT Analysis
+                </h2>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                    What thought would you like to analyze?
+                  </label>
+                  <textarea
+                    value={newCBTText}
+                    onChange={(e) => setNewCBTText(e.target.value)}
+                    placeholder="Enter a negative or challenging thought you'd like to work through..."
+                    className="w-full min-h-[120px] p-3 border-2 border-purple-200 dark:border-purple-800 rounded-lg focus:border-purple-400 dark:focus:border-purple-600 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900 resize-none bg-white dark:bg-gray-800 transition-all"
+                    autoFocus
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    💡 CBT works best with specific thoughts like &quot;I&apos;m a failure&quot; or &quot;Nobody likes me&quot;
+                  </p>
+                </div>
+
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => {
+                      setShowNewCBTPrompt(false);
+                      setNewCBTText("");
+                    }}
+                    className="px-6 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!newCBTText.trim()) return;
+
+                      const newThought = await addThought({
+                        text: newCBTText.trim(),
+                        tags: ['cbt'],
+                      });
+
+                      setShowNewCBTPrompt(false);
+                      setNewCBTText("");
+                      
+                      // Auto-select the new thought for processing
+                      setTimeout(() => {
+                        const addedThought = thoughts.find(t => t.text === newCBTText.trim());
+                        if (addedThought) {
+                          setSelectedThought(addedThought);
+                        }
+                      }, 100);
+                    }}
+                    disabled={!newCBTText.trim()}
+                    className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
+                  >
+                    <Brain className="h-4 w-4" />
+                    Start CBT Analysis
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* FAB for creating new CBT analysis */}
+      <FloatingActionButton
+        onClick={() => setShowNewCBTPrompt(true)}
+        title="New CBT Analysis"
+        icon={<Plus className="h-6 w-6" />}
+      />
     </div>
   );
 }

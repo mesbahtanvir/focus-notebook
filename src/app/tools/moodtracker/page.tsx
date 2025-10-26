@@ -6,9 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useMoods, type MoodEntry } from "@/store/useMoods";
 import { useThoughts } from "@/store/useThoughts";
-import { X, Trash2, ExternalLink, Brain } from "lucide-react";
+import { X, Trash2, ExternalLink, Brain, Plus, Smile, CheckCircle2 } from "lucide-react";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import Link from "next/link";
 
 // Emotion definitions with categories
@@ -249,28 +250,45 @@ export default function MoodTrackerPage() {
           />
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button 
-            onClick={save} 
+        <div className="flex items-center justify-center">
+          <button
+            onClick={save}
             disabled={saving}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold shadow-lg"
+            className="w-full max-w-md px-8 py-4 rounded-2xl bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 hover:from-purple-600 hover:via-pink-600 hover:to-rose-600 text-white font-bold shadow-2xl hover:shadow-3xl transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
           >
-            {saving ? '💾 Saving…' : '✨ Save Mood'}
-          </Button>
-          <AnimatePresence>
-            {savedPulse && (
-              <motion.span
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.35 }}
-                className="text-sm font-semibold text-green-600 dark:text-green-400"
-              >
-                ✅ Saved!
-              </motion.span>
+            {saving ? (
+              <>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                >
+                  💾
+                </motion.div>
+                <span>Saving…</span>
+              </>
+            ) : (
+              <>
+                <Smile className="h-6 w-6" />
+                <span className="text-lg">Save Mood Entry</span>
+              </>
             )}
-          </AnimatePresence>
+          </button>
         </div>
+
+        {savedPulse && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35 }}
+            className="text-center"
+          >
+            <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold shadow-lg">
+              <CheckCircle2 className="h-5 w-5" />
+              <span>Saved Successfully!</span>
+            </div>
+          </motion.div>
+        )}
 
         <div className="space-y-3">
           <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
@@ -328,6 +346,13 @@ export default function MoodTrackerPage() {
           onClose={() => setSelectedMood(null)}
         />
       )}
+
+      {/* Quick FAB for scrolling to top / quick entry */}
+      <FloatingActionButton
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        title="Track New Mood"
+        icon={<Smile className="h-6 w-6" />}
+      />
     </Card>
   );
 }

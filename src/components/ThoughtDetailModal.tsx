@@ -315,6 +315,40 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                 )}
               </div>
 
+              {/* Processing Status Summary */}
+              {isProcessed && (
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-2 border-green-200 dark:border-green-800">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg shadow-md">
+                          <CheckCircle2 className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-bold text-green-800 dark:text-green-200">
+                            AI Processing Complete
+                          </h3>
+                          <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                            This thought has been analyzed and actions have been created
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          // Revert processing by removing the 'processed' tag
+                          const updatedTags = (thought.tags || []).filter(t => t !== 'processed');
+                          await updateThought(thought.id, { tags: updatedTags });
+                        }}
+                        className="px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border-2 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all text-sm font-semibold"
+                        title="Mark as unprocessed to process again"
+                      >
+                        Revert
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* AI-Created Resources Section */}
               {aiCreatedResources.total > 0 && (
                 <div className="pt-6 border-t border-gray-200 dark:border-gray-700">

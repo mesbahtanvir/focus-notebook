@@ -323,7 +323,7 @@ describe('MoodTracker Page', () => {
       })
 
       await waitFor(() => {
-        expect(screen.getByText(/Saved!/i)).toBeInTheDocument()
+        expect(screen.getByText(/Saved Successfully!/i)).toBeInTheDocument()
       })
     })
 
