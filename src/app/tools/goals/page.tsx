@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGoals, Goal, GoalTimeframe } from "@/store/useGoals";
-import { useProjects } from "@/store/useProjects";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Target, CheckCircle2, Trash2, Edit2, PlayCircle, PauseCircle, Archive, ChevronDown, ChevronUp, Search
+  Target, CheckCircle2, Trash2, Edit2, PlayCircle, PauseCircle, Archive, ChevronDown, ChevronUp, Search, Filter
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -26,23 +25,19 @@ export default function GoalsPage() {
   const deleteGoal = useGoals((s) => s.deleteGoal);
   const toggleStatus = useGoals((s) => s.toggleStatus);
   
-  const projects = useProjects((s) => s.projects);
-  const getProjectsByGoal = useProjects((s) => s.getProjectsByGoal);
-  const subscribeProjects = useProjects((s) => s.subscribe);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [showPaused, setShowPaused] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     if (user?.uid) {
       subscribe(user.uid);
-      subscribeProjects(user.uid);
     }
-  }, [user?.uid, subscribe, subscribeProjects]);
+  }, [user?.uid, subscribe]);
 
   const handleSubmit = async (data: {
     title: string;
@@ -89,27 +84,119 @@ export default function GoalsPage() {
   const pausedGoals = filterGoals(goals.filter(g => g.status === 'paused'));
   const archivedGoals = filterGoals(goals.filter(g => g.status === 'archived'));
 
+  // Separate by timeframe
+  const shortTermGoals = activeGoals.filter(g => g.timeframe === 'short-term' || g.timeframe === 'immediate');
+  const longTermGoals = activeGoals.filter(g => g.timeframe === 'long-term' || !g.timeframe);
+
+  const stats = useMemo(() => {
+    return {
+      total: goals.length,
+      active: activeGoals.length,
+      shortTerm: shortTermGoals.length,
+      longTerm: longTermGoals.length,
+      completed: completedGoals.length,
+      paused: pausedGoals.length,
+    };
+  }, [goals.length, activeGoals.length, shortTermGoals.length, longTermGoals.length, completedGoals.length, pausedGoals.length]);
+
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Target className="h-8 w-8 text-purple-600" />
-          Goals
-        </h1>
-        <p className="text-muted-foreground mt-1">Define and achieve your long-term objectives</p>
+    <div className="space-y-4 max-w-7xl mx-auto p-4 md:p-6">
+      {/* Compact Header with inline stats */}
+      <div className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-4 border-purple-200 dark:border-purple-800 shadow-xl p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">🎯 Goals</h1>
+            <div className="flex items-center gap-3 mt-2 text-sm font-medium">
+              <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">{stats.active} active</span>
+              <span className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300">{stats.completed} done</span>
+              <span className="px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300">{stats.shortTerm} tactical</span>
+              <span className="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300">{stats.longTerm} strategic</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search goals..."
-          className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-600 focus:border-transparent outline-none transition-all"
-        />
+      {/* Search & Filters */}
+      <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search goals..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        {/* Filter Controls */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+            >
+              <Filter className="h-4 w-4" />
+              Filters
+              <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            {activeGoals.length} active, {completedGoals.length} completed
+          </div>
+        </div>
+
+        {/* Filter Options */}
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex flex-wrap gap-4 pt-4 border-t border-blue-200 dark:border-blue-700"
+          >
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowCompleted(!showCompleted)}
+                className={`text-xs px-3 py-1 rounded-full transition-colors ${
+                  showCompleted
+                    ? 'bg-green-200 dark:bg-green-700 text-green-700 dark:text-green-300'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                } hover:bg-green-300 dark:hover:bg-green-600`}
+              >
+                {showCompleted ? 'Hiding' : 'Show'} Completed
+              </button>
+              <button
+                onClick={() => setShowPaused(!showPaused)}
+                className={`text-xs px-3 py-1 rounded-full transition-colors ${
+                  showPaused
+                    ? 'bg-yellow-200 dark:bg-yellow-700 text-yellow-700 dark:text-yellow-300'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                } hover:bg-yellow-300 dark:hover:bg-yellow-600`}
+              >
+                {showPaused ? 'Hiding' : 'Show'} Paused
+              </button>
+              <button
+                onClick={() => setShowArchived(!showArchived)}
+                className={`text-xs px-3 py-1 rounded-full transition-colors ${
+                  showArchived
+                    ? 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                } hover:bg-gray-300 dark:hover:bg-gray-600`}
+              >
+                {showArchived ? 'Hiding' : 'Show'} Archived
+              </button>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* Goal Form Modal */}
@@ -120,15 +207,14 @@ export default function GoalsPage() {
         editingGoal={editingGoal}
       />
 
-      {/* Active Goals */}
+      {/* Tactical Goals */}
       <div className="space-y-4">
         <h2 className="text-2xl font-bold flex items-center gap-2">
-          <PlayCircle className="h-6 w-6 text-green-600" />
-          Active Goals ({activeGoals.length})
+          <PlayCircle className="h-6 w-6 text-orange-600" />
+          Tactical Goals ({shortTermGoals.length})
         </h2>
         <AnimatePresence>
-          {activeGoals.map((goal) => {
-            const relatedProjects = getProjectsByGoal(goal.id);
+          {shortTermGoals.map((goal) => {
             return (
               <motion.div
                 key={goal.id}
@@ -152,87 +238,15 @@ export default function GoalsPage() {
                       </span>
                       <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                         {goal.timeframe === 'immediate' && '⚡ Immediate'}
-                        {goal.timeframe === 'short-term' && '🎯 Short-term'}
-                        {goal.timeframe === 'long-term' && '🌟 Long-term'}
-                        {!goal.timeframe && '🎯 Short-term'}
+                        {goal.timeframe === 'short-term' && '⚡ Tactical'}
+                        {goal.timeframe === 'long-term' && '🎯 Strategic'}
+                        {!goal.timeframe && '⚡ Tactical'}
                       </span>
                     </div>
-                    <p className="text-muted-foreground mb-4">{goal.objective}</p>
-
-                    {/* Projects Section */}
-                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-                      <h4 className="font-semibold text-sm mb-2">Projects ({relatedProjects.length}):</h4>
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {relatedProjects.map((project) => (
-                          <Link
-                            key={project.id}
-                            href={`/tools/projects/${project.id}`}
-                            className="px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition-all shadow-sm flex items-center gap-1"
-                          >
-                            <Target className="h-3 w-3" />
-                            {project.title}
-                          </Link>
-                        ))}
-                        {relatedProjects.length === 0 && (
-                          <p className="text-sm text-gray-500 dark:text-gray-400 italic">No projects yet. Create one below.</p>
-                        )}
-                      </div>
-                      {/* Quick Project Creation */}
-                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="text"
-                          id={`project-input-${goal.id}`}
-                          placeholder="New project name..."
-                          onKeyPress={async (e) => {
-                            if (e.key === 'Enter') {
-                              const input = e.currentTarget;
-                              const projectName = input.value.trim();
-                              if (projectName) {
-                                await useProjects.getState().add({
-                                  title: projectName,
-                                  objective: `Project for ${goal.title}`,
-                                  actionPlan: [],
-                                  goalId: goal.id,
-                                  timeframe: 'long-term',
-                                  status: 'active',
-                                  category: 'mastery',
-                                  priority: 'medium',
-                                });
-                                input.value = '';
-                              }
-                            }
-                          }}
-                          className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 outline-none bg-white dark:bg-gray-800"
-                        />
-                        <button
-                          onClick={async () => {
-                            const input = document.getElementById(`project-input-${goal.id}`) as HTMLInputElement;
-                            if (input) {
-                              const projectName = input.value.trim();
-                              if (projectName) {
-                                await useProjects.getState().add({
-                                  title: projectName,
-                                  objective: `Project for ${goal.title}`,
-                                  actionPlan: [],
-                                  goalId: goal.id,
-                                  timeframe: 'long-term',
-                                  status: 'active',
-                                  category: 'mastery',
-                                  priority: 'medium',
-                                });
-                                input.value = '';
-                              }
-                            }
-                          }}
-                          className="px-3 py-1.5 text-sm rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:hover:bg-purple-950/60 transition-colors font-medium"
-                        >
-                          + Add Project
-                        </button>
-                      </div>
-                    </div>
+                    <p className="text-muted-foreground">{goal.objective}</p>
                   </div>
 
-                  <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => toggleStatus(goal.id)}
                       className="p-2 rounded-lg hover:bg-green-100 dark:hover:bg-green-950/40 text-green-600 transition-colors"
@@ -267,10 +281,89 @@ export default function GoalsPage() {
             );
           })}
         </AnimatePresence>
-        {activeGoals.length === 0 && (
+        {shortTermGoals.length === 0 && (
           <div className="card p-8 text-center text-muted-foreground">
             <Target className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>No active goals. Create one to get started!</p>
+            <p>No tactical goals yet. Create one to get started!</p>
+          </div>
+        )}
+      </div>
+
+      {/* Strategic Goals */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold flex items-center gap-2">
+          <PlayCircle className="h-6 w-6 text-purple-600" />
+          Strategic Goals ({longTermGoals.length})
+        </h2>
+        <AnimatePresence>
+          {longTermGoals.map((goal) => {
+            return (
+              <motion.div
+                key={goal.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="card p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => router.push(`/tools/goals/${goal.id}`)}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-bold">{goal.title}</h3>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                        goal.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' :
+                        goal.priority === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400' :
+                        goal.priority === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-400' :
+                        'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400'
+                      }`}>
+                        {goal.priority}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                        🎯 Strategic
+                      </span>
+                    </div>
+                    <p className="text-muted-foreground">{goal.objective}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => toggleStatus(goal.id)}
+                      className="p-2 rounded-lg hover:bg-green-100 dark:hover:bg-green-950/40 text-green-600 transition-colors"
+                      title="Mark as completed"
+                    >
+                      <CheckCircle2 className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => handleEdit(goal)}
+                      className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-950/40 text-blue-600 transition-colors"
+                      title="Edit"
+                    >
+                      <Edit2 className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => updateGoal(goal.id, { status: 'paused' })}
+                      className="p-2 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-950/40 text-yellow-600 transition-colors"
+                      title="Pause"
+                    >
+                      <PauseCircle className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => deleteGoal(goal.id)}
+                      className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/40 text-red-600 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+        {longTermGoals.length === 0 && (
+          <div className="card p-8 text-center text-muted-foreground">
+            <Target className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p>No strategic goals yet. Create one to get started!</p>
           </div>
         )}
       </div>

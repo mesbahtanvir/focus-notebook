@@ -36,7 +36,7 @@ export function FriendCard({ friend, onEdit, onDelete }: {
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
-        <Link href={`/tools/friends/${friend.id}`} className="flex-1 hover:opacity-80 transition-opacity">
+        <Link href={`/tools/relationships/${friend.id}`} className="flex-1 hover:opacity-80 transition-opacity">
           <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100">{friend.name}</h3>
           <p className="text-xs text-gray-600 dark:text-gray-400 capitalize">
             {friend.relationshipType.replace('-', ' ')}

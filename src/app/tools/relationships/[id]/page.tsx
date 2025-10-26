@@ -49,11 +49,55 @@ export default function FriendDetailPage() {
 
   const friend = friends.find((f) => f.id === friendId);
 
-  // Filter thoughts that mention this person's name
-  const relatedThoughts = thoughts.filter((t) =>
-    t.tags?.includes(friend?.name || '') ||
-    t.text.toLowerCase().includes((friend?.name || '').toLowerCase())
-  );
+  // Helper function to get shortname from full name (first name, lowercase, no spaces)
+  const getShortName = (name: string): string => {
+    const firstName = name.split(' ')[0];
+    return firstName.toLowerCase().trim();
+  };
+
+  const shortName = friend ? getShortName(friend.name) : '';
+  const personTag = friend ? `person-${shortName}` : '';
+
+  // Filter thoughts that mention this person's name or have person tag
+  const relatedThoughts = thoughts.filter((t) => {
+    if (!friend) return false;
+    return t.tags?.some(tag => 
+      tag === personTag || 
+      tag === friend.name ||
+      tag.includes(personTag)
+    ) || t.text.toLowerCase().includes((friend?.name || '').toLowerCase());
+  });
+
+  // Helper function to render tags - makes person tags clickable
+  const getShortNameForTag = (name: string): string => {
+    const firstName = name.split(' ')[0];
+    return firstName.toLowerCase().trim();
+  };
+
+  const renderTag = (tag: string) => {
+    if (tag.startsWith('person-')) {
+      const shortNameFromTag = tag.replace('person-', '');
+      const taggedFriend = friends.find(f => getShortNameForTag(f.name) === shortNameFromTag);
+      
+      if (taggedFriend) {
+        return (
+          <Link
+            key={tag}
+            href={`/tools/relationships/${taggedFriend.id}`}
+            className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800/40 hover:underline transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {taggedFriend.name}
+          </Link>
+        );
+      }
+    }
+    return (
+      <span key={tag} className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
+        {tag}
+      </span>
+    );
+  };
 
   const handleAddThought = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +107,7 @@ export default function FriendDetailPage() {
     try {
       await addThought({
         text: newThoughtText.trim(),
-        tags: [friend.name],
+        tags: [personTag],
       });
       setNewThoughtText("");
     } finally {
@@ -275,7 +319,7 @@ export default function FriendDetailPage() {
                 {isAddingThought ? 'Adding...' : 'Add Thought'}
               </button>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                This thought will be automatically tagged with {friend.name}
+                This thought will be automatically tagged with {personTag}
               </p>
             </form>
           </div>
@@ -308,11 +352,7 @@ export default function FriendDetailPage() {
                         <>
                           <span>•</span>
                           <div className="flex gap-1">
-                            {thought.tags.map((tag, i) => (
-                              <span key={i} className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
-                                {tag}
-                              </span>
-                            ))}
+                            {thought.tags.map((tag, i) => renderTag(tag))}
                           </div>
                         </>
                       )}

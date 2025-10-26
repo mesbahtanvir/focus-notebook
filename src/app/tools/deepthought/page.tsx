@@ -25,7 +25,7 @@ interface DeepThought {
 }
 
 export default function DeepThoughtPage() {
-  useTrackToolUsage('deepthought');
+  useTrackToolUsage('deepreflect');
 
   const [thoughts, setThoughts] = useState<DeepThought[]>([]);
   const [showNewThought, setShowNewThought] = useState(false);

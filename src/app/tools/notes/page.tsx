@@ -174,30 +174,41 @@ export default function DocumentsPage() {
         </div>
       </div>
 
-      {/* Search and Filter */}
-      <div className="rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-4 border-green-200 dark:border-green-800 shadow-xl p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Search */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search notes..."
-              className="input pl-10 w-full"
-            />
-          </div>
+      {/* Search & Filters */}
+      <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search notes..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              ×
+            </button>
+          )}
+        </div>
 
-          {/* Filter Button */}
+        {/* Filter Controls */}
+        <div className="flex items-center justify-between">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-accent transition-colors"
+            className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
           >
             <Filter className="h-4 w-4" />
             Filters
             <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
           </button>
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            Showing {filteredDocuments.length} of {tasksWithNotes.length} notes
+          </div>
         </div>
 
         {/* Filter Options */}
@@ -206,18 +217,16 @@ export default function DocumentsPage() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="flex flex-wrap gap-3 pt-4 border-t"
+            className="flex flex-wrap gap-4 pt-4 border-t border-blue-200 dark:border-blue-700"
           >
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Category</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value as FilterType)}
-                className="input py-1 text-sm"
+                className="input py-1 text-sm min-w-[150px]"
               >
                 <option value="all">All Categories</option>
-                <option value="mastery">Mastery</option>
-                <option value="pleasure">Pleasure</option>
               </select>
             </div>
           </motion.div>
@@ -226,10 +235,6 @@ export default function DocumentsPage() {
 
       {/* Documents List */}
       <div className="space-y-4">
-        <div className="text-sm text-muted-foreground">
-          Showing {filteredDocuments.length} of {stats.total} notes
-        </div>
-
         {filteredDocuments.length === 0 && (
           <div className="card p-12 text-center">
             <BookOpen className="h-16 w-16 mx-auto text-muted-foreground mb-4" />

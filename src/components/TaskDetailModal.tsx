@@ -518,6 +518,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                   <option value="biweekly">Bi-weekly (Every 2 weeks)</option>
                   <option value="monthly">Monthly</option>
                   <option value="bimonthly">Bi-monthly (Every 2 months)</option>
+                  <option value="halfyearly">Half-yearly (Every 6 months)</option>
                   <option value="yearly">Yearly</option>
                 </select>
                 {recurrenceType !== 'none' && (
@@ -531,6 +532,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                         recurrenceType === 'biweekly' ? 'two weeks' :
                         recurrenceType === 'monthly' ? 'month' :
                         recurrenceType === 'bimonthly' ? 'two months' :
+                        recurrenceType === 'halfyearly' ? 'six months' :
                         recurrenceType === 'yearly' ? 'year' :
                         recurrenceType === 'workweek' ? 'work week' : 'day'
                       }`}
@@ -544,6 +546,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                       {recurrenceType === 'biweekly' && 'Leave blank for every two weeks'}
                       {recurrenceType === 'monthly' && 'e.g., 3 for 3 times per month'}
                       {recurrenceType === 'bimonthly' && 'Leave blank for every two months'}
+                      {recurrenceType === 'halfyearly' && 'Leave blank for every six months'}
                       {recurrenceType === 'yearly' && 'Leave blank for once per year'}
                     </p>
                   </div>

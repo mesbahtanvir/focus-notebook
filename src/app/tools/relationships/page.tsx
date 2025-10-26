@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useFriends, Friend, EnergyLevel } from "@/store/useFriends";
+import { useFriends, Friend, EnergyLevel, RelationshipType } from "@/store/useFriends";
 import { useAuth } from "@/contexts/AuthContext";
 import { AnimatePresence, motion } from "framer-motion";
 import { FriendCard } from "@/components/FriendCard";
@@ -36,6 +36,7 @@ export default function FriendsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterEnergy, setFilterEnergy] = useState<'all' | EnergyLevel>('all');
   const [filterPriority, setFilterPriority] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  const [filterRelationshipType, setFilterRelationshipType] = useState<'all' | RelationshipType>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{show: boolean; id: string; name: string}>({show: false, id: '', name: ''});
 
@@ -51,6 +52,7 @@ export default function FriendsPage() {
       if (searchQuery && !f.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       if (filterEnergy !== 'all' && f.energyLevel !== filterEnergy) return false;
       if (filterPriority !== 'all' && f.priority !== filterPriority) return false;
+      if (filterRelationshipType !== 'all' && f.relationshipType !== filterRelationshipType) return false;
       return true;
     }).sort((a, b) => {
       // Sort by priority first, then by name
@@ -59,7 +61,7 @@ export default function FriendsPage() {
       if (priorityDiff !== 0) return priorityDiff;
       return a.name.localeCompare(b.name);
     });
-  }, [friends, searchQuery, filterEnergy, filterPriority]);
+  }, [friends, searchQuery, filterEnergy, filterPriority, filterRelationshipType]);
 
   const stats = useMemo(() => {
     return {
@@ -195,6 +197,22 @@ export default function FriendsPage() {
                 <option value="high">🔴 High Priority</option>
                 <option value="medium">🟡 Medium Priority</option>
                 <option value="low">⚪ Low Priority</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Relationship Type</label>
+              <select
+                value={filterRelationshipType}
+                onChange={(e) => setFilterRelationshipType(e.target.value as any)}
+                className="input py-1 text-sm min-w-[150px]"
+              >
+                <option value="all">All Types</option>
+                <option value="close-friend">🤝 Close Friend</option>
+                <option value="friend">👋 Friend</option>
+                <option value="acquaintance">🤔 Acquaintance</option>
+                <option value="family">👨‍👩‍👧 Family</option>
+                <option value="colleague">💼 Colleague</option>
+                <option value="mentor">🧙 Mentor</option>
               </select>
             </div>
           </motion.div>

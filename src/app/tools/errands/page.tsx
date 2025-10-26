@@ -1,8 +1,8 @@
 "use client";
 
 import { useTasks } from "@/store/useTasks";
-import { motion } from "framer-motion";
-import { ShoppingBag, MapPin, Car, Package, CheckCircle2, Circle, Trash2, Plus, Search } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShoppingBag, MapPin, Car, Package, CheckCircle2, Circle, Trash2, Plus, Search, Filter, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
 import { getNotesPreview } from "@/lib/formatNotes";
@@ -18,6 +18,7 @@ export default function ErrandsPage() {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   // Filter for non-focus-eligible tasks (errands)
   const errandTasks = tasks.filter(t => t.focusEligible === false);
@@ -63,16 +64,56 @@ export default function ErrandsPage() {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search errands..."
-          className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-600 focus:border-transparent outline-none transition-all"
-        />
+      {/* Search & Filters */}
+      <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search errands..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        {/* Filter Controls */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
+          >
+            <Filter className="h-4 w-4" />
+            Filters
+            <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          </button>
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            {activeErrands.length + completedErrands.length} total errands
+          </div>
+        </div>
+
+        {/* Filter Options (placeholder for future filters) */}
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex flex-wrap gap-4 pt-4 border-t border-blue-200 dark:border-blue-700"
+          >
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              No additional filters available
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* Quick Stats */}

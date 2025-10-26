@@ -26,7 +26,9 @@ import {
   MessageSquare,
   ListChecks,
   Milestone,
-  Search
+  Search,
+  Filter,
+  ChevronDown
 } from "lucide-react";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
@@ -57,6 +59,7 @@ export default function ProjectsPage() {
   const [filterTimeframe, setFilterTimeframe] = useState<'all' | ProjectTimeframe>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | ProjectStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   const filteredProjects = useMemo(() => {
     return projects.filter(p => {
@@ -118,41 +121,80 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+      {/* Search & Filters */}
+      <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
             type="text"
+            placeholder="Search projects..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search projects..."
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent outline-none transition-all"
+            className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              ×
+            </button>
+          )}
         </div>
-        <div className="flex flex-wrap gap-2">
-        <select
-          value={filterTimeframe}
-          onChange={(e) => setFilterTimeframe(e.target.value as any)}
-          className="input py-2 text-sm"
-        >
-          <option value="all">All Timeframes</option>
-          <option value="short-term">Short-term</option>
-          <option value="long-term">Long-term</option>
-        </select>
-        
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value as any)}
-          className="input py-2 text-sm"
-        >
-          <option value="all">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="on-hold">On Hold</option>
-          <option value="completed">Completed</option>
-          <option value="paused">Paused</option>
-        </select>
+
+        {/* Filter Controls */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+          >
+            <Filter className="h-4 w-4" />
+            Filters
+            <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          </button>
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            Showing {filteredProjects.length} of {projects.length} projects
+          </div>
         </div>
+
+        {/* Filter Options */}
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex flex-wrap gap-4 pt-4 border-t border-blue-200 dark:border-blue-700"
+          >
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Timeframe</label>
+              <select
+                value={filterTimeframe}
+                onChange={(e) => setFilterTimeframe(e.target.value as any)}
+                className="input py-1 text-sm min-w-[150px]"
+              >
+                <option value="all">All Timeframes</option>
+                <option value="short-term">Short-term</option>
+                <option value="long-term">Long-term</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as any)}
+                className="input py-1 text-sm min-w-[150px]"
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="on-hold">On Hold</option>
+                <option value="completed">Completed</option>
+                <option value="paused">Paused</option>
+              </select>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* Projects List */}

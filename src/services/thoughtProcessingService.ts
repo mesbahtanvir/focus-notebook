@@ -3,7 +3,6 @@ import { useTasks } from '@/store/useTasks';
 import { useProjects } from '@/store/useProjects';
 import { useGoals } from '@/store/useGoals';
 import { useMoods } from '@/store/useMoods';
-import { useFriends } from '@/store/useFriends';
 import { useLLMQueue } from '@/store/useLLMQueue';
 import { useSettings } from '@/store/useSettings';
 
@@ -46,7 +45,6 @@ export class ThoughtProcessingService {
             projects: useProjects.getState().projects.slice(0, 20),
             tasks: useTasks.getState().tasks.slice(0, 50),
             moods: useMoods.getState().moods.slice(0, 10),
-            friends: useFriends.getState().friends.slice(0, 30),
           },
         },
       });
@@ -62,7 +60,7 @@ export class ThoughtProcessingService {
 
           if (request.status === 'completed') {
             // Execute actions immediately
-            this.executeActions(thoughtId, request.output?.result?.actions || []);
+            ThoughtProcessingService.executeActions(thoughtId, request.output?.result?.actions || []);
             resolve({ success: true, actions: request.output?.result?.actions });
           } else if (request.status === 'failed') {
             resolve({ success: false, error: request.error });
@@ -88,7 +86,6 @@ export class ThoughtProcessingService {
     const addProject = useProjects.getState().add;
     const addGoal = useGoals.getState().add;
     const addMood = useMoods.getState().add;
-    const addFriend = useFriends.getState().add;
 
     for (const action of actions) {
       try {
@@ -193,7 +190,7 @@ export class ThoughtProcessingService {
     const results: ThoughtProcessingResult[] = [];
     
     for (const thoughtId of thoughtIds) {
-      const result = await this.processThought(thoughtId);
+      const result = await ThoughtProcessingService.processThought(thoughtId);
       results.push(result);
       
       // Small delay between requests to avoid overwhelming the API

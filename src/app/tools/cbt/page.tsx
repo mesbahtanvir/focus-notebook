@@ -3,9 +3,17 @@
 import { useState, useMemo } from "react";
 import { useThoughts, Thought } from "@/store/useThoughts";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, CheckCircle, ArrowLeft, Lightbulb, AlertCircle, TrendingUp, Heart, Plus } from "lucide-react";
+import { Brain, CheckCircle, ArrowLeft, Lightbulb, AlertCircle, TrendingUp, Heart, Plus, Search, Filter, ChevronDown } from "lucide-react";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
+import {
+  ToolPageLayout,
+  ToolHeader,
+  ToolContent,
+  ToolList,
+  ToolCard,
+  EmptyState
+} from "@/components/tools";
 
 export default function CBTPage() {
   useTrackToolUsage('cbt');
@@ -16,26 +24,52 @@ export default function CBTPage() {
   const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
   const [showNewCBTPrompt, setShowNewCBTPrompt] = useState(false);
   const [newCBTText, setNewCBTText] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   // Filter thoughts with "cbt" tag but not "cbt-processed"
   const unprocessedThoughts = useMemo(() => {
+    const searchLower = searchQuery.toLowerCase();
     return thoughts.filter(thought => {
       const tags = thought.tags || [];
-      return tags.includes('cbt') && !tags.includes('cbt-processed');
+      const isCBT = tags.includes('cbt') && !tags.includes('cbt-processed');
+
+      if (!isCBT) return false;
+
+      // Apply search filter
+      if (searchQuery) {
+        const textMatch = thought.text?.toLowerCase().includes(searchLower);
+        const tagsMatch = thought.tags?.some(tag => tag.toLowerCase().includes(searchLower));
+        return textMatch || tagsMatch;
+      }
+
+      return true;
     });
-  }, [thoughts]);
+  }, [thoughts, searchQuery]);
 
   // Filter thoughts that have been processed with CBT
   const processedThoughts = useMemo(() => {
+    const searchLower = searchQuery.toLowerCase();
     return thoughts.filter(thought => {
       const tags = thought.tags || [];
-      return tags.includes('cbt-processed') && thought.cbtAnalysis;
+      const isProcessed = tags.includes('cbt-processed') && thought.cbtAnalysis;
+
+      if (!isProcessed) return false;
+
+      // Apply search filter
+      if (searchQuery) {
+        const textMatch = thought.text?.toLowerCase().includes(searchLower);
+        const tagsMatch = thought.tags?.some(tag => tag.toLowerCase().includes(searchLower));
+        return textMatch || tagsMatch;
+      }
+
+      return true;
     }).sort((a, b) => {
       const dateA = a.cbtAnalysis?.analyzedAt ? new Date(a.cbtAnalysis.analyzedAt).getTime() : 0;
       const dateB = b.cbtAnalysis?.analyzedAt ? new Date(b.cbtAnalysis.analyzedAt).getTime() : 0;
       return dateB - dateA; // Most recent first
     });
-  }, [thoughts]);
+  }, [thoughts, searchQuery]);
 
   const handleProcessComplete = (thought: Thought, cbtData: any) => {
     // Update thought with CBT analysis and add "cbt-processed" tag
@@ -62,77 +96,94 @@ export default function CBTPage() {
     );
   }
 
+  const cbtStats = useMemo(() => {
+    const toProcess = unprocessedThoughts.length;
+    const processed = thoughts.filter(t => t.tags?.includes('cbt-processed')).length;
+    const total = thoughts.filter(t => t.tags?.includes('cbt')).length;
+    
+    return { toProcess, processed, total };
+  }, [unprocessedThoughts.length, thoughts]);
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 p-6 md:p-8 rounded-2xl border-4 border-purple-200 shadow-lg">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-lg">
-            <Brain className="h-8 w-8 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
-              🧠 CBT Processing
-            </h1>
-            <p className="text-gray-600 text-sm md:text-base mt-1">
-              Cognitive Behavioral Therapy - Process your thoughts
-            </p>
+    <>
+    <ToolPageLayout>
+      <ToolHeader
+        title="CBT Processing"
+        description="Cognitive Behavioral Therapy - Process your thoughts through the CBT framework"
+        stats={[
+          { label: 'to process', value: cbtStats.toProcess, variant: 'warning' },
+          { label: 'processed', value: cbtStats.processed, variant: 'success' },
+          { label: 'total', value: cbtStats.total }
+        ]}
+      />
+
+      {/* Search & Filters */}
+      <div className="px-4 py-3">
+        <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search CBT thoughts..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        {/* Filter Controls */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+          >
+            <Filter className="h-4 w-4" />
+            Filters
+            <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          </button>
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            Showing {unprocessedThoughts.length + processedThoughts.length} CBT thoughts
           </div>
         </div>
 
-        {/* Info Box */}
-        <div className="bg-white rounded-xl p-4 border-2 border-purple-200">
-          <p className="text-sm text-gray-700">
-            <strong className="text-purple-600">💡 How it works:</strong> Select a thought below to process it through the CBT framework. 
-            You&apos;ll work through identifying situations, thoughts, emotions, and behaviors to gain insight and develop healthier perspectives.
-          </p>
+        {/* Filter Options (placeholder) */}
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex flex-wrap gap-4 pt-4 border-t border-blue-200 dark:border-blue-700"
+          >
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              No additional filters available
+            </div>
+          </motion.div>
+        )}
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-3">
-        <div className="rounded-xl p-4 md:p-6 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 shadow-md">
-          <div className="text-xs md:text-sm text-purple-600 font-medium">🎯 To Process</div>
-          <div className="text-2xl md:text-3xl font-bold mt-1 text-purple-600">
-            {unprocessedThoughts.length}
-          </div>
-        </div>
-        <div className="rounded-xl p-4 md:p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 shadow-md">
-          <div className="text-xs md:text-sm text-green-600 font-medium">✅ Processed</div>
-          <div className="text-2xl md:text-3xl font-bold mt-1 text-green-600">
-            {thoughts.filter(t => t.tags?.includes('cbt-processed')).length}
-          </div>
-        </div>
-        <div className="rounded-xl p-4 md:p-6 bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 shadow-md col-span-2 md:col-span-1">
-          <div className="text-xs md:text-sm text-blue-600 font-medium">📊 Total CBT</div>
-          <div className="text-2xl md:text-3xl font-bold mt-1 text-blue-600">
-            {thoughts.filter(t => t.tags?.includes('cbt')).length}
-          </div>
-        </div>
-      </div>
-
-      {/* Thoughts List */}
-      <div className="space-y-4">
-        <h2 className="text-lg md:text-xl font-bold text-gray-800 flex items-center gap-2">
-          <Lightbulb className="h-5 w-5 text-yellow-500" />
-          Thoughts Ready for Processing
-        </h2>
-
+      <ToolContent>
         {unprocessedThoughts.length === 0 ? (
-          <div className="rounded-2xl p-12 text-center bg-gradient-to-br from-purple-50 to-pink-50 border-4 border-purple-200 shadow-lg">
-            <Brain className="h-16 w-16 mx-auto text-purple-400 mb-4" />
-            <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-2">
-              No thoughts to process
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Add the &quot;cbt&quot; tag to your thoughts in the Thoughts page to process them here.
-            </p>
-            <p className="text-sm text-gray-500">
-              💡 Tip: Use CBT for challenging negative thoughts or difficult emotions
-            </p>
-          </div>
+          <EmptyState
+            icon={<Brain className="h-12 w-12" />}
+            title="No thoughts to process"
+            description="Add the &quot;cbt&quot; tag to your thoughts in the Thoughts page to process them here."
+            action={{
+              label: 'Create CBT Thought',
+              onClick: () => setShowNewCBTPrompt(true)
+            }}
+          />
         ) : (
-          <div className="grid gap-4">
+          <ToolList>
             <AnimatePresence>
               {unprocessedThoughts.map((thought) => (
                 <motion.div
@@ -140,62 +191,62 @@ export default function CBTPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="rounded-xl p-4 md:p-6 bg-white border-2 border-purple-200 cursor-pointer hover:shadow-lg hover:border-purple-400 transition-all transform hover:scale-[1.02]"
-                  onClick={() => setSelectedThought(thought)}
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex-shrink-0">
-                      <Brain className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-800 text-base md:text-lg mb-2">
-                        {thought.text}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-gray-600">
-                        <span className="px-2 py-1 rounded-full bg-purple-50 text-purple-600 border border-purple-200">
-                          📅 {(() => {
-                            try {
-                              if (typeof thought.createdAt === 'object' && 'toDate' in thought.createdAt) {
-                                return thought.createdAt.toDate().toLocaleDateString();
-                              }
-                              if (typeof thought.createdAt === 'string') {
+                  <ToolCard onClick={() => setSelectedThought(thought)}>
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex-shrink-0">
+                        <Brain className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-800 text-sm">
+                          {thought.text}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-gray-600">
+                          <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200">
+                            {(() => {
+                              try {
+                                if (typeof thought.createdAt === 'object' && 'toDate' in thought.createdAt) {
+                                  return thought.createdAt.toDate().toLocaleDateString();
+                                }
+                                if (typeof thought.createdAt === 'string') {
+                                  return new Date(thought.createdAt).toLocaleDateString();
+                                }
+                                if (typeof thought.createdAt === 'object' && 'seconds' in thought.createdAt) {
+                                  return new Date(thought.createdAt.seconds * 1000).toLocaleDateString();
+                                }
                                 return new Date(thought.createdAt).toLocaleDateString();
+                              } catch {
+                                return 'N/A';
                               }
-                              if (typeof thought.createdAt === 'object' && 'seconds' in thought.createdAt) {
-                                return new Date(thought.createdAt.seconds * 1000).toLocaleDateString();
-                              }
-                              return new Date(thought.createdAt).toLocaleDateString();
-                            } catch {
-                              return 'N/A';
-                            }
-                          })()}
-                        </span>
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <div className="px-3 py-1 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-semibold whitespace-nowrap">
+                          Process →
+                        </div>
                       </div>
                     </div>
-                    <div className="flex-shrink-0">
-                      <div className="px-4 py-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-semibold">
-                        Process →
-                      </div>
-                    </div>
-                  </div>
+                  </ToolCard>
                 </motion.div>
               ))}
             </AnimatePresence>
-          </div>
+          </ToolList>
         )}
-      </div>
+      </ToolContent>
 
       {/* Processed Thoughts List */}
-      <div className="space-y-4">
-        <h2 className="text-lg md:text-xl font-bold text-gray-800 flex items-center gap-2">
+      <div className="space-y-4 px-4 pb-4">
+        <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
           <CheckCircle className="h-5 w-5 text-green-500" />
           CBT-Processed Thoughts History
         </h2>
 
         {processedThoughts.length === 0 ? (
-          <div className="rounded-2xl p-8 text-center bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
+          <div className="rounded-2xl p-8 text-center bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-2 border-green-200 dark:border-green-800">
             <CheckCircle className="h-12 w-12 mx-auto text-green-400 mb-3" />
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               No processed thoughts yet. Complete the CBT process above to see your history here.
             </p>
           </div>
@@ -208,19 +259,19 @@ export default function CBTPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="rounded-xl p-4 md:p-6 bg-white border-2 border-green-200 shadow-md hover:shadow-lg transition-all"
+                  className="rounded-xl p-4 md:p-6 bg-white dark:bg-gray-800 border-2 border-green-200 dark:border-green-800 shadow-md hover:shadow-lg transition-all"
                 >
                   <div className="space-y-4">
                     {/* Header */}
-                    <div className="flex items-start gap-4 pb-4 border-b border-green-100">
+                    <div className="flex items-start gap-4 pb-4 border-b border-green-100 dark:border-green-800">
                       <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex-shrink-0">
                         <CheckCircle className="h-5 w-5 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-800 text-base">
+                        <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
                           {thought.text}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           Processed: {(() => {
                             try {
                               const date = thought.cbtAnalysis?.analyzedAt;
@@ -245,47 +296,47 @@ export default function CBTPage() {
                       <div className="grid gap-3 text-sm">
                         {/* Situation */}
                         {thought.cbtAnalysis.situation && (
-                          <div className="rounded-lg p-3 bg-purple-50 border border-purple-200">
-                            <div className="font-semibold text-purple-700 mb-1 flex items-center gap-2">
+                          <div className="rounded-lg p-3 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
+                            <div className="font-semibold text-purple-700 dark:text-purple-300 mb-1 flex items-center gap-2">
                               <span className="flex items-center justify-center w-5 h-5 rounded-full bg-purple-500 text-white text-xs">1</span>
                               Situation
                             </div>
-                            <p className="text-gray-700">{thought.cbtAnalysis.situation}</p>
+                            <p className="text-gray-700 dark:text-gray-300">{thought.cbtAnalysis.situation}</p>
                           </div>
                         )}
 
                         {/* Automatic Thought */}
                         {thought.cbtAnalysis.automaticThought && (
-                          <div className="rounded-lg p-3 bg-pink-50 border border-pink-200">
-                            <div className="font-semibold text-pink-700 mb-1 flex items-center gap-2">
+                          <div className="rounded-lg p-3 bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-800">
+                            <div className="font-semibold text-pink-700 dark:text-pink-300 mb-1 flex items-center gap-2">
                               <span className="flex items-center justify-center w-5 h-5 rounded-full bg-pink-500 text-white text-xs">2</span>
                               Automatic Thought
                             </div>
-                            <p className="text-gray-700 italic">&quot;{thought.cbtAnalysis.automaticThought}&quot;</p>
+                            <p className="text-gray-700 dark:text-gray-300 italic">&quot;{thought.cbtAnalysis.automaticThought}&quot;</p>
                           </div>
                         )}
 
                         {/* Emotions */}
                         {thought.cbtAnalysis.emotion && (
-                          <div className="rounded-lg p-3 bg-red-50 border border-red-200">
-                            <div className="font-semibold text-red-700 mb-1 flex items-center gap-2">
+                          <div className="rounded-lg p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
+                            <div className="font-semibold text-red-700 dark:text-red-300 mb-1 flex items-center gap-2">
                               <span className="flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-xs">3</span>
                               Emotions
                             </div>
-                            <p className="text-gray-700">{thought.cbtAnalysis.emotion}</p>
+                            <p className="text-gray-700 dark:text-gray-300">{thought.cbtAnalysis.emotion}</p>
                           </div>
                         )}
 
                         {/* Cognitive Distortions */}
                         {(thought.cbtAnalysis as any).cognitiveDistortions && (thought.cbtAnalysis as any).cognitiveDistortions.length > 0 && (
-                          <div className="rounded-lg p-3 bg-orange-50 border border-orange-200">
-                            <div className="font-semibold text-orange-700 mb-2 flex items-center gap-2">
+                          <div className="rounded-lg p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800">
+                            <div className="font-semibold text-orange-700 dark:text-orange-300 mb-2 flex items-center gap-2">
                               <span className="flex items-center justify-center w-5 h-5 rounded-full bg-orange-500 text-white text-xs">4</span>
                               Cognitive Distortions
                             </div>
                             <div className="flex flex-wrap gap-2">
                               {(thought.cbtAnalysis as any).cognitiveDistortions.map((distortion: string, idx: number) => (
-                                <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium border border-orange-300">
+                                <span key={idx} className="px-2 py-1 bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 rounded-full text-xs font-medium border border-orange-300 dark:border-orange-700">
                                   {distortion}
                                 </span>
                               ))}
@@ -295,12 +346,12 @@ export default function CBTPage() {
 
                         {/* Rational Response */}
                         {(thought.cbtAnalysis as any).rationalResponse && (
-                          <div className="rounded-lg p-3 bg-green-50 border border-green-200">
-                            <div className="font-semibold text-green-700 mb-1 flex items-center gap-2">
+                          <div className="rounded-lg p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                            <div className="font-semibold text-green-700 dark:text-green-300 mb-1 flex items-center gap-2">
                               <span className="flex items-center justify-center w-5 h-5 rounded-full bg-green-500 text-white text-xs">5</span>
                               Rational Response
                             </div>
-                            <p className="text-gray-700">{(thought.cbtAnalysis as any).rationalResponse}</p>
+                            <p className="text-gray-700 dark:text-gray-300">{(thought.cbtAnalysis as any).rationalResponse}</p>
                           </div>
                         )}
                       </div>
@@ -312,100 +363,101 @@ export default function CBTPage() {
           </div>
         )}
       </div>
+    </ToolPageLayout>
 
-      {/* New CBT Thought Modal */}
-      <AnimatePresence>
-        {showNewCBTPrompt && (
+    {/* New CBT Thought Modal */}
+    <AnimatePresence>
+      {showNewCBTPrompt && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowNewCBTPrompt(false)}
+        >
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setShowNewCBTPrompt(false)}
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-800 dark:to-purple-950/30 rounded-2xl p-6 max-w-lg w-full shadow-2xl border-4 border-purple-200 dark:border-purple-800"
+            onClick={(e) => e.stopPropagation()}
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-800 dark:to-purple-950/30 rounded-2xl p-6 max-w-lg w-full shadow-2xl border-4 border-purple-200 dark:border-purple-800"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl shadow-lg">
-                  <Brain className="h-6 w-6 text-white" />
-                </div>
-                <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  New CBT Analysis
-                </h2>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl shadow-lg">
+                <Brain className="h-6 w-6 text-white" />
+              </div>
+              <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                New CBT Analysis
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                  What thought would you like to analyze?
+                </label>
+                <textarea
+                  value={newCBTText}
+                  onChange={(e) => setNewCBTText(e.target.value)}
+                  placeholder="Enter a negative or challenging thought you'd like to work through..."
+                  className="w-full min-h-[120px] p-3 border-2 border-purple-200 dark:border-purple-800 rounded-lg focus:border-purple-400 dark:focus:border-purple-600 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900 resize-none bg-white dark:bg-gray-800 transition-all"
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  💡 CBT works best with specific thoughts like &quot;I&apos;m a failure&quot; or &quot;Nobody likes me&quot;
+                </p>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    What thought would you like to analyze?
-                  </label>
-                  <textarea
-                    value={newCBTText}
-                    onChange={(e) => setNewCBTText(e.target.value)}
-                    placeholder="Enter a negative or challenging thought you'd like to work through..."
-                    className="w-full min-h-[120px] p-3 border-2 border-purple-200 dark:border-purple-800 rounded-lg focus:border-purple-400 dark:focus:border-purple-600 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900 resize-none bg-white dark:bg-gray-800 transition-all"
-                    autoFocus
-                  />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    💡 CBT works best with specific thoughts like &quot;I&apos;m a failure&quot; or &quot;Nobody likes me&quot;
-                  </p>
-                </div>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setShowNewCBTPrompt(false);
+                    setNewCBTText("");
+                  }}
+                  className="px-6 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!newCBTText.trim()) return;
 
-                <div className="flex gap-3 justify-end">
-                  <button
-                    onClick={() => {
-                      setShowNewCBTPrompt(false);
-                      setNewCBTText("");
-                    }}
-                    className="px-6 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (!newCBTText.trim()) return;
+                    const newThought = await addThought({
+                      text: newCBTText.trim(),
+                      tags: ['cbt'],
+                    });
 
-                      const newThought = await addThought({
-                        text: newCBTText.trim(),
-                        tags: ['cbt'],
-                      });
-
-                      setShowNewCBTPrompt(false);
-                      setNewCBTText("");
-                      
-                      // Auto-select the new thought for processing
-                      setTimeout(() => {
-                        const addedThought = thoughts.find(t => t.text === newCBTText.trim());
-                        if (addedThought) {
-                          setSelectedThought(addedThought);
-                        }
-                      }, 100);
-                    }}
-                    disabled={!newCBTText.trim()}
-                    className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
-                  >
-                    <Brain className="h-4 w-4" />
-                    Start CBT Analysis
-                  </button>
-                </div>
+                    setShowNewCBTPrompt(false);
+                    setNewCBTText("");
+                    
+                    // Auto-select the new thought for processing
+                    setTimeout(() => {
+                      const addedThought = thoughts.find(t => t.text === newCBTText.trim());
+                      if (addedThought) {
+                        setSelectedThought(addedThought);
+                      }
+                    }, 100);
+                  }}
+                  disabled={!newCBTText.trim()}
+                  className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
+                >
+                  <Brain className="h-4 w-4" />
+                  Start CBT Analysis
+                </button>
               </div>
-            </motion.div>
+            </div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </motion.div>
+      )}
+    </AnimatePresence>
 
-      {/* FAB for creating new CBT analysis */}
-      <FloatingActionButton
-        onClick={() => setShowNewCBTPrompt(true)}
-        title="New CBT Analysis"
-        icon={<Plus className="h-6 w-6" />}
-      />
-    </div>
+    {/* FAB for creating new CBT analysis */}
+    <FloatingActionButton
+      onClick={() => setShowNewCBTPrompt(true)}
+      title="New CBT Analysis"
+      icon={<Plus className="h-6 w-6" />}
+    />
+    </>
   );
 }
 

@@ -22,7 +22,8 @@ import {
   MessageCircle,
   Target,
   Search,
-  Loader2
+  Loader2,
+  FileText
 } from "lucide-react";
 import { getNotesPreview } from "@/lib/formatNotes";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
@@ -65,6 +66,21 @@ function TasksPageContent() {
       }
     }
   }, [searchParams, tasks]);
+
+  // Helper function to extract user notes from task.notes
+  const getUserNotes = (notes?: string): string => {
+    if (!notes) return '';
+    try {
+      const parsed = JSON.parse(notes);
+      // Check if it's metadata
+      if (parsed.sourceThoughtId || parsed.createdBy === 'thought-processor') {
+        return parsed.userNotes || '';
+      }
+    } catch {
+      // Not JSON, return as-is
+    }
+    return notes;
+  };
 
   const filteredAndSortedTasks = useMemo(() => {
     const searchLower = searchTerm.toLowerCase();
@@ -131,6 +147,7 @@ function TasksPageContent() {
       'biweekly': [],
       'monthly': [],
       'bimonthly': [],
+      'halfyearly': [],
       'yearly': []
     };
 
@@ -201,53 +218,48 @@ function TasksPageContent() {
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
       {/* Header with inline stats */}
       <div className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-4 border-purple-200 dark:border-purple-800 shadow-xl p-6">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">📋 Tasks</h1>
-              <div className="flex items-center gap-4 mt-2 text-sm font-medium">
-                <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">{taskStats.active} active</span>
-                <span className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300">{taskStats.completed} done</span>
-                {taskStats.overdue > 0 && (
-                  <span className="px-3 py-1 rounded-full bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300">{taskStats.overdue} overdue</span>
-                )}
-              </div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">📋 Tasks</h1>
+            <div className="flex items-center gap-4 mt-2 text-sm font-medium">
+              <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">{taskStats.active} active</span>
+              <span className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300">{taskStats.completed} done</span>
+              {taskStats.overdue > 0 && (
+                <span className="px-3 py-1 rounded-full bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300">{taskStats.overdue} overdue</span>
+              )}
             </div>
-          </div>
-
-          {/* Search Bar */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="Search tasks..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-              >
-                <svg className="h-5 w-5 text-gray-400 hover:text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </button>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Filters & Sort */}
+      {/* Search & Filters */}
       <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        {/* Filter Controls */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 text-sm font-medium"
+              className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
             >
               <Filter className="h-4 w-4" />
               Filters
@@ -255,39 +267,45 @@ function TasksPageContent() {
             </button>
             <button
               onClick={() => setShowCompleted(!showCompleted)}
-              className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              className="text-xs px-3 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
               {showCompleted ? 'Hide' : 'Show'} completed
             </button>
           </div>
-          <div className="flex items-center gap-2">
-            <SortAsc className="h-4 w-4 text-muted-foreground" />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="input py-1 text-sm"
-            >
-              <option value="priority">Priority</option>
-              <option value="dueDate">Due Date</option>
-              <option value="createdAt">Created Date</option>
-              <option value="title">Title</option>
-            </select>
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {filteredAndSortedTasks.length} of {tasks.length} tasks
+            </div>
+            <div className="flex items-center gap-2">
+              <SortAsc className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                className="input py-1 text-sm"
+              >
+                <option value="priority">Priority</option>
+                <option value="dueDate">Due Date</option>
+                <option value="createdAt">Created Date</option>
+                <option value="title">Title</option>
+              </select>
+            </div>
           </div>
         </div>
 
+        {/* Filter Options */}
         {showFilters && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="flex flex-wrap gap-4 pt-4 border-t"
+            className="flex flex-wrap gap-4 pt-4 border-t border-blue-200 dark:border-blue-700"
           >
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as TaskStatus | 'all')}
-                className="input py-1 text-sm"
+                className="input py-1 text-sm min-w-[150px]"
               >
                 <option value="all">All</option>
                 <option value="active">Active</option>
@@ -296,11 +314,11 @@ function TasksPageContent() {
               </select>
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Category</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value as TaskCategory | 'all')}
-                className="input py-1 text-sm"
+                className="input py-1 text-sm min-w-[150px]"
               >
                 <option value="all">All</option>
                 <option value="mastery">Mastery</option>
@@ -308,11 +326,11 @@ function TasksPageContent() {
               </select>
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Priority</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Priority</label>
               <select
                 value={filterPriority}
                 onChange={(e) => setFilterPriority(e.target.value as TaskPriority | 'all')}
-                className="input py-1 text-sm"
+                className="input py-1 text-sm min-w-[150px]"
               >
                 <option value="all">All</option>
                 <option value="urgent">Urgent</option>
@@ -327,10 +345,6 @@ function TasksPageContent() {
 
       {/* Task List - Grouped by Frequency */}
       <div className="space-y-6">
-        <div className="text-sm text-muted-foreground">
-          Showing {filteredAndSortedTasks.length} of {tasks.length} tasks
-        </div>
-
         {filteredAndSortedTasks.length === 0 && (
           <div className="card p-12 text-center">
             <CheckCircle2 className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
@@ -490,19 +504,20 @@ function TaskGroup({
                 }`}
                 onClick={() => onTaskClick(task)}
               >
-                <div className="flex items-center gap-3">
-                  <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 shadow-md ${
-                    task.done
-                      ? 'bg-gradient-to-br from-green-400 to-emerald-500 border-green-600 dark:from-green-600 dark:to-emerald-700 dark:border-green-500'
-                      : 'bg-white dark:bg-gray-800 border-gray-400 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
-                  }`}>
-                    {task.done && <CheckCircle2 className="h-4 w-4 text-white" />}
-                  </div>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 shadow-md ${
+                      task.done
+                        ? 'bg-gradient-to-br from-green-400 to-emerald-500 border-green-600 dark:from-green-600 dark:to-emerald-700 dark:border-green-500'
+                        : 'bg-white dark:bg-gray-800 border-gray-400 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
+                    }`}>
+                      {task.done && <CheckCircle2 className="h-4 w-4 text-white" />}
+                    </div>
 
-                  <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                    <h3 className={`font-medium shrink-0 ${task.done && !task.recurrence ? 'line-through text-muted-foreground' : ''}`}>
-                      {task.title}
-                    </h3>
+                    <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                      <h3 className={`font-medium shrink-0 ${task.done && !task.recurrence ? 'line-through text-muted-foreground' : ''}`}>
+                        {task.title}
+                      </h3>
 
                     <span className={`px-2.5 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 shrink-0 ${getPriorityColor(task.priority)}`}>
                       {getPriorityIcon(task.priority)}
@@ -602,7 +617,30 @@ function TaskGroup({
                         </Link>
                       );
                     })()}
+                    </div>
                   </div>
+                  
+                  {/* Display notes if available */}
+                  {(() => {
+                    const notes = getUserNotes(task.notes);
+                    if (!notes) return null;
+                    
+                    // Truncate notes to first 100 characters
+                    const preview = notes.length > 100 ? notes.substring(0, 100) + '...' : notes;
+                    
+                    return (
+                      <div 
+                        className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-800 dark:hover:text-gray-200 transition-colors ml-9"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedTask(task);
+                        }}
+                      >
+                        <FileText className="h-3 w-3 shrink-0" />
+                        <span className="line-clamp-1">{preview}</span>
+                      </div>
+                    );
+                  })()}
                 </div>
               </motion.div>
             ))}

@@ -12,11 +12,11 @@ export type ToolName =
   | 'focus'
   | 'brainstorming'
   | 'notes'
-  | 'friends'
+  | 'relationships'
   | 'moodtracker'
   | 'cbt'
   | 'errands'
-  | 'deepthought';
+  | 'deepreflect';
 
 export interface ToolUsageRecord {
   id: string;

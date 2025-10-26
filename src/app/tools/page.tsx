@@ -117,8 +117,8 @@ const TOOLS = [
     priority: "low" as const,
   },
   {
-    key: "deepthought",
-    title: "Deep Thought",
+    key: "deepreflect",
+    title: "Deep Reflection",
     description: "Profound reflections and philosophical explorations for deeper understanding.",
     icon: Brain,
     emoji: "🤔",
@@ -128,7 +128,7 @@ const TOOLS = [
     priority: "low" as const,
   },
   {
-    key: "friends",
+    key: "relationships",
     title: "Relationships",
     description: "Reflect on your connections to prioritize aligned relationships and personal growth.",
     icon: Users,

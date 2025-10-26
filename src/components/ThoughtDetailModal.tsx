@@ -6,6 +6,7 @@ import { useThoughts, Thought } from "@/store/useThoughts";
 import { useTasks } from "@/store/useTasks";
 import { useProjects } from "@/store/useProjects";
 import { useMoods } from "@/store/useMoods";
+import { useFriends } from "@/store/useFriends";
 import { ThoughtProcessingService } from "@/services/thoughtProcessingService";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import Link from "next/link";
@@ -59,8 +60,40 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const deleteProject = useProjects((s) => s.delete);
   const moods = useMoods((s) => s.moods);
   const deleteMood = useMoods((s) => s.delete);
+  const friends = useFriends((s) => s.friends);
   
   const isProcessed = Array.isArray(thought.tags) && thought.tags.includes('processed');
+
+  // Helper function to get shortname from full name
+  const getShortName = (name: string): string => {
+    const firstName = name.split(' ')[0];
+    return firstName.toLowerCase().trim();
+  };
+
+  // Render tag component - makes person tags clickable and shows person name
+  const renderTag = (tag: string) => {
+    if (tag.startsWith('person-')) {
+      const shortNameFromTag = tag.replace('person-', '');
+      const taggedFriend = friends.find(f => getShortName(f.name) === shortNameFromTag);
+      
+      if (taggedFriend) {
+        return (
+          <Link
+            key={tag}
+            href={`/tools/relationships/${taggedFriend.id}`}
+            className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 text-sm rounded-full hover:bg-purple-200 dark:hover:bg-purple-800 hover:underline transition-colors"
+          >
+            {taggedFriend.name}
+          </Link>
+        );
+      }
+    }
+    return (
+      <span key={tag} className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 text-sm rounded-full">
+        {tag}
+      </span>
+    );
+  };
 
   // Find AI-created resources linked to this thought
   const aiCreatedResources = useMemo(() => {
@@ -120,6 +153,8 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
     await updateThought(thought.id, { tags: updatedTags });
 
     setShowRevertConfirm(false);
+    // Close the modal to refresh the view
+    onClose();
   };
 
   const handleProcessNow = async () => {
@@ -345,14 +380,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {thought.tags && thought.tags.length > 0 ? (
-                      thought.tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 text-sm rounded-full"
-                        >
-                          {tag}
-                        </span>
-                      ))
+                      thought.tags.map((tag) => renderTag(tag))
                     ) : (
                       <span className="text-gray-500 dark:text-gray-400 italic">
                         No tags
