@@ -8,7 +8,7 @@ import { isWorkday, getDateString } from '@/lib/utils/date'
 export type TaskStatus = 'active' | 'completed' | 'backlog'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type TaskCategory = 'mastery' | 'pleasure'
-export type RecurrenceType = 'none' | 'daily' | 'workweek' | 'weekly' | 'monthly'
+export type RecurrenceType = 'none' | 'daily' | 'workweek' | 'weekly' | 'biweekly' | 'monthly' | 'bimonthly' | 'yearly'
 
 export interface RecurrenceConfig {
   type: RecurrenceType

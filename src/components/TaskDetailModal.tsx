@@ -515,7 +515,10 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                   <option value="daily">Daily</option>
                   <option value="workweek">Work Week</option>
                   <option value="weekly">Weekly</option>
+                  <option value="biweekly">Bi-weekly (Every 2 weeks)</option>
                   <option value="monthly">Monthly</option>
+                  <option value="bimonthly">Bi-monthly (Every 2 months)</option>
+                  <option value="yearly">Yearly</option>
                 </select>
                 {recurrenceType !== 'none' && (
                   <div>
@@ -523,7 +526,14 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                       type="number"
                       value={recurrenceFrequency}
                       onChange={(e) => setRecurrenceFrequency(parseInt(e.target.value) || 0)}
-                      placeholder={`Times per ${recurrenceType === 'weekly' ? 'week' : recurrenceType === 'monthly' ? 'month' : recurrenceType === 'workweek' ? 'work week' : 'day'}`}
+                      placeholder={`Times per ${
+                        recurrenceType === 'weekly' ? 'week' :
+                        recurrenceType === 'biweekly' ? 'two weeks' :
+                        recurrenceType === 'monthly' ? 'month' :
+                        recurrenceType === 'bimonthly' ? 'two months' :
+                        recurrenceType === 'yearly' ? 'year' :
+                        recurrenceType === 'workweek' ? 'work week' : 'day'
+                      }`}
                       className="input w-full"
                       min="1"
                     />
@@ -531,7 +541,10 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                       {recurrenceType === 'daily' && 'Leave blank for every day'}
                       {recurrenceType === 'workweek' && 'e.g., 5 for every workday (Mon-Fri)'}
                       {recurrenceType === 'weekly' && 'e.g., 4 for 4 times per week'}
+                      {recurrenceType === 'biweekly' && 'Leave blank for every two weeks'}
                       {recurrenceType === 'monthly' && 'e.g., 3 for 3 times per month'}
+                      {recurrenceType === 'bimonthly' && 'Leave blank for every two months'}
+                      {recurrenceType === 'yearly' && 'Leave blank for once per year'}
                     </p>
                   </div>
                 )}

@@ -128,7 +128,10 @@ function TasksPageContent() {
       'daily': [],
       'workweek': [],
       'weekly': [],
-      'monthly': []
+      'biweekly': [],
+      'monthly': [],
+      'bimonthly': [],
+      'yearly': []
     };
 
     filteredAndSortedTasks.forEach(task => {
@@ -140,7 +143,15 @@ function TasksPageContent() {
       }
     });
 
-    return groups;
+    // Filter out empty groups
+    const nonEmptyGroups: Record<string, Task[]> = {};
+    Object.entries(groups).forEach(([key, tasks]) => {
+      if (tasks.length > 0) {
+        nonEmptyGroups[key] = tasks;
+      }
+    });
+
+    return nonEmptyGroups;
   }, [filteredAndSortedTasks]);
 
   const taskStats = useMemo(() => {

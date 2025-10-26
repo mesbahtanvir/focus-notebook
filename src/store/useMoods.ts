@@ -26,7 +26,7 @@ type State = {
   hasPendingWrites: boolean
   unsubscribe: (() => void) | null
   subscribe: (userId: string) => void
-  add: (entry: Omit<MoodEntry, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>) => Promise<void>
+  add: (entry: Omit<MoodEntry, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>) => Promise<string>
   delete: (id: string) => Promise<void>
 }
 
@@ -75,6 +75,7 @@ export const useMoods = create<State>((set, get) => ({
     }
 
     await createAt(`users/${userId}/moods/${moodId}`, newEntry)
+    return moodId
   },
 
   delete: async (id) => {
