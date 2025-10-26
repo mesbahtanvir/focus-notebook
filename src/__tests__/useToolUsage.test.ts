@@ -145,7 +145,7 @@ describe('useToolUsage', () => {
   it('limits most used tools to specified count', () => {
     const { result } = renderHook(() => useToolUsage());
 
-    const toolNames = ['tasks', 'thoughts', 'goals', 'projects', 'focus', 'brainstorming', 'notes', 'friends', 'moodtracker', 'cbt'] as const;
+    const toolNames = ['tasks', 'thoughts', 'goals', 'projects', 'focus', 'brainstorming', 'notes', 'relationships', 'moodtracker', 'cbt'] as const;
 
     act(() => {
       // Add 10 different tools using setState
@@ -235,8 +235,8 @@ describe('useToolUsage', () => {
 
     const toolNames: ToolName[] = [
       'tasks', 'thoughts', 'goals', 'projects', 'focus',
-      'brainstorming', 'notes', 'friends', 'moodtracker',
-      'cbt', 'errands', 'deepthought'
+      'brainstorming', 'notes', 'relationships', 'moodtracker',
+      'cbt', 'errands', 'deepreflect'
     ];
 
     for (const toolName of toolNames) {
