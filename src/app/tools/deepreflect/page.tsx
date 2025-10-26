@@ -108,7 +108,7 @@ export default function DeepThoughtPage() {
     <ToolPageLayout>
       <ToolHeader
         title="Deep Reflection"
-        description="Profound reflections and philosophical explorations for deeper understanding"
+        subtitle="Profound reflections and philosophical explorations for deeper understanding"
         stats={[
           { label: 'total', value: reflectionStats.total },
           { label: 'categorized', value: reflectionStats.categorized, variant: 'info' },
@@ -300,7 +300,7 @@ export default function DeepThoughtPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                  What's on your mind?
+                  What&apos;s on your mind?
                 </label>
                 <textarea
                   value={newThought}

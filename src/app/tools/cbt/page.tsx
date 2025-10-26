@@ -86,6 +86,14 @@ export default function CBTPage() {
     setSelectedThought(null);
   };
 
+  const cbtStats = useMemo(() => {
+    const toProcess = unprocessedThoughts.length;
+    const processed = thoughts.filter(t => t.tags?.includes('cbt-processed')).length;
+    const total = thoughts.filter(t => t.tags?.includes('cbt')).length;
+    
+    return { toProcess, processed, total };
+  }, [unprocessedThoughts.length, thoughts]);
+
   if (selectedThought) {
     return (
       <CBTProcessing
@@ -96,20 +104,12 @@ export default function CBTPage() {
     );
   }
 
-  const cbtStats = useMemo(() => {
-    const toProcess = unprocessedThoughts.length;
-    const processed = thoughts.filter(t => t.tags?.includes('cbt-processed')).length;
-    const total = thoughts.filter(t => t.tags?.includes('cbt')).length;
-    
-    return { toProcess, processed, total };
-  }, [unprocessedThoughts.length, thoughts]);
-
   return (
     <>
     <ToolPageLayout>
       <ToolHeader
         title="CBT Processing"
-        description="Cognitive Behavioral Therapy - Process your thoughts through the CBT framework"
+        subtitle="Cognitive Behavioral Therapy - Process your thoughts through the CBT framework"
         stats={[
           { label: 'to process', value: cbtStats.toProcess, variant: 'warning' },
           { label: 'processed', value: cbtStats.processed, variant: 'success' },

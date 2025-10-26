@@ -29,11 +29,11 @@ const toolIcons: Record<ToolName, any> = {
   focus: Zap,
   brainstorming: Lightbulb,
   notes: StickyNote,
-  friends: Users,
+  relationships: Users,
   moodtracker: Smile,
   cbt: Heart,
   errands: ShoppingCart,
-  deepthought: Sparkles,
+  deepreflect: Sparkles,
 };
 
 const toolColors: Record<ToolName, string> = {
@@ -44,11 +44,11 @@ const toolColors: Record<ToolName, string> = {
   focus: "from-indigo-500 to-purple-500",
   brainstorming: "from-yellow-500 to-orange-500",
   notes: "from-teal-500 to-green-500",
-  friends: "from-pink-500 to-rose-500",
+  relationships: "from-pink-500 to-rose-500",
   moodtracker: "from-amber-500 to-yellow-500",
   cbt: "from-red-500 to-pink-500",
   errands: "from-cyan-500 to-blue-500",
-  deepthought: "from-violet-500 to-purple-500",
+  deepreflect: "from-violet-500 to-purple-500",
 };
 
 const toolLabels: Record<ToolName, string> = {
@@ -59,11 +59,11 @@ const toolLabels: Record<ToolName, string> = {
   focus: "Focus",
   brainstorming: "Brainstorming",
   notes: "Notes",
-  friends: "People",
+  relationships: "People",
   moodtracker: "Mood Tracker",
   cbt: "CBT",
   errands: "Errands",
-  deepthought: "Deep Thought",
+  deepreflect: "Deep Reflect",
 };
 
 export function MostUsedTools() {

@@ -61,7 +61,7 @@ export default function GoalDetailPage() {
 
   const addProject = useProjects((s) => s.add);
   const updateProject = useProjects((s) => s.update);
-  const addThought = useThoughts((s) => s.addThought);
+  const addThought = useThoughts((s) => s.add);
   const updateThought = useThoughts((s) => s.updateThought);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);

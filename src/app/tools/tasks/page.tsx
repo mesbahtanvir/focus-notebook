@@ -375,6 +375,7 @@ function TasksPageContent() {
             isCollapsed={collapsedGroups.has(frequency)}
             onToggle={() => toggleGroupCollapse(frequency)}
             onTaskClick={setSelectedTask}
+            setSelectedTask={setSelectedTask}
             thoughts={thoughts}
             projects={projects}
             getPriorityColor={getPriorityColor}
@@ -432,6 +433,7 @@ function TaskGroup({
   isCollapsed,
   onToggle,
   onTaskClick,
+  setSelectedTask,
   thoughts,
   projects,
   getPriorityColor,
@@ -442,6 +444,7 @@ function TaskGroup({
   isCollapsed: boolean;
   onToggle: () => void;
   onTaskClick: (task: Task) => void;
+  setSelectedTask: (task: Task) => void;
   thoughts: any[];
   projects: any[];
   getPriorityColor: (priority: TaskPriority) => string;
@@ -451,6 +454,21 @@ function TaskGroup({
     initialItemsPerPage: 15,
     threshold: 0.8
   });
+
+  // Helper function to extract user notes from task.notes
+  const getUserNotes = (notes?: string): string => {
+    if (!notes) return '';
+    try {
+      const parsed = JSON.parse(notes);
+      // Check if it's metadata
+      if (parsed.sourceThoughtId || parsed.createdBy === 'thought-processor') {
+        return parsed.userNotes || '';
+      }
+    } catch {
+      // Not JSON, return as-is
+    }
+    return notes;
+  };
 
   if (tasks.length === 0) return null;
 
