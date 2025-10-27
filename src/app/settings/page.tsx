@@ -14,6 +14,13 @@ import Link from 'next/link'
 import { exportAllData, exportData, downloadDataAsFile, deleteAllUserData, getDataStats, importDataFromFile, ExportOptions, ImportProgress } from '@/lib/utils/data-management'
 import { DataMigration } from '@/components/DataMigration'
 import { TokenUsageDashboard } from '@/components/TokenUsageDashboard'
+import { useTasks } from '@/store/useTasks'
+import { useGoals } from '@/store/useGoals'
+import { useProjects } from '@/store/useProjects'
+import { useThoughts } from '@/store/useThoughts'
+import { useMoods } from '@/store/useMoods'
+import { useFocus } from '@/store/useFocus'
+import { useAuth } from '@/contexts/AuthContext'
 
 type SettingsFormValues = {
   allowBackgroundProcessing: boolean;
@@ -22,6 +29,7 @@ type SettingsFormValues = {
 
 export default function SettingsPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const { setValue, watch } = useForm<SettingsFormValues>({
     defaultValues: {
@@ -29,7 +37,27 @@ export default function SettingsPage() {
       openaiApiKey: '',
     },
   });
-  
+
+  // Store subscriptions for re-fetching data
+  const tasksSubscribe = useTasks((s) => s.subscribe);
+  const goalsSubscribe = useGoals((s) => s.subscribe);
+  const projectsSubscribe = useProjects((s) => s.subscribe);
+  const thoughtsSubscribe = useThoughts((s) => s.subscribe);
+  const moodsSubscribe = useMoods((s) => s.subscribe);
+  const focusSubscribe = useFocus((s) => s.subscribe);
+
+  // Helper to refresh all stores without page reload
+  const refreshAllStores = () => {
+    if (user?.uid) {
+      tasksSubscribe(user.uid);
+      goalsSubscribe(user.uid);
+      projectsSubscribe(user.uid);
+      thoughtsSubscribe(user.uid);
+      moodsSubscribe(user.uid);
+      focusSubscribe(user.uid);
+    }
+  };
+
   // API Key management
   const { settings, updateSettings, clearApiKey } = useSettings();
   const [showApiKey, setShowApiKey] = useState(false);
@@ -204,16 +232,12 @@ export default function SettingsPage() {
         setSelectedFile(null);
         setImportProgress(null);
 
-        // Refresh stats after import
+        // Refresh stores and stats after import
         setTimeout(() => {
+          refreshAllStores();
           const newStats = getDataStats();
           setDataStats(newStats);
         }, 1000);
-        
-        // Refresh page after a short delay to show updated data
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
       } else {
         toast({
           title: 'Import Failed',
@@ -244,16 +268,16 @@ export default function SettingsPage() {
       // Update stats after deletion
       setDataStats({ tasks: 0, goals: 0, projects: 0, thoughts: 0, moods: 0, focusSessions: 0, total: 0 });
       setShowDeleteConfirm(false);
-      
+
       toast({
         title: 'All Data Deleted',
         description: 'All your data has been permanently deleted.',
       });
-      
-      // Refresh the page after a short delay
+
+      // Refresh stores without page reload
       setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+        refreshAllStores();
+      }, 500);
     } catch (error) {
       console.error('Delete failed:', error);
       toast({
