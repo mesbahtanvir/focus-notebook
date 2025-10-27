@@ -57,10 +57,10 @@ export default function ProgressDashboard() {
 
     // Tasks Progress
     const totalTasks = tasks.length;
-    const completedTasks = tasks.filter(t => t.done).length;
-    const activeTasks = tasks.filter(t => !t.done && t.status === 'active').length;
+    const completedTasks = tasks.filter(t => t.done);
+    const activeTasks = tasks.filter(t => !t.done && t.status === 'active');
 
-    const tasksProgress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+    const tasksProgress = totalTasks > 0 ? (completedTasks.length / totalTasks) * 100 : 0;
 
     // Filter by date if needed
     const filteredCompletedGoals = completedGoals.filter(g => {
