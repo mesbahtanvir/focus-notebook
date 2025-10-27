@@ -133,7 +133,26 @@ export default function GoalDetailPage() {
       const checkStatus = () => {
         const request = useLLMQueue.getState().getRequest(requestId);
         if (request?.status === 'completed' && request.output?.result) {
-          const response = request.output.result.response || request.output.result;
+          // Handle both new structure (with actions) and old structure (direct response)
+          const result = request.output.result as any;
+          
+          // Check if this is the new thought-processing structure
+          if (result.actions && Array.isArray(result.actions)) {
+            // This is thought-processing type - skip for brainstorming
+            setIsBrainstorming(false);
+            return;
+          }
+          
+          // Handle brainstorming response
+          let response: string;
+          if (typeof result === 'string') {
+            response = result;
+          } else if (result.response) {
+            response = result.response;
+          } else {
+            response = String(result);
+          }
+          
           const ideas = response.split('\n')
             .map((line: string) => line.trim())
             .filter((line: string) => line && !line.match(/^\d+\.?\s*$/))

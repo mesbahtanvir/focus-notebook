@@ -50,6 +50,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAIResources, setShowAIResources] = useState(false);
   const [showRevertConfirm, setShowRevertConfirm] = useState(false);
+  const [isProcessingSuggestion, setIsProcessingSuggestion] = useState(false);
 
   const updateThought = useThoughts((s) => s.updateThought);
   const deleteThought = useThoughts((s) => s.deleteThought);
@@ -202,6 +203,58 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
       return 'Invalid date';
     }
   };
+
+  // Handle suggestion actions
+  const handleAcceptSuggestion = async (suggestionId: string) => {
+    setIsProcessingSuggestion(true);
+    try {
+      await ThoughtProcessingService.applySuggestion(thought.id, suggestionId);
+      const updatedThought = useThoughts.getState().thoughts.find(t => t.id === thought.id);
+      if (updatedThought) {
+        onClose();
+        // Show success message
+        setSuccessMessage('Suggestion applied successfully');
+        setShowSuccessModal(true);
+      }
+    } catch (error) {
+      setErrorMessage('Failed to apply suggestion');
+      setShowErrorModal(true);
+    } finally {
+      setIsProcessingSuggestion(false);
+    }
+  };
+
+  const handleRejectSuggestion = async (suggestionId: string) => {
+    setIsProcessingSuggestion(true);
+    try {
+      await ThoughtProcessingService.rejectSuggestion(thought.id, suggestionId);
+      const updatedThought = useThoughts.getState().thoughts.find(t => t.id === thought.id);
+      if (updatedThought) {
+        // Refresh the modal with updated thought
+        onClose();
+      }
+    } catch (error) {
+      setErrorMessage('Failed to reject suggestion');
+      setShowErrorModal(true);
+    } finally {
+      setIsProcessingSuggestion(false);
+    }
+  };
+
+  const formatActionType = (type: string) => {
+    const typeMap: Record<string, string> = {
+      createTask: 'Create Task',
+      enhanceTask: 'Enhance Task',
+      createMood: 'Create Mood Entry',
+      addTag: 'Add Tag',
+      createProject: 'Create Project',
+      createGoal: 'Create Goal',
+      linkToProject: 'Link to Project',
+    };
+    return typeMap[type] || type;
+  };
+
+  const pendingSuggestions = thought.aiSuggestions?.filter(s => s.status === 'pending') || [];
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -389,6 +442,60 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                   </div>
                 )}
               </div>
+
+              {/* AI Suggestions */}
+              {pendingSuggestions.length > 0 && (
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+                        AI Suggestions
+                      </h3>
+                      <span className="text-xs px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-full">
+                        {pendingSuggestions.length} pending
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {pendingSuggestions.map((suggestion) => (
+                        <div key={suggestion.id} className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-700">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                              {formatActionType(suggestion.type)}
+                            </span>
+                            <span className="text-xs px-2 py-1 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-200 rounded-full font-medium">
+                              {suggestion.confidence}% confidence
+                            </span>
+                          </div>
+
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                            {suggestion.reasoning}
+                          </p>
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleAcceptSuggestion(suggestion.id)}
+                              disabled={isProcessingSuggestion}
+                              className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                              Accept
+                            </button>
+                            <button
+                              onClick={() => handleRejectSuggestion(suggestion.id)}
+                              disabled={isProcessingSuggestion}
+                              className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Processing Status Summary */}
               {isProcessed && (

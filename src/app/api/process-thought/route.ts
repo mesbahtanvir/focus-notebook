@@ -29,34 +29,53 @@ export async function POST(request: NextRequest) {
     console.log('🤖 Processing thought:', thought.id);
     console.log('💭 Thought text:', thought.text);
 
-    // Build user context section
+    // Build comprehensive user context section (excluding thoughts)
     const userContextSection = context ? `
 
 User's Current Data Context:
+
 ${context.goals && context.goals.length > 0 ? `\nGoals (${context.goals.length}):
-${context.goals.map((goal: any) => `- ${goal.title} (${goal.status})`).join('\n')}` : ''}
+${context.goals.map((goal: any) => `- ${goal.title} (${goal.status}) - ${goal.objective || 'No objective'}`).join('\n')}` : ''}
 
 ${context.projects && context.projects.length > 0 ? `\nProjects (${context.projects.length}):
-${context.projects.map((project: any) => `- ${project.title} (${project.status}) - ${project.description}`).join('\n')}` : ''}
+${context.projects.map((project: any) => `- ${project.title} (${project.status}) - ${project.description || 'No description'}`).join('\n')}` : ''}
 
-${context.tasks && context.tasks.length > 0 ? `\nRecent Tasks (${context.tasks.length}):
-${context.tasks.slice(0, 10).map((task: any) => `- ${task.title} (${task.status}) - ${task.category}`).join('\n')}` : ''}
+${context.tasks && context.tasks.length > 0 ? `\nActive Tasks (${context.tasks.length}):
+${context.tasks.map((task: any) => `- ${task.title} (${task.category || 'no category'}) - ${task.priority || 'no priority'}`).join('\n')}` : ''}
 
 ${context.moods && context.moods.length > 0 ? `\nRecent Moods (${context.moods.length}):
-${context.moods.slice(0, 5).map((mood: any) => `- ${mood.mood} (${mood.intensity}/10) - ${mood.notes || 'No notes'}`).join('\n')}` : ''}
+${context.moods.map((mood: any) => `- ${mood.value || mood.mood}/10 - ${mood.note || 'No notes'}`).join('\n')}` : ''}
 
-${context.friends && context.friends.length > 0 ? `\nFriends/Contacts (${context.friends.length}):
-${context.friends.map((friend: any) => `- ${friend.name} (${friend.relationship})`).join('\n')}` : ''}` : '';
+${context.relationships && context.relationships.length > 0 ? `\nRelationships (${context.relationships.length}):
+${context.relationships.map((person: any) => `- ${person.name} (${person.relationshipType || 'unknown'}) - Strength: ${person.connectionStrength || 'N/A'}/10`).join('\n')}` : ''}
+
+${context.notes && context.notes.length > 0 ? `\nRecent Notes (${context.notes.length}):
+${context.notes.map((note: any) => `- ${note.title || 'Untitled'} - ${note.content?.substring(0, 50) || 'No content'}...`).join('\n')}` : ''}
+
+${context.errands && context.errands.length > 0 ? `\nActive Errands (${context.errands.length}):
+${context.errands.map((errand: any) => `- ${errand.title || 'Untitled'} (${errand.category || 'no category'})`).join('\n')}` : ''}` : '';
 
     const prompt = `You are an intelligent thought processor for a productivity and mental wellness app.
 
+Available Tool Tags (use these to indicate which tools can benefit from this thought):
+- tool-tasks: Thought contains actionable items that should become tasks
+- tool-projects: Relates to project planning or execution
+- tool-goals: Connects to personal or professional goals
+- tool-mood: Expresses emotions or mental state that should be tracked
+- tool-cbt: Contains cognitive distortions or negative thinking patterns suitable for CBT analysis
+- tool-focus: Suitable for focused work sessions or deep work
+- tool-brainstorming: Contains ideas for exploration and ideation
+- tool-relationships: Mentions people or relationship dynamics
+- tool-notes: General reference or learning material to save
+- tool-errands: Contains to-do items for daily tasks
+
 Available Actions:
-- createTask: Create a new task
+- createTask: Create a new task from the thought
+- enhanceTask: Enhance an existing task with information from this thought (provide taskId in data)
 - createProject: Create a new project
 - createGoal: Create a new goal
-- createMoodEntry: Create a mood entry
-- addTag: Add a tag to the thought
-- enhanceThought: Improve the thought text
+- createMood: Create a mood entry
+- addTag: Add a tool tag to the thought
 - linkToProject: Link thought to existing project
 
 ${userContextSection}
@@ -68,52 +87,56 @@ Current Tags: ${thought.tags?.join(', ') || 'none'}
 Created: ${thought.createdAt}
 
 Analyze this thought and suggest helpful actions. Consider:
-1. **Thought Enhancement**: Can the text be improved for clarity or grammar?
+1. **Tool Tags**: Which tools (tasks, projects, goals, mood, cbt, etc.) can benefit from this thought?
 2. **Existing Data Context**: Review the user's current goals, projects, tasks, and moods to determine if this thought should:
    - Link to an existing project/goal (use linkToProject action)
-   - Create a new project/goal (use createProject action)
-   - Add to an existing task or create a new one
-   - Relate to recent mood patterns
-3. **Specific Actions**: What should be created or updated?
-4. **Mood Recognition**: If this is clearly an emotional expression, create a mood entry with intensity
+   - Create a new project/goal (use createProject/createGoal action)
+   - Enhance an existing task with new information (use enhanceTask with taskId)
+   - Create a new task (use createTask)
+   - Track mood/emotion (use createMood)
+3. **Confidence Scoring**: For each action, provide a confidence score (0-100):
+   - 99-100: Very high confidence, safe to auto-apply immediately
+   - 70-98: Medium confidence, show as suggestion for user approval
+   - 0-69: Low confidence, do not suggest
 
 Respond ONLY with valid JSON (no markdown, no code blocks):
 {
   "actions": [
     {
+      "type": "addTag",
+      "confidence": 95,
+      "data": { "tag": "tool-tasks" },
+      "reasoning": "Thought contains actionable items"
+    },
+    {
       "type": "createTask",
+      "confidence": 85,
       "data": {
         "title": "specific task title",
-        "category": "health | wealth | mastery | connection",
-        "estimatedTime": 30,
-        "priority": "medium"
+        "category": "mastery",
+        "priority": "high"
       },
-      "reasoning": "why this task should be created"
+      "reasoning": "Clear actionable item identified"
     },
     {
-      "type": "addTag",
-      "data": { "tag": "research" },
-      "reasoning": "why this tag is appropriate"
-    },
-    {
-      "type": "createMoodEntry",
+      "type": "enhanceTask",
+      "confidence": 90,
       "data": {
-        "mood": "sad",
-        "intensity": 9,
-        "notes": "User expresses strong sadness"
+        "taskId": "existing-task-id",
+        "updates": {
+          "notes": "Additional context from thought"
+        }
       },
-      "reasoning": "Clear emotional expression with high intensity"
+      "reasoning": "Thought provides relevant context for existing task"
     },
     {
-      "type": "createProject",
+      "type": "createMood",
+      "confidence": 99,
       "data": {
-        "title": "Better Physique",
-        "description": "Achieve great physical fitness and body composition",
-        "timeframe": "long-term",
-        "category": "health",
-        "targetDate": "2027-10-21"
+        "value": 7,
+        "note": "Feeling optimistic about new project"
       },
-      "reasoning": "Clear long-term goal with 2 year timeframe"
+      "reasoning": "Clear emotional expression with high confidence"
     }
   ]
 }
@@ -123,7 +146,9 @@ Rules:
 - Don't create tasks for vague thoughts
 - Use appropriate categories: health, wealth, mastery, connection
 - Be conservative with task creation
-- Consider existing user data when making decisions`;
+- Consider existing user data when making decisions
+- Match tasks to existing context when enhancing
+- Confidence scores should be accurate and conservative`;
 
     // Call OpenAI API
     console.log('📤 Calling OpenAI API');

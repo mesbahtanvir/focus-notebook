@@ -12,7 +12,14 @@ export interface LLMRequest {
     context?: any;
   };
   output?: {
-    result: any;
+    result: {
+      actions: Array<{
+        type: string;
+        data: any;
+        reasoning: string;
+        confidence: number; // 0-100
+      }>;
+    };
     tokens?: number;
     cost?: number;
   };

@@ -4,6 +4,16 @@ import { db, auth } from '@/lib/firebaseClient'
 import { createAt, updateAt, deleteAt } from '@/lib/data/gateway'
 import { subscribeCol } from '@/lib/data/subscribe'
 
+export interface AISuggestion {
+  id: string
+  type: 'createTask' | 'enhanceTask' | 'createMood' | 'addTag' | 'createProject' | 'createGoal' | 'linkToProject'
+  confidence: number // 0-100
+  data: any
+  reasoning: string
+  createdAt: string
+  status: 'pending' | 'accepted' | 'rejected'
+}
+
 export interface Thought {
   id: string
   text: string
@@ -25,6 +35,10 @@ export interface Thought {
     outcome?: string
     analyzedAt?: string
   }
+  // AI processing fields
+  aiSuggestions?: AISuggestion[]
+  aiProcessingStatus?: 'pending' | 'processing' | 'completed' | 'failed'
+  confidenceScore?: number
 }
 
 type State = {

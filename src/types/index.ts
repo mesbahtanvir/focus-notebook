@@ -14,3 +14,6 @@ export interface MoodEntry {
   mood: number // 1-10 scale
   note?: string
 }
+
+// Re-export AISuggestion for shared use
+export type { AISuggestion } from '@/store/useThoughts'
