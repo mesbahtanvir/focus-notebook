@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, Suspense } from "react";
 import { useTasks, Task, TaskStatus, TaskPriority, TaskCategory } from '@/store/useTasks';
 import { useThoughts } from '@/store/useThoughts';
 import { useProjects } from '@/store/useProjects';
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -23,7 +23,8 @@ import {
   Target,
   Search,
   Loader2,
-  FileText
+  FileText,
+  ArrowLeft
 } from "lucide-react";
 import { getNotesPreview } from "@/lib/formatNotes";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
@@ -40,6 +41,7 @@ type ViewMode = 'list' | 'kanban';
 function TasksPageContent() {
   useTrackToolUsage('tasks');
 
+  const router = useRouter();
   const tasks = useTasks((s) => s.tasks);
   const thoughts = useThoughts((s) => s.thoughts);
   const projects = useProjects((s) => s.projects);
@@ -218,6 +220,17 @@ function TasksPageContent() {
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
       {/* Header with inline stats */}
       <div className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-4 border-purple-200 dark:border-purple-800 shadow-xl p-6">
+        {/* Back Button */}
+        <button
+          onClick={() => router.back()}
+          className="group mb-4 flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-purple-300 dark:border-purple-700 hover:border-purple-500 dark:hover:border-purple-500 transition-all transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
+        >
+          <ArrowLeft className="h-4 w-4 text-purple-600 dark:text-purple-400 group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors" />
+          <span className="text-sm font-semibold text-purple-600 dark:text-purple-400 group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors">
+            Back
+          </span>
+        </button>
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex-1">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">📋 Tasks</h1>
