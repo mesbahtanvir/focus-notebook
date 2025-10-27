@@ -14,6 +14,14 @@ import {
   ToolCard,
   EmptyState
 } from "@/components/tools";
+import { 
+  filterUnprocessedThoughts, 
+  filterProcessedThoughts, 
+  calculateCBTStats,
+  formatDate,
+  formatDetailedDate,
+  addCBTProcessedTag 
+} from "@/lib/cbtUtils";
 
 export default function CBTPage() {
   useTrackToolUsage('cbt');
@@ -29,54 +37,17 @@ export default function CBTPage() {
 
   // Filter thoughts with "cbt" tag but not "cbt-processed"
   const unprocessedThoughts = useMemo(() => {
-    const searchLower = searchQuery.toLowerCase();
-    return thoughts.filter(thought => {
-      const tags = thought.tags || [];
-      const isCBT = tags.includes('cbt') && !tags.includes('cbt-processed');
-
-      if (!isCBT) return false;
-
-      // Apply search filter
-      if (searchQuery) {
-        const textMatch = thought.text?.toLowerCase().includes(searchLower);
-        const tagsMatch = thought.tags?.some(tag => tag.toLowerCase().includes(searchLower));
-        return textMatch || tagsMatch;
-      }
-
-      return true;
-    });
+    return filterUnprocessedThoughts(thoughts, searchQuery);
   }, [thoughts, searchQuery]);
 
   // Filter thoughts that have been processed with CBT
   const processedThoughts = useMemo(() => {
-    const searchLower = searchQuery.toLowerCase();
-    return thoughts.filter(thought => {
-      const tags = thought.tags || [];
-      const isProcessed = tags.includes('cbt-processed') && thought.cbtAnalysis;
-
-      if (!isProcessed) return false;
-
-      // Apply search filter
-      if (searchQuery) {
-        const textMatch = thought.text?.toLowerCase().includes(searchLower);
-        const tagsMatch = thought.tags?.some(tag => tag.toLowerCase().includes(searchLower));
-        return textMatch || tagsMatch;
-      }
-
-      return true;
-    }).sort((a, b) => {
-      const dateA = a.cbtAnalysis?.analyzedAt ? new Date(a.cbtAnalysis.analyzedAt).getTime() : 0;
-      const dateB = b.cbtAnalysis?.analyzedAt ? new Date(b.cbtAnalysis.analyzedAt).getTime() : 0;
-      return dateB - dateA; // Most recent first
-    });
+    return filterProcessedThoughts(thoughts, searchQuery);
   }, [thoughts, searchQuery]);
 
   const handleProcessComplete = (thought: Thought, cbtData: any) => {
     // Update thought with CBT analysis and add "cbt-processed" tag
-    const updatedTags = [...(thought.tags || [])];
-    if (!updatedTags.includes('cbt-processed')) {
-      updatedTags.push('cbt-processed');
-    }
+    const updatedTags = addCBTProcessedTag(thought.tags || []);
 
     updateThought(thought.id, {
       cbtAnalysis: cbtData,
@@ -87,12 +58,8 @@ export default function CBTPage() {
   };
 
   const cbtStats = useMemo(() => {
-    const toProcess = unprocessedThoughts.length;
-    const processed = thoughts.filter(t => t.tags?.includes('cbt-processed')).length;
-    const total = thoughts.filter(t => t.tags?.includes('cbt')).length;
-    
-    return { toProcess, processed, total };
-  }, [unprocessedThoughts.length, thoughts]);
+    return calculateCBTStats(thoughts, unprocessedThoughts.length);
+  }, [thoughts, unprocessedThoughts.length]);
 
   if (selectedThought) {
     return (
@@ -203,22 +170,7 @@ export default function CBTPage() {
                         </p>
                         <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-gray-600">
                           <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200">
-                            {(() => {
-                              try {
-                                if (typeof thought.createdAt === 'object' && 'toDate' in thought.createdAt) {
-                                  return thought.createdAt.toDate().toLocaleDateString();
-                                }
-                                if (typeof thought.createdAt === 'string') {
-                                  return new Date(thought.createdAt).toLocaleDateString();
-                                }
-                                if (typeof thought.createdAt === 'object' && 'seconds' in thought.createdAt) {
-                                  return new Date(thought.createdAt.seconds * 1000).toLocaleDateString();
-                                }
-                                return new Date(thought.createdAt).toLocaleDateString();
-                              } catch {
-                                return 'N/A';
-                              }
-                            })()}
+                            {formatDate(thought.createdAt)}
                           </span>
                         </div>
                       </div>
@@ -272,21 +224,7 @@ export default function CBTPage() {
                           {thought.text}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Processed: {(() => {
-                            try {
-                              const date = thought.cbtAnalysis?.analyzedAt;
-                              if (!date) return 'N/A';
-                              return new Date(date).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              });
-                            } catch {
-                              return 'N/A';
-                            }
-                          })()}
+                          Processed: {formatDetailedDate(thought.cbtAnalysis?.analyzedAt)}
                         </p>
                       </div>
                     </div>
