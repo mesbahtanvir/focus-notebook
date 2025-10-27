@@ -4,35 +4,29 @@ import { useState, useMemo, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useThoughts, Thought } from "@/store/useThoughts";
 import { useFriends } from "@/store/useFriends";
-import { ThoughtProcessingService } from "@/services/thoughtProcessingService";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
   Plus,
   Brain,
-  Heart,
-  Frown,
-  Smile,
   CheckCircle2,
   Tag,
   Calendar,
-  Sparkles,
   Loader2,
-  Bell,
   Search,
   Filter,
-  ChevronDown
+  ChevronDown,
+  ArrowLeft,
+  Sparkles,
+  AlertCircle
 } from "lucide-react";
-import { ErrorModal } from '@/components/ErrorModal';
 import { ThoughtDetailModal } from "@/components/ThoughtDetailModal";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import {
   ToolPageLayout,
-  ToolHeader,
-  ToolFilters,
-  FilterSelect,
   ToolContent,
   ToolList,
   ToolCard,
@@ -49,12 +43,6 @@ function ThoughtsPageContent() {
 
   const [showNewThought, setShowNewThought] = useState(false);
   const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processingThoughtId, setProcessingThoughtId] = useState<string | null>(null);
-  const [showErrorModal, setShowErrorModal] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'processed' | 'unprocessed'>('all');
   const [showFilters, setShowFilters] = useState(false);
@@ -136,35 +124,31 @@ function ThoughtsPageContent() {
 
   const thoughtStats = useMemo(() => {
     if (!thoughts || !Array.isArray(thoughts)) {
-      return { total: 0, analyzed: 0, unprocessed: 0 };
+      return { total: 0, analyzed: 0, unprocessed: 0, awaitingApproval: 0 };
     }
 
     const total = thoughts.length;
     const analyzed = thoughts.filter(t => t && t.cbtAnalysis).length;
     const unprocessed = thoughts.filter(t => t && !t.tags?.includes('processed')).length;
+    const awaitingApproval = thoughts.filter(t => 
+      t && 
+      t.aiSuggestions && 
+      Array.isArray(t.aiSuggestions) && 
+      t.aiSuggestions.some(s => s.status === 'pending')
+    ).length;
 
-    return { total, analyzed, unprocessed };
+    return { total, analyzed, unprocessed, awaitingApproval };
   }, [thoughts]);
 
-  const handleProcessThought = async (thoughtId: string) => {
-    setIsProcessing(true);
-    setProcessingThoughtId(thoughtId);
-    
-    const result = await ThoughtProcessingService.processThought(thoughtId);
-    
-    if (result.success) {
-      // Success - thought will be updated by the processor
-    } else {
-      const needsApiKey = result.error === 'OpenAI API key not configured';
-      setErrorMessage(needsApiKey 
-        ? 'Please configure your OpenAI API key in Settings to enable AI-powered thought processing.' 
-        : `Failed to process: ${result.error}`);
-      setShowErrorModal(true);
-    }
-    
-    setIsProcessing(false);
-    setProcessingThoughtId(null);
-  };
+  // Get thoughts with pending AI suggestions
+  const awaitingApprovalThoughts = useMemo(() => {
+    return thoughts.filter(t => 
+      t && 
+      t.aiSuggestions && 
+      Array.isArray(t.aiSuggestions) && 
+      t.aiSuggestions.some(s => s.status === 'pending')
+    );
+  }, [thoughts]);
 
   // Helper function to get shortname from full name
   const getShortName = (name: string): string => {
@@ -201,18 +185,38 @@ function ThoughtsPageContent() {
 
   return (
     <ToolPageLayout>
-      <ToolHeader
-        title="Thoughts"
-        showBackButton={true}
-        stats={[
-          { label: 'total', value: thoughtStats.total },
-          { label: 'unprocessed', value: thoughtStats.unprocessed, variant: 'warning' },
-          { label: 'analyzed', value: thoughtStats.analyzed, variant: 'success' }
-        ]}
-      />
+      {/* Header with inline stats */}
+      <div className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-4 border-purple-200 dark:border-purple-800 shadow-xl p-6 mx-4 mt-4 mb-4">
+        <div className="flex items-start gap-3">
+          {/* Back Button */}
+          <button
+            onClick={() => router.back()}
+            className="group flex items-center justify-center p-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-purple-300 dark:border-purple-700 hover:border-purple-500 dark:hover:border-purple-500 transition-all transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg shrink-0"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-5 w-5 text-purple-600 dark:text-purple-400 group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors" />
+          </button>
+
+          {/* Title and Stats */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">💭 Thoughts</h1>
+            <div className="flex items-center gap-3 mt-2 text-sm font-medium flex-wrap">
+              <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">{thoughtStats.total} total</span>
+              <span className="px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300">{thoughtStats.unprocessed} unprocessed</span>
+              <span className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300">{thoughtStats.analyzed} analyzed</span>
+              {thoughtStats.awaitingApproval > 0 && (
+                <span className="px-3 py-1 rounded-full bg-yellow-100 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-300 flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  {thoughtStats.awaitingApproval} await approval
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Search & Filters */}
-      <div className="px-4 py-3">
+      <div className="px-4 py-3 mb-4">
         <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
           {/* Search Bar */}
           <div className="relative">
@@ -361,6 +365,63 @@ function ThoughtsPageContent() {
         )}
       </ToolContent>
 
+      {/* AI Suggestions Awaiting Approval Section */}
+      {awaitingApprovalThoughts.length > 0 && (
+        <div className="px-4 py-4 my-6">
+          <div className="rounded-xl bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 border-4 border-yellow-200 dark:border-yellow-800 shadow-xl p-6 space-y-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl shadow-lg">
+                <Sparkles className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  AI Suggestions Awaiting Approval
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {awaitingApprovalThoughts.length} thought{awaitingApprovalThoughts.length !== 1 ? 's' : ''} have AI suggestions ready for review
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-3">
+              {awaitingApprovalThoughts.map((thought) => {
+                const pendingSuggestions = thought.aiSuggestions?.filter(s => s.status === 'pending') || [];
+                return (
+                  <motion.div
+                    key={thought.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-lg p-4 bg-white dark:bg-gray-800 border-2 border-yellow-300 dark:border-yellow-700 hover:border-yellow-400 dark:hover:border-yellow-600 cursor-pointer transition-all hover:shadow-lg"
+                    onClick={() => setSelectedThought(thought)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg flex-shrink-0">
+                        <Brain className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 dark:text-white text-sm mb-2 line-clamp-2">
+                          {thought.text}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-1 rounded-full text-xs font-bold bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300">
+                            {pendingSuggestions.length} suggestion{pendingSuggestions.length !== 1 ? 's' : ''} pending
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <div className="px-3 py-1 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs font-semibold whitespace-nowrap">
+                          Review →
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* New Thought Modal */}
       {showNewThought && (
         <NewThoughtModal onClose={() => setShowNewThought(false)} />
@@ -374,57 +435,13 @@ function ThoughtsPageContent() {
         />
       )}
 
-      {/* Approval Dialog removed - actions are executed instantly */}
-
-
-      {/* Error Modal */}
-      <ErrorModal
-        isOpen={showErrorModal}
-        onClose={() => setShowErrorModal(false)}
-        title="Processing Failed"
-        message={errorMessage}
-        showSettingsButton={errorMessage.includes('OpenAI API key')}
-      />
-
-      {/* Success Modal */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6"
-          >
-            <div className="flex items-center gap-4 mb-4">
-              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg">
-                <CheckCircle2 className="h-8 w-8 text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
-                  Success!
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">
-                  {successMessage}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowSuccessModal(false)}
-              className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold shadow-lg transition-all"
-            >
-              Got it!
-            </button>
-          </motion.div>
-        </div>
-      )}
 
       {/* Floating Action Button */}
-      <button
+      <FloatingActionButton
         onClick={() => setShowNewThought(true)}
-        className="fixed bottom-8 right-8 h-16 w-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-2xl hover:shadow-3xl transition-all flex items-center justify-center z-40 hover:scale-110"
         title="New Thought"
-      >
-        <Plus className="h-8 w-8" />
-      </button>
+        icon={<Plus className="h-6 w-6" />}
+      />
     </ToolPageLayout>
   );
 }

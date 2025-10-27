@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useMoods, type MoodEntry } from "@/store/useMoods";
 import { useThoughts } from "@/store/useThoughts";
-import { X, Trash2, ExternalLink, Brain, Plus, Smile, CheckCircle2 } from "lucide-react";
+import { X, Trash2, ExternalLink, Brain, Plus, Smile, CheckCircle2, ArrowLeft } from "lucide-react";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
@@ -76,6 +77,7 @@ const ALL_EMOTIONS = EMOTIONS;
 export default function MoodTrackerPage() {
   useTrackToolUsage('moodtracker');
 
+  const router = useRouter();
   const moodsFromStore = useMoods((s) => s.moods);
   const addMood = useMoods((s) => s.add);
 
@@ -145,12 +147,26 @@ export default function MoodTrackerPage() {
   return (
     <Card className="border-2 border-purple-200 dark:border-purple-800 shadow-xl bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30">
       <CardHeader className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-950/50 dark:to-pink-950/50 border-b-2 border-purple-200 dark:border-purple-800">
-        <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-          💭 Mood Tracker
-        </CardTitle>
-        <CardDescription className="text-gray-600 dark:text-gray-400 font-medium">
-          Track your emotional state based on Feeling Good principles
-        </CardDescription>
+        <div className="flex items-start gap-3">
+          {/* Back Button */}
+          <button
+            onClick={() => router.back()}
+            className="group flex items-center justify-center p-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-purple-300 dark:border-purple-700 hover:border-purple-500 dark:hover:border-purple-500 transition-all transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg shrink-0"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-5 w-5 text-purple-600 dark:text-purple-400 group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors" />
+          </button>
+
+          {/* Title and Description */}
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              💭 Mood Tracker
+            </CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-400 font-medium">
+              Track your emotional state based on Feeling Good principles
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
         {/* Emotion Sliders */}

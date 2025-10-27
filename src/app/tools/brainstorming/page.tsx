@@ -391,18 +391,25 @@ export default function BrainstormingPage() {
   return (
     <div className="container mx-auto py-6 md:py-8 space-y-6 px-4 md:px-0 max-w-7xl">
       {/* Header */}
-      <div className="text-center space-y-3">
-        <div className="flex justify-center">
-          <div className="p-3 bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 rounded-full">
-            <Lightbulb className="h-10 w-10 text-yellow-600 dark:text-yellow-400" />
+      <div className="rounded-xl bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 border-4 border-yellow-200 dark:border-yellow-800 shadow-xl p-6">
+        <div className="flex items-start gap-3">
+          {/* Back Button */}
+          <button
+            onClick={() => router.back()}
+            className="group flex items-center justify-center p-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-yellow-300 dark:border-yellow-700 hover:border-yellow-500 dark:hover:border-yellow-500 transition-all transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg shrink-0"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-5 w-5 text-yellow-600 dark:text-yellow-400 group-hover:text-yellow-700 dark:group-hover:text-yellow-300 transition-colors" />
+          </button>
+
+          {/* Title and Description */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 dark:from-yellow-400 dark:to-orange-400 bg-clip-text text-transparent">💡 Brainstorming</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+              AI-powered brainstorming sessions for your ideas
+            </p>
           </div>
         </div>
-        <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-yellow-600 via-orange-600 to-red-600 bg-clip-text text-transparent">
-          💡 Brainstorming
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 text-base md:text-lg max-w-2xl mx-auto">
-          AI-powered brainstorming sessions for your ideas
-        </p>
       </div>
 
       {/* API Key Warning */}

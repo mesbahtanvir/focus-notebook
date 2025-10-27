@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useTasks } from "@/store/useTasks";
 import { useFocus, selectBalancedTasks } from "@/store/useFocus";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Zap, Clock, Target, History, Star, TrendingUp, Brain, Rocket, Heart, Briefcase, X, Trash2 } from "lucide-react";
+import { Play, Zap, Clock, Target, History, Star, TrendingUp, Brain, Rocket, Heart, Briefcase, X, Trash2, ArrowLeft } from "lucide-react";
 import { FocusSession } from "@/components/FocusSession";
 import { FocusStatistics } from "@/components/FocusStatistics";
 import { FocusSessionDetailModal } from "@/components/FocusSessionDetailModal";
@@ -19,6 +19,7 @@ function FocusPageContent() {
   useTrackToolUsage('focus');
 
   const { user } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const tasks = useTasks((s) => s.tasks);
   const currentSession = useFocus((s) => s.currentSession);
@@ -186,14 +187,28 @@ function FocusPageContent() {
             className="space-y-4"
           >
             {/* Header */}
-            <div className="mb-6">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Zap className="h-6 w-6 md:h-8 md:w-8 text-purple-600" />
-                Focus Session
-              </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Deep work mode
-              </p>
+            <div className="rounded-xl bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20 border-4 border-purple-200 dark:border-purple-800 shadow-xl p-6 mb-6">
+              <div className="flex items-start gap-3">
+                {/* Back Button */}
+                <button
+                  onClick={() => router.back()}
+                  className="group flex items-center justify-center p-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-purple-300 dark:border-purple-700 hover:border-purple-500 dark:hover:border-purple-500 transition-all transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg shrink-0"
+                  aria-label="Go back"
+                >
+                  <ArrowLeft className="h-5 w-5 text-purple-600 dark:text-purple-400 group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors" />
+                </button>
+
+                {/* Title and Description */}
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 bg-clip-text text-transparent flex items-center gap-2">
+                    <Zap className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                    Focus Session
+                  </h1>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Deep work mode
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Active Session Alert */}

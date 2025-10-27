@@ -28,7 +28,8 @@ import {
   Milestone,
   Search,
   Filter,
-  ChevronDown
+  ChevronDown,
+  ArrowLeft
 } from "lucide-react";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
@@ -108,10 +109,20 @@ export default function ProjectsPage() {
     <div className="space-y-4 max-w-7xl mx-auto p-4 md:p-6">
       {/* Compact Header with inline stats */}
       <div className="rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-4 border-green-200 dark:border-green-800 shadow-xl p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
+        <div className="flex items-start gap-3">
+          {/* Back Button */}
+          <button
+            onClick={() => router.back()}
+            className="group flex items-center justify-center p-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-green-300 dark:border-green-700 hover:border-green-500 dark:hover:border-green-500 transition-all transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg shrink-0"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-5 w-5 text-green-600 dark:text-green-400 group-hover:text-green-700 dark:group-hover:text-green-300 transition-colors" />
+          </button>
+
+          {/* Title and Stats */}
+          <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">🎯 Projects</h1>
-            <div className="flex items-center gap-3 mt-2 text-sm font-medium">
+            <div className="flex items-center gap-3 mt-2 text-sm font-medium flex-wrap">
               <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">{stats.active} active</span>
               <span className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300">{stats.completed} done</span>
               <span className="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300">{stats.shortTerm} short-term</span>

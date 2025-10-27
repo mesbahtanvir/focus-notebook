@@ -2,15 +2,18 @@
 
 import { useTasks } from "@/store/useTasks";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, MapPin, Car, Package, CheckCircle2, Circle, Trash2, Plus, Search, Filter, ChevronDown } from "lucide-react";
+import { ShoppingBag, MapPin, Car, Package, CheckCircle2, Circle, Trash2, Plus, Search, Filter, ChevronDown, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getNotesPreview } from "@/lib/formatNotes";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 
 export default function ErrandsPage() {
   useTrackToolUsage('errands');
 
+  const router = useRouter();
   const tasks = useTasks((s) => s.tasks);
   const toggle = useTasks((s) => s.toggle);
   const deleteTask = useTasks((s) => s.deleteTask);
@@ -44,12 +47,18 @@ export default function ErrandsPage() {
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
       {/* Header */}
       <div className="rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border-4 border-orange-200 dark:border-orange-800 shadow-xl p-6">
-        <Link href="/tools" className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-2 transition-colors">
-          <ChevronDown className="h-4 w-4 -rotate-90" />
-          Back to Tools
-        </Link>
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
+        <div className="flex items-start gap-3">
+          {/* Back Button */}
+          <button
+            onClick={() => router.back()}
+            className="group flex items-center justify-center p-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-orange-300 dark:border-orange-700 hover:border-orange-500 dark:hover:border-orange-500 transition-all transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg shrink-0"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-5 w-5 text-orange-600 dark:text-orange-400 group-hover:text-orange-700 dark:group-hover:text-orange-300 transition-colors" />
+          </button>
+
+          {/* Title and Description */}
+          <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 dark:from-orange-400 dark:to-amber-400 bg-clip-text text-transparent flex items-center gap-2">
               <ShoppingBag className="h-6 w-6 text-orange-600 dark:text-orange-400" />
               🛍️ Errands & Out-of-Office Tasks
@@ -58,13 +67,6 @@ export default function ErrandsPage() {
               Tasks that need to be done outside or away from your desk
             </p>
           </div>
-          <Link
-            href="/tools/tasks"
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold shadow-lg transition-all transform hover:scale-105 active:scale-95"
-          >
-            <Plus className="h-5 w-5 inline mr-1" />
-            New Task
-          </Link>
         </div>
       </div>
 
@@ -307,6 +309,13 @@ export default function ErrandsPage() {
           </div>
         </div>
       </div>
+
+      {/* Floating Action Button */}
+      <FloatingActionButton
+        href="/tools/tasks"
+        title="New Errand"
+        icon={<Plus className="h-6 w-6" />}
+      />
     </div>
   );
 }

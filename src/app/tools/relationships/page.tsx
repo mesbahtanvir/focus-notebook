@@ -17,14 +17,18 @@ import {
   Search,
   UserX,
   Filter,
-  ChevronDown
+  ChevronDown,
+  ArrowLeft
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 
 export default function FriendsPage() {
   useTrackToolUsage('relationships');
 
+  const router = useRouter();
   const { user } = useAuth();
   const friends = useFriends((s) => s.friends);
   const subscribe = useFriends((s) => s.subscribe);
@@ -92,12 +96,18 @@ export default function FriendsPage() {
     <div className="space-y-4 max-w-7xl mx-auto p-4 md:p-6">
       {/* Header */}
       <div className="rounded-xl bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-950/20 dark:to-rose-950/20 border-4 border-pink-200 dark:border-pink-800 shadow-xl p-6">
-        <Link href="/tools" className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-2 transition-colors">
-          <ChevronDown className="h-4 w-4 -rotate-90" />
-          Back to Tools
-        </Link>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex-1">
+        <div className="flex items-start gap-3 mb-4">
+          {/* Back Button */}
+          <button
+            onClick={() => router.back()}
+            className="group flex items-center justify-center p-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-pink-300 dark:border-pink-700 hover:border-pink-500 dark:hover:border-pink-500 transition-all transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg shrink-0"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-5 w-5 text-pink-600 dark:text-pink-400 group-hover:text-pink-700 dark:group-hover:text-pink-300 transition-colors" />
+          </button>
+
+          {/* Title and Description */}
+          <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 dark:from-pink-400 dark:to-rose-400 bg-clip-text text-transparent flex items-center gap-2">
               <Users className="h-7 w-7 text-pink-600 dark:text-pink-400" />
               Relationships
@@ -120,16 +130,6 @@ export default function FriendsPage() {
               </span>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setEditingFriend(null);
-              setShowModal(true);
-            }}
-            className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-bold shadow-lg transition-all transform hover:scale-105 active:scale-95"
-          >
-            <Plus className="h-5 w-5" />
-            Add Person
-          </button>
         </div>
       </div>
 
@@ -300,6 +300,16 @@ export default function FriendsPage() {
         cancelText="Keep"
         variant="warning"
         icon={<UserX className="h-8 w-8" />}
+      />
+
+      {/* Floating Action Button */}
+      <FloatingActionButton
+        onClick={() => {
+          setEditingFriend(null);
+          setShowModal(true);
+        }}
+        title="Add Person"
+        icon={<Plus className="h-6 w-6" />}
       />
     </div>
   );

@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useTasks } from "@/store/useTasks";
 import { useThoughts } from "@/store/useThoughts";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  FileText, 
-  Search, 
+import {
+  FileText,
+  Search,
   Filter,
   Calendar,
   Tag,
@@ -19,7 +20,8 @@ import {
   Save,
   Check,
   ArrowRight,
-  ExternalLink
+  ExternalLink,
+  ArrowLeft
 } from "lucide-react";
 import { FormattedNotes, getNotesPreview } from "@/lib/formatNotes";
 import Link from "next/link";
@@ -32,6 +34,7 @@ type FilterType = 'all';
 
 export default function DocumentsPage() {
   useTrackToolUsage('notes');
+  const router = useRouter();
   const tasks = useTasks((s) => s.tasks);
   const updateTask = useTasks((s) => s.updateTask);
   const thoughts = useThoughts((s) => s.thoughts);
@@ -144,14 +147,26 @@ export default function DocumentsPage() {
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
       {/* Header */}
       <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 border-4 border-indigo-200 dark:border-indigo-800 shadow-xl p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
+        <div className="flex items-start gap-3">
+          {/* Back Button */}
+          <button
+            onClick={() => router.back()}
+            className="group flex items-center justify-center p-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-indigo-300 dark:border-indigo-700 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg shrink-0"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-5 w-5 text-indigo-600 dark:text-indigo-400 group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors" />
+          </button>
+
+          {/* Title and Description */}
+          <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">📝 Notes</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm">
               All your notes and documentation
             </p>
           </div>
-          <div className="flex items-center gap-3">
+
+          {/* Stats */}
+          <div className="flex items-center gap-3 shrink-0">
             <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-900 dark:to-purple-900 border-2 border-indigo-300 dark:border-indigo-700">
               <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{stats.total}</div>
               <div className="text-xs text-indigo-700 dark:text-indigo-300 font-medium">Notes</div>

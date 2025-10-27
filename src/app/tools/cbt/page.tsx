@@ -99,7 +99,7 @@ export default function CBTPage() {
       />
 
       {/* Search & Filters */}
-      <div className="px-4 py-3">
+      <div className="px-4 py-3 mb-4">
         <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
         {/* Search Bar */}
         <div className="relative">
@@ -203,8 +203,8 @@ export default function CBTPage() {
       </ToolContent>
 
       {/* Processed Thoughts List */}
-      <div className="space-y-4 px-4 pb-4">
-        <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+      <div className="space-y-4 px-4 pb-4 mt-8">
+        <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2 mb-4">
           <CheckCircle className="h-5 w-5 text-green-500" />
           CBT-Processed Thoughts History
         </h2>

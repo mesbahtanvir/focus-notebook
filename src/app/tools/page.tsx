@@ -144,20 +144,12 @@ type ToolPriority = 'high' | 'medium' | 'low';
 
 export default function ToolsPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [showLowPriority, setShowLowPriority] = useState(false);
-  const [showMediumPriority, setShowMediumPriority] = useState(true);
 
-  const { highPriority, mediumPriority, lowPriority } = useMemo(() => {
-    const filtered = TOOLS.filter(tool => 
+  const filteredTools = useMemo(() => {
+    return TOOLS.filter(tool =>
       tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tool.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
-
-    return {
-      highPriority: filtered.filter(t => t.priority === 'high'),
-      mediumPriority: filtered.filter(t => t.priority === 'medium'),
-      lowPriority: filtered.filter(t => t.priority === 'low'),
-    };
   }, [searchQuery]);
 
   return (
@@ -193,143 +185,50 @@ export default function ToolsPage() {
         </div>
       </div>
 
-      {/* High Priority Tools */}
+      {/* All Tools Grid */}
       <div className="space-y-3">
         <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-          <span className="px-2 py-1 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs">ESSENTIAL</span>
-          Core Tools ({highPriority.length})
+          All Tools ({filteredTools.length})
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {highPriority.map((tool) => {
-          const Icon = tool.icon;
-          return (
-            <Link
-              key={tool.key}
-              href={`/tools/${tool.key}`}
-              className={`group relative overflow-hidden rounded-xl bg-gradient-to-br ${tool.bgGradient} border-2 ${tool.borderColor} p-4 transition-all duration-300 hover:shadow-xl hover:scale-105`}
-            >
-              {/* Icon Circle */}
-              <div className="flex items-start justify-between mb-3">
-                <div className={`p-2 bg-gradient-to-r ${tool.gradient} rounded-lg shadow-md group-hover:shadow-lg transition-all group-hover:scale-110`}>
-                  <Icon className="h-5 w-5 text-white" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredTools.map((tool) => {
+            const Icon = tool.icon;
+            return (
+              <Link
+                key={tool.key}
+                href={`/tools/${tool.key}`}
+                className={`group relative overflow-hidden rounded-xl bg-gradient-to-br ${tool.bgGradient} border-2 ${tool.borderColor} p-4 transition-all duration-300 hover:shadow-xl hover:scale-105`}
+              >
+                {/* Icon Circle */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className={`p-2 bg-gradient-to-r ${tool.gradient} rounded-lg shadow-md group-hover:shadow-lg transition-all group-hover:scale-110`}>
+                    <Icon className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="text-2xl group-hover:scale-125 transition-transform">
+                    {tool.emoji}
+                  </span>
                 </div>
-                <span className="text-2xl group-hover:scale-125 transition-transform">
-                  {tool.emoji}
-                </span>
-              </div>
 
-              {/* Content */}
-              <div className="space-y-1">
-                <h3 className="text-lg font-bold text-gray-800 group-hover:text-gray-900">
-                  {tool.title}
-                </h3>
-                <p className="text-xs text-gray-600 leading-relaxed">
-                  {tool.description}
-                </p>
-              </div>
+                {/* Content */}
+                <div className="space-y-1">
+                  <h3 className="text-lg font-bold text-gray-800 group-hover:text-gray-900">
+                    {tool.title}
+                  </h3>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    {tool.description}
+                  </p>
+                </div>
 
-              {/* Hover Glow Effect */}
-              <div className={`absolute inset-0 bg-gradient-to-r ${tool.gradient} opacity-0 group-hover:opacity-10 transition-opacity rounded-xl`} />
-            </Link>
-          );
+                {/* Hover Glow Effect */}
+                <div className={`absolute inset-0 bg-gradient-to-r ${tool.gradient} opacity-0 group-hover:opacity-10 transition-opacity rounded-xl`} />
+              </Link>
+            );
           })}
         </div>
       </div>
 
-      {/* Medium Priority Tools */}
-      {mediumPriority.length > 0 && (
-        <div className="space-y-3">
-          <button
-            onClick={() => setShowMediumPriority(!showMediumPriority)}
-            className="flex items-center gap-2 text-lg font-bold text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
-          >
-            <span className="px-2 py-1 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs">USEFUL</span>
-            Additional Tools ({mediumPriority.length})
-            {showMediumPriority ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-          </button>
-          {showMediumPriority && (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {mediumPriority.map((tool) => {
-                const Icon = tool.icon;
-                return (
-                  <Link
-                    key={tool.key}
-                    href={`/tools/${tool.key}`}
-                    className={`group relative overflow-hidden rounded-xl bg-gradient-to-br ${tool.bgGradient} border-2 ${tool.borderColor} p-4 transition-all duration-300 hover:shadow-xl hover:scale-105`}
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className={`p-2 bg-gradient-to-r ${tool.gradient} rounded-lg shadow-md group-hover:shadow-lg transition-all group-hover:scale-110`}>
-                        <Icon className="h-5 w-5 text-white" />
-                      </div>
-                      <span className="text-2xl group-hover:scale-125 transition-transform">
-                        {tool.emoji}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="text-lg font-bold text-gray-800 group-hover:text-gray-900">
-                        {tool.title}
-                      </h3>
-                      <p className="text-xs text-gray-600 leading-relaxed">
-                        {tool.description}
-                      </p>
-                    </div>
-                    <div className={`absolute inset-0 bg-gradient-to-r ${tool.gradient} opacity-0 group-hover:opacity-10 transition-opacity rounded-xl`} />
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Low Priority Tools */}
-      {lowPriority.length > 0 && (
-        <div className="space-y-3">
-          <button
-            onClick={() => setShowLowPriority(!showLowPriority)}
-            className="flex items-center gap-2 text-lg font-bold text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
-          >
-            <span className="px-2 py-1 rounded-lg bg-gradient-to-r from-gray-400 to-slate-500 text-white text-xs">OPTIONAL</span>
-            Specialized Tools ({lowPriority.length})
-            {showLowPriority ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-          </button>
-          {showLowPriority && (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {lowPriority.map((tool) => {
-                const Icon = tool.icon;
-                return (
-                  <Link
-                    key={tool.key}
-                    href={`/tools/${tool.key}`}
-                    className={`group relative overflow-hidden rounded-xl bg-gradient-to-br ${tool.bgGradient} border-2 ${tool.borderColor} p-4 transition-all duration-300 hover:shadow-xl hover:scale-105`}
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className={`p-2 bg-gradient-to-r ${tool.gradient} rounded-lg shadow-md group-hover:shadow-lg transition-all group-hover:scale-110`}>
-                        <Icon className="h-5 w-5 text-white" />
-                      </div>
-                      <span className="text-2xl group-hover:scale-125 transition-transform">
-                        {tool.emoji}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="text-lg font-bold text-gray-800 group-hover:text-gray-900">
-                        {tool.title}
-                      </h3>
-                      <p className="text-xs text-gray-600 leading-relaxed">
-                        {tool.description}
-                      </p>
-                    </div>
-                    <div className={`absolute inset-0 bg-gradient-to-r ${tool.gradient} opacity-0 group-hover:opacity-10 transition-opacity rounded-xl`} />
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* No Results */}
-      {searchQuery && highPriority.length === 0 && mediumPriority.length === 0 && lowPriority.length === 0 && (
+      {searchQuery && filteredTools.length === 0 && (
         <div className="text-center py-16">
           <Search className="h-16 w-16 mx-auto text-gray-300 dark:text-gray-700 mb-4" />
           <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">
