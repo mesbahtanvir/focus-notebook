@@ -2,6 +2,15 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { act } from '@testing-library/react'
 import MoodTrackerPage from '@/app/tools/moodtracker/page'
 
+// Mock Next.js router
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    back: jest.fn(),
+    push: jest.fn(),
+    replace: jest.fn(),
+  }),
+}))
+
 // Mock the useMoods store
 const mockMoods = jest.fn()
 const mockAddMood = jest.fn()
@@ -43,6 +52,25 @@ jest.mock('@/store/useThoughts', () => ({
     
     return state
   }
+}))
+
+// Mock useTrackToolUsage
+jest.mock('@/hooks/useTrackToolUsage', () => ({
+  useTrackToolUsage: jest.fn(),
+}))
+
+// Mock FloatingActionButton
+jest.mock('@/components/ui/FloatingActionButton', () => ({
+  FloatingActionButton: jest.fn(({ onClick, title, icon }) => (
+    <button onClick={onClick} title={title}>
+      {icon} {title}
+    </button>
+  )),
+}))
+
+// Mock ConfirmModal
+jest.mock('@/components/ConfirmModal', () => ({
+  ConfirmModal: jest.fn(() => null),
 }))
 
 describe('MoodTracker Page', () => {
