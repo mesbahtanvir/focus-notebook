@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 type FormValues = { text: string };
 
 export default function Page() {
-  const { user } = useAuth();
+  const { user, isAnonymous } = useAuth();
   const { register, handleSubmit, reset } = useForm<FormValues>();
   // Thoughts store
   const thoughts = useThoughts((s) => s.thoughts);
@@ -53,20 +53,45 @@ export default function Page() {
 
   return (
     <div className="space-y-4">
-      {/* Minimal Login Prompt */}
+      {/* Authentication Status */}
       {!user && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="flex items-center justify-between p-3 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800"
+          className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-2 border-purple-200 dark:border-purple-800"
         >
-          <span className="text-sm text-gray-600 dark:text-gray-400">Not syncing</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🔒</span>
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Sign up to sync across devices</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Your data stays local until you sign in</p>
+            </div>
+          </div>
           <Link
             href="/login"
-            className="text-sm font-medium px-4 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+            className="text-sm font-medium px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors shadow-md"
           >
-            Sign In
+            Sign Up
           </Link>
+        </motion.div>
+      )}
+      
+      {isAnonymous && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 border-2 border-yellow-300 dark:border-yellow-700"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🚀</span>
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Temporary Account Active</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Upgrade to keep your data forever</p>
+            </div>
+          </div>
+          <span className="text-xs px-3 py-1 rounded-full bg-yellow-200 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-200 font-medium">
+            Syncing
+          </span>
         </motion.div>
       )}
 

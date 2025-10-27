@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, EmailAuthProvider } from "firebase/auth";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -23,6 +23,7 @@ export const db = initializeFirestore(app, {
 });
 
 export const googleProvider = new GoogleAuthProvider();
+export const emailProvider = new EmailAuthProvider();
 
 // Configure Google provider
 googleProvider.setCustomParameters({
