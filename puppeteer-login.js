@@ -29,23 +29,37 @@ module.exports = async ({ url, options, config }) => {
   await page.goto('https://focus.yourthoughts.ca/login', { waitUntil: 'networkidle2' });
 
   // 2) Click "Continue with Email" button to switch to email auth mode
-  // Wait for the button and click it using XPath to find button with "Continue with Email" text
-  await page.waitForXPath('//button[contains(text(), "Continue with Email")]');
-  const [emailButton] = await page.$x('//button[contains(text(), "Continue with Email")]');
-  await emailButton.click();
-  await page.waitForTimeout(500); // Wait for form transition animation
+  // Wait for the page to load, then find and click the button by its text content
+  await page.waitForFunction(() => {
+    const buttons = Array.from(document.querySelectorAll('button'));
+    return buttons.some(btn => btn.textContent?.includes('Continue with Email'));
+  });
+  
+  await page.evaluate(() => {
+    const buttons = Array.from(document.querySelectorAll('button'));
+    const emailButton = buttons.find(btn => btn.textContent?.includes('Continue with Email'));
+    if (emailButton) {
+      emailButton.click();
+    }
+  });
+  
+  // Wait for form transition animation
+  await new Promise(resolve => setTimeout(resolve, 500));
 
   // 3) Wait for email form to appear and fill credentials
   await page.waitForSelector('input[type="email"]');
-  await page.type('input[type="email"]', process.env.TEST_EMAIL);
-  await page.type('input[type="password"]', process.env.TEST_PASSWORD);
+  const emailInput = await page.$('input[type="email"]');
+  await emailInput.type(process.env.TEST_EMAIL);
+  
+  const passwordInput = await page.$('input[type="password"]');
+  await passwordInput.type(process.env.TEST_PASSWORD);
 
   // 4) Click submit button (either "Sign In" or "Create Account")
-  await page.click('button[type="submit"]');
-
-  // 5) Wait for successful navigation - the app redirects to home page after login
-  // Look for the main app container or any authenticated element
-  await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 });
+  const submitButton = await page.$('button[type="submit"]');
+  await Promise.all([
+    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }),
+    submitButton.click()
+  ]);
 
   // 6) Verify we're logged in by checking for authenticated user elements
   // The app should redirect to '/' when logged in
