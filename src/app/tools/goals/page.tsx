@@ -169,11 +169,11 @@ export default function GoalsPage() {
         editingGoal={editingGoal}
       />
 
-      {/* Tactical Goals */}
+      {/* Short Term Goals */}
       <div className="space-y-4">
         <h2 className="text-2xl font-bold flex items-center gap-2">
           <PlayCircle className="h-6 w-6 text-orange-600" />
-          Tactical Goals ({shortTermGoals.length})
+          Short Term Goals ({shortTermGoals.length})
         </h2>
         <AnimatePresence>
           {shortTermGoals.map((goal) => {
@@ -200,9 +200,9 @@ export default function GoalsPage() {
                       </span>
                       <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                         {goal.timeframe === 'immediate' && '⚡ Immediate'}
-                        {goal.timeframe === 'short-term' && '⚡ Tactical'}
-                        {goal.timeframe === 'long-term' && '🎯 Strategic'}
-                        {!goal.timeframe && '⚡ Tactical'}
+                        {goal.timeframe === 'short-term' && '⚡ Short Term'}
+                        {goal.timeframe === 'long-term' && '🎯 Long Term'}
+                        {!goal.timeframe && '⚡ Short Term'}
                       </span>
                     </div>
                     <p className="text-muted-foreground">{goal.objective}</p>
@@ -246,16 +246,16 @@ export default function GoalsPage() {
         {shortTermGoals.length === 0 && (
           <div className="card p-8 text-center text-muted-foreground">
             <Target className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>No tactical goals yet. Create one to get started!</p>
+            <p>No short term goals yet. Create one to get started!</p>
           </div>
         )}
       </div>
 
-      {/* Strategic Goals */}
+      {/* Long Term Goals */}
       <div className="space-y-4">
         <h2 className="text-2xl font-bold flex items-center gap-2">
           <PlayCircle className="h-6 w-6 text-purple-600" />
-          Strategic Goals ({longTermGoals.length})
+          Long Term Goals ({longTermGoals.length})
         </h2>
         <AnimatePresence>
           {longTermGoals.map((goal) => {
@@ -281,7 +281,7 @@ export default function GoalsPage() {
                         {goal.priority}
                       </span>
                       <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                        🎯 Strategic
+                        🎯 Long Term
                       </span>
                     </div>
                     <p className="text-muted-foreground">{goal.objective}</p>
@@ -325,7 +325,7 @@ export default function GoalsPage() {
         {longTermGoals.length === 0 && (
           <div className="card p-8 text-center text-muted-foreground">
             <Target className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>No strategic goals yet. Create one to get started!</p>
+            <p>No long term goals yet. Create one to get started!</p>
           </div>
         )}
       </div>

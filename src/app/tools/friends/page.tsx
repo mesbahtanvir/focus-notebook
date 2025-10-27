@@ -14,12 +14,10 @@ import {
   TrendingUp,
   Shield,
   Star,
-  Search,
-  UserX,
-  Filter,
-  ChevronDown
+  UserX
 } from "lucide-react";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
+import { toolThemes, ToolHeader, SearchAndFilters, ToolPageLayout } from "@/components/tools";
 
 export default function FriendsPage() {
   useTrackToolUsage('relationships');
@@ -36,8 +34,9 @@ export default function FriendsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterEnergy, setFilterEnergy] = useState<'all' | EnergyLevel>('all');
   const [filterPriority, setFilterPriority] = useState<'all' | 'high' | 'medium' | 'low'>('all');
-  const [showFilters, setShowFilters] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{show: boolean; id: string; name: string}>({show: false, id: '', name: ''});
+
+  const theme = toolThemes.pink;
 
   // Subscribe to Firebase
   useEffect(() => {
@@ -86,91 +85,38 @@ export default function FriendsPage() {
   };
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto p-4 md:p-6">
-      {/* Header */}
-      <div className="rounded-xl bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-950/20 dark:to-rose-950/20 border-4 border-pink-200 dark:border-pink-800 shadow-xl p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 dark:from-pink-400 dark:to-rose-400 bg-clip-text text-transparent flex items-center gap-2">
-              <Users className="h-7 w-7 text-pink-600 dark:text-pink-400" />
-              Relationships
-            </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Understand your connections • Prioritize aligned relationships • Grow together
-            </p>
-            <div className="flex items-center gap-3 mt-3 text-xs font-medium flex-wrap">
-              <span className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300">
-                <Zap className="h-3 w-3 inline mr-1" />
-                {stats.energizing} energizing
-              </span>
-              <span className="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300">
-                <Star className="h-3 w-3 inline mr-1" />
-                {stats.highPriority} high priority
-              </span>
-              <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">
-                <TrendingUp className="h-3 w-3 inline mr-1" />
-                {stats.highGrowth} growth-aligned
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              setEditingFriend(null);
-              setShowModal(true);
-            }}
-            className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-bold shadow-lg transition-all transform hover:scale-105 active:scale-95"
-          >
-            <Plus className="h-5 w-5" />
-            Add Person
-          </button>
-        </div>
-      </div>
+    <ToolPageLayout>
+      <ToolHeader
+        title="Relationships"
+        emoji="👥"
+        subtitle="Understand your connections • Prioritize aligned relationships • Grow together"
+        showBackButton
+        stats={[
+          { label: 'energizing', value: stats.energizing, variant: 'success' },
+          { label: 'high priority', value: stats.highPriority, variant: 'warning' },
+          { label: 'growth-aligned', value: stats.highGrowth, variant: 'info' }
+        ]}
+        theme={theme}
+        action={{
+          label: 'Add Person',
+          icon: Users,
+          onClick: () => {
+            setEditingFriend(null);
+            setShowModal(true);
+          }
+        }}
+      />
 
-      {/* Search & Filters */}
-      <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              ×
-            </button>
-          )}
-        </div>
-
-        {/* Filter Controls */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors"
-          >
-            <Filter className="h-4 w-4" />
-            Filters
-            <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-          </button>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            Showing {filteredFriends.length} of {friends.length} people
-          </div>
-        </div>
-
-        {/* Filter Options */}
-        {showFilters && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="flex flex-wrap gap-4 pt-4 border-t border-blue-200 dark:border-blue-700"
-          >
+      <SearchAndFilters
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search by name..."
+        totalCount={friends.length}
+        filteredCount={filteredFriends.length}
+        theme={theme}
+        showFilterToggle
+        filterContent={
+          <div className="flex flex-wrap gap-4">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Energy Level</label>
               <select
@@ -197,12 +143,12 @@ export default function FriendsPage() {
                 <option value="low">⚪ Low Priority</option>
               </select>
             </div>
-          </motion.div>
-        )}
-      </div>
+          </div>
+        }
+      />
 
       {/* Privacy Notice */}
-      <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 border-2 border-blue-200 dark:border-blue-800 p-4">
+      <div className="bg-blue-50 dark:bg-blue-950/20 border-2 border-blue-200 dark:border-blue-800 rounded-lg p-4">
         <div className="flex items-start gap-3">
           <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
           <div className="text-sm text-gray-700 dark:text-gray-300">
@@ -278,6 +224,6 @@ export default function FriendsPage() {
         variant="warning"
         icon={<UserX className="h-8 w-8" />}
       />
-    </div>
+    </ToolPageLayout>
   );
 }
