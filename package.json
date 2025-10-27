@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
-    "test:ci": "jest --ci --coverage"
+    "test:ci": "jest --ci --coverage",
+    "lighthouse": "./run-lighthouse.sh",
+    "lighthouse:single": "lhci autorun --collect.url=\"https://focus.yourthoughts.ca\""
   },
   "dependencies": {
     "@capacitor/cli": "^7.4.3",

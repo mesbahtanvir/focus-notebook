@@ -1,0 +1,26 @@
+{
+    "ci": {
+      "collect": {
+        "url": [
+          "https://focus.yourthoughts.ca/login"
+        ],
+        "numberOfRuns": 1
+      },
+      "settings": {
+        "disableStorageReset": true,
+        "chromeFlags": [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage"
+        ]
+      },
+      "assert": {
+        "preset": "lighthouse:recommended"
+      },
+      "upload": {
+        "target": "filesystem",
+        "outputDir": "./lhci_reports"
+      }
+    }
+  }
+
