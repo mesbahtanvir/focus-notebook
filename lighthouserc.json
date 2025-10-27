@@ -1,0 +1,43 @@
+{
+    "ci": {
+      "collect": {
+        "url": [
+          "https://focus.yourthoughts.ca",
+          "https://focus.yourthoughts.ca/login",
+          "https://focus.yourthoughts.ca/dashboard",
+          "https://focus.yourthoughts.ca/profile",
+          "https://focus.yourthoughts.ca/settings",
+          "https://focus.yourthoughts.ca/admin",
+          "https://focus.yourthoughts.ca/learn",
+          "https://focus.yourthoughts.ca/tools",
+          "https://focus.yourthoughts.ca/tools/focus",
+          "https://focus.yourthoughts.ca/tools/tasks",
+          "https://focus.yourthoughts.ca/tools/thoughts",
+          "https://focus.yourthoughts.ca/tools/moodtracker",
+          "https://focus.yourthoughts.ca/tools/cbt",
+          "https://focus.yourthoughts.ca/tools/brainstorming",
+          "https://focus.yourthoughts.ca/tools/projects",
+          "https://focus.yourthoughts.ca/tools/relationships",
+          "https://focus.yourthoughts.ca/tools/friends",
+          "https://focus.yourthoughts.ca/tools/goals",
+          "https://focus.yourthoughts.ca/tools/notes",
+          "https://focus.yourthoughts.ca/tools/errands",
+          "https://focus.yourthoughts.ca/tools/deepreflect",
+          "https://focus.yourthoughts.ca/tools/deepthought"
+        ],
+        "numberOfRuns": 1,
+        "puppeteerScript": "./puppeteer-login.js"
+      },
+      "settings": {
+        "disableStorageReset": true
+      },
+      "assert": {
+        "preset": "lighthouse:recommended"
+      },
+      "upload": {
+        "target": "filesystem",
+        "outputDir": "./lhci_reports"
+      }
+    }
+  }
+  

@@ -11,6 +11,10 @@ out/
 # Testing
 coverage/
 
+# Lighthouse CI
+lhci_reports/
+.lighthouseci/
+
 # Environment variables
 .env*.local
 .env

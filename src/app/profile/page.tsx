@@ -10,9 +10,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import Image from "next/image";
-import { UserIcon, LogOut, Mail, User, Edit, Shield } from "lucide-react";
+import { UserIcon, LogOut, Mail, User, Edit, Shield, AlertTriangle } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { motion } from "framer-motion";
 
 type ProfileForm = {
   fullName: string;
@@ -21,7 +22,7 @@ type ProfileForm = {
 };
 
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isAnonymous } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [userData, setUserData] = useState<ProfileForm>({
@@ -174,21 +175,29 @@ export default function ProfilePage() {
         </CardHeader>
         
         <CardContent className="p-8">
-          {/* Account Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-6 text-center border-2 border-purple-200">
-              <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">✨</div>
-              <div className="text-sm text-gray-600 mt-2 font-medium">Active Member</div>
-            </div>
-            <div className="bg-gradient-to-r from-blue-100 to-cyan-100 rounded-xl p-6 text-center border-2 border-blue-200">
-              <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">☁️</div>
-              <div className="text-sm text-gray-600 mt-2 font-medium">Cloud Sync</div>
-            </div>
-            <div className="bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl p-6 text-center border-2 border-green-200">
-              <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">🔐</div>
-              <div className="text-sm text-gray-600 mt-2 font-medium">Secure</div>
-            </div>
-          </div>
+          {/* Anonymous Account Warning */}
+          {isAnonymous && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-xl"
+            >
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-6 w-6 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-yellow-900 mb-1">
+                    Temporary Account Active
+                  </h3>
+                  <p className="text-xs text-yellow-800 mb-3">
+                    Your data is saved locally but may be lost if you clear your browser or use a different device. 
+                    <Link href="/login" className="underline font-semibold hover:no-underline ml-1">
+                      Create a permanent account
+                    </Link> to keep your data forever.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
           {/* Bio Section */}
           {userData.bio && (
@@ -202,39 +211,6 @@ export default function ProfilePage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Link
-          href="/settings"
-          className="group p-6 rounded-xl bg-gradient-to-r from-orange-100 to-yellow-100 border-2 border-orange-200 hover:shadow-lg transition-all transform hover:scale-105"
-        >
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full">
-              <Edit className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-800">Settings</h3>
-              <p className="text-sm text-gray-600">Manage your preferences</p>
-            </div>
-          </div>
-        </Link>
-
-        <Link
-          href="/dashboard"
-          className="group p-6 rounded-xl bg-gradient-to-r from-blue-100 to-cyan-100 border-2 border-blue-200 hover:shadow-lg transition-all transform hover:scale-105"
-        >
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full">
-              <span className="text-2xl">📊</span>
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-800">Dashboard</h3>
-              <p className="text-sm text-gray-600">View your activity</p>
-            </div>
-          </div>
-        </Link>
-      </div>
     </div>
   );
 }

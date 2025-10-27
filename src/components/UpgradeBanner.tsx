@@ -41,44 +41,25 @@ export function UpgradeBanner() {
       <AnimatePresence>
         {isVisible && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="relative bg-gradient-to-r from-yellow-50 via-orange-50 to-amber-50 dark:from-yellow-950/30 dark:via-orange-950/30 dark:to-amber-950/30 border-b-4 border-yellow-400 dark:border-yellow-600"
+            exit={{ opacity: 0, y: -10 }}
+            className="fixed top-0 left-0 right-0 z-40 bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-lg"
           >
-            <div className="container mx-auto px-4 py-3">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="p-2 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg shadow-md flex-shrink-0">
-                    <AlertTriangle className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      You&apos;re using a temporary account
-                    </p>
-                    <p className="text-xs text-gray-700 dark:text-gray-300">
-                      Sign up to keep your data forever and access it from any device
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleUpgrade}
-                    className="px-4 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    Upgrade
-                  </motion.button>
-                  
+            {/* Account for sidebar width on different screen sizes */}
+            <div className="ml-0 lg:ml-20 xl:ml-64">
+              <div className="px-4 py-2 flex items-center justify-center">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  <p className="text-xs font-medium">
+                    Temporary account active — <button onClick={handleUpgrade} className="underline font-semibold hover:no-underline">Create permanent account</button>
+                  </p>
                   <button
                     onClick={handleDismiss}
-                    className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                    aria-label="Dismiss banner"
+                    className="ml-2 p-1 hover:bg-white/20 rounded transition-colors flex-shrink-0"
+                    aria-label="Dismiss"
                   >
-                    <X className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -169,7 +150,7 @@ function UpgradeModal({ onClose }: { onClose: () => void }) {
                 <Sparkles className="h-6 w-6 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Upgrade Your Account
+                Create Permanent Account
               </h2>
             </div>
             <button
@@ -216,10 +197,10 @@ function UpgradeModal({ onClose }: { onClose: () => void }) {
           )}
 
           {!showEmailForm ? (
-            /* Upgrade Options */
+            /* Create Account Options */
             <div className="space-y-4">
               <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                Choose how to upgrade:
+                Choose how to create your account:
               </p>
 
               {/* Google Upgrade */}
@@ -300,7 +281,7 @@ function UpgradeModal({ onClose }: { onClose: () => void }) {
                 disabled={loading}
                 className="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
               >
-                {loading ? 'Upgrading...' : 'Upgrade Account'}
+                {loading ? 'Creating Account...' : 'Create Account'}
               </motion.button>
             </form>
           )}

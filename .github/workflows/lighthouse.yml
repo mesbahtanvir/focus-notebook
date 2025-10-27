@@ -1,0 +1,66 @@
+name: Lighthouse CI
+
+on:
+  schedule:
+    # Run daily at 3 AM UTC (after potential nightly deployments)
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    # Allow manual triggering
+    # Usage: Go to Actions tab -> Select "Lighthouse CI" -> Click "Run workflow"
+  workflow_run:
+    # Run after the CI/CD Pipeline completes successfully
+    workflows: ["CI/CD Pipeline"]
+    types:
+      - completed
+    branches: [main, develop]
+
+jobs:
+  lighthouse:
+    name: Run Lighthouse Performance Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli
+
+      - name: Wait for Vercel deployment
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run'
+        run: |
+          echo "Waiting 90 seconds for Vercel deployment to complete..."
+          sleep 90
+
+      - name: Run Lighthouse CI
+        run: lhci autorun
+        env:
+          TEST_EMAIL: ${{ secrets.LHCI_TEST_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.LHCI_TEST_PASSWORD }}
+
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports-${{ github.run_id }}
+          path: lhci_reports/
+          retention-days: 30
+
+      - name: Create summary
+        if: always()
+        run: |
+          echo "## 🚀 Lighthouse CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Reports have been uploaded as artifacts." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📊 View the HTML reports in the artifacts section below." >> $GITHUB_STEP_SUMMARY
+

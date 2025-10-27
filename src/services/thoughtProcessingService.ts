@@ -235,13 +235,13 @@ export class ThoughtProcessingService {
     const suggestion = thought.aiSuggestions.find(s => s.id === suggestionId);
     if (!suggestion) return;
 
-    // Execute the suggestion as a regular action
+    // Execute the suggestion as a high-confidence action (99) to ensure it's auto-applied
     await this.executeActions(thoughtId, [
       {
         type: suggestion.type,
         data: suggestion.data,
         reasoning: suggestion.reasoning,
-        confidence: suggestion.confidence,
+        confidence: 99, // Force high confidence to ensure auto-apply
       },
     ]);
 
