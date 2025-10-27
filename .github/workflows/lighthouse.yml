@@ -35,6 +35,18 @@ jobs:
       - name: Install Lighthouse CI
         run: npm install -g @lhci/cli
 
+      - name: Install Chrome dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg
+          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+
+      - name: Verify Chrome installation
+        run: google-chrome --version
+
       - name: Wait for Vercel deployment
         if: github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run'
         run: |
@@ -46,6 +58,8 @@ jobs:
         env:
           TEST_EMAIL: ${{ secrets.LHCI_TEST_EMAIL }}
           TEST_PASSWORD: ${{ secrets.LHCI_TEST_PASSWORD }}
+          CHROME_PATH: /usr/bin/google-chrome
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
 
       - name: Upload Lighthouse reports
         if: always()

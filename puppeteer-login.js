@@ -1,8 +1,28 @@
 // puppeteer-login.js
 const puppeteer = require('puppeteer');
+const { execSync } = require('child_process');
 
 module.exports = async ({ url, options, config }) => {
-  const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });
+  // Determine which Chrome to use
+  let executablePath;
+  if (process.env.CHROME_PATH) {
+    executablePath = process.env.CHROME_PATH;
+  } else {
+    // Try to find Chrome in common locations
+    try {
+      execSync('which google-chrome', { stdio: 'ignore' });
+      executablePath = '/usr/bin/google-chrome';
+    } catch (e) {
+      // Use Puppeteer's bundled Chromium (default)
+      executablePath = null;
+    }
+  }
+
+  const browser = await puppeteer.launch({ 
+    headless: 'new', 
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    executablePath: executablePath
+  });
   const page = await browser.newPage();
 
   // 1) Go to login page
@@ -34,7 +54,13 @@ module.exports = async ({ url, options, config }) => {
   // 7) Hand off the *authenticated* browser to Lighthouse
   const wsEndpoint = browser.wsEndpoint();
   // LHCI will connect to this running instance under the hood
-  process.env.CHROME_PATH = ''; // ensure Puppeteer Chromium is used
+  // Use system Chrome if available, otherwise let Lighthouse CI handle it
+  if (process.env.CHROME_PATH) {
+    // Already set by the environment (CI)
+  } else {
+    // Use Puppeteer's bundled Chromium for local development
+    process.env.CHROME_PATH = '';
+  }
   process.env.LHCI_REMOTE_DEBUGGING_ADDRESS = new URL(wsEndpoint).host;
 
   // Keep browser open while LHCI collects pages, it will close later
