@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import SummaryPanel from "@/components/SummaryPanel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, TrendingUp, Clock, Zap, Target, Smile, Calendar } from "lucide-react";
+import Link from "next/link";
 import { useTasks } from "@/store/useTasks";
 import { useMoods } from "@/store/useMoods";
 import { useFocus } from "@/store/useFocus";
@@ -195,6 +196,37 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto py-6 md:py-8 px-4 md:px-0 max-w-7xl">
+      {/* Dashboard Selection */}
+      <div className="mb-6">
+        <Card className="border-4 border-indigo-200 shadow-xl bg-gradient-to-br from-white to-indigo-50 dark:from-gray-900 dark:to-indigo-950">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold flex items-center gap-2">
+              <BarChart3 className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+              Select Dashboard
+            </CardTitle>
+            <CardDescription>View your analytics or progress tracking</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <DashboardLink
+                title="Analytics Dashboard"
+                description="View charts, trends, and detailed analytics"
+                icon={<TrendingUp className="h-8 w-8" />}
+                href="/dashboard"
+                gradient="from-blue-500 to-cyan-500"
+              />
+              <DashboardLink
+                title="Progress Dashboard"
+                description="Track your goals, projects, and task progress"
+                icon={<Target className="h-8 w-8" />}
+                href="/dashboard/progress"
+                gradient="from-green-500 to-emerald-500"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Sticky Period Selector */}
       <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 pb-4 mb-2">
         <div className="flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 shadow-md">

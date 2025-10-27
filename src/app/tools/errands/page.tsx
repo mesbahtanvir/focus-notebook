@@ -44,6 +44,10 @@ export default function ErrandsPage() {
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
       {/* Header */}
       <div className="rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border-4 border-orange-200 dark:border-orange-800 shadow-xl p-6">
+        <Link href="/tools" className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-2 transition-colors">
+          <ChevronDown className="h-4 w-4 -rotate-90" />
+          Back to Tools
+        </Link>
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 dark:from-orange-400 dark:to-amber-400 bg-clip-text text-transparent flex items-center gap-2">

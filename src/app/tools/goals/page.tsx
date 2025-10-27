@@ -106,12 +106,12 @@ export default function GoalsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">🎯 Goals</h1>
-            <div className="flex items-center gap-3 mt-2 text-sm font-medium">
-              <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">{stats.active} active</span>
-              <span className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300">{stats.completed} done</span>
-              <span className="px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300">{stats.shortTerm} tactical</span>
-              <span className="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300">{stats.longTerm} strategic</span>
-            </div>
+                   <div className="flex items-center gap-3 mt-2 text-sm font-medium">
+                     <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">{stats.active} Active</span>
+                     <span className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300">{stats.completed} Done</span>
+                     <span className="px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300">{stats.shortTerm} Short Term</span>
+                     <span className="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300">{stats.longTerm} Long Term</span>
+                   </div>
           </div>
         </div>
       </div>

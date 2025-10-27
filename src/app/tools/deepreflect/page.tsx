@@ -109,6 +109,7 @@ export default function DeepThoughtPage() {
       <ToolHeader
         title="Deep Reflection"
         subtitle="Profound reflections and philosophical explorations for deeper understanding"
+        showBackButton={true}
         stats={[
           { label: 'total', value: reflectionStats.total },
           { label: 'categorized', value: reflectionStats.categorized, variant: 'info' },

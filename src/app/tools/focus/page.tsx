@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useTasks } from "@/store/useTasks";
 import { useFocus, selectBalancedTasks } from "@/store/useFocus";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Zap, Clock, Target, History, Star, TrendingUp, Brain, Rocket, Heart, Briefcase, X } from "lucide-react";
+import { Play, Zap, Clock, Target, History, Star, TrendingUp, Brain, Rocket, Heart, Briefcase, X, Trash2 } from "lucide-react";
 import { FocusSession } from "@/components/FocusSession";
 import { FocusStatistics } from "@/components/FocusStatistics";
 import { FocusSessionDetailModal } from "@/components/FocusSessionDetailModal";
@@ -28,6 +28,7 @@ function FocusPageContent() {
   const subscribe = useFocus((s) => s.subscribe);
   const loadActiveSession = useFocus((s) => s.loadActiveSession);
   const clearCompletedSession = useFocus((s) => s.clearCompletedSession);
+  const deleteSession = useFocus((s) => s.deleteSession);
 
   // Get duration from URL or default to 60 minutes
   const urlDuration = searchParams.get('duration');
@@ -456,47 +457,61 @@ function FocusPageContent() {
                       const completionRate = session.tasks?.length ? (completed / session.tasks.length) * 100 : 0;
                       
                       return (
-                        <motion.button
+                        <motion.div
                           key={session.id}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
-                          onClick={() => setSelectedSession(session)}
-                          className="w-full text-left p-4 rounded-lg bg-accent/50 dark:bg-gray-700/50 hover:bg-accent dark:hover:bg-gray-700 transition-colors space-y-2 cursor-pointer"
+                          className="flex items-start gap-2"
                         >
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">
-                              {formatDateTime(session.startTime)}
-                            </span>
-                            {session.rating && (
+                          <button
+                            onClick={() => setSelectedSession(session)}
+                            className="flex-1 text-left p-4 rounded-lg bg-accent/50 dark:bg-gray-700/50 hover:bg-accent dark:hover:bg-gray-700 transition-colors space-y-2 cursor-pointer"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">
+                                {formatDateTime(session.startTime)}
+                              </span>
+                              {session.rating && (
+                                <div className="flex items-center gap-1">
+                                  <Star className="h-4 w-4 fill-gray-700 text-gray-700 dark:fill-gray-300 dark:text-gray-300" />
+                                  <span className="text-sm font-medium text-foreground">{session.rating}/5</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-4 text-sm">
                               <div className="flex items-center gap-1">
-                                <Star className="h-4 w-4 fill-gray-700 text-gray-700 dark:fill-gray-300 dark:text-gray-300" />
-                                <span className="text-sm font-medium text-foreground">{session.rating}/5</span>
+                                <Clock className="h-4 w-4 text-purple-500 dark:text-purple-400" />
+                                <span className="font-medium text-foreground">
+                                  {Math.floor(totalTime / 60)}m
+                                </span>
                               </div>
+                              <div className="flex items-center gap-1">
+                                <TrendingUp className="h-4 w-4 text-green-500 dark:text-green-400" />
+                                <span className="font-medium text-foreground">
+                                  {Math.round(completionRate)}%
+                                </span>
+                              </div>
+                              <span className="text-muted-foreground">
+                                {completed}/{session.tasks?.length || 0} tasks
+                              </span>
+                            </div>
+                            {session.feedback && (
+                              <p className="text-sm text-muted-foreground italic line-clamp-2">
+                                &quot;{session.feedback}&quot;
+                              </p>
                             )}
-                          </div>
-                          <div className="flex items-center gap-4 text-sm">
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-4 w-4 text-purple-500 dark:text-purple-400" />
-                              <span className="font-medium text-foreground">
-                                {Math.floor(totalTime / 60)}m
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <TrendingUp className="h-4 w-4 text-green-500 dark:text-green-400" />
-                              <span className="font-medium text-foreground">
-                                {Math.round(completionRate)}%
-                              </span>
-                            </div>
-                            <span className="text-muted-foreground">
-                              {completed}/{session.tasks?.length || 0} tasks
-                            </span>
-                          </div>
-                          {session.feedback && (
-                            <p className="text-sm text-muted-foreground italic line-clamp-2">
-                              &quot;{session.feedback}&quot;
-                            </p>
-                          )}
-                        </motion.button>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteSession(session.id);
+                            }}
+                            className="p-2 mt-4 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-colors group"
+                            title="Delete session"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400 group-hover:text-red-700 dark:group-hover:text-red-500" />
+                          </button>
+                        </motion.div>
                       );
                     })}
                   </div>

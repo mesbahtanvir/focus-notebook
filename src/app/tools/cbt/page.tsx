@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useThoughts, Thought } from "@/store/useThoughts";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, CheckCircle, ArrowLeft, Lightbulb, AlertCircle, TrendingUp, Heart, Plus, Search, Filter, ChevronDown } from "lucide-react";
+import { Brain, CheckCircle, ArrowLeft, Lightbulb, AlertCircle, TrendingUp, Heart, Plus, Search, Filter, ChevronDown, Trash2 } from "lucide-react";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import {
@@ -57,6 +57,19 @@ export default function CBTPage() {
     setSelectedThought(null);
   };
 
+  const handleDeleteProcessedThought = async (thoughtId: string) => {
+    const thought = thoughts.find(t => t.id === thoughtId);
+    if (!thought) return;
+
+    // Remove cbt-processed tag and clear cbtAnalysis
+    const updatedTags = (thought.tags || []).filter(tag => tag !== 'cbt-processed');
+    
+    await updateThought(thoughtId, {
+      cbtAnalysis: undefined,
+      tags: updatedTags,
+    });
+  };
+
   const cbtStats = useMemo(() => {
     return calculateCBTStats(thoughts, unprocessedThoughts.length);
   }, [thoughts, unprocessedThoughts.length]);
@@ -77,6 +90,7 @@ export default function CBTPage() {
       <ToolHeader
         title="CBT Processing"
         subtitle="Cognitive Behavioral Therapy - Process your thoughts through the CBT framework"
+        showBackButton={true}
         stats={[
           { label: 'to process', value: cbtStats.toProcess, variant: 'warning' },
           { label: 'processed', value: cbtStats.processed, variant: 'success' },
@@ -214,20 +228,27 @@ export default function CBTPage() {
                   className="rounded-xl p-4 md:p-6 bg-white dark:bg-gray-800 border-2 border-green-200 dark:border-green-800 shadow-md hover:shadow-lg transition-all"
                 >
                   <div className="space-y-4">
-                    {/* Header */}
-                    <div className="flex items-start gap-4 pb-4 border-b border-green-100 dark:border-green-800">
-                      <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex-shrink-0">
-                        <CheckCircle className="h-5 w-5 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
-                          {thought.text}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Processed: {formatDetailedDate(thought.cbtAnalysis?.analyzedAt)}
-                        </p>
-                      </div>
+                  {/* Header */}
+                  <div className="flex items-start gap-4 pb-4 border-b border-green-100 dark:border-green-800">
+                    <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex-shrink-0">
+                      <CheckCircle className="h-5 w-5 text-white" />
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
+                        {thought.text}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Processed: {formatDetailedDate(thought.cbtAnalysis?.analyzedAt)}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteProcessedThought(thought.id)}
+                      className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-colors group"
+                      title="Delete CBT analysis"
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400 group-hover:text-red-700 dark:group-hover:text-red-500" />
+                    </button>
+                  </div>
 
                     {/* CBT Analysis Summary */}
                     {thought.cbtAnalysis && (

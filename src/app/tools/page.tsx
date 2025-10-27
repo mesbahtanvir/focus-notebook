@@ -41,7 +41,7 @@ const TOOLS = [
   },
   {
     key: "moodtracker",
-    title: "Mood Tracker",
+    title: "Mood",
     description: "Track your mood (1–10) with optional notes and history.",
     icon: Smile,
     emoji: "😊",
@@ -161,20 +161,22 @@ export default function ToolsPage() {
   }, [searchQuery]);
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto py-4 space-y-3">
       {/* Header Section */}
-      <div className="text-center space-y-4">
-        <div className="flex justify-center">
-          <div className="p-4 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full">
-            <Sparkles className="h-12 w-12 text-purple-600" />
+      <div className="text-center space-y-2">
+        <div className="flex justify-center items-center gap-3">
+          <div className="p-3 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full">
+            <Sparkles className="h-8 w-8 text-purple-600" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
+              🛠️ Your Toolkit
+            </h1>
+            <p className="text-gray-600 text-sm">
+              Explore tools to help you think, plan, and grow.
+            </p>
           </div>
         </div>
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
-          🛠️ Your Toolkit
-        </h1>
-        <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-          Explore tools to help you think, plan, and grow.
-        </p>
       </div>
 
       {/* Search Bar */}

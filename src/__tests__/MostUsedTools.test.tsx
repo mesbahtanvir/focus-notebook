@@ -80,7 +80,7 @@ describe('MostUsedTools Component', () => {
     expect(screen.getByText('30 clicks')).toBeInTheDocument();
   });
 
-  it('displays rank badges for tools', () => {
+  it('displays tools without rank badges', () => {
     mockGetMostUsedTools.mockReturnValue([
       { toolName: 'tasks', clickCount: 50, lastAccessed: '2025-01-01T00:00:00.000Z' },
       { toolName: 'thoughts', clickCount: 30, lastAccessed: '2025-01-01T00:00:00.000Z' },
@@ -89,9 +89,15 @@ describe('MostUsedTools Component', () => {
 
     render(<MostUsedTools />);
 
-    expect(screen.getByText('1')).toBeInTheDocument(); // Rank 1
-    expect(screen.getByText('2')).toBeInTheDocument(); // Rank 2
-    expect(screen.getByText('3')).toBeInTheDocument(); // Rank 3
+    // Verify tools are displayed without rank badges
+    expect(screen.getByText('Tasks')).toBeInTheDocument();
+    expect(screen.getByText('Thoughts')).toBeInTheDocument();
+    expect(screen.getByText('Goals')).toBeInTheDocument();
+    
+    // Verify rank numbers are NOT displayed
+    expect(screen.queryByText('1')).not.toBeInTheDocument();
+    expect(screen.queryByText('2')).not.toBeInTheDocument();
+    expect(screen.queryByText('3')).not.toBeInTheDocument();
   });
 
   it('subscribes to tool usage data when user is logged in', () => {

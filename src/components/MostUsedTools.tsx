@@ -60,7 +60,7 @@ const toolLabels: Record<ToolName, string> = {
   brainstorming: "Brainstorming",
   notes: "Notes",
   relationships: "People",
-  moodtracker: "Mood Tracker",
+  moodtracker: "Mood",
   cbt: "CBT",
   errands: "Errands",
   deepreflect: "Deep Reflect",
@@ -110,11 +110,6 @@ export function MostUsedTools() {
                 transition={{ delay: index * 0.1 }}
                 className="relative p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600 transition-all hover:shadow-lg group"
               >
-                {/* Rank Badge */}
-                <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white text-xs font-bold flex items-center justify-center shadow-md">
-                  {index + 1}
-                </div>
-
                 {/* Icon */}
                 <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
                   <Icon className="h-6 w-6 text-white" />

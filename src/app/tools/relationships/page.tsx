@@ -19,6 +19,7 @@ import {
   Filter,
   ChevronDown
 } from "lucide-react";
+import Link from "next/link";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 
 export default function FriendsPage() {
@@ -91,6 +92,10 @@ export default function FriendsPage() {
     <div className="space-y-4 max-w-7xl mx-auto p-4 md:p-6">
       {/* Header */}
       <div className="rounded-xl bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-950/20 dark:to-rose-950/20 border-4 border-pink-200 dark:border-pink-800 shadow-xl p-6">
+        <Link href="/tools" className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-2 transition-colors">
+          <ChevronDown className="h-4 w-4 -rotate-90" />
+          Back to Tools
+        </Link>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex-1">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 dark:from-pink-400 dark:to-rose-400 bg-clip-text text-transparent flex items-center gap-2">

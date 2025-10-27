@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { Task } from './useTasks'
 import { collection, query, orderBy, where, getDocs } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebaseClient'
-import { createAt, updateAt } from '@/lib/data/gateway'
+import { createAt, updateAt, deleteAt } from '@/lib/data/gateway'
 import { subscribeCol } from '@/lib/data/subscribe'
 
 export interface FocusTask {
@@ -53,6 +53,7 @@ type State = {
   startSession: (tasks: Task[], duration: number) => Promise<void>
   endSession: (feedback?: string, rating?: number) => Promise<void>
   saveSessionFeedback: (feedback: string, rating: number) => Promise<void>
+  deleteSession: (sessionId: string) => Promise<void>
   clearCompletedSession: () => void
   loadSessions: () => Promise<void>
   loadActiveSession: () => Promise<void>
@@ -319,6 +320,23 @@ export const useFocus = create<State>((set, get) => ({
   
   clearCompletedSession: () => {
     set({ completedSession: null })
+  },
+  
+  deleteSession: async (sessionId: string) => {
+    const userId = auth.currentUser?.uid
+    if (!userId) throw new Error('Not authenticated')
+    
+    try {
+      await deleteAt(`users/${userId}/focusSessions/${sessionId}`)
+      
+      // Remove from local state
+      set((state) => ({
+        sessions: state.sessions.filter(s => s.id !== sessionId),
+      }))
+    } catch (error) {
+      console.error('Failed to delete session:', error)
+      throw error
+    }
   },
   
   loadSessions: async () => {

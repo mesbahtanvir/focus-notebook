@@ -1,6 +1,7 @@
 "use client";
 
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 interface Stat {
   label: string;
@@ -19,12 +20,22 @@ interface ToolHeaderProps {
   stats?: Stat[];
   action?: Action;
   subtitle?: string;
+  showBackButton?: boolean;
 }
 
-export function ToolHeader({ title, stats, action, subtitle }: ToolHeaderProps) {
+export function ToolHeader({ title, stats, action, subtitle, showBackButton }: ToolHeaderProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 shadow-sm">
       <div className="flex-1">
+        {showBackButton && (
+          <Link
+            href="/tools"
+            className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-2 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Tools
+          </Link>
+        )}
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{title}</h1>
         
         {subtitle && (

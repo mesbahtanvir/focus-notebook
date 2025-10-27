@@ -270,10 +270,10 @@ export function TaskInput({ onClose, onTaskCreated, defaultProjectId }: TaskInpu
               <option value="daily">📆 Daily</option>
               <option value="workweek">💼 Work Week</option>
               <option value="weekly">📅 Weekly</option>
-              <option value="biweekly">📆 Bi-weekly (Every 2 weeks)</option>
+              <option value="biweekly">📆 Bi-weekly</option>
               <option value="monthly">🗓️ Monthly</option>
-              <option value="bimonthly">🗓️ Bi-monthly (Every 2 months)</option>
-              <option value="halfyearly">📅 Half-yearly (Every 6 months)</option>
+              <option value="bimonthly">🗓️ Bi-monthly</option>
+              <option value="halfyearly">📅 Half-yearly</option>
               <option value="yearly">📆 Yearly</option>
             </select>
             {recurrenceType !== 'none' && (

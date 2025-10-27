@@ -203,6 +203,7 @@ function ThoughtsPageContent() {
     <ToolPageLayout>
       <ToolHeader
         title="Thoughts"
+        showBackButton={true}
         stats={[
           { label: 'total', value: thoughtStats.total },
           { label: 'unprocessed', value: thoughtStats.unprocessed, variant: 'warning' },
