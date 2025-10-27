@@ -30,8 +30,11 @@ import {
   ToolContent,
   ToolList,
   ToolCard,
-  EmptyState
+  EmptyState,
+  ToolHeader,
+  SearchAndFilters
 } from "@/components/tools";
+import { toolThemes } from "@/components/tools/themes";
 
 function ThoughtsPageContent() {
   useTrackToolUsage('thoughts');
@@ -183,100 +186,45 @@ function ThoughtsPageContent() {
 
 
 
+  const theme = toolThemes.purple;
+
   return (
     <ToolPageLayout>
-      {/* Header with inline stats */}
-      <div className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-4 border-purple-200 dark:border-purple-800 shadow-xl p-6 mx-4 mt-4 mb-4">
-        <div className="flex items-start gap-3">
-          {/* Back Button */}
-          <button
-            onClick={() => router.back()}
-            className="group flex items-center justify-center p-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-purple-300 dark:border-purple-700 hover:border-purple-500 dark:hover:border-purple-500 transition-all transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg shrink-0"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="h-5 w-5 text-purple-600 dark:text-purple-400 group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors" />
-          </button>
+      <ToolHeader
+        title="Thoughts"
+        emoji="💭"
+        showBackButton
+        stats={[
+          { label: 'total', value: thoughtStats.total, variant: 'info' },
+          { label: 'unprocessed', value: thoughtStats.unprocessed, variant: 'warning' },
+          { label: 'analyzed', value: thoughtStats.analyzed, variant: 'success' },
+        ]}
+        theme={theme}
+      />
 
-          {/* Title and Stats */}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">💭 Thoughts</h1>
-            <div className="flex items-center gap-3 mt-2 text-sm font-medium flex-wrap">
-              <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">{thoughtStats.total} total</span>
-              <span className="px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300">{thoughtStats.unprocessed} unprocessed</span>
-              <span className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300">{thoughtStats.analyzed} analyzed</span>
-              {thoughtStats.awaitingApproval > 0 && (
-                <span className="px-3 py-1 rounded-full bg-yellow-100 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-300 flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  {thoughtStats.awaitingApproval} await approval
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Search & Filters */}
-      <div className="px-4 py-3 mb-4">
-        <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search thoughts..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                ×
-              </button>
-            )}
-          </div>
-
-          {/* Filter Toggle */}
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+      <SearchAndFilters
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Search thoughts..."
+        totalCount={thoughts.length}
+        filteredCount={filteredThoughts.length}
+        showFilterToggle
+        filterContent={
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value as 'all' | 'processed' | 'unprocessed')}
+              className="input py-1 text-sm min-w-[150px]"
             >
-              <Filter className="h-4 w-4" />
-              Filters
-              <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-            </button>
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              Showing {filteredThoughts.length} of {thoughts.length} thoughts
-            </div>
+              <option value="all">All Thoughts</option>
+              <option value="processed">Processed</option>
+              <option value="unprocessed">Unprocessed</option>
+            </select>
           </div>
-
-          {/* Filters */}
-          {showFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="flex flex-wrap gap-4 pt-4 border-t border-blue-200 dark:border-blue-700"
-            >
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-                <select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value as 'all' | 'processed' | 'unprocessed')}
-                  className="input py-1 text-sm min-w-[150px]"
-                >
-                  <option value="all">All Thoughts</option>
-                  <option value="processed">Processed</option>
-                  <option value="unprocessed">Unprocessed</option>
-                </select>
-              </div>
-            </motion.div>
-          )}
-        </div>
-      </div>
+        }
+        theme={theme}
+      />
 
       <ToolContent>
         {filteredThoughts.length === 0 ? (

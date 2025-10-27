@@ -7,28 +7,22 @@ import { useThoughts } from "@/store/useThoughts";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
-  Search,
-  Filter,
   Calendar,
   Tag,
-  ChevronDown,
   ChevronRight,
-  File,
-  Folder,
-  BookOpen,
+  ChevronDown,
   Edit3,
-  Save,
   Check,
-  ArrowRight,
   ExternalLink,
-  ArrowLeft
+  BookOpen,
+  Loader2
 } from "lucide-react";
 import { FormattedNotes, getNotesPreview } from "@/lib/formatNotes";
 import Link from "next/link";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
-import { Loader2 } from "lucide-react";
+import { toolThemes, ToolHeader, SearchAndFilters, ToolPageLayout } from "@/components/tools";
 
 type FilterType = 'all';
 
@@ -143,110 +137,30 @@ export default function DocumentsPage() {
     };
   }, []);
 
+  const theme = toolThemes.indigo;
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
-      {/* Header */}
-      <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 border-4 border-indigo-200 dark:border-indigo-800 shadow-xl p-6">
-        <div className="flex items-start gap-3">
-          {/* Back Button */}
-          <button
-            onClick={() => router.back()}
-            className="group flex items-center justify-center p-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-indigo-300 dark:border-indigo-700 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg shrink-0"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="h-5 w-5 text-indigo-600 dark:text-indigo-400 group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors" />
-          </button>
+    <ToolPageLayout>
+      <ToolHeader
+        title="Notes"
+        emoji="📝"
+        subtitle="All your notes and documentation"
+        showBackButton
+        stats={[
+          { label: 'notes', value: stats.total },
+          { label: 'words', value: stats.totalWords.toLocaleString() }
+        ]}
+        theme={theme}
+      />
 
-          {/* Title and Description */}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">📝 Notes</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm">
-              All your notes and documentation
-            </p>
-          </div>
-
-          {/* Stats */}
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-900 dark:to-purple-900 border-2 border-indigo-300 dark:border-indigo-700">
-              <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{stats.total}</div>
-              <div className="text-xs text-indigo-700 dark:text-indigo-300 font-medium">Notes</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-2">
-        <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6">
-          <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Total Notes</div>
-          <div className="text-3xl font-bold mt-2 bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">{stats.total}</div>
-        </div>
-        <div className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-4 border-purple-200 dark:border-purple-800 shadow-xl p-6">
-          <div className="text-sm font-medium text-purple-700 dark:text-purple-300">Total Words</div>
-          <div className="text-3xl font-bold mt-2 bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
-            {stats.totalWords.toLocaleString()}
-          </div>
-        </div>
-      </div>
-
-      {/* Search & Filters */}
-      <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search notes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              ×
-            </button>
-          )}
-        </div>
-
-        {/* Filter Controls */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-          >
-            <Filter className="h-4 w-4" />
-            Filters
-            <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-          </button>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            Showing {filteredDocuments.length} of {tasksWithNotes.length} notes
-          </div>
-        </div>
-
-        {/* Filter Options */}
-        {showFilters && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="flex flex-wrap gap-4 pt-4 border-t border-blue-200 dark:border-blue-700"
-          >
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
-              <select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value as FilterType)}
-                className="input py-1 text-sm min-w-[150px]"
-              >
-                <option value="all">All Categories</option>
-              </select>
-            </div>
-          </motion.div>
-        )}
-      </div>
+      <SearchAndFilters
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search notes..."
+        totalCount={tasksWithNotes.length}
+        filteredCount={filteredDocuments.length}
+        theme={theme}
+      />
 
       {/* Documents List */}
       <div className="space-y-4">
@@ -424,7 +338,7 @@ export default function DocumentsPage() {
         title="New Note"
         icon={<Edit3 className="h-6 w-6" />}
       />
-    </div>
+    </ToolPageLayout>
   );
 }
 

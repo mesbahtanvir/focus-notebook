@@ -15,7 +15,7 @@ export function ToolPageLayout({ children, maxWidth = 'default' }: ToolPageLayou
   }[maxWidth];
 
   return (
-    <div className={`space-y-4 ${widthClass} mx-auto p-4 md:p-6`}>
+    <div className={`space-y-4 ${widthClass} mx-auto px-4 py-2 md:px-6 md:py-4`}>
       {children}
     </div>
   );

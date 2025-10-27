@@ -118,7 +118,6 @@ export default function DeepThoughtPage() {
       />
 
       {/* Search & Filters Section */}
-      <div className="px-4 py-3">
         <div className="rounded-xl bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20 border-4 border-teal-200 dark:border-teal-800 shadow-xl p-6 space-y-4">
           {/* Search Bar */}
           <div className="relative">
@@ -181,7 +180,6 @@ export default function DeepThoughtPage() {
             </motion.div>
           )}
         </div>
-      </div>
 
       {/* Reflections List */}
       <ToolContent>

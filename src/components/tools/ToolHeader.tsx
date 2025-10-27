@@ -1,7 +1,9 @@
 "use client";
 
-import { LucideIcon, ArrowLeft, ReactNode } from "lucide-react";
+import { LucideIcon, ArrowLeft } from "lucide-react";
+import { ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { ToolTheme } from "./themes";
 
 interface Stat {
   label: string;
@@ -29,6 +31,7 @@ interface ToolHeaderProps {
   borderColor?: string;
   textGradient?: string;
   backButtonColor?: string;
+  theme?: ToolTheme;
 }
 
 export function ToolHeader({
@@ -40,13 +43,20 @@ export function ToolHeader({
   actionElement,
   subtitle,
   showBackButton = false,
-  gradientFrom = "from-white to-gray-50",
-  gradientTo = "to-gray-50",
-  borderColor = "border-gray-200",
-  textGradient = "from-gray-900 to-gray-700",
-  backButtonColor = "gray"
+  gradientFrom,
+  gradientTo,
+  borderColor,
+  textGradient,
+  backButtonColor,
+  theme
 }: ToolHeaderProps) {
   const router = useRouter();
+
+  // Apply theme if provided, otherwise use custom or default values
+  const headerBg = gradientFrom || theme?.headerBg || "from-white to-gray-50";
+  const headerBorder = borderColor || theme?.headerBorder || "border-gray-200";
+  const headerText = textGradient || theme?.headerText || "from-gray-900 to-gray-700";
+  const buttonColor = backButtonColor || theme?.backButtonColor || "gray";
 
   const getBackButtonColorClasses = () => {
     const colors = {
@@ -59,11 +69,11 @@ export function ToolHeader({
       yellow: "border-yellow-300 dark:border-yellow-700 hover:border-yellow-500 dark:hover:border-yellow-500 text-yellow-600 dark:text-yellow-400 group-hover:text-yellow-700 dark:group-hover:text-yellow-300",
       indigo: "border-indigo-300 dark:border-indigo-700 hover:border-indigo-500 dark:hover:border-indigo-500 text-indigo-600 dark:text-indigo-400 group-hover:text-indigo-700 dark:group-hover:text-indigo-300",
     };
-    return colors[backButtonColor as keyof typeof colors] || colors.gray;
+    return colors[buttonColor as keyof typeof colors] || colors.gray;
   };
 
   return (
-    <div className={`rounded-xl bg-gradient-to-br ${gradientFrom} ${gradientTo} dark:from-gray-900 dark:to-gray-800 border-4 ${borderColor} dark:border-gray-800 shadow-xl p-6`}>
+    <div className={`rounded-xl bg-gradient-to-br ${headerBg} border-4 ${headerBorder} dark:border-gray-800 shadow-xl p-6 mx-4 md:mx-0`}>
       <div className="flex items-start gap-3">
         {/* Back Button */}
         {showBackButton && (
@@ -78,7 +88,7 @@ export function ToolHeader({
 
         {/* Title and Content */}
         <div className="flex-1 min-w-0">
-          <h1 className={`text-2xl font-bold bg-gradient-to-r ${textGradient} dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent flex items-center gap-2`}>
+          <h1 className={`text-2xl font-bold bg-gradient-to-r ${headerText} dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent flex items-center gap-2`}>
             {Icon && <Icon className="h-6 w-6" style={{ color: 'inherit' }} />}
             {emoji} {title}
           </h1>

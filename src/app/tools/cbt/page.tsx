@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Brain, CheckCircle, ArrowLeft, Lightbulb, AlertCircle, TrendingUp, Heart, Plus, Search, Filter, ChevronDown, Trash2 } from "lucide-react";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
+import { toolThemes, SearchAndFilters } from "@/components/tools";
 import {
   ToolPageLayout,
   ToolHeader,
@@ -84,6 +85,8 @@ export default function CBTPage() {
     );
   }
 
+  const theme = toolThemes.purple;
+
   return (
     <>
     <ToolPageLayout>
@@ -96,61 +99,16 @@ export default function CBTPage() {
           { label: 'processed', value: cbtStats.processed, variant: 'success' },
           { label: 'total', value: cbtStats.total }
         ]}
+        theme={theme}
       />
 
-      {/* Search & Filters */}
-      <div className="px-4 py-3 mb-4">
-        <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search CBT thoughts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              ×
-            </button>
-          )}
-        </div>
-
-        {/* Filter Controls */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
-          >
-            <Filter className="h-4 w-4" />
-            Filters
-            <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-          </button>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            Showing {unprocessedThoughts.length + processedThoughts.length} CBT thoughts
-          </div>
-        </div>
-
-        {/* Filter Options (placeholder) */}
-        {showFilters && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="flex flex-wrap gap-4 pt-4 border-t border-blue-200 dark:border-blue-700"
-          >
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              No additional filters available
-            </div>
-          </motion.div>
-        )}
-        </div>
-      </div>
+      <SearchAndFilters
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search CBT thoughts..."
+        totalCount={unprocessedThoughts.length + processedThoughts.length}
+        theme={theme}
+      />
 
       <ToolContent>
         {unprocessedThoughts.length === 0 ? (

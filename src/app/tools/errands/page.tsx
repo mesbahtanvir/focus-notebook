@@ -2,26 +2,22 @@
 
 import { useTasks } from "@/store/useTasks";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, MapPin, Car, Package, CheckCircle2, Circle, Trash2, Plus, Search, Filter, ChevronDown, ArrowLeft } from "lucide-react";
+import { MapPin, Car, Package, CheckCircle2, Circle, Trash2, Plus } from "lucide-react";
 import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { getNotesPreview } from "@/lib/formatNotes";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
+import { toolThemes, ToolHeader, SearchAndFilters, ToolPageLayout } from "@/components/tools";
 
 export default function ErrandsPage() {
   useTrackToolUsage('errands');
 
-  const router = useRouter();
   const tasks = useTasks((s) => s.tasks);
   const toggle = useTasks((s) => s.toggle);
   const deleteTask = useTasks((s) => s.deleteTask);
   const updateTask = useTasks((s) => s.updateTask);
 
-  const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
 
   // Filter for non-focus-eligible tasks (errands)
   const errandTasks = tasks.filter(t => t.focusEligible === false);
@@ -43,110 +39,32 @@ export default function ErrandsPage() {
     await updateTask(taskId, { focusEligible: !currentValue });
   };
 
+  const theme = toolThemes.orange;
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
-      {/* Header */}
-      <div className="rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border-4 border-orange-200 dark:border-orange-800 shadow-xl p-6">
-        <div className="flex items-start gap-3">
-          {/* Back Button */}
-          <button
-            onClick={() => router.back()}
-            className="group flex items-center justify-center p-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-orange-300 dark:border-orange-700 hover:border-orange-500 dark:hover:border-orange-500 transition-all transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg shrink-0"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="h-5 w-5 text-orange-600 dark:text-orange-400 group-hover:text-orange-700 dark:group-hover:text-orange-300 transition-colors" />
-          </button>
+    <ToolPageLayout>
+      <ToolHeader
+        title="Errands & Out-of-Office Tasks"
+        emoji="🛍️"
+        subtitle="Tasks that need to be done outside or away from your desk"
+        showBackButton
+        stats={[
+          { label: 'active', value: activeErrands.length, variant: 'warning' },
+          { label: 'completed', value: completedErrands.length, variant: 'success' }
+        ]}
+        theme={theme}
+      />
 
-          {/* Title and Description */}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 dark:from-orange-400 dark:to-amber-400 bg-clip-text text-transparent flex items-center gap-2">
-              <ShoppingBag className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-              🛍️ Errands & Out-of-Office Tasks
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm">
-              Tasks that need to be done outside or away from your desk
-            </p>
-          </div>
-        </div>
-      </div>
+      <SearchAndFilters
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search errands..."
+        totalCount={errandTasks.length}
+        filteredCount={activeErrands.length + completedErrands.length}
+        theme={theme}
+      />
 
-      {/* Search & Filters */}
-      <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search errands..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              ×
-            </button>
-          )}
-        </div>
-
-        {/* Filter Controls */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
-          >
-            <Filter className="h-4 w-4" />
-            Filters
-            <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-          </button>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            {activeErrands.length + completedErrands.length} total errands
-          </div>
-        </div>
-
-        {/* Filter Options (placeholder for future filters) */}
-        {showFilters && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="flex flex-wrap gap-4 pt-4 border-t border-blue-200 dark:border-blue-700"
-          >
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              No additional filters available
-            </div>
-          </motion.div>
-        )}
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-xl bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 border-4 border-orange-200 dark:border-orange-800 shadow-xl p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-orange-100 dark:bg-orange-900/50 rounded-xl">
-              <MapPin className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-            </div>
-            <div>
-              <div className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400 bg-clip-text text-transparent">{activeErrands.length}</div>
-              <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Errands</div>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-4 border-green-200 dark:border-green-800 shadow-xl p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-xl">
-              <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
-            </div>
-            <div>
-              <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">{completedErrands.length}</div>
-              <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Completed</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Main Content */}
 
       {/* Active Errands */}
       <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
@@ -316,6 +234,6 @@ export default function ErrandsPage() {
         title="New Errand"
         icon={<Plus className="h-6 w-6" />}
       />
-    </div>
+    </ToolPageLayout>
   );
 }

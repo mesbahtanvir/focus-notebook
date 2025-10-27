@@ -3,6 +3,7 @@
 import { ReactNode, useState } from "react";
 import { Search, Filter, ChevronDown, X } from "lucide-react";
 import { motion } from "framer-motion";
+import { ToolTheme } from "./themes";
 
 interface SearchAndFiltersProps {
   searchValue: string;
@@ -13,6 +14,7 @@ interface SearchAndFiltersProps {
   showFilterToggle?: boolean;
   filterContent?: ReactNode;
   className?: string;
+  theme?: ToolTheme;
 }
 
 export function SearchAndFilters({
@@ -23,12 +25,18 @@ export function SearchAndFilters({
   filteredCount,
   showFilterToggle = false,
   filterContent,
-  className = ""
+  className = "",
+  theme
 }: SearchAndFiltersProps) {
   const [showFilters, setShowFilters] = useState(false);
 
+  // Use theme if provided, otherwise use default blue theme
+  const searchBg = theme?.searchBg || 'from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20';
+  const searchBorder = theme?.searchBorder || 'border-blue-200 dark:border-blue-800';
+  const searchFocus = theme?.searchFocus || 'ring-blue-500';
+
   return (
-    <div className={`rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4 ${className}`}>
+    <div className={`rounded-xl bg-gradient-to-br ${searchBg} border-4 ${searchBorder} shadow-xl p-6 space-y-4 mx-4 md:mx-0 ${className}`}>
       {/* Search Bar */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -37,7 +45,7 @@ export function SearchAndFilters({
           placeholder={searchPlaceholder}
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          className={`w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:${searchFocus} focus:border-transparent transition-all`}
         />
         {searchValue && (
           <button
@@ -55,7 +63,7 @@ export function SearchAndFilters({
           {showFilterToggle && filterContent && (
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
             >
               <Filter className="h-4 w-4" />
               Filters
@@ -78,7 +86,7 @@ export function SearchAndFilters({
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          className="pt-4 border-t border-blue-200 dark:border-blue-700"
+          className={`pt-4 border-t ${searchBorder}`}
         >
           {filterContent}
         </motion.div>

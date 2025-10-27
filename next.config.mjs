@@ -12,9 +12,6 @@ const nextConfig = {
       'react-hook-form',
       'framer-motion',
     ],
-    // Enable View Transitions API for native-like page transitions
-    // This provides smooth, app-like transitions between routes in supporting browsers
-    viewTransitions: true,
   },
 };
 

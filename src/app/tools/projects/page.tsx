@@ -34,6 +34,7 @@ import {
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { Loader2 } from "lucide-react";
+import { toolThemes, ToolHeader, SearchAndFilters, ToolPageLayout } from "@/components/tools";
 
 export default function ProjectsPage() {
   useTrackToolUsage('projects');
@@ -105,78 +106,32 @@ export default function ProjectsPage() {
     return tasks.filter(t => project.linkedTaskIds.includes(t.id));
   };
 
+  const theme = toolThemes.green;
+
   return (
-    <div className="space-y-4 max-w-7xl mx-auto p-4 md:p-6">
-      {/* Compact Header with inline stats */}
-      <div className="rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-4 border-green-200 dark:border-green-800 shadow-xl p-6">
-        <div className="flex items-start gap-3">
-          {/* Back Button */}
-          <button
-            onClick={() => router.back()}
-            className="group flex items-center justify-center p-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-green-300 dark:border-green-700 hover:border-green-500 dark:hover:border-green-500 transition-all transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg shrink-0"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="h-5 w-5 text-green-600 dark:text-green-400 group-hover:text-green-700 dark:group-hover:text-green-300 transition-colors" />
-          </button>
+    <ToolPageLayout>
+      <ToolHeader
+        title="Projects"
+        emoji="🎯"
+        showBackButton
+        stats={[
+          { label: 'active', value: stats.active, variant: 'info' },
+          { label: 'done', value: stats.completed, variant: 'success' },
+          { label: 'short-term', value: stats.shortTerm },
+          { label: 'long-term', value: stats.longTerm }
+        ]}
+        theme={theme}
+      />
 
-          {/* Title and Stats */}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">🎯 Projects</h1>
-            <div className="flex items-center gap-3 mt-2 text-sm font-medium flex-wrap">
-              <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">{stats.active} active</span>
-              <span className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300">{stats.completed} done</span>
-              <span className="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300">{stats.shortTerm} short-term</span>
-              <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">{stats.longTerm} long-term</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Search & Filters */}
-      <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl p-6 space-y-4">
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search projects..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              ×
-            </button>
-          )}
-        </div>
-
-        {/* Filter Controls */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors"
-          >
-            <Filter className="h-4 w-4" />
-            Filters
-            <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-          </button>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            Showing {filteredProjects.length} of {projects.length} projects
-          </div>
-        </div>
-
-        {/* Filter Options */}
-        {showFilters && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="flex flex-wrap gap-4 pt-4 border-t border-blue-200 dark:border-blue-700"
-          >
+      <SearchAndFilters
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search projects..."
+        totalCount={projects.length}
+        filteredCount={filteredProjects.length}
+        showFilterToggle
+        filterContent={
+          <>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Timeframe</label>
               <select
@@ -189,7 +144,6 @@ export default function ProjectsPage() {
                 <option value="long-term">Long-term</option>
               </select>
             </div>
-
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
               <select
@@ -204,9 +158,10 @@ export default function ProjectsPage() {
                 <option value="paused">Paused</option>
               </select>
             </div>
-          </motion.div>
-        )}
-      </div>
+          </>
+        }
+        theme={theme}
+      />
 
       {/* Projects List */}
       <div className="space-y-4">
@@ -371,7 +326,7 @@ export default function ProjectsPage() {
         onClick={() => setShowNewProject(true)}
         title="New Project"
       />
-    </div>
+    </ToolPageLayout>
   );
 }
 
