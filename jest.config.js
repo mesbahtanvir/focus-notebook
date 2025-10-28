@@ -20,7 +20,7 @@ const customJestConfig = {
     '<rootDir>/node_modules/',
     '<rootDir>/src/__tests__/utils/builders/', // Ignore builder files (not tests)
     '<rootDir>/src/__tests__/utils/testHelpers', // Ignore test helpers (not tests)
-    '<rootDir>/functions/lib/', // Ignore compiled cloud functions (tested from src)
+    '<rootDir>/functions/', // Ignore all functions tests (functions has its own test suite)
   ],
   transformIgnorePatterns: [
     '/node_modules/(?!(react-markdown|vfile|vfile-message|unist-util-stringify-position|unist-util-position|unist-util-generated|unist-util-is|unist-util-visit|unist-util-visit-parents|unist-util-find-all-after|unist-util-find-after|unist-util-find-before|unist-util-find-all-before|unist-util-remove-position|unist-util-is|unist-util-stringify-position|unist-util-position|unist-util-generated|bail|is-plain-obj|trough|vfile|vfile-message)/)',
