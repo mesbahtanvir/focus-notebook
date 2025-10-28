@@ -26,6 +26,8 @@ import {
   ListChecks,
   Target,
   Smile,
+  Link2,
+  Plus,
 } from "lucide-react";
 
 interface ThoughtDetailModalProps {
@@ -51,6 +53,10 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const [showAIResources, setShowAIResources] = useState(false);
   const [showRevertConfirm, setShowRevertConfirm] = useState(false);
   const [isProcessingSuggestion, setIsProcessingSuggestion] = useState(false);
+  const [showLinkingUI, setShowLinkingUI] = useState(false);
+  const [selectedTasksToLink, setSelectedTasksToLink] = useState<string[]>(thought.linkedTaskIds || []);
+  const [selectedMoodsToLink, setSelectedMoodsToLink] = useState<string[]>(thought.linkedMoodIds || []);
+  const [selectedProjectsToLink, setSelectedProjectsToLink] = useState<string[]>(thought.linkedProjectIds || []);
 
   const updateThought = useThoughts((s) => s.updateThought);
   const deleteThought = useThoughts((s) => s.deleteThought);
@@ -129,6 +135,33 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
       tags: tags.length > 0 ? tags : undefined,
     });
     setIsEditing(false);
+  };
+
+  const handleSaveLinking = async () => {
+    await updateThought(thought.id, {
+      linkedTaskIds: selectedTasksToLink.length > 0 ? selectedTasksToLink : undefined,
+      linkedMoodIds: selectedMoodsToLink.length > 0 ? selectedMoodsToLink : undefined,
+      linkedProjectIds: selectedProjectsToLink.length > 0 ? selectedProjectsToLink : undefined,
+    });
+    setShowLinkingUI(false);
+  };
+
+  const toggleTaskLink = (taskId: string) => {
+    setSelectedTasksToLink(prev =>
+      prev.includes(taskId) ? prev.filter(id => id !== taskId) : [...prev, taskId]
+    );
+  };
+
+  const toggleMoodLink = (moodId: string) => {
+    setSelectedMoodsToLink(prev =>
+      prev.includes(moodId) ? prev.filter(id => id !== moodId) : [...prev, moodId]
+    );
+  };
+
+  const toggleProjectLink = (projectId: string) => {
+    setSelectedProjectsToLink(prev =>
+      prev.includes(projectId) ? prev.filter(id => id !== projectId) : [...prev, projectId]
+    );
   };
 
   const handleDelete = async () => {
@@ -439,6 +472,139 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                         No tags
                       </span>
                     )}
+                  </div>
+                )}
+              </div>
+
+              {/* Manual Linking Section */}
+              <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setShowLinkingUI(!showLinkingUI)}
+                  className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 border-2 border-blue-200 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-700 transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
+                      <Link2 className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                        Link Items
+                      </h3>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        {(selectedTasksToLink.length + selectedMoodsToLink.length + selectedProjectsToLink.length) > 0
+                          ? `${selectedTasksToLink.length + selectedMoodsToLink.length + selectedProjectsToLink.length} item(s) linked`
+                          : 'Connect tasks, moods, and projects'}
+                      </p>
+                    </div>
+                  </div>
+                  {showLinkingUI ? (
+                    <ChevronUp className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                  )}
+                </button>
+
+                {showLinkingUI && (
+                  <div className="mt-4 space-y-4 p-4 bg-white dark:bg-gray-800 rounded-xl border-2 border-blue-200 dark:border-blue-800">
+                    {/* Tasks Section */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                        <ListChecks className="h-4 w-4 text-green-600" />
+                        Tasks ({selectedTasksToLink.length} selected)
+                      </h4>
+                      <div className="max-h-40 overflow-y-auto space-y-2">
+                        {tasks.filter(t => !t.done).slice(0, 10).map((task) => (
+                          <label
+                            key={task.id}
+                            className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedTasksToLink.includes(task.id)}
+                              onChange={() => toggleTaskLink(task.id)}
+                              className="w-4 h-4 text-blue-600 rounded"
+                            />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{task.title}</span>
+                          </label>
+                        ))}
+                        {tasks.filter(t => !t.done).length === 0 && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 italic">No active tasks available</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Projects Section */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                        <Target className="h-4 w-4 text-purple-600" />
+                        Projects ({selectedProjectsToLink.length} selected)
+                      </h4>
+                      <div className="max-h-40 overflow-y-auto space-y-2">
+                        {projects.filter(p => p.status === 'active').slice(0, 10).map((project) => (
+                          <label
+                            key={project.id}
+                            className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedProjectsToLink.includes(project.id)}
+                              onChange={() => toggleProjectLink(project.id)}
+                              className="w-4 h-4 text-blue-600 rounded"
+                            />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{project.title}</span>
+                          </label>
+                        ))}
+                        {projects.filter(p => p.status === 'active').length === 0 && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 italic">No active projects available</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Moods Section */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                        <Smile className="h-4 w-4 text-yellow-600" />
+                        Recent Moods ({selectedMoodsToLink.length} selected)
+                      </h4>
+                      <div className="max-h-40 overflow-y-auto space-y-2">
+                        {moods.slice(0, 10).map((mood) => (
+                          <label
+                            key={mood.id}
+                            className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedMoodsToLink.includes(mood.id)}
+                              onChange={() => toggleMoodLink(mood.id)}
+                              className="w-4 h-4 text-blue-600 rounded"
+                            />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Mood: {mood.value}/10 {mood.note && `- ${mood.note.substring(0, 30)}...`}
+                            </span>
+                          </label>
+                        ))}
+                        {moods.length === 0 && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 italic">No moods tracked yet</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <button
+                        onClick={handleSaveLinking}
+                        className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+                      >
+                        <Save className="h-4 w-4" />
+                        Save Links
+                      </button>
+                      <button
+                        onClick={() => setShowLinkingUI(false)}
+                        className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg transition-all"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

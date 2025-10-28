@@ -4,6 +4,7 @@ import { db, auth } from '@/lib/firebaseClient'
 import { createAt, setAt, updateAt, deleteAt } from '@/lib/data/gateway'
 import { subscribeCol } from '@/lib/data/subscribe'
 import { isWorkday, getDateString } from '@/lib/utils/date'
+import { AIActionMetadata } from '@/types/aiMetadata'
 
 export type TaskStatus = 'active' | 'completed' | 'backlog'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
@@ -54,6 +55,11 @@ export interface Task {
   projectId?: string // Link to project
   thoughtId?: string // Link to thought that created this task
   focusEligible?: boolean // Can be done during a focus session (laptop/notebook work)
+
+  // AI Action Tracking (Bug 1)
+  createdBy?: 'ai' | 'user' // Who created this task
+  aiMetadata?: AIActionMetadata // Metadata for AI-created/modified items
+  aiActionHistory?: AIActionMetadata[] // Full history of AI actions on this task
 }
 
 // Helper functions for recurring tasks

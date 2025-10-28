@@ -39,6 +39,10 @@ export interface Thought {
   aiSuggestions?: AISuggestion[]
   aiProcessingStatus?: 'pending' | 'processing' | 'completed' | 'failed'
   confidenceScore?: number
+  // Linked items (for manual linking)
+  linkedTaskIds?: string[] // Tasks manually linked to this thought
+  linkedMoodIds?: string[] // Mood entries manually linked to this thought
+  linkedProjectIds?: string[] // Projects manually linked to this thought
 }
 
 type State = {

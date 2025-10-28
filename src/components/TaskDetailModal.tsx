@@ -159,11 +159,11 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-gradient-to-br from-white to-blue-50 dark:from-gray-900 dark:to-blue-950/30 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden border-4 border-blue-200 dark:border-blue-800"
+        className="bg-gradient-to-br from-white to-blue-50 dark:from-gray-900 dark:to-blue-950/30 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col border-4 border-blue-200 dark:border-blue-800"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-blue-100 via-indigo-100 to-purple-100 dark:from-blue-900/50 dark:via-indigo-900/50 dark:to-purple-900/50 border-b-4 border-blue-200 dark:border-blue-800 p-6 flex items-center justify-between">
+        <div className="flex-shrink-0 bg-gradient-to-r from-blue-100 via-indigo-100 to-purple-100 dark:from-blue-900/50 dark:via-indigo-900/50 dark:to-purple-900/50 border-b-4 border-blue-200 dark:border-blue-800 p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {task.done && (
               <div className="text-green-600 dark:text-green-400">
@@ -220,7 +220,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
           {/* Title */}
           <div>
             <label className="block text-sm font-medium mb-2">Title</label>

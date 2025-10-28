@@ -6,6 +6,7 @@ import { useMoods } from '@/store/useMoods';
 import { useRelationships } from '@/store/useRelationships';
 import { useLLMQueue } from '@/store/useLLMQueue';
 import { useSettings } from '@/store/useSettings';
+import { createAIMetadata, addToActionHistory } from '@/types/aiMetadata';
 
 export interface ThoughtProcessingResult {
   success: boolean;
@@ -105,15 +106,32 @@ export class ThoughtProcessingService {
     for (const action of autoApplyActions) {
       try {
         switch (action.type) {
-          case 'createTask':
+          case 'createTask': {
+            const taskId = Date.now().toString();
+            const metadata = createAIMetadata({
+              sourceType: 'thought',
+              sourceId: thoughtId,
+              actionType: 'create',
+              targetType: 'task',
+              targetId: taskId,
+              confidence: action.confidence,
+              reasoning: action.reasoning,
+              newData: action.data,
+            });
+
             await addTask({
               title: action.data.title,
               category: action.data.category,
               priority: action.data.priority,
               status: 'active',
               focusEligible: true,
+              thoughtId: thoughtId, // ✅ Link task to source thought
+              createdBy: 'ai', // ✅ Mark as AI-created
+              aiMetadata: metadata, // ✅ Full metadata
+              aiActionHistory: [metadata], // ✅ Start history
             });
             break;
+          }
 
           case 'createProject':
             await addProject({
@@ -126,6 +144,7 @@ export class ThoughtProcessingService {
               status: 'active',
               priority: 'medium',
               targetDate: action.data.targetDate,
+              notes: JSON.stringify({ sourceThoughtId: thoughtId }), // ✅ Link project to source thought
             });
             break;
 
@@ -145,6 +164,7 @@ export class ThoughtProcessingService {
             await addMood({
               value: action.data.value || action.data.intensity || 5,
               note: action.data.note || action.data.notes || action.data.mood,
+              metadata: { sourceThoughtId: thoughtId }, // ✅ Link mood to source thought
             });
             break;
 

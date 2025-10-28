@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useFocus } from '@/store/useFocus';
 import { useTasks } from '@/store/useTasks';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Pause, 
-  Play, 
-  X, 
+import {
+  Pause,
+  Play,
+  X,
   Check,
   Clock
 } from "lucide-react";
@@ -16,6 +17,7 @@ import { ConfirmModal } from "./ConfirmModal";
 import { formatTimeGentle } from '@/lib/utils/date';
 
 export function FocusSession() {
+  const router = useRouter();
   const currentSession = useFocus((s) => s.currentSession);
   const endSession = useFocus((s) => s.endSession);
   const switchToTask = useFocus((s) => s.switchToTask);
@@ -75,10 +77,12 @@ export function FocusSession() {
     if (currentSession && currentSession.tasks.filter(t => t.completed).length === currentSession.tasks.length && currentSession.tasks.length > 0) {
       const timer = setTimeout(async () => {
         await endSession();
+        // Redirect to summary page
+        router.push(`/tools/focus/summary?sessionId=${currentSession.id}`);
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [currentSession, endSession]);
+  }, [currentSession, endSession, router]);
 
   // Load notes for current task (only when task index changes, not on every session update)
   useEffect(() => {
@@ -165,7 +169,11 @@ export function FocusSession() {
   const confirmEndSession = async () => {
     setShowExitConfirm(false);
     // Notes are auto-saved, just end session
-    await endSession();
+    if (currentSession) {
+      await endSession();
+      // Redirect to summary page
+      router.push(`/tools/focus/summary?sessionId=${currentSession.id}`);
+    }
   };
 
   const progressPercentage = (completedTasks / totalTasks) * 100;
