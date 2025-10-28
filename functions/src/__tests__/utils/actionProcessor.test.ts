@@ -3,7 +3,6 @@
  */
 
 import { processActions, buildThoughtUpdate, countChanges } from '../../utils/actionProcessor';
-import { CONFIG } from '../../config';
 
 describe('Action Processor', () => {
   describe('processActions', () => {

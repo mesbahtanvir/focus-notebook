@@ -98,7 +98,7 @@ export class ThoughtProcessingService {
 
     console.log(`Processing ${actions.length} actions: ${autoApplyActions.length} auto-apply, ${suggestionActions.length} suggestions, ${ignoredActions.length} ignored`);
 
-    // Execute high-confidence actions immediately (only tags and text updates)
+    // Execute high-confidence actions immediately
     for (const action of autoApplyActions) {
       try {
         switch (action.type) {
@@ -122,15 +122,64 @@ export class ThoughtProcessingService {
             });
             break;
 
-          // Disabled: Don't create any new entries automatically
           case 'createTask':
-          case 'createProject':
-          case 'createGoal':
-          case 'createMoodEntry':
-          case 'createMood':
+            // Create new task
+            const addTask = useTasks.getState().add;
+            await addTask({
+              title: action.data.title,
+              category: action.data.category,
+              priority: action.data.priority || 'medium',
+              status: 'active',
+              focusEligible: true,
+              thoughtId,
+              createdBy: 'ai',
+            });
+            break;
+
           case 'enhanceTask':
+            // Update existing task
+            const updateTask = useTasks.getState().updateTask;
+            await updateTask(action.data.taskId, action.data.updates);
+            break;
+
+          case 'createMood':
+          case 'createMoodEntry':
+            // Create mood entry
+            const addMood = useMoods.getState().add;
+            await addMood({
+              value: action.data.value,
+              note: action.data.note,
+              metadata: { sourceThoughtId: thoughtId },
+            });
+            break;
+
+          case 'createProject':
+            // Create new project
+            const addProject = useProjects.getState().add;
+            await addProject({
+              title: action.data.title,
+              description: action.data.description,
+              createdBy: 'ai',
+              sourceThoughtId: thoughtId,
+            });
+            break;
+
+          case 'createGoal':
+            // Create new goal
+            const addGoal = useGoals.getState().add;
+            await addGoal({
+              title: action.data.title,
+              objective: action.data.objective,
+              createdBy: 'ai',
+              sourceThoughtId: thoughtId,
+            });
+            break;
+
           case 'linkToProject':
-            console.log(`Skipping ${action.type} - only tags and text updates are auto-applied`);
+            // Link thought to project
+            await updateThought(thoughtId, {
+              projectId: action.data.projectId,
+            });
             break;
 
           default:

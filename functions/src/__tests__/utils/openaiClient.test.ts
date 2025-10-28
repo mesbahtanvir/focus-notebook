@@ -2,6 +2,20 @@
  * Unit tests for OpenAI Client
  */
 
+// Set environment variable BEFORE importing (CONFIG is evaluated at import time)
+process.env.OPENAI_API_KEY = 'sk-test-key';
+
+// Mock the config module to ensure API key is set
+jest.mock('../../config', () => ({
+  CONFIG: {
+    OPENAI_API_KEY: 'sk-test-key',
+    MODELS: {
+      DEFAULT: 'gpt-3.5-turbo',
+      FALLBACK: 'gpt-3.5-turbo',
+    },
+  },
+}));
+
 import { callOpenAI } from '../../utils/openaiClient';
 import type { ProcessingContext } from '../../utils/contextGatherer';
 
@@ -11,8 +25,6 @@ global.fetch = jest.fn();
 describe('OpenAI Client', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Mock environment variable
-    process.env.OPENAI_API_KEY = 'sk-test-key';
   });
 
   const mockContext: ProcessingContext = {
