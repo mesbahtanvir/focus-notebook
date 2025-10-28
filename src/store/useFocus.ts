@@ -188,9 +188,15 @@ export const useFocus = create<State>((set, get) => ({
       orderBy('startTime', 'desc')
     )
 
-    const unsub = subscribeCol<FocusSession>(sessionsQuery, (sessions, meta) => {
-      set({ 
-        sessions, 
+    const unsub = subscribeCol<any>(sessionsQuery, (firestoreSessions, meta) => {
+      // Transform Firestore sessions to properly parse tasksData
+      const sessions: FocusSession[] = firestoreSessions.map((session: any) => ({
+        ...session,
+        tasks: session.tasksData ? JSON.parse(session.tasksData) : (session.tasks || []),
+      }));
+
+      set({
+        sessions,
         isLoading: false,
         fromCache: meta.fromCache,
         hasPendingWrites: meta.hasPendingWrites,

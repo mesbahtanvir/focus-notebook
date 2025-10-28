@@ -124,9 +124,13 @@ export class ThoughtProcessingService {
           case 'createTask':
             // Create new task
             const addTask = useTasks.getState().add;
+            // Validate category - must be 'mastery' or 'pleasure' only
+            const validCategory = action.data.category === 'mastery' || action.data.category === 'pleasure'
+              ? action.data.category
+              : 'mastery'; // Default to mastery if invalid
             await addTask({
               title: action.data.title,
-              category: action.data.category,
+              category: validCategory,
               priority: action.data.priority || 'medium',
               status: 'active',
               focusEligible: true,

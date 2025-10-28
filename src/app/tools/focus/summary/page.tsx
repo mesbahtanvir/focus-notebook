@@ -51,11 +51,12 @@ function FocusSessionSummaryContent() {
     );
   }
 
-  const completedTasks = session.tasks.filter(t => t.completed).length;
-  const totalTasks = session.tasks.length;
+  const tasks = session.tasks || [];
+  const completedTasks = tasks.filter(t => t.completed).length;
+  const totalTasks = tasks.length;
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  const totalTimeSpent = session.tasks.reduce((sum, task) => sum + (task.timeSpent || 0), 0);
+  const totalTimeSpent = tasks.reduce((sum, task) => sum + (task.timeSpent || 0), 0);
   const totalTimeInMinutes = Math.floor(totalTimeSpent / 60);
 
   const sessionDuration = session.endTime && session.startTime
@@ -162,7 +163,7 @@ function FocusSessionSummaryContent() {
             Task Breakdown
           </h2>
           <div className="space-y-3">
-            {session.tasks.map((focusTask, index) => (
+            {tasks.map((focusTask, index) => (
               <div
                 key={index}
                 className={`flex items-center justify-between p-4 rounded-xl border-2 ${

@@ -34,7 +34,6 @@ function FocusPageContent() {
   // Get duration from URL or default to 60 minutes
   const urlDuration = searchParams.get('duration');
   const [duration, setDuration] = useState(urlDuration ? parseInt(urlDuration) : 60);
-  const [showSetup, setShowSetup] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [selectedSession, setSelectedSession] = useState<FocusSessionType | null>(null);
@@ -97,9 +96,9 @@ function FocusPageContent() {
 
   const handleConfirmStart = async () => {
     if (selectedTasks.length === 0) return;
-    await startSession(selectedTasks, duration);
     setShowConfirmModal(false);
-    setShowSetup(false);
+    await startSession(selectedTasks, duration);
+    // Don't need to setShowSetup(false) - the component will automatically render FocusSession when currentSession exists
   };
 
   const selectModeTask = (mode: 'regular' | 'philosopher' | 'beast' | 'selfcare') => {
@@ -179,13 +178,12 @@ function FocusPageContent() {
   return (
     <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl">
       <AnimatePresence mode="wait">
-        {showSetup && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="space-y-4"
-          >
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="space-y-4"
+        >
             {/* Header */}
             <div className="rounded-xl bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20 border-4 border-purple-200 dark:border-purple-800 shadow-xl p-6 mb-6">
               <div className="flex items-start gap-3">
@@ -335,16 +333,6 @@ function FocusPageContent() {
                     </button>
                   </div>
                 </div>
-
-                {/* Start Button (Desktop - in sidebar) */}
-                <button
-                  onClick={handleStartSession}
-                  disabled={selectedTasks.length === 0}
-                  className="hidden lg:flex w-full items-center justify-center gap-2 py-3 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white font-semibold transition-colors disabled:cursor-not-allowed"
-                >
-                  <Play className="h-5 w-5" />
-                  Start ({selectedTasks.length})
-                </button>
               </div>
 
               {/* Right Column: Task Selection (2/3 width on desktop) */}
@@ -428,16 +416,6 @@ function FocusPageContent() {
                 )}
               </div>
             </div>
-
-            {/* Start Button (Mobile/Tablet - bottom) */}
-            <button
-              onClick={handleStartSession}
-              disabled={selectedTasks.length === 0}
-              className="lg:hidden w-full flex items-center justify-center gap-2 py-3 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white font-semibold transition-colors disabled:cursor-not-allowed"
-            >
-              <Play className="h-5 w-5" />
-              Start Focus Session ({selectedTasks.length} tasks)
-            </button>
 
             {/* Session History Button */}
             {sessions.length > 0 && (
@@ -534,7 +512,6 @@ function FocusPageContent() {
               )}
             </AnimatePresence>
           </motion.div>
-        )}
       </AnimatePresence>
 
       {/* Confirmation Modal */}
@@ -659,11 +636,19 @@ function FocusPageContent() {
       )}
 
       {!currentSession && (
-        <FloatingActionButton
-          onClick={() => setShowSetup(true)}
-          title="Start Focus Session"
-          icon={<Play className="h-6 w-6" />}
-        />
+        <div className="fixed bottom-6 right-6 z-50">
+          <FloatingActionButton
+            onClick={handleStartSession}
+            title={selectedTasks.length > 0 ? `Start Focus Session (${selectedTasks.length} tasks)` : "Select tasks to start"}
+            icon={<Play className="h-6 w-6" />}
+            disabled={selectedTasks.length === 0}
+          />
+          {selectedTasks.length > 0 && (
+            <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold rounded-full h-7 w-7 flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-900">
+              {selectedTasks.length}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
