@@ -178,6 +178,84 @@ jobs:
         run: |
           echo "✅ Emulator setup complete"
 
+  deploy:
+    name: Deploy Cloud Functions
+    runs-on: ubuntu-latest
+    needs: [lint-and-test, build, security-check, validate-config]
+    # Only deploy on successful merge to main branch
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd functions
+          npm ci
+
+      - name: Build functions
+        run: |
+          cd functions
+          npm run build
+
+      - name: Deploy to Firebase
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only functions
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+
+      - name: Comment deployment success on related PRs
+        if: success()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const commitSha = context.sha;
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: commitSha,
+            });
+
+            for (const pr of prs) {
+              await github.rest.issues.createComment({
+                issue_number: pr.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `✅ Cloud Functions deployed successfully for commit ${commitSha.substring(0, 7)}`
+              });
+            }
+
+      - name: Notify deployment failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const commitSha = context.sha;
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: commitSha,
+            });
+
+            for (const pr of prs) {
+              await github.rest.issues.createComment({
+                issue_number: pr.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `❌ Cloud Functions deployment failed for commit ${commitSha.substring(0, 7)}. Check the [workflow run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.`
+              });
+            }
+
   notify:
     name: Notify on Failure
     runs-on: ubuntu-latest

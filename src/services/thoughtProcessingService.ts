@@ -6,7 +6,6 @@ import { useMoods } from '@/store/useMoods';
 import { useRelationships } from '@/store/useRelationships';
 import { useLLMQueue } from '@/store/useLLMQueue';
 import { useSettings } from '@/store/useSettings';
-import { createAIMetadata, addToActionHistory } from '@/types/aiMetadata';
 
 export interface ThoughtProcessingResult {
   success: boolean;
@@ -159,8 +158,13 @@ export class ThoughtProcessingService {
             await addProject({
               title: action.data.title,
               description: action.data.description,
-              createdBy: 'ai',
-              sourceThoughtId: thoughtId,
+              source: 'ai',
+              objective: action.data.objective || '',
+              actionPlan: action.data.actionPlan || [],
+              timeframe: action.data.timeframe || 'short-term',
+              status: 'active',
+              priority: action.data.priority || 'medium',
+              category: action.data.category || 'mastery',
             });
             break;
 
@@ -170,16 +174,24 @@ export class ThoughtProcessingService {
             await addGoal({
               title: action.data.title,
               objective: action.data.objective,
-              createdBy: 'ai',
-              sourceThoughtId: thoughtId,
+              source: 'ai',
+              timeframe: action.data.timeframe || 'short-term',
+              status: 'active',
+              priority: action.data.priority || 'medium',
             });
             break;
 
           case 'linkToProject':
             // Link thought to project
-            await updateThought(thoughtId, {
-              projectId: action.data.projectId,
-            });
+            const currentThoughtForLink = useThoughts.getState().thoughts.find(t => t.id === thoughtId);
+            if (currentThoughtForLink) {
+              const currentLinkedProjects = currentThoughtForLink.linkedProjectIds || [];
+              if (!currentLinkedProjects.includes(action.data.projectId)) {
+                await updateThought(thoughtId, {
+                  linkedProjectIds: [...currentLinkedProjects, action.data.projectId],
+                });
+              }
+            }
             break;
 
           default:
@@ -193,7 +205,7 @@ export class ThoughtProcessingService {
     // Save medium-confidence actions as suggestions
     if (suggestionActions.length > 0) {
       const suggestions: AISuggestion[] = suggestionActions.map(action => ({
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
         type: action.type as any,
         confidence: action.confidence,
         data: action.data,
