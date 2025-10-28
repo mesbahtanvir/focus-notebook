@@ -90,10 +90,6 @@ export class ThoughtProcessingService {
 
   static async executeActions(thoughtId: string, actions: Array<{ type: string; data: any; reasoning: string; confidence: number }>) {
     const updateThought = useThoughts.getState().updateThought;
-    const addTask = useTasks.getState().add;
-    const addProject = useProjects.getState().add;
-    const addGoal = useGoals.getState().add;
-    const addMood = useMoods.getState().add;
 
     // Filter actions by confidence
     const autoApplyActions = actions.filter(a => a.confidence >= 99);
@@ -102,72 +98,10 @@ export class ThoughtProcessingService {
 
     console.log(`Processing ${actions.length} actions: ${autoApplyActions.length} auto-apply, ${suggestionActions.length} suggestions, ${ignoredActions.length} ignored`);
 
-    // Execute high-confidence actions immediately
+    // Execute high-confidence actions immediately (only tags and text updates)
     for (const action of autoApplyActions) {
       try {
         switch (action.type) {
-          case 'createTask': {
-            const taskId = Date.now().toString();
-            const metadata = createAIMetadata({
-              sourceType: 'thought',
-              sourceId: thoughtId,
-              actionType: 'create',
-              targetType: 'task',
-              targetId: taskId,
-              confidence: action.confidence,
-              reasoning: action.reasoning,
-              newData: action.data,
-            });
-
-            await addTask({
-              title: action.data.title,
-              category: action.data.category,
-              priority: action.data.priority,
-              status: 'active',
-              focusEligible: true,
-              thoughtId: thoughtId, // ✅ Link task to source thought
-              createdBy: 'ai', // ✅ Mark as AI-created
-              aiMetadata: metadata, // ✅ Full metadata
-              aiActionHistory: [metadata], // ✅ Start history
-            });
-            break;
-          }
-
-          case 'createProject':
-            await addProject({
-              title: action.data.title,
-              description: action.data.description,
-              objective: action.data.objective || action.data.description || 'Generated from thought',
-              actionPlan: action.data.actionPlan || ['Review and plan next steps'],
-              timeframe: action.data.timeframe,
-              category: action.data.category,
-              status: 'active',
-              priority: 'medium',
-              targetDate: action.data.targetDate,
-              notes: JSON.stringify({ sourceThoughtId: thoughtId }), // ✅ Link project to source thought
-            });
-            break;
-
-          case 'createGoal':
-            await addGoal({
-              title: action.data.title,
-              objective: action.data.objective || action.data.description || 'Generated from thought',
-              timeframe: action.data.timeframe || 'short-term',
-              status: 'active',
-              priority: 'medium',
-              targetDate: action.data.targetDate,
-            });
-            break;
-
-          case 'createMoodEntry':
-          case 'createMood':
-            await addMood({
-              value: action.data.value || action.data.intensity || 5,
-              note: action.data.note || action.data.notes || action.data.mood,
-              metadata: { sourceThoughtId: thoughtId }, // ✅ Link mood to source thought
-            });
-            break;
-
           case 'addTag':
             // Add tag to thought
             const currentThought = useThoughts.getState().thoughts.find(t => t.id === thoughtId);
@@ -188,26 +122,15 @@ export class ThoughtProcessingService {
             });
             break;
 
+          // Disabled: Don't create any new entries automatically
+          case 'createTask':
+          case 'createProject':
+          case 'createGoal':
+          case 'createMoodEntry':
+          case 'createMood':
           case 'enhanceTask':
-            // Enhance existing task with new information
-            const { updateTask } = useTasks.getState();
-            if (action.data.taskId && action.data.updates) {
-              await updateTask(action.data.taskId, action.data.updates);
-            }
-            break;
-
           case 'linkToProject':
-            // Add project link to thought
-            const thought = useThoughts.getState().thoughts.find(t => t.id === thoughtId);
-            if (thought) {
-              const currentTags = thought.tags || [];
-              const projectTag = `project:${action.data.projectId}`;
-              if (!currentTags.includes(projectTag)) {
-                await updateThought(thoughtId, {
-                  tags: [...currentTags, projectTag],
-                });
-              }
-            }
+            console.log(`Skipping ${action.type} - only tags and text updates are auto-applied`);
             break;
 
           default:
