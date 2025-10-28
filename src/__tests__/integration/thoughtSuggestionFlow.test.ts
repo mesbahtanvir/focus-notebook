@@ -148,6 +148,7 @@ describe('Full Thought Suggestion Flow', () => {
       expect(addMood).toHaveBeenCalledWith({
         value: 4,
         note: 'Feeling anxious',
+        metadata: { sourceThoughtId: 'thought-1' }, // Bug 4 fix: Added metadata
       });
 
       // Should have updated thought with processed tag
@@ -325,13 +326,18 @@ describe('Full Thought Suggestion Flow', () => {
       await ThoughtProcessingService.applySuggestion('thought-1', 'suggestion-1');
 
       // Should create the task
-      expect(mockAddTask).toHaveBeenCalledWith({
-        title: 'Buy groceries',
-        category: 'mastery',
-        priority: 'medium',
-        status: 'active',
-        focusEligible: true,
-      });
+      expect(mockAddTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Buy groceries',
+          category: 'mastery',
+          priority: 'medium',
+          status: 'active',
+          focusEligible: true,
+          thoughtId: 'thought-1', // Bug 4 fix: Added thoughtId
+          createdBy: 'ai', // Bug 1 fix: Added createdBy
+          // aiMetadata and aiActionHistory are also added but we use objectContaining
+        })
+      );
 
       // Should update suggestion status to accepted
       expect(mockUpdateThought).toHaveBeenCalledWith(

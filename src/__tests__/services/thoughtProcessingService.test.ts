@@ -184,13 +184,17 @@ describe('ThoughtProcessingService', () => {
 
       await ThoughtProcessingService.executeActions('thought-1', actions);
 
-      expect(addTask).toHaveBeenCalledWith({
-        title: 'New task',
-        category: 'mastery',
-        priority: 'high',
-        status: 'active',
-        focusEligible: true,
-      });
+      expect(addTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'New task',
+          category: 'mastery',
+          priority: 'high',
+          status: 'active',
+          focusEligible: true,
+          thoughtId: 'thought-1', // Bug 4 fix
+          createdBy: 'ai', // Bug 1 fix
+        })
+      );
     });
 
     it('should enhance existing task for enhanceTask action', async () => {
@@ -236,6 +240,7 @@ describe('ThoughtProcessingService', () => {
       expect(addMood).toHaveBeenCalledWith({
         value: 7,
         note: 'Feeling good',
+        metadata: { sourceThoughtId: 'thought-1' }, // Bug 4 fix
       });
     });
 
@@ -320,13 +325,17 @@ describe('ThoughtProcessingService', () => {
       await ThoughtProcessingService.applySuggestion('thought-1', 'suggestion-1');
 
       // Should create the task (with high confidence it executes)
-      expect(addTask).toHaveBeenCalledWith({
-        title: 'Suggested task',
-        category: 'mastery',
-        priority: 'medium',
-        status: 'active',
-        focusEligible: true,
-      });
+      expect(addTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Suggested task',
+          category: 'mastery',
+          priority: 'medium',
+          status: 'active',
+          focusEligible: true,
+          thoughtId: 'thought-1', // Bug 4 fix
+          createdBy: 'ai', // Bug 1 fix
+        })
+      );
 
       // Should update suggestion status to accepted
       expect(updateThought).toHaveBeenCalled();
