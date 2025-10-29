@@ -41,6 +41,7 @@ export class RecurringTaskService {
     if (!task.recurrence || task.recurrence.type === 'none') return false;
 
     const today = getDateString(new Date());
+    const todayDate = new Date();
     const { type } = task.recurrence;
 
     // For workweek tasks, only create on weekdays
@@ -54,19 +55,75 @@ export class RecurringTaskService {
 
     if (hasTaskForToday) return false;
 
-    // Check if this task should have an instance for today
+    // Check if this task should have an instance for today based on recurrence pattern
     const taskDueDate = task.dueDate;
     if (!taskDueDate) return true; // No due date, create for today
 
     const taskDate = new Date(taskDueDate);
-    const nowDate = new Date();
+    taskDate.setHours(0, 0, 0, 0); // Normalize to start of day
+    todayDate.setHours(0, 0, 0, 0); // Normalize to start of day
 
-    // If task's due date is in the past or today, and it's completed, create new instance
-    if (task.done && taskDate <= nowDate) {
-      return true;
+    // Task must be completed to generate a new instance
+    if (!task.done) return false;
+
+    // Task's due date must be in the past or today to generate next instance
+    if (taskDate > todayDate) return false;
+
+    // Check if today matches the recurrence pattern
+    return this.matchesRecurrencePattern(type, taskDate, todayDate);
+  }
+
+  /**
+   * Check if today matches the recurrence pattern from the last instance
+   */
+  private matchesRecurrencePattern(
+    recurrenceType: string,
+    lastDueDate: Date,
+    today: Date
+  ): boolean {
+    const daysDiff = Math.floor((today.getTime() - lastDueDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    switch (recurrenceType) {
+      case 'daily':
+        // If task is completed on its due date (daysDiff = 0), create tomorrow's instance
+        return daysDiff >= 0;
+
+      case 'workweek':
+        // Already handled in shouldCreateTaskForToday
+        return daysDiff >= 0;
+
+      case 'weekly':
+        return daysDiff >= 7;
+
+      case 'biweekly':
+        return daysDiff >= 14;
+
+      case 'monthly':
+        // Check if it's been at least a month
+        const monthsDiff = (today.getFullYear() - lastDueDate.getFullYear()) * 12 +
+                          (today.getMonth() - lastDueDate.getMonth());
+        return monthsDiff >= 1;
+
+      case 'bimonthly':
+        // Check if it's been at least 2 months
+        const bimonthsDiff = (today.getFullYear() - lastDueDate.getFullYear()) * 12 +
+                             (today.getMonth() - lastDueDate.getMonth());
+        return bimonthsDiff >= 2;
+
+      case 'halfyearly':
+        // Check if it's been at least 6 months
+        const halfYearDiff = (today.getFullYear() - lastDueDate.getFullYear()) * 12 +
+                             (today.getMonth() - lastDueDate.getMonth());
+        return halfYearDiff >= 6;
+
+      case 'yearly':
+        // Check if it's been at least a year
+        const yearsDiff = today.getFullYear() - lastDueDate.getFullYear();
+        return yearsDiff >= 1;
+
+      default:
+        return false;
     }
-
-    return false;
   }
 
   /**
