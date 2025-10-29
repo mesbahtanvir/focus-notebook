@@ -33,8 +33,6 @@ import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import Link from "next/link";
 
-export const dynamic = 'force-dynamic';
-
 // Helper function to format time until deadline
 function formatTimeUntil(targetDate: string): { value: number; unit: string; isOverdue: boolean } {
   const target = new Date(targetDate);

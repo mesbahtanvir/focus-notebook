@@ -15,8 +15,6 @@ import { GoalProjectLinks } from "@/components/goal/GoalProjectLinks";
 import { GoalThoughtLinks } from "@/components/goal/GoalThoughtLinks";
 import { GoalBrainstorming } from "@/components/goal/GoalBrainstorming";
 
-export const dynamic = 'force-dynamic';
-
 export default function GoalDetailPage() {
   const params = useParams();
   const router = useRouter();

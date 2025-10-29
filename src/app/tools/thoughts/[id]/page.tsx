@@ -14,8 +14,6 @@ import {
   Loader2,
 } from "lucide-react";
 
-export const dynamic = 'force-dynamic';
-
 export default function ThoughtDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
