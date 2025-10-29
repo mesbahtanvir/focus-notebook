@@ -21,6 +21,7 @@ import { useThoughts } from '@/store/useThoughts'
 import { useMoods } from '@/store/useMoods'
 import { useFocus } from '@/store/useFocus'
 import { useAuth } from '@/contexts/AuthContext'
+import { EnhancedDataManagement } from '@/components/EnhancedDataManagement';
 
 type SettingsFormValues = {
   allowBackgroundProcessing: boolean;
@@ -795,15 +796,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* Data Migration Component */}
-      <div className="mt-6">
-        <DataMigration />
-      </div>
-
-      {/* Token Usage Dashboard */}
-      <div className="mt-6">
-        <TokenUsageDashboard />
-      </div>
-
+      <EnhancedDataManagement />
     </div>
   );
 }

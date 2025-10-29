@@ -11,6 +11,7 @@ import { useFocus } from "@/store/useFocus";
 import { motion } from "framer-motion";
 import { getTimeOfDayCategory } from "@/lib/formatDateTime";
 import { useAuth } from "@/contexts/AuthContext";
+import { TokenUsageDashboard } from "@/components/TokenUsageDashboard";
 
 type SummaryPeriod = 'today' | 'week' | 'month';
 
@@ -399,6 +400,10 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+      {/* Token Usage Dashboard */}
+      <div className="mt-6">
+        <TokenUsageDashboard />
+      </div>
       </div>
     </div>
   );

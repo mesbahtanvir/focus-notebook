@@ -1,0 +1,277 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "exportedAt": "2025-10-28T12:00:00.000Z",
+    "userId": "sample-user",
+    "totalItems": 15,
+    "entityCounts": {
+      "tasks": 6,
+      "projects": 3,
+      "goals": 2,
+      "thoughts": 2,
+      "moods": 1,
+      "focusSessions": 1,
+      "people": 0
+    }
+  },
+  "data": {
+    "goals": [
+      {
+        "id": "goal-1",
+        "title": "Master Full-Stack Development",
+        "objective": "Become proficient in modern full-stack web development",
+        "timeframe": "long-term",
+        "status": "in-progress",
+        "priority": "high",
+        "progress": 45,
+        "tags": ["career", "learning"],
+        "targetDate": "2025-12-31",
+        "actionPlan": "Learn React, Node.js, databases, and deployment",
+        "createdAt": "2025-01-01T00:00:00.000Z",
+        "updatedAt": "2025-10-28T00:00:00.000Z"
+      },
+      {
+        "id": "goal-2",
+        "title": "Improve Physical Health",
+        "objective": "Get in shape and maintain healthy lifestyle",
+        "timeframe": "short-term",
+        "status": "in-progress",
+        "priority": "high",
+        "progress": 60,
+        "tags": ["health", "fitness"],
+        "targetDate": "2025-06-30",
+        "actionPlan": "Exercise 4x per week, eat healthy, sleep 8 hours",
+        "createdAt": "2025-02-01T00:00:00.000Z",
+        "updatedAt": "2025-10-28T00:00:00.000Z"
+      }
+    ],
+    "projects": [
+      {
+        "id": "project-1",
+        "title": "Build Personal Portfolio Website",
+        "objective": "Create a professional portfolio to showcase projects",
+        "description": "Design and develop a modern portfolio website with case studies",
+        "goalId": "goal-1",
+        "status": "in-progress",
+        "priority": "high",
+        "category": "mastery",
+        "progress": 70,
+        "tags": ["web-dev", "portfolio"],
+        "linkedTaskIds": ["task-1", "task-2", "task-3"],
+        "createdAt": "2025-03-01T00:00:00.000Z",
+        "updatedAt": "2025-10-28T00:00:00.000Z"
+      },
+      {
+        "id": "project-2",
+        "title": "Learn TypeScript",
+        "objective": "Master TypeScript for better code quality",
+        "description": "Complete TypeScript course and build projects",
+        "goalId": "goal-1",
+        "status": "active",
+        "priority": "medium",
+        "category": "mastery",
+        "progress": 40,
+        "tags": ["learning", "typescript"],
+        "linkedTaskIds": ["task-4"],
+        "createdAt": "2025-04-01T00:00:00.000Z",
+        "updatedAt": "2025-10-28T00:00:00.000Z"
+      },
+      {
+        "id": "project-3",
+        "title": "Morning Workout Routine",
+        "objective": "Establish consistent morning exercise habit",
+        "description": "Create and follow a 30-minute morning workout routine",
+        "goalId": "goal-2",
+        "status": "active",
+        "priority": "high",
+        "category": "pleasure",
+        "progress": 80,
+        "tags": ["fitness", "habits"],
+        "linkedTaskIds": ["task-5"],
+        "createdAt": "2025-02-15T00:00:00.000Z",
+        "updatedAt": "2025-10-28T00:00:00.000Z"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "task-1",
+        "title": "Design portfolio homepage",
+        "done": true,
+        "status": "completed",
+        "priority": "high",
+        "category": "mastery",
+        "projectId": "project-1",
+        "tags": ["design", "figma"],
+        "notes": "Created mockups in Figma with modern design",
+        "estimatedMinutes": 240,
+        "actualMinutes": 180,
+        "completedAt": "2025-10-15T00:00:00.000Z",
+        "createdAt": "2025-03-05T00:00:00.000Z",
+        "updatedAt": "2025-10-15T00:00:00.000Z"
+      },
+      {
+        "id": "task-2",
+        "title": "Implement responsive layout",
+        "done": true,
+        "status": "completed",
+        "priority": "high",
+        "category": "mastery",
+        "projectId": "project-1",
+        "tags": ["frontend", "responsive"],
+        "notes": "Used Tailwind CSS for responsive design",
+        "estimatedMinutes": 360,
+        "actualMinutes": 420,
+        "completedAt": "2025-10-20T00:00:00.000Z",
+        "createdAt": "2025-03-10T00:00:00.000Z",
+        "updatedAt": "2025-10-20T00:00:00.000Z"
+      },
+      {
+        "id": "task-3",
+        "title": "Add project case studies section",
+        "done": false,
+        "status": "active",
+        "priority": "medium",
+        "category": "mastery",
+        "projectId": "project-1",
+        "tags": ["content", "writing"],
+        "notes": "Write 3 detailed case studies of best projects",
+        "estimatedMinutes": 480,
+        "dueDate": "2025-11-15",
+        "focusEligible": true,
+        "createdAt": "2025-03-15T00:00:00.000Z",
+        "updatedAt": "2025-10-28T00:00:00.000Z"
+      },
+      {
+        "id": "task-4",
+        "title": "Complete TypeScript fundamentals course",
+        "done": false,
+        "status": "active",
+        "priority": "medium",
+        "category": "mastery",
+        "projectId": "project-2",
+        "tags": ["learning", "typescript", "course"],
+        "notes": "Working through official TypeScript handbook",
+        "estimatedMinutes": 600,
+        "dueDate": "2025-11-30",
+        "focusEligible": true,
+        "createdAt": "2025-04-05T00:00:00.000Z",
+        "updatedAt": "2025-10-28T00:00:00.000Z"
+      },
+      {
+        "id": "task-5",
+        "title": "Do morning workout",
+        "done": false,
+        "status": "active",
+        "priority": "high",
+        "category": "pleasure",
+        "projectId": "project-3",
+        "tags": ["fitness", "daily"],
+        "notes": "30 min workout: cardio + strength training",
+        "estimatedMinutes": 30,
+        "dueDate": "2025-10-29",
+        "recurrence": {
+          "type": "daily",
+          "frequency": 1
+        },
+        "createdAt": "2025-02-20T00:00:00.000Z",
+        "updatedAt": "2025-10-28T00:00:00.000Z"
+      },
+      {
+        "id": "task-6",
+        "title": "Review TypeScript best practices",
+        "done": false,
+        "status": "backlog",
+        "priority": "low",
+        "category": "mastery",
+        "thoughtId": "thought-1",
+        "tags": ["typescript", "learning"],
+        "notes": "Research industry best practices and patterns",
+        "estimatedMinutes": 120,
+        "focusEligible": true,
+        "createdAt": "2025-10-25T00:00:00.000Z",
+        "updatedAt": "2025-10-28T00:00:00.000Z"
+      }
+    ],
+    "thoughts": [
+      {
+        "id": "thought-1",
+        "text": "I should really focus on learning TypeScript properly. It will make my code more maintainable and help me catch bugs earlier.",
+        "tags": ["learning", "typescript", "productivity"],
+        "notes": "This came up after debugging a tricky type error",
+        "isDeepThought": true,
+        "deepThoughtNotes": "TypeScript adoption would significantly improve code quality",
+        "linkedTaskIds": ["task-6"],
+        "linkedProjectIds": ["project-2"],
+        "createdAt": "2025-10-25T00:00:00.000Z",
+        "updatedAt": "2025-10-25T00:00:00.000Z"
+      },
+      {
+        "id": "thought-2",
+        "text": "Morning workouts have been great for my energy levels. I should make this a permanent habit.",
+        "tags": ["fitness", "habits", "wellness"],
+        "notes": "Noticed better focus throughout the day",
+        "isDeepThought": false,
+        "linkedProjectIds": ["project-3"],
+        "createdAt": "2025-10-26T00:00:00.000Z",
+        "updatedAt": "2025-10-26T00:00:00.000Z"
+      }
+    ],
+    "moods": [
+      {
+        "id": "mood-1",
+        "value": 8,
+        "note": "Feeling productive and energized after completing the portfolio layout",
+        "metadata": {
+          "sourceThoughtId": "thought-2",
+          "createdBy": "user",
+          "dimensions": {
+            "energy": 8,
+            "focus": 9,
+            "stress": 3
+          }
+        },
+        "createdAt": "2025-10-26T10:00:00.000Z",
+        "updatedAt": "2025-10-26T10:00:00.000Z"
+      }
+    ],
+    "focusSessions": [
+      {
+        "id": "session-1",
+        "duration": 90,
+        "tasks": [
+          {
+            "id": "task-2",
+            "title": "Implement responsive layout",
+            "timeSpent": 60,
+            "completed": true,
+            "notes": "Completed main layout structure"
+          },
+          {
+            "id": "task-3",
+            "title": "Add project case studies section",
+            "timeSpent": 30,
+            "completed": false,
+            "notes": "Started planning case studies"
+          }
+        ],
+        "startTime": "2025-10-20T14:00:00.000Z",
+        "endTime": "2025-10-20T15:30:00.000Z",
+        "currentTaskIndex": 1,
+        "isActive": false,
+        "isOnBreak": false,
+        "breaks": [
+          {
+            "startTime": "2025-10-20T14:45:00.000Z",
+            "endTime": "2025-10-20T14:50:00.000Z",
+            "duration": 5
+          }
+        ],
+        "feedback": "Very productive session",
+        "rating": 9,
+        "createdAt": "2025-10-20T14:00:00.000Z",
+        "updatedAt": "2025-10-20T15:30:00.000Z"
+      }
+    ],
+    "people": []
+  }
+}
