@@ -7,6 +7,7 @@ import { useGoals } from "@/store/useGoals";
 import { useThoughts } from "@/store/useThoughts";
 import { useTasks } from "@/store/useTasks";
 import { useAuth } from "@/contexts/AuthContext";
+import { TimeTrackingService } from "@/services/TimeTrackingService";
 import { motion, AnimatePresence } from "framer-motion";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -185,7 +186,8 @@ export default function ProjectsPage() {
           {displayedItems.map((project) => {
             const linkedThoughts = getProjectThoughts(project.id);
             const linkedTasks = getProjectTasks(project.id);
-            
+            const projectTime = TimeTrackingService.calculateProjectTime(project, tasks);
+
             return (
               <motion.div
                 key={project.id}
@@ -274,6 +276,12 @@ export default function ProjectsPage() {
                     <ListChecks className="h-4 w-4" />
                     {linkedTasks.length} task(s)
                   </div>
+                  {projectTime.totalMinutes > 0 && (
+                    <div className="flex items-center gap-1 font-medium text-blue-600 dark:text-blue-400">
+                      <Clock className="h-4 w-4" />
+                      {TimeTrackingService.formatTime(projectTime.totalMinutes)} tracked
+                    </div>
+                  )}
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
                     {(() => {

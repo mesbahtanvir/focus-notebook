@@ -3,6 +3,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGoals, Goal, GoalTimeframe } from "@/store/useGoals";
+import { useProjects } from "@/store/useProjects";
+import { useTasks } from "@/store/useTasks";
+import { TimeTrackingService } from "@/services/TimeTrackingService";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Target, CheckCircle2, Trash2, Edit2, PlayCircle, PauseCircle, Archive, ChevronDown, ChevronUp
@@ -25,7 +28,12 @@ export default function GoalsPage() {
   const updateGoal = useGoals((s) => s.updateGoal);
   const deleteGoal = useGoals((s) => s.deleteGoal);
   const toggleStatus = useGoals((s) => s.toggleStatus);
-  
+
+  const projects = useProjects((s) => s.projects);
+  const subscribeProjects = useProjects((s) => s.subscribe);
+  const tasks = useTasks((s) => s.tasks);
+  const subscribeTasks = useTasks((s) => s.subscribe);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -37,8 +45,10 @@ export default function GoalsPage() {
   useEffect(() => {
     if (user?.uid) {
       subscribe(user.uid);
+      subscribeProjects(user.uid);
+      subscribeTasks(user.uid);
     }
-  }, [user?.uid, subscribe]);
+  }, [user?.uid, subscribe, subscribeProjects, subscribeTasks]);
 
   const handleSubmit = async (data: {
     title: string;
@@ -177,6 +187,8 @@ export default function GoalsPage() {
         </h2>
         <AnimatePresence>
           {shortTermGoals.map((goal) => {
+            const goalTime = TimeTrackingService.calculateGoalTime(goal, projects, tasks);
+
             return (
               <motion.div
                 key={goal.id}
@@ -204,6 +216,11 @@ export default function GoalsPage() {
                         {goal.timeframe === 'long-term' && '🎯 Long Term'}
                         {!goal.timeframe && '⚡ Short Term'}
                       </span>
+                      {goalTime.totalMinutes > 0 && (
+                        <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                          ⏱️ {TimeTrackingService.formatTime(goalTime.totalMinutes)} invested
+                        </span>
+                      )}
                     </div>
                     <p className="text-muted-foreground">{goal.objective}</p>
                   </div>
@@ -259,6 +276,8 @@ export default function GoalsPage() {
         </h2>
         <AnimatePresence>
           {longTermGoals.map((goal) => {
+            const goalTime = TimeTrackingService.calculateGoalTime(goal, projects, tasks);
+
             return (
               <motion.div
                 key={goal.id}
@@ -283,6 +302,11 @@ export default function GoalsPage() {
                       <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                         🎯 Long Term
                       </span>
+                      {goalTime.totalMinutes > 0 && (
+                        <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                          ⏱️ {TimeTrackingService.formatTime(goalTime.totalMinutes)} invested
+                        </span>
+                      )}
                     </div>
                     <p className="text-muted-foreground">{goal.objective}</p>
                   </div>

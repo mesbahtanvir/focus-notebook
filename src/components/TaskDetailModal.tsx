@@ -10,6 +10,7 @@ import { FormattedNotes } from "@/lib/formatNotes";
 import { TaskSteps } from "@/components/TaskSteps";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { TimeDisplay } from "@/components/TimeDisplay";
+import { SessionHistory } from "@/components/SessionHistory";
 import Link from "next/link";
 import {
   X,
@@ -385,8 +386,8 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
 
           {/* Time Tracking - Show when there's actual time spent */}
           {!isEditing && (task.actualMinutes || task.estimatedMinutes) && (
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl p-4 border-2 border-blue-200 dark:border-blue-800">
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-blue-900 dark:text-blue-100">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl p-4 border-2 border-blue-200 dark:border-blue-800 space-y-4">
+              <h4 className="text-sm font-semibold flex items-center gap-2 text-blue-900 dark:text-blue-100">
                 <Clock className="h-4 w-4" />
                 Time Tracking
               </h4>
@@ -396,6 +397,13 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                 variant="detailed"
                 showProgressBar={true}
               />
+
+              {/* Session History */}
+              {task.actualMinutes && task.actualMinutes > 0 && (
+                <div className="pt-3 border-t border-blue-200 dark:border-blue-800">
+                  <SessionHistory taskId={task.id} />
+                </div>
+              )}
             </div>
           )}
 
