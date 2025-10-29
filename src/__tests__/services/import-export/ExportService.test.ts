@@ -1,5 +1,5 @@
 import { ExportService } from '@/services/import-export/ExportService';
-import { ExportFilterOptions } from '@/types/import-export';
+import { ExportFilterOptions, EntityType } from '@/types/import-export';
 import { mockEntityCollection, emptyEntityCollection } from '../../utils/mockData';
 
 describe('ExportService', () => {
@@ -173,7 +173,7 @@ describe('ExportService', () => {
     it('should filter goals by status', async () => {
       const filters: ExportFilterOptions = {
         entities: ['goals'],
-        status: ['in-progress'],
+        status: ['active'],
       };
 
       const result = await exportService.exportWithFilters(
@@ -182,7 +182,7 @@ describe('ExportService', () => {
         filters
       );
 
-      expect(result.data.goals?.every(g => g.status === 'in-progress')).toBe(true);
+      expect(result.data.goals?.every(g => g.status === 'active')).toBe(true);
     });
 
     it('should filter thoughts by tags', async () => {
@@ -243,9 +243,9 @@ describe('ExportService', () => {
 
   describe('exportSelected', () => {
     it('should export only selected items', async () => {
-      const selectedIds = new Map([
-        ['tasks', new Set(['task-1', 'task-2'])],
-        ['projects', new Set(['project-1'])],
+      const selectedIds = new Map<EntityType, Set<string>>([
+        ['tasks' as EntityType, new Set(['task-1', 'task-2'])],
+        ['projects' as EntityType, new Set(['project-1'])],
       ]);
 
       const result = await exportService.exportSelected(
@@ -273,8 +273,8 @@ describe('ExportService', () => {
     });
 
     it('should handle selection of non-existent IDs', async () => {
-      const selectedIds = new Map([
-        ['tasks', new Set(['non-existent-task'])],
+      const selectedIds = new Map<EntityType, Set<string>>([
+        ['tasks' as EntityType, new Set(['non-existent-task'])],
       ]);
 
       const result = await exportService.exportSelected(
@@ -329,6 +329,10 @@ describe('ExportService', () => {
           duration: 60,
           tasks: [],
           startTime: '2025-01-05T00:00:00.000Z',
+          currentTaskIndex: 0,
+          isActive: false,
+          isOnBreak: false,
+          breaks: [],
           createdAt: '2025-01-05T00:00:00.000Z',
           updatedAt: '2025-01-05T00:00:00.000Z',
         }],

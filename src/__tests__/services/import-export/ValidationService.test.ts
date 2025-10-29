@@ -75,10 +75,10 @@ describe('ValidationService', () => {
 
       const result = validationService.validate(emptyData);
 
-      // Data has empty collections, should be valid or have warnings
+      // Data has empty collections, should be valid or have errors
       expect(result.entities).toBeDefined();
-      // Check if it's valid or has specific warnings about empty data
-      expect(result.isValid || result.warnings.length > 0).toBe(true);
+      // Check if it's valid or has specific errors about empty data
+      expect(result.isValid || result.errors.length > 0).toBe(true);
     });
   });
 
