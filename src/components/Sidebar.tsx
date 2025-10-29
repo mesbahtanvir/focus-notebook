@@ -28,7 +28,13 @@ export default function Sidebar() {
     };
   }, [isOpen]);
 
-  const navItems = [
+  const navItems: Array<{
+    href: string;
+    icon: typeof Home;
+    label: string;
+    color: string;
+    badge?: string | number;
+  }> = [
     { href: '/', icon: Home, label: 'Home', color: 'from-purple-500 to-pink-500' },
     { href: '/tools', icon: Wrench, label: 'Tools', color: 'from-green-500 to-emerald-500' },
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: 'from-blue-500 to-cyan-500' },

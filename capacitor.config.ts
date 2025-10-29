@@ -7,7 +7,6 @@ const config: CapacitorConfig = {
   ios: {
     contentInset: 'automatic',
     backgroundColor: '#ffffff',
-    keyboardResize: 'body',
     preferredContentMode: 'mobile',
     limitsNavigationsToAppBoundDomains: true,
     scrollEnabled: true,
