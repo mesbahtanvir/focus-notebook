@@ -4,6 +4,14 @@ const config: CapacitorConfig = {
   appId: 'com.mesbah.personalnotebook',
   appName: 'Personal Notebook',
   webDir: 'out', // ✅ this should match your Next.js export folder
+  ios: {
+    contentInset: 'automatic',
+    backgroundColor: '#ffffff',
+    keyboardResize: 'body',
+    preferredContentMode: 'mobile',
+    limitsNavigationsToAppBoundDomains: true,
+    scrollEnabled: true,
+  },
 };
 
 export default config;

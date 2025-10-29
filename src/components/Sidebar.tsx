@@ -76,7 +76,7 @@ export default function Sidebar() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
-        className="lg:hidden fixed top-4 left-4 z-50 p-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg hover:shadow-xl transition-all transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-purple-300"
+        className="lg:hidden fixed top-4 left-4 z-50 p-4 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg hover:shadow-xl transition-all transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-purple-300 min-h-[44px] min-w-[44px] touch-manipulation"
         aria-label={isOpen ? 'Close menu' : 'Open menu'}
         aria-expanded={isOpen}
       >
@@ -110,6 +110,10 @@ export default function Sidebar() {
           lg:translate-x-0
           w-64 lg:w-20 xl:w-64
         `}
+        style={{
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
       >
         {/* Header */}
         <div className="p-4 border-b-4 border-purple-200 bg-gradient-to-r from-purple-100 to-pink-100">
@@ -132,9 +136,10 @@ export default function Sidebar() {
                 onClick={closeSidebar}
                 aria-current={isActive ? 'page' : undefined}
                 className={`
-                  group relative flex items-center gap-3 p-3 rounded-xl
+                  group relative flex items-center gap-3 p-4 min-h-[44px] rounded-xl
                   transition-all duration-200 transform
                   focus:outline-none focus:ring-4 focus:ring-purple-300
+                  touch-manipulation
                   ${isActive
                     ? `bg-gradient-to-r ${item.color} text-white shadow-md scale-105`
                     : 'text-gray-700 hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 hover:scale-105'
@@ -144,7 +149,16 @@ export default function Sidebar() {
                 title={item.label}
               >
                 <item.icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-600'}`} />
-                <span className="font-medium lg:hidden xl:inline">{item.label}</span>
+                <span className="font-medium lg:hidden xl:inline flex-1">{item.label}</span>
+                {item.badge && (
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                    isActive 
+                      ? 'bg-white/20 text-white' 
+                      : 'bg-purple-500 text-white'
+                  }`}>
+                    {item.badge}
+                  </span>
+                )}
                 
                 {/* Tooltip for tablet view */}
                 <span className="hidden lg:block xl:hidden absolute left-full ml-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
@@ -160,9 +174,10 @@ export default function Sidebar() {
             onClick={closeSidebar}
             aria-current={pathname === '/admin' ? 'page' : undefined}
             className={`
-              group relative flex items-center gap-3 p-3 rounded-xl
+              group relative flex items-center gap-3 p-4 min-h-[44px] rounded-xl
               transition-all duration-200 transform
               focus:outline-none focus:ring-4 focus:ring-blue-300
+              touch-manipulation
               ${pathname === '/admin'
                 ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md scale-105'
                 : 'text-gray-700 hover:bg-gradient-to-r hover:from-blue-100 hover:to-cyan-100 hover:scale-105'

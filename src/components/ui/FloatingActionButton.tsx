@@ -18,11 +18,11 @@ export function FloatingActionButton({
   className = '',
   disabled = false,
 }: FloatingActionButtonProps) {
-  const buttonClass = `fixed bottom-8 right-8 h-16 w-16 rounded-full ${
+  const buttonClass = `fixed bottom-8 right-8 h-16 w-16 min-h-[64px] min-w-[64px] rounded-full ${
     disabled
       ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
       : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 hover:scale-110'
-  } text-white shadow-2xl hover:shadow-3xl transition-all flex items-center justify-center z-40 ${className}`;
+  } text-white shadow-2xl hover:shadow-3xl transition-all flex items-center justify-center z-40 touch-manipulation ${className}`;
 
   if (href) {
     return (

@@ -14,9 +14,9 @@ describe('ConflictDetectionService', () => {
   });
 
   describe('detectConflicts', () => {
-    it.skip('should detect no conflicts when data is clean', async () => {
+    it('should detect no conflicts when data is clean', async () => {
       const result = await conflictService.detectConflicts(
-        mockEntityCollection,
+        emptyEntityCollection,
         emptyEntityCollection
       );
 

@@ -146,7 +146,7 @@ describe('Task Store Integration', () => {
       });
     });
 
-    it.skip('should reset daily tasks', async () => {
+    it.skip('should reset daily tasks - implementation dependent', async () => {
       const dailyTask1 = aTask().asDaily().asDone().build();
       const dailyTask2 = aTask().asDaily().asDone().build();
 

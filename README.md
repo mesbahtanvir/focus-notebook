@@ -119,6 +119,32 @@ npm test
 npm run test:ci
 ```
 
+## 📱 iPad App
+
+This app is configured to run on iPad using Capacitor. See the complete guide:
+
+📖 **[iPad App Guide](./IPAD_GUIDE.md)** - Build, run, and publish your iPad app
+
+### Quick Start for iPad
+
+```bash
+# 1. Install CocoaPods
+brew install cocoapods
+
+# 2. Install iOS dependencies
+cd ios/App && pod install && cd ../..
+
+# 3. Build and sync
+npm run build && npx cap sync ios
+
+# 4. Open in Xcode
+open ios/App/App.xcworkspace
+```
+
+Then in Xcode: Select iPad Simulator → Press `⌘R` to build and run!
+
+---
+
 ## 📦 Deployment
 
 ### Deploy to Vercel

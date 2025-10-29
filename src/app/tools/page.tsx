@@ -153,7 +153,7 @@ export default function ToolsPage() {
   }, [searchQuery]);
 
   return (
-    <div className="container mx-auto py-4 space-y-3">
+    <div className="container mx-auto py-4 md:py-6 lg:py-8 space-y-4 md:space-y-6 px-4 md:px-6 lg:px-8">
       {/* Header Section */}
       <div className="text-center space-y-2">
         <div className="flex justify-center items-center gap-3">
@@ -190,7 +190,7 @@ export default function ToolsPage() {
         <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
           All Tools ({filteredTools.length})
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredTools.map((tool) => {
             const Icon = tool.icon;
             return (

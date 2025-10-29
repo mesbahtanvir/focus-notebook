@@ -100,7 +100,7 @@ export class ValidationService {
 
     // Check if we have any valid entities
     const hasValidEntities = Object.keys(entities).some(
-      key => entities[key as EntityType]?.length > 0
+      key => (entities[key as EntityType]?.length ?? 0) > 0
     );
 
     const hasBlockingErrors = errors.some(e => e.severity === 'error');

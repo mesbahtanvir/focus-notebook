@@ -196,9 +196,10 @@ export default function DashboardPage() {
   }, [tasks, moods, sessions, summaryPeriod]);
 
   return (
-    <div className="container mx-auto py-6 md:py-8 px-4 md:px-0 max-w-7xl">
-      {/* Dashboard Selection */}
-      <div className="mb-6">
+    <div className="container mx-auto py-6 md:py-8 lg:py-10 px-4 md:px-6 lg:px-8 max-w-7xl">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
+      {/* Dashboard Selection - Full Width */}
+      <div className="mb-6 xl:col-span-2">
         <Card className="border-4 border-indigo-200 shadow-xl bg-gradient-to-br from-white to-indigo-50 dark:from-gray-900 dark:to-indigo-950">
           <CardHeader>
             <CardTitle className="text-2xl font-bold flex items-center gap-2">
@@ -227,9 +228,9 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Sticky Period Selector */}
-      <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 pb-4 mb-2">
+      
+      {/* Sticky Period Selector - Full Width */}
+      <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 pb-4 mb-2 xl:col-span-2">
         <div className="flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 shadow-md">
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-2">Period:</span>
           {(['today', 'week', 'month'] as SummaryPeriod[]).map((period) => (
@@ -403,6 +404,7 @@ export default function DashboardPage() {
       {/* Token Usage Dashboard */}
       <div className="mt-6">
         <TokenUsageDashboard />
+      </div>
       </div>
       </div>
     </div>

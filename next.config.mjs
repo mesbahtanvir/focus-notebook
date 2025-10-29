@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  // output: 'export', // Temporarily disabled for build
+  output: 'export', // Required for static export to Capacitor
   images: {
     unoptimized: true,
   },

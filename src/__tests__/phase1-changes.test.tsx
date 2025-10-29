@@ -73,16 +73,16 @@ describe('Phase 1 Changes Validation - Quick Fixes', () => {
   });
 
   describe('File Content Validation - Tools Page', () => {
-    it('should have compact header in tools page file content', async () => {
+    it('should have responsive padding for iPad optimization in tools page file content', async () => {
       const fs = require('fs');
       const path = require('path');
       const filePath = path.join(process.cwd(), 'src/app/tools/page.tsx');
       const fileContent = fs.readFileSync(filePath, 'utf8');
       
-      // Should have compact spacing (py-4 not py-8)
-      expect(fileContent).toContain('py-4 space-y-3');
+      // Should have responsive spacing for iPad optimization
+      expect(fileContent).toContain('py-4 md:py-6 lg:py-8');
       
-      // Should not have old spacing
+      // Should not have old non-responsive spacing
       expect(fileContent).not.toContain('py-8 space-y-6');
     });
 

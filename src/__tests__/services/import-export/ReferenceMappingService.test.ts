@@ -249,7 +249,7 @@ describe('ReferenceMappingService', () => {
     });
   });
 
-  describe.skip('updateReferences', () => {
+  describe('updateReferences', () => {
     it('should update task references', () => {
       const idMapping = {
         oldToNew: new Map([
@@ -271,7 +271,8 @@ describe('ReferenceMappingService', () => {
       expect(task1?.projectId).toBe('new-project-1');
 
       const task2 = updated.tasks?.find(t => t.id === 'task-2'); // Mapping doesn't exist
-      expect(task2?.thoughtId).toBe('thought-1'); // Should keep original
+      // Should update the reference since 'thought-1' was in the mapping
+      expect(task2?.thoughtId).toBe('new-thought-1');
     });
 
     it('should update project references', () => {

@@ -44,7 +44,7 @@ export function TaskModal({
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ type: "spring", duration: 0.4, bounce: 0.3 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30, mass: 0.8 }}
             className="relative bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-2xl w-full border-4 border-cyan-200 dark:border-cyan-800 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >

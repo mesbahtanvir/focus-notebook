@@ -1,0 +1,15 @@
+iPad Build Quick Steps:
+=======================
+
+1. In Xcode Navigator (left sidebar):
+   ✓ Click the blue "App" icon (you can see this!)
+
+2. In the center panel tabs:
+   ✓ Click "Signing & Capabilities"
+   ✓ Select your Team
+
+3. In top bar:
+   ✓ Choose "iPad Pro" simulator
+   ✓ Press ⌘R (Command + R)
+
+That's it! The app should build and launch on iPad simulator.

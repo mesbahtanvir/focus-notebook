@@ -366,8 +366,12 @@ describe('ExportService', () => {
       createElementSpy = jest.spyOn(document, 'createElement').mockReturnValue(mockAnchor as any);
       appendChildSpy = jest.spyOn(document.body, 'appendChild').mockImplementation();
       removeChildSpy = jest.spyOn(document.body, 'removeChild').mockImplementation();
-      createObjectURLSpy = jest.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
-      revokeObjectURLSpy = jest.spyOn(URL, 'revokeObjectURL').mockImplementation();
+      // Mock URL.createObjectURL
+      global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
+      createObjectURLSpy = global.URL.createObjectURL as jest.Mock;
+      // Mock URL.revokeObjectURL  
+      global.URL.revokeObjectURL = jest.fn();
+      revokeObjectURLSpy = global.URL.revokeObjectURL as jest.Mock;
     });
 
     afterEach(() => {
@@ -378,7 +382,7 @@ describe('ExportService', () => {
       revokeObjectURLSpy.mockRestore();
     });
 
-    it.skip('should trigger download with default filename', async () => {
+    it('should trigger download with default filename', async () => {
       const exportedData = await exportService.exportAll(mockEntityCollection, 'test-user');
 
       exportService.downloadAsJson(exportedData);
@@ -390,7 +394,7 @@ describe('ExportService', () => {
       expect(revokeObjectURLSpy).toHaveBeenCalled();
     });
 
-    it.skip('should use custom filename when provided', async () => {
+    it('should use custom filename when provided', async () => {
       const exportedData = await exportService.exportAll(mockEntityCollection, 'test-user');
       const customFilename = 'my-export.json';
 

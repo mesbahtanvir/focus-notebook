@@ -84,11 +84,14 @@ export function GoalFormModal({
 
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ type: "spring", duration: 0.4, bounce: 0.3 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30, mass: 0.8 }}
             className="relative bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-2xl w-full border-4 border-purple-200 dark:border-purple-800 overflow-hidden"
+            style={{
+              maxHeight: 'calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 4rem)',
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Decorative background elements */}
@@ -124,8 +127,9 @@ export function GoalFormModal({
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full p-3 rounded-xl border-2 border-purple-200 dark:border-purple-800 focus:border-purple-400 dark:focus:border-purple-600 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900 bg-white dark:bg-gray-800 transition-all outline-none"
+                  className="w-full p-4 min-h-[44px] rounded-xl border-2 border-purple-200 dark:border-purple-800 focus:border-purple-400 dark:focus:border-purple-600 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900 bg-white dark:bg-gray-800 transition-all outline-none touch-manipulation text-base"
                   placeholder="e.g., Launch my own business"
+                  inputMode="text"
                   required
                   autoFocus
                 />
@@ -136,9 +140,10 @@ export function GoalFormModal({
                 <textarea
                   value={objective}
                   onChange={(e) => setObjective(e.target.value)}
-                  className="w-full p-3 rounded-xl border-2 border-purple-200 dark:border-purple-800 focus:border-purple-400 dark:focus:border-purple-600 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900 bg-white dark:bg-gray-800 transition-all outline-none"
+                  className="w-full p-4 min-h-[120px] rounded-xl border-2 border-purple-200 dark:border-purple-800 focus:border-purple-400 dark:focus:border-purple-600 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900 bg-white dark:bg-gray-800 transition-all outline-none touch-manipulation text-base resize-none"
                   rows={3}
                   placeholder="Why is this goal important? What will achieving it mean to you?"
+                  inputMode="text"
                   required
                 />
               </div>
@@ -156,7 +161,7 @@ export function GoalFormModal({
                   <select
                     value={timeframe}
                     onChange={(e) => setTimeframe(e.target.value as GoalTimeframe)}
-                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-purple-500 outline-none"
+                    className="w-full px-4 py-2 min-h-[44px] rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-purple-500 outline-none touch-manipulation text-base"
                     required
                   >
                     <option value="immediate">Immediate (Days-Weeks)</option>
@@ -170,7 +175,7 @@ export function GoalFormModal({
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as any)}
-                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-purple-500 outline-none"
+                    className="w-full px-4 py-2 min-h-[44px] rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-purple-500 outline-none touch-manipulation text-base"
                   >
                     <option value="urgent">Urgent</option>
                     <option value="high">High</option>
