@@ -45,7 +45,17 @@ npx cap sync ios
 open ios/App/App.xcworkspace
 ```
 
-That's it! Xcode should open with your project ready.
+**IMPORTANT: Configure Signing in Xcode**
+
+After opening the project:
+1. In Xcode, select the **"App"** project in the left sidebar
+2. Select **"App"** under TARGETS (not PROJECTS)
+3. Click **"Signing & Capabilities"** tab
+4. Check **"Automatically manage signing"**
+5. Select your **Team** from the dropdown (or click "Add Account..." to add your Apple ID)
+6. The Bundle Identifier should be: `com.mesbah.personalnotebook`
+
+**Need help?** See [XCODE_SIGNING_SETUP.md](./XCODE_SIGNING_SETUP.md) for detailed instructions.
 
 ---
 
