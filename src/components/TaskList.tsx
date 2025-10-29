@@ -7,6 +7,7 @@ import { useThoughts } from "@/store/useThoughts";
 import { isTodayISO } from "@/lib/utils/date";
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
+import { TimeDisplay } from "./TimeDisplay";
 
 export default function TaskList() {
   const tasks = useTasks((s) => s.tasks);
@@ -105,6 +106,19 @@ export default function TaskList() {
                         </span>
                       )}
                     </div>
+
+                    {/* Time Tracking - Always visible */}
+                    {(t.actualMinutes || t.estimatedMinutes) && (
+                      <div className="mt-2">
+                        <TimeDisplay
+                          actual={t.actualMinutes}
+                          estimated={t.estimatedMinutes}
+                          variant="inline"
+                          showProgressBar={true}
+                        />
+                      </div>
+                    )}
+
                     {/* Tags - Hidden by default, shown on hover */}
                     <div className="mt-1.5 flex items-center gap-1.5 flex-wrap opacity-0 group-hover:opacity-100 transition-opacity">
                       {t.priority && (

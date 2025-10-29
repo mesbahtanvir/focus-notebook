@@ -4,6 +4,7 @@ import { collection, query, orderBy, where, getDocs } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebaseClient'
 import { createAt, updateAt, deleteAt } from '@/lib/data/gateway'
 import { subscribeCol } from '@/lib/data/subscribe'
+import { TimeTrackingService } from '@/services/TimeTrackingService'
 
 export interface FocusTask {
   task: Task
@@ -259,10 +260,10 @@ export const useFocus = create<State>((set, get) => ({
   endSession: async (feedback, rating) => {
     const current = get().currentSession
     if (!current) return
-    
+
     const userId = auth.currentUser?.uid
     if (!userId) throw new Error('Not authenticated')
-    
+
     const completedSession: FocusSession = {
       ...current,
       endTime: new Date().toISOString(),
@@ -272,7 +273,7 @@ export const useFocus = create<State>((set, get) => ({
       feedback,
       rating,
     }
-    
+
     // Update Firestore - mark as completed
     try {
       await updateAt(`users/${userId}/focusSessions/${completedSession.id}`, {
@@ -287,7 +288,22 @@ export const useFocus = create<State>((set, get) => ({
     } catch (error) {
       console.error('Failed to save focus session:', error)
     }
-    
+
+    // Update actual time for each task worked on
+    try {
+      for (const focusTask of completedSession.tasks) {
+        if (focusTask.timeSpent > 0) {
+          await TimeTrackingService.updateTaskActualTime(
+            focusTask.task.id,
+            focusTask.timeSpent
+          )
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update task actual times:', error)
+      // Don't throw - session is already completed
+    }
+
     // Set completed session for display
     set({
       currentSession: null,
@@ -527,9 +543,33 @@ export const useFocus = create<State>((set, get) => ({
   },
   
   pauseSession: async () => {
+    const current = get().currentSession
+    if (!current) return
+
+    const userId = auth.currentUser?.uid
+    if (!userId) {
+      console.warn('Cannot pause session: user not authenticated')
+      return
+    }
+
+    // Update actual time for tasks with time spent (partial session)
+    try {
+      for (const focusTask of current.tasks) {
+        if (focusTask.timeSpent > 0) {
+          await TimeTrackingService.updateTaskActualTime(
+            focusTask.task.id,
+            focusTask.timeSpent
+          )
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update task actual times on pause:', error)
+      // Continue with pause even if time update fails
+    }
+
     set((state) => {
       if (!state.currentSession) return state
-      
+
       return {
         currentSession: {
           ...state.currentSession,

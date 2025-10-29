@@ -15,6 +15,7 @@ import {
 import { FormattedNotes } from '@/lib/formatNotes';
 import { ConfirmModal } from "./ConfirmModal";
 import { formatTimeGentle } from '@/lib/utils/date';
+import { TimeTrackingService } from '@/services/TimeTrackingService';
 
 export function FocusSession() {
   const router = useRouter();
@@ -251,11 +252,45 @@ export function FocusSession() {
                 </div>
 
                 {/* Timer */}
-                <div className="flex items-center justify-center gap-2 text-purple-600 dark:text-purple-400">
-                  <Clock className="h-5 w-5" />
-                  <span className="text-2xl font-mono font-bold">
-                    {formatTimeGentle(currentFocusTask.timeSpent)}
-                  </span>
+                <div className="flex flex-col items-center gap-3">
+                  {/* Current Session Timer */}
+                  <div className="flex items-center justify-center gap-2 text-purple-600 dark:text-purple-400">
+                    <Clock className="h-5 w-5" />
+                    <span className="text-2xl font-mono font-bold">
+                      {formatTimeGentle(currentFocusTask.timeSpent)}
+                    </span>
+                  </div>
+
+                  {/* Total Time Context */}
+                  {(currentFocusTask.task.actualMinutes || currentFocusTask.task.estimatedMinutes) && (
+                    <div className="flex flex-col items-center gap-1 text-xs">
+                      <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                        {currentFocusTask.task.actualMinutes && (
+                          <span>
+                            📊 Total: {TimeTrackingService.formatTime(currentFocusTask.task.actualMinutes + Math.floor(currentFocusTask.timeSpent / 60))}
+                          </span>
+                        )}
+                        {currentFocusTask.task.estimatedMinutes && (
+                          <span>
+                            🎯 Est: {TimeTrackingService.formatTime(currentFocusTask.task.estimatedMinutes)}
+                          </span>
+                        )}
+                      </div>
+                      {currentFocusTask.task.estimatedMinutes && (
+                        <div className="text-gray-500 dark:text-gray-500">
+                          {(() => {
+                            const totalMinutes = (currentFocusTask.task.actualMinutes || 0) + Math.floor(currentFocusTask.timeSpent / 60);
+                            const efficiency = TimeTrackingService.calculateEfficiency(totalMinutes, currentFocusTask.task.estimatedMinutes);
+                            const status = TimeTrackingService.getEfficiencyStatus(efficiency);
+
+                            if (status === 'on-track') return '✨ Right on track!';
+                            if (status === 'warning') return '⚠️ Slightly over estimate';
+                            return '🔴 Over budget';
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
