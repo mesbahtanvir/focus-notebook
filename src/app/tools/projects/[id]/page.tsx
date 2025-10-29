@@ -24,7 +24,9 @@ import {
   Zap,
   ListChecks,
   BarChart3,
-  User
+  User,
+  Save,
+  X as XIcon
 } from "lucide-react";
 import { TaskModal } from "@/components/TaskModal";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
@@ -60,6 +62,7 @@ export default function ProjectDetailPage() {
   const projectId = params.id as string;
 
   const projects = useProjects((s) => s.projects);
+  const isLoading = useProjects((s) => s.isLoading);
   const subscribe = useProjects((s) => s.subscribe);
   const updateProject = useProjects((s) => s.update);
   const deleteProject = useProjects((s) => s.delete);
@@ -75,6 +78,26 @@ export default function ProjectDetailPage() {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<{
+    title: string;
+    description: string;
+    objective: string;
+    status: 'active' | 'completed' | 'on-hold' | 'cancelled';
+    priority: 'low' | 'medium' | 'high' | 'urgent';
+    timeframe: 'short-term' | 'long-term';
+    category: 'mastery' | 'health' | 'wealth' | 'connection';
+    targetDate: string;
+  }>({
+    title: '',
+    description: '',
+    objective: '',
+    status: 'active',
+    priority: 'medium',
+    timeframe: 'short-term',
+    category: 'mastery',
+    targetDate: '',
+  });
 
   useEffect(() => {
     if (user?.uid) {
@@ -84,6 +107,22 @@ export default function ProjectDetailPage() {
   }, [user?.uid, subscribe, subscribeTasks]);
 
   const project = projects.find((p) => p.id === projectId);
+
+  // Populate edit form when project loads or edit mode is entered
+  useEffect(() => {
+    if (project && isEditing) {
+      setEditForm({
+        title: project.title,
+        description: project.description || '',
+        objective: project.objective || '',
+        status: project.status,
+        priority: project.priority,
+        timeframe: project.timeframe,
+        category: project.category,
+        targetDate: project.targetDate || '',
+      });
+    }
+  }, [project, isEditing]);
 
   const linkedTasks = useMemo(() => {
     if (!project) return [];
@@ -164,6 +203,46 @@ export default function ProjectDetailPage() {
     router.push("/tools/projects");
   };
 
+  const handleStartEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editForm.title.trim()) return;
+
+    await updateProject(projectId, {
+      title: editForm.title,
+      description: editForm.description,
+      objective: editForm.objective,
+      status: editForm.status,
+      priority: editForm.priority,
+      timeframe: editForm.timeframe,
+      category: editForm.category,
+      targetDate: editForm.targetDate || undefined,
+    });
+
+    setIsEditing(false);
+  };
+
+  // Show loading state while data is being fetched
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto p-4 md:p-6">
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-green-600 mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+            Loading project...
+          </h2>
+        </div>
+      </div>
+    );
+  }
+
+  // Show not found only after loading is complete
   if (!project) {
     return (
       <div className="max-w-7xl mx-auto p-4 md:p-6">
@@ -204,62 +283,146 @@ export default function ProjectDetailPage() {
               <Target className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
-                {project.title}
-              </h1>
-              <p className="text-gray-700 dark:text-gray-300 text-lg mb-3">{project.objective}</p>
+              {isEditing ? (
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                    className="text-3xl font-bold bg-transparent border-b-2 border-green-300 dark:border-green-700 focus:border-green-500 dark:focus:border-green-500 outline-none w-full text-gray-900 dark:text-white pb-1"
+                    placeholder="Project Title"
+                  />
+                  <textarea
+                    value={editForm.objective}
+                    onChange={(e) => setEditForm({ ...editForm, objective: e.target.value })}
+                    className="text-lg bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2 w-full focus:ring-2 focus:ring-green-500 outline-none"
+                    placeholder="Objective"
+                    rows={2}
+                  />
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <select
+                      value={editForm.status}
+                      onChange={(e) => setEditForm({ ...editForm, status: e.target.value as any })}
+                      className="input text-sm"
+                    >
+                      <option value="active">Active</option>
+                      <option value="completed">Completed</option>
+                      <option value="on-hold">On Hold</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                    <select
+                      value={editForm.category}
+                      onChange={(e) => setEditForm({ ...editForm, category: e.target.value as any })}
+                      className="input text-sm"
+                    >
+                      <option value="mastery">Mastery</option>
+                      <option value="health">Health</option>
+                      <option value="wealth">Wealth</option>
+                      <option value="connection">Connection</option>
+                    </select>
+                    <select
+                      value={editForm.priority}
+                      onChange={(e) => setEditForm({ ...editForm, priority: e.target.value as any })}
+                      className="input text-sm"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
+                    <select
+                      value={editForm.timeframe}
+                      onChange={(e) => setEditForm({ ...editForm, timeframe: e.target.value as any })}
+                      className="input text-sm"
+                    >
+                      <option value="short-term">Short-term</option>
+                      <option value="long-term">Long-term</option>
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
+                    {project.title}
+                  </h1>
+                  <p className="text-gray-700 dark:text-gray-300 text-lg mb-3">{project.objective}</p>
 
-              {/* Meta info */}
-              <div className="flex flex-wrap items-center gap-3 text-sm">
-                <span className={`px-3 py-1 rounded-full font-semibold ${
-                  project.status === "active"
-                    ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
-                    : project.status === "completed"
-                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
-                    : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                }`}>
-                  {project.status}
-                </span>
+                  {/* Meta info */}
+                  <div className="flex flex-wrap items-center gap-3 text-sm">
+                    <span className={`px-3 py-1 rounded-full font-semibold ${
+                      project.status === "active"
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                        : project.status === "completed"
+                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                        : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                    }`}>
+                      {project.status}
+                    </span>
 
-                <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 font-semibold">
-                  {project.category}
-                </span>
+                    <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 font-semibold">
+                      {project.category}
+                    </span>
 
-                <span className={`px-3 py-1 rounded-full font-semibold ${
-                  project.priority === "urgent"
-                    ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
-                    : project.priority === "high"
-                    ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
-                    : project.priority === "medium"
-                    ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300"
-                    : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
-                }`}>
-                  {project.priority}
-                </span>
+                    <span className={`px-3 py-1 rounded-full font-semibold ${
+                      project.priority === "urgent"
+                        ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                        : project.priority === "high"
+                        ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
+                        : project.priority === "medium"
+                        ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300"
+                        : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                    }`}>
+                      {project.priority}
+                    </span>
 
-                <span className="px-3 py-1 rounded-full bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300 font-semibold">
-                  {project.timeframe}
-                </span>
-              </div>
+                    <span className="px-3 py-1 rounded-full bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300 font-semibold">
+                      {project.timeframe}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
           {/* Action buttons */}
           <div className="flex gap-2">
-            <button
-              onClick={() => {/* TODO: Edit modal */}}
-              className="p-2.5 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-lg transition-colors"
-              title="Edit Project"
-            >
-              <Edit3 className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="p-2.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg transition-colors"
-              title="Delete Project"
-            >
-              <Trash2 className="h-5 w-5" />
-            </button>
+            {isEditing ? (
+              <>
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-4 py-2.5 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400 rounded-lg transition-colors font-medium flex items-center gap-2"
+                  title="Save Changes"
+                >
+                  <Save className="h-5 w-5" />
+                  Save
+                </button>
+                <button
+                  onClick={handleCancelEdit}
+                  className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors font-medium flex items-center gap-2"
+                  title="Cancel"
+                >
+                  <XIcon className="h-5 w-5" />
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleStartEdit}
+                  className="p-2.5 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-lg transition-colors"
+                  title="Edit Project"
+                >
+                  <Edit3 className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="p-2.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg transition-colors"
+                  title="Delete Project"
+                >
+                  <Trash2 className="h-5 w-5" />
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

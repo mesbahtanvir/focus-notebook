@@ -13,6 +13,7 @@ interface SearchAndFiltersProps {
   filteredCount?: number;
   showFilterToggle?: boolean;
   filterContent?: ReactNode;
+  additionalControls?: ReactNode;
   className?: string;
   theme?: ToolTheme;
 }
@@ -25,6 +26,7 @@ export function SearchAndFilters({
   filteredCount,
   showFilterToggle = false,
   filterContent,
+  additionalControls,
   className = "",
   theme
 }: SearchAndFiltersProps) {
@@ -88,8 +90,17 @@ export function SearchAndFilters({
           exit={{ opacity: 0, height: 0 }}
           className={`pt-4 border-t ${searchBorder}`}
         >
-          {filterContent}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            {filterContent}
+          </div>
         </motion.div>
+      )}
+
+      {/* Additional Controls (Sort, View Toggle, etc.) */}
+      {additionalControls && (
+        <div className={`pt-4 border-t ${searchBorder}`}>
+          {additionalControls}
+        </div>
       )}
     </div>
   );

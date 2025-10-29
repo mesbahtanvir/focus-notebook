@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 import { useTasks, Task, TaskCategory, TaskPriority, TaskStatus, RecurrenceType, TaskStep } from "@/store/useTasks";
 import { useThoughts } from "@/store/useThoughts";
 import { useProjects } from "@/store/useProjects";
@@ -32,6 +33,20 @@ interface TaskDetailModalProps {
 }
 
 export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
+  // Helper function to capitalize first letter of each word
+  const capitalize = (str: string): string => {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
+  // Helper function to format recurrence type for display
+  const formatRecurrenceType = (type: string): string => {
+    if (type === 'workweek') return 'Work Week';
+    if (type === 'biweekly') return 'Bi-weekly';
+    if (type === 'bimonthly') return 'Bi-monthly';
+    if (type === 'halfyearly') return 'Half-yearly';
+    return capitalize(type);
+  };
+
   // Helper functions to extract thoughtId and parse metadata from task notes
   const getMetadataFromNotes = (notes?: string): any => {
     if (!notes) return null;
@@ -84,15 +99,27 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
   const [selectedProjectId, setSelectedProjectId] = useState<string>(task.projectId || '');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  const { user } = useAuth();
+
   const updateTask = useTasks((s) => s.updateTask);
   const deleteTask = useTasks((s) => s.deleteTask);
   const toggleTask = useTasks((s) => s.toggle);
 
   const thoughts = useThoughts((s) => s.thoughts);
   const projects = useProjects((s) => s.projects);
+  const subscribeProjects = useProjects((s) => s.subscribe);
+  const subscribeThoughts = useThoughts((s) => s.subscribe);
   const currentThoughtId = isEditing ? selectedThoughtId : getThoughtIdFromTask(task);
   const linkedThought = thoughts.find(t => t.id === currentThoughtId);
   const linkedProject = projects.find(p => p.id === (isEditing ? selectedProjectId : task.projectId));
+
+  // Subscribe to projects and thoughts when modal opens
+  useEffect(() => {
+    if (user?.uid) {
+      subscribeProjects(user.uid);
+      subscribeThoughts(user.uid);
+    }
+  }, [user?.uid, subscribeProjects, subscribeThoughts]);
 
   const handleSave = async () => {
     const tags = tagsInput
@@ -258,7 +285,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
             ) : (
               <div className="flex items-center gap-2">
                 <div className={`w-3 h-3 rounded-full ${getPriorityColor(task.priority)}`} />
-                <span>{task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}</span>
+                <span>{capitalize(task.priority)}</span>
               </div>
             )}
           </div>
@@ -282,7 +309,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                     ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900"
                     : "bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-900"
                 }`}>
-                  {(task.category || 'mastery').charAt(0).toUpperCase() + (task.category || 'mastery').slice(1)}
+                  {capitalize(task.category || 'mastery')}
                 </span>
               )}
             </div>
@@ -307,7 +334,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                     ? "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950/40 dark:text-gray-300 dark:border-gray-900"
                     : "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/40 dark:text-yellow-300 dark:border-yellow-900"
                 }`}>
-                  {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
+                  {capitalize(task.status)}
                 </span>
               )}
             </div>
@@ -556,7 +583,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Repeat className="h-4 w-4 text-purple-600" />
-                  <span className="capitalize font-semibold">{task.recurrence.type}</span>
+                  <span className="font-semibold">{formatRecurrenceType(task.recurrence.type)}</span>
                 </div>
                 {task.recurrence.frequency && (
                   <div className="text-sm">

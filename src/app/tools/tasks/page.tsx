@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect, Suspense } from "react";
 import { useTasks, Task, TaskStatus, TaskPriority, TaskCategory } from '@/store/useTasks';
 import { useThoughts } from '@/store/useThoughts';
-import { useProjects } from '@/store/useProjects';
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -20,7 +19,6 @@ import {
   Trash2,
   ChevronDown,
   MessageCircle,
-  Target,
   Search,
   Loader2,
   FileText,
@@ -45,7 +43,6 @@ function TasksPageContent() {
   const router = useRouter();
   const tasks = useTasks((s) => s.tasks);
   const thoughts = useThoughts((s) => s.thoughts);
-  const projects = useProjects((s) => s.projects);
   const searchParams = useSearchParams();
   const [showNewTask, setShowNewTask] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -247,7 +244,7 @@ function TasksPageContent() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as TaskStatus | 'all')}
-                className="input py-1 text-sm min-w-[150px]"
+                className="input py-1 text-sm"
               >
                 <option value="all">All</option>
                 <option value="active">Active</option>
@@ -260,7 +257,7 @@ function TasksPageContent() {
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value as TaskCategory | 'all')}
-                className="input py-1 text-sm min-w-[150px]"
+                className="input py-1 text-sm"
               >
                 <option value="all">All</option>
                 <option value="mastery">Mastery</option>
@@ -272,7 +269,7 @@ function TasksPageContent() {
               <select
                 value={filterPriority}
                 onChange={(e) => setFilterPriority(e.target.value as TaskPriority | 'all')}
-                className="input py-1 text-sm min-w-[150px]"
+                className="input py-1 text-sm"
               >
                 <option value="all">All</option>
                 <option value="urgent">Urgent</option>
@@ -283,31 +280,34 @@ function TasksPageContent() {
             </div>
           </>
         }
+        additionalControls={
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setShowCompleted(!showCompleted)}
+              className="text-sm px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
+            >
+              {showCompleted ? 'Hide' : 'Show'} completed
+            </button>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                <SortAsc className="h-4 w-4" />
+                Sort by:
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                className="input py-2 text-sm"
+              >
+                <option value="priority">Priority</option>
+                <option value="dueDate">Due Date</option>
+                <option value="createdAt">Created Date</option>
+                <option value="title">Title</option>
+              </select>
+            </div>
+          </div>
+        }
         theme={theme}
       />
-      
-      {/* Sort and Show Completed Controls */}
-      <div className="flex items-center justify-between px-4 md:px-0 py-2">
-        <button
-          onClick={() => setShowCompleted(!showCompleted)}
-          className="text-xs px-3 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-        >
-          {showCompleted ? 'Hide' : 'Show'} completed
-        </button>
-        <div className="flex items-center gap-2">
-          <SortAsc className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="input py-1 text-sm"
-          >
-            <option value="priority">Priority</option>
-            <option value="dueDate">Due Date</option>
-            <option value="createdAt">Created Date</option>
-            <option value="title">Title</option>
-          </select>
-        </div>
-      </div>
 
       {/* Task List - Grouped by Frequency */}
       <div className="space-y-6">
@@ -343,7 +343,6 @@ function TasksPageContent() {
             onTaskClick={setSelectedTask}
             setSelectedTask={setSelectedTask}
             thoughts={thoughts}
-            projects={projects}
             getPriorityColor={getPriorityColor}
             getPriorityIcon={getPriorityIcon}
           />
@@ -401,7 +400,6 @@ function TaskGroup({
   onTaskClick,
   setSelectedTask,
   thoughts,
-  projects,
   getPriorityColor,
   getPriorityIcon
 }: {
@@ -412,7 +410,6 @@ function TaskGroup({
   onTaskClick: (task: Task) => void;
   setSelectedTask: (task: Task) => void;
   thoughts: any[];
-  projects: any[];
   getPriorityColor: (priority: TaskPriority) => string;
   getPriorityIcon: (priority: TaskPriority) => React.ReactNode;
 }) {
@@ -583,21 +580,6 @@ function TaskGroup({
                         >
                           <MessageCircle className="h-3 w-3" />
                           From Thought
-                        </Link>
-                      );
-                    })()}
-
-                    {task.projectId && (() => {
-                      const project = projects.find(p => p.id === task.projectId);
-                      if (!project) return null;
-                      return (
-                        <Link
-                          href={`/tools/projects/${task.projectId}`}
-                          className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm flex items-center gap-1 shrink-0 hover:from-green-600 hover:to-emerald-700 transition-colors"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Target className="h-3 w-3" />
-                          {project.title}
                         </Link>
                       );
                     })()}
