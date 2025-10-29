@@ -69,6 +69,17 @@ jobs:
           path: lhci_reports/
           retention-days: 30
 
+      - name: Upload error screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-error-screenshots-${{ github.run_id }}
+          path: |
+            login-error.png
+            form-error.png
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Create summary
         if: always()
         run: |

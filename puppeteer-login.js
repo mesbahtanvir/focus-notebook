@@ -57,102 +57,181 @@ module.exports = async ({ url, options, config }) => {
     }
   }
 
-  const browser = await puppeteer.launch({ 
-    headless: 'new', 
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
     executablePath: executablePath
   });
   const page = await browser.newPage();
 
-  // 1) Go to login page
-  await page.goto('https://focus.yourthoughts.ca/login', { waitUntil: 'networkidle2' });
+  // Set a reasonable viewport
+  await page.setViewport({ width: 1280, height: 800 });
+
+  console.log('Navigating to login page...');
+
+  // 1) Go to login page with longer timeout
+  try {
+    await page.goto('https://focus.yourthoughts.ca/login', {
+      waitUntil: 'networkidle2',
+      timeout: 60000 // 60 seconds for initial page load
+    });
+  } catch (error) {
+    console.error('Failed to load login page:', error.message);
+    throw new Error('Could not load login page - site may be down or slow');
+  }
+
+  console.log('Login page loaded successfully');
 
   // 2) Click "Continue with Email" button to switch to email auth mode
-  // Wait for the page to load, then find and click the button by its text content
-  await page.waitForFunction(() => {
-    const buttons = Array.from(document.querySelectorAll('button'));
-    return buttons.some(btn => btn.textContent?.includes('Continue with Email'));
-  });
-  
-  await page.evaluate(() => {
-    const buttons = Array.from(document.querySelectorAll('button'));
-    const emailButton = buttons.find(btn => btn.textContent?.includes('Continue with Email'));
-    if (emailButton) {
-      emailButton.click();
-    }
-  });
-  
+  console.log('Looking for "Continue with Email" button...');
+
+  try {
+    await page.waitForFunction(() => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      return buttons.some(btn => btn.textContent?.includes('Continue with Email'));
+    }, { timeout: 15000 });
+
+    await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      const emailButton = buttons.find(btn => btn.textContent?.includes('Continue with Email'));
+      if (emailButton) {
+        emailButton.click();
+      }
+    });
+
+    console.log('Clicked "Continue with Email" button');
+  } catch (error) {
+    console.log('Could not find "Continue with Email" button - may already be on email form');
+  }
+
   // Wait for form transition animation
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await new Promise(resolve => setTimeout(resolve, 1000));
 
   // 3) Wait for email form to appear and fill credentials
-  await page.waitForSelector('input[type="email"]');
-  const emailInput = await page.$('input[type="email"]');
-  await emailInput.type(process.env.TEST_EMAIL);
-  
-  const passwordInput = await page.$('input[type="password"]');
-  await passwordInput.type(process.env.TEST_PASSWORD);
+  console.log('Waiting for email form...');
+
+  try {
+    await page.waitForSelector('input[type="email"]', { timeout: 15000 });
+    console.log('Email input found');
+
+    const emailInput = await page.$('input[type="email"]');
+    await emailInput.type(process.env.TEST_EMAIL, { delay: 50 });
+    console.log('Email entered');
+
+    const passwordInput = await page.$('input[type="password"]');
+    if (!passwordInput) {
+      throw new Error('Password input not found');
+    }
+    await passwordInput.type(process.env.TEST_PASSWORD, { delay: 50 });
+    console.log('Password entered');
+  } catch (error) {
+    console.error('Failed to fill credentials:', error.message);
+    // Take a screenshot for debugging
+    try {
+      await page.screenshot({ path: 'form-error.png', fullPage: true });
+      console.log('Screenshot saved to form-error.png');
+    } catch (e) {
+      // Ignore screenshot errors
+    }
+    throw error;
+  }
 
   // 4) Click submit button (either "Sign In" or "Create Account")
+  console.log('Looking for submit button...');
+
   const submitButton = await page.$('button[type="submit"]');
   if (!submitButton) {
     throw new Error('Submit button not found');
   }
 
-  // Start navigation wait with longer timeout
-  const navigationPromise = page.waitForNavigation({ 
-    waitUntil: 'networkidle2', 
-    timeout: 30000 // Increased to 30 seconds
-  });
+  console.log('Clicking submit button...');
 
   // Click the button
   await submitButton.click();
 
-  // Wait for navigation with better error handling
+  // Wait for authentication to complete - Firebase auth may not trigger traditional navigation
+  // Instead, wait for either:
+  // 1. URL to change away from /login
+  // 2. Authenticated content to appear
+  console.log('Waiting for authentication to complete...');
+
   try {
-    await navigationPromise;
+    // Wait for URL to not include 'login' OR for authenticated content
+    await Promise.race([
+      // Option 1: Wait for URL change away from login
+      page.waitForFunction(
+        () => !window.location.href.includes('/login'),
+        { timeout: 45000 }
+      ),
+      // Option 2: Wait for authenticated page elements
+      page.waitForSelector('input[placeholder*="on your mind"], form input[type="text"]', { timeout: 45000 })
+    ]);
+
+    console.log('Authentication successful! Current URL:', page.url());
   } catch (error) {
-    // If navigation fails, check if we're already on the target page
     const currentUrl = page.url();
-    console.log('Navigation timeout. Current URL:', currentUrl);
-    
-    // Check if we're already logged in (on home page)
+    console.log('Authentication wait timeout. Current URL:', currentUrl);
+
+    // Check if we're on an authenticated page despite the timeout
     if (currentUrl.includes('yourthoughts.ca') && !currentUrl.includes('login')) {
       console.log('Already on authenticated page, continuing...');
     } else {
-      throw new Error('Login failed - navigation timeout');
+      // Take a screenshot for debugging
+      try {
+        await page.screenshot({ path: 'login-error.png', fullPage: true });
+        console.log('Screenshot saved to login-error.png');
+      } catch (e) {
+        // Ignore screenshot errors
+      }
+      throw new Error(`Login failed - authentication timeout at ${currentUrl}`);
     }
   }
 
-  // 6) Verify we're logged in by checking for authenticated user elements
-  // The app should redirect to '/' when logged in
+  // Give Firebase some extra time to settle
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  // 5) Verify we're logged in by checking for authenticated user elements
+  console.log('Verifying login status...');
+  const currentUrl = page.url();
+  console.log('Final URL:', currentUrl);
+
+  // Check if we're NOT on the login page
+  if (currentUrl.includes('/login')) {
+    throw new Error('Still on login page after authentication attempt');
+  }
+
+  // Try to find any authenticated content
   try {
-    await page.waitForSelector('input[placeholder*="on your mind"]', { timeout: 10000 });
-  } catch (error) {
-    // If selector timeout, try alternative selectors
-    console.log('Primary selector not found, trying alternatives...');
+    // Wait for any sign that we're on an authenticated page
     const altSelectors = [
       'input[placeholder*="on your mind"]',
-      'form',
-      'input[type="text"]'
+      '[href="/dashboard"]',
+      '[href="/profile"]',
+      'nav a[href*="/tools"]',
+      'button[aria-label*="menu"]',
+      'form input[type="text"]'
     ];
-    
+
     let found = false;
     for (const selector of altSelectors) {
       try {
-        await page.waitForSelector(selector, { timeout: 5000 });
+        await page.waitForSelector(selector, { timeout: 3000 });
         found = true;
-        console.log('Found element with selector:', selector);
+        console.log('✓ Login verified with selector:', selector);
         break;
       } catch (e) {
         // Continue trying other selectors
       }
     }
-    
+
     if (!found) {
-      console.warn('Could not verify login status, continuing anyway...');
+      console.warn('⚠️  Could not verify login with selectors, but URL indicates success');
     }
+  } catch (error) {
+    console.warn('⚠️  Verification failed, but continuing anyway');
   }
+
+  console.log('✓ Authentication complete, handing off to Lighthouse...');
 
   // 7) Hand off the *authenticated* browser to Lighthouse
   const wsEndpoint = browser.wsEndpoint();
