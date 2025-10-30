@@ -9,11 +9,10 @@ import { useTasks } from "@/store/useTasks";
 import { useMoods } from "@/store/useMoods";
 import { useFocus } from "@/store/useFocus";
 import { motion } from "framer-motion";
-import { getTimeOfDayCategory } from "@/lib/formatDateTime";
+import { computeDashboardAnalytics, SummaryPeriod } from "@/lib/analytics/dashboard";
+import type { TimeOfDayData } from "@/lib/analytics/dashboard";
 import { useAuth } from "@/contexts/AuthContext";
 import { TokenUsageDashboard } from "@/components/TokenUsageDashboard";
-
-type SummaryPeriod = 'today' | 'week' | 'month';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -30,170 +29,16 @@ export default function DashboardPage() {
   }, [user?.uid, subscribe]);
 
   // Generate analytics data
-  const analytics = useMemo(() => {
-    const now = new Date();
-
-    // Use summaryPeriod for all date range calculations
-    let startDate = new Date();
-    let days = 1;
-
-    if (summaryPeriod === 'today') {
-      startDate.setHours(0, 0, 0, 0);
-      days = 1;
-    } else if (summaryPeriod === 'week') {
-      const dayOfWeek = now.getDay();
-      startDate = new Date(now.getTime() - dayOfWeek * 24 * 60 * 60 * 1000);
-      startDate.setHours(0, 0, 0, 0);
-      days = 7;
-    } else {
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      // Calculate days in current month
-      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      days = lastDay.getDate();
-    }
-
-    // Mood trends
-    const moodData = [];
-    for (let i = 0; i < days; i++) {
-      const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
-      const dayMoods = moods.filter(m => {
-        const moodDate = new Date(m.createdAt);
-        return moodDate.toDateString() === date.toDateString();
-      });
-      const avgMood = dayMoods.length > 0
-        ? dayMoods.reduce((sum, m) => sum + m.value, 0) / dayMoods.length
-        : null;
-      moodData.push({ date, value: avgMood });
-    }
-
-    // Focus session time trends
-    const focusData = [];
-    for (let i = 0; i < days; i++) {
-      const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
-      const daySessions = sessions.filter(s => {
-        const sessionDate = new Date(s.startTime);
-        return sessionDate.toDateString() === date.toDateString();
-      });
-      const totalMinutes = daySessions.reduce((sum, s) => {
-        const sessionTime = (s.tasks || []).reduce((t, task) => t + task.timeSpent, 0) / 60;
-        return sum + sessionTime;
-      }, 0);
-      focusData.push({ date, minutes: totalMinutes });
-    }
-
-    // Overall statistics - filter all data by startDate
-    const completedTasks = tasks.filter(t => t.completedAt && new Date(t.completedAt) >= startDate);
-
-    const recentMoods = moods.filter(m => new Date(m.createdAt) >= startDate);
-    const avgMood = recentMoods.length > 0
-      ? recentMoods.reduce((sum, m) => sum + m.value, 0) / recentMoods.length
-      : 0;
-
-    const totalFocusTime = sessions
-      .filter(s => new Date(s.startTime) >= startDate)
-      .reduce((sum, s) => {
-        return sum + (s.tasks || []).reduce((t, task) => t + task.timeSpent, 0);
-      }, 0);
-
-    const totalTaskTime = completedTasks.reduce((sum, t) => {
-      return sum + (t.estimatedMinutes || 0);
-    }, 0);
-
-    // Task completion trends by category
-    const taskData = [];
-    for (let i = 0; i < days; i++) {
-      const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
-      const dayCompletedTasks = tasks.filter(t => {
-        if (!t.completedAt) return false;
-        const taskDate = new Date(t.completedAt);
-        return taskDate.toDateString() === date.toDateString();
-      });
-      taskData.push({ date, total: dayCompletedTasks.length });
-    }
-
-    // Summary stats (same as overall stats since we're using unified date range)
-    const summaryTasks = completedTasks;
-    const summaryMastery = summaryTasks.filter(t => t.category === 'mastery').length;
-    const summaryPleasure = summaryTasks.filter(t => t.category === 'pleasure').length;
-    const summaryAvgMood = avgMood;
-    const summaryFocusTime = totalFocusTime;
-
-    // Mastery vs Pleasure trends
-    const categoryData = [];
-    for (let i = 0; i < days; i++) {
-      const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
-      const dayTasks = tasks.filter(t => {
-        if (!t.completedAt) return false;
-        const taskDate = new Date(t.completedAt);
-        return taskDate.toDateString() === date.toDateString();
-      });
-      const mastery = dayTasks.filter(t => t.category === 'mastery').length;
-      const pleasure = dayTasks.filter(t => t.category === 'pleasure').length;
-      categoryData.push({ date, mastery, pleasure });
-    }
-
-    // Productivity by time of day
-    const timeOfDayData = {
-      morning: { sessions: 0, totalTime: 0, completedTasks: 0, avgCompletion: 0 },
-      afternoon: { sessions: 0, totalTime: 0, completedTasks: 0, avgCompletion: 0 },
-      evening: { sessions: 0, totalTime: 0, completedTasks: 0, avgCompletion: 0 },
-      night: { sessions: 0, totalTime: 0, completedTasks: 0, avgCompletion: 0 },
-      lateNight: { sessions: 0, totalTime: 0, completedTasks: 0, avgCompletion: 0 },
-    };
-
-    sessions.filter(s => new Date(s.startTime) >= startDate).forEach(session => {
-      const hour = new Date(session.startTime).getHours();
-      let timeOfDay: keyof typeof timeOfDayData;
-      
-      if (hour >= 5 && hour < 12) timeOfDay = 'morning';
-      else if (hour >= 12 && hour < 17) timeOfDay = 'afternoon';
-      else if (hour >= 17 && hour < 21) timeOfDay = 'evening';
-      else if (hour >= 21 || hour < 2) timeOfDay = 'night';
-      else timeOfDay = 'lateNight'; // 2am - 5am
-
-      const sessionTime = (session.tasks || []).reduce((sum, t) => sum + t.timeSpent, 0);
-      const completed = (session.tasks || []).filter(t => t.completed).length;
-      
-      timeOfDayData[timeOfDay].sessions++;
-      timeOfDayData[timeOfDay].totalTime += sessionTime;
-      timeOfDayData[timeOfDay].completedTasks += completed;
-    });
-
-    // Calculate average completion rates
-    Object.keys(timeOfDayData).forEach(key => {
-      const data = timeOfDayData[key as keyof typeof timeOfDayData];
-      if (data.sessions > 0) {
-        const totalPossibleTasks = sessions
-          .filter(s => getTimeOfDayCategory(s.startTime) === key)
-          .reduce((sum, s) => sum + (s.tasks || []).length, 0);
-        data.avgCompletion = totalPossibleTasks > 0 ? (data.completedTasks / totalPossibleTasks) * 100 : 0;
-      }
-    });
-
-    return {
-      moodData,
-      focusData,
-      taskData,
-      categoryData,
-      timeOfDayData,
-      stats: {
-        totalFocusTime: Math.round(totalFocusTime / 60),
-        totalSessions: sessions.filter(s => new Date(s.startTime) >= startDate).length,
-        completedTasks: completedTasks.length,
-        avgMood: avgMood || 0,
-        totalTaskTime,
-      },
-      summary: {
-        tasksCompleted: summaryTasks.length,
-        mastery: summaryMastery,
-        pleasure: summaryPleasure,
-        avgMood: summaryAvgMood,
-        focusTime: Math.round(summaryFocusTime / 60),
-      },
-      period: summaryPeriod,
-      days,
-    };
-  }, [tasks, moods, sessions, summaryPeriod]);
+  const analytics = useMemo(
+    () =>
+      computeDashboardAnalytics({
+        tasks,
+        moods,
+        sessions,
+        period: summaryPeriod,
+      }),
+    [tasks, moods, sessions, summaryPeriod]
+  );
 
   return (
     <div className="container mx-auto py-6 md:py-8 lg:py-10 px-4 md:px-6 lg:px-8 max-w-7xl">
@@ -604,15 +449,8 @@ function StackedAreaChart({ data }: {
   );
 }
 
-function TimeOfDayProductivity({ data }: {
-  data: {
-    morning: { sessions: number; totalTime: number; completedTasks: number; avgCompletion: number };
-    afternoon: { sessions: number; totalTime: number; completedTasks: number; avgCompletion: number };
-    evening: { sessions: number; totalTime: number; completedTasks: number; avgCompletion: number };
-    night: { sessions: number; totalTime: number; completedTasks: number; avgCompletion: number };
-  }
-}) {
-  const periods = [
+function TimeOfDayProductivity({ data }: { data: TimeOfDayData }) {
+  const periods: { key: keyof TimeOfDayData; label: string; emoji: string; time: string; color: string }[] = [
     { key: 'morning', label: 'Morning', emoji: '🌅', time: '5am-12pm', color: 'from-amber-400 to-yellow-500' },
     { key: 'afternoon', label: 'Afternoon', emoji: '☀️', time: '12pm-5pm', color: 'from-orange-400 to-amber-500' },
     { key: 'evening', label: 'Evening', emoji: '🌆', time: '5pm-9pm', color: 'from-purple-400 to-pink-500' },
@@ -620,12 +458,12 @@ function TimeOfDayProductivity({ data }: {
   ];
 
   // Find most productive time
-  const maxCompletion = Math.max(...periods.map(p => data[p.key as keyof typeof data].avgCompletion));
+  const maxCompletion = Math.max(...periods.map(p => data[p.key].avgCompletion));
   
   return (
     <div className="space-y-4">
       {periods.map((period) => {
-        const periodData = data[period.key as keyof typeof data];
+        const periodData = data[period.key];
         const isMostProductive = periodData.avgCompletion === maxCompletion && maxCompletion > 0;
         
         return (
