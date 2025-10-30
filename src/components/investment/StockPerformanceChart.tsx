@@ -131,6 +131,29 @@ export function StockPerformanceChart({ investment, currency }: StockPerformance
         </div>
       )}
 
+      {nativeCurrency && typeof nativeCurrentValue === 'number' && (
+        <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50/60 p-3 text-sm dark:border-sky-800 dark:bg-sky-900/20">
+          <div className="flex items-center gap-2 mb-2">
+            <CurrencyBadge code={nativeCurrency} tone="native" label="Native" />
+            <span className="font-medium text-sky-900 dark:text-sky-100">Native valuation</span>
+          </div>
+          <div className="flex justify-between text-sky-900 dark:text-sky-100">
+            <span>Current:</span>
+            <span className="font-semibold">
+              {formatCurrency(nativeCurrentValue, nativeCurrency, investment.locale || 'en-US')}
+            </span>
+          </div>
+          {typeof investment.nativeInitialAmount === 'number' && (
+            <div className="flex justify-between text-sky-900 dark:text-sky-100 mt-1">
+              <span>Initial:</span>
+              <span className="font-semibold">
+                {formatCurrency(investment.nativeInitialAmount, nativeCurrency, investment.locale || 'en-US')}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="mt-3">
         <ResponsiveContainer width="100%" height={180}>
           <LineChart data={chartData}>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { useInvestments } from '@/store/useInvestments';
+import { useInvestments, Investment } from '@/store/useInvestments';
 import { InvestmentFormModal } from '@/components/investment/InvestmentFormModal';
 import { ContributionFormModal } from '@/components/investment/ContributionFormModal';
 import { PortfolioValueChart } from '@/components/investment/PortfolioValueChart';
@@ -14,7 +14,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toolThemes } from '@/components/tools/themes';
-import { Edit, Trash2, Plus, TrendingUp, TrendingDown, DollarSign, RefreshCw, Sparkles, Camera } from 'lucide-react';
+import { Trash2, Plus, RefreshCw, Sparkles, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/store/useSettings';
 import { fetchStockHistory } from '@/lib/services/stockApi';
@@ -43,7 +43,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
 
   const [isInvestmentFormOpen, setIsInvestmentFormOpen] = useState(false);
   const [isContributionFormOpen, setIsContributionFormOpen] = useState(false);
-  const [selectedInvestment, setSelectedInvestment] = useState<string | null>(null);
+  const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isGeneratingPrediction, setIsGeneratingPrediction] = useState(false);
   const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
@@ -110,6 +110,8 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   const roi = getPortfolioROI(portfolio.id, currency);
   const gain = totalValue - totalInvested;
   const isPositive = gain >= 0;
+  const baseCurrency = portfolio.baseCurrency || 'USD';
+  const locale = portfolio.locale || 'en-US';
 
   const convertAmount = (amount: number | undefined | null) => convertCurrency(amount ?? 0, BASE_CURRENCY, currency);
   const formatAmount = (amount: number) => formatCurrencyValue(amount, currency);
@@ -465,7 +467,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              setSelectedInvestment(investment.id);
+                              setSelectedInvestment(investment);
                               setIsContributionFormOpen(true);
                             }}
                           >
@@ -506,6 +508,48 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                       </div>
                     </div>
 
+                    {investment.nativeCurrency && (
+                      <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50/70 p-4 dark:border-sky-800 dark:bg-sky-900/20">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CurrencyBadge code={investment.nativeCurrency} tone="native" label="Native" />
+                          <span className="text-sm font-semibold text-sky-900 dark:text-sky-100">Native totals</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-sky-900 dark:text-sky-100">
+                          {typeof investment.nativeInitialAmount === 'number' && (
+                            <div>
+                              <p className="uppercase tracking-wide text-[0.65rem] opacity-70">Initial</p>
+                              <p className="font-semibold">
+                                {formatAmount(
+                                  investment.nativeInitialAmount,
+                                  investment.nativeCurrency
+                                )}
+                              </p>
+                            </div>
+                          )}
+                          {typeof investment.nativeCurrentValue === 'number' && (
+                            <div>
+                              <p className="uppercase tracking-wide text-[0.65rem] opacity-70">Current</p>
+                              <p className="font-semibold">
+                                {formatAmount(
+                                  investment.nativeCurrentValue,
+                                  investment.nativeCurrency
+                                )}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        {investment.conversionRate && (
+                          <p className="mt-2 text-xs text-sky-800/80 dark:text-sky-200">
+                            Conversion rate: 1 {investment.nativeCurrency} ≈ {formatAmount(
+                              investment.conversionRate,
+                              investment.baseCurrency || baseCurrency,
+                              { minimumFractionDigits: 4, maximumFractionDigits: 4 }
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     {investment.contributions.length > 0 && (
                       <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                         <h4 className="font-semibold mb-3">Contribution History</h4>
@@ -536,6 +580,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                                   <span className="font-medium">
                                     {formatAmount(convertAmount(contribution.amount))}
                                   </span>
+                                  <CurrencyBadge code={investment.baseCurrency || baseCurrency} tone="base" />
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -569,6 +614,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
           isOpen={isInvestmentFormOpen}
           onClose={() => setIsInvestmentFormOpen(false)}
           portfolioId={portfolio.id}
+          baseCurrency={baseCurrency}
         />
 
         {selectedInvestment && (

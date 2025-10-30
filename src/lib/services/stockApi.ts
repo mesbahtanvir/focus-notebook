@@ -4,6 +4,8 @@
  */
 import { formatCurrency } from './currency';
 
+import { formatCurrency } from '@/lib/currency';
+
 export interface StockQuote {
   symbol: string;
   price: number;

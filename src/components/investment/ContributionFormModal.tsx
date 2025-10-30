@@ -44,6 +44,7 @@ export function ContributionFormModal({
   const { addContribution } = useInvestments();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const effectiveBaseCurrency = baseCurrency || investment?.baseCurrency || 'USD';
 
   const {
     register,
@@ -113,6 +114,44 @@ export function ContributionFormModal({
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+          <div className="rounded-md border border-amber-200 bg-amber-50/80 p-3 text-sm dark:border-amber-800 dark:bg-amber-900/30">
+            <div className="flex items-center gap-2 mb-2">
+              <CurrencyBadge code={effectiveBaseCurrency} tone="base" label="Converted" />
+              <span className="font-medium text-amber-900 dark:text-amber-200">Converted totals</span>
+            </div>
+            <p className="text-amber-900/80 dark:text-amber-100">Enter contribution amounts using the converted/base currency.</p>
+            {investment?.nativeCurrency && typeof investment.nativeCurrentValue === 'number' && (
+              <div className="mt-3 rounded border border-sky-200 bg-sky-50/70 p-3 text-sky-900 dark:border-sky-800 dark:bg-sky-900/20 dark:text-sky-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <CurrencyBadge code={investment.nativeCurrency} tone="native" label="Native" />
+                  <span className="font-medium">Native reference</span>
+                </div>
+                <div className="flex justify-between text-xs uppercase tracking-wide opacity-75">
+                  <span>Current</span>
+                  <span>Initial</span>
+                </div>
+                <div className="flex justify-between text-sm font-semibold mt-1">
+                  <span>
+                    {formatCurrency(
+                      investment.nativeCurrentValue,
+                      investment.nativeCurrency,
+                      investment.locale || 'en-US'
+                    )}
+                  </span>
+                  <span>
+                    {typeof investment.nativeInitialAmount === 'number'
+                      ? formatCurrency(
+                          investment.nativeInitialAmount,
+                          investment.nativeCurrency,
+                          investment.locale || 'en-US'
+                        )
+                      : '—'}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div>
             <Label htmlFor="type">Type *</Label>
             <Controller

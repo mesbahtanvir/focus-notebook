@@ -29,6 +29,10 @@ export function PortfolioCard({ portfolio, index, currency }: PortfolioCardProps
   const roi = getPortfolioROI(portfolio.id, currency);
   const gain = totalValue - totalInvested;
   const isPositive = gain >= 0;
+  const baseCurrency = portfolio.baseCurrency || 'USD';
+  const locale = portfolio.locale || 'en-US';
+
+  const formatAmount = (amount: number) => formatCurrency(amount, baseCurrency, locale);
 
   const targetAmount = portfolio.targetAmount
     ? convertCurrency(portfolio.targetAmount, BASE_CURRENCY, currency)
