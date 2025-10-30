@@ -5,7 +5,9 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { Investment, PricePoint } from '@/store/useInvestments';
 import { getChangeColorClass } from '@/lib/services/stockApi';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { BASE_CURRENCY, convertCurrency, formatCurrency, SupportedCurrency } from '@/lib/utils/currency';
+import { BASE_CURRENCY, convertCurrency, formatCurrency as formatCurrencyBase, SupportedCurrency } from '@/lib/utils/currency';
+import { formatCurrency as formatCurrencyWithLocale } from '@/lib/currency';
+import { CurrencyBadge } from '@/components/investment/CurrencyBadge';
 
 interface StockPerformanceChartProps {
   investment: Investment;
@@ -38,7 +40,7 @@ export function StockPerformanceChart({ investment, currency }: StockPerformance
           </div>
           {investment.currentPricePerShare && (
             <div className="text-right">
-              <p className="font-semibold">{formatCurrency(currentPricePerShare ?? 0, currency)}</p>
+              <p className="font-semibold">{formatCurrencyBase(currentPricePerShare ?? 0, currency)}</p>
               <p className="text-xs text-gray-500">per share</p>
             </div>
           )}
@@ -67,6 +69,8 @@ export function StockPerformanceChart({ investment, currency }: StockPerformance
   // Calculate total value if quantity is available
   const totalValue = investment.quantity ? toDisplay(investment.quantity * currentPriceBase) : null;
   const totalGain = investment.quantity ? toDisplay(investment.quantity * priceChangeBase) : null;
+  const nativeCurrency = investment.nativeCurrency;
+  const nativeCurrentValue = investment.nativeCurrentValue;
 
   // Custom tooltip
   const CustomTooltip = ({ active, payload }: any) => {
@@ -75,11 +79,11 @@ export function StockPerformanceChart({ investment, currency }: StockPerformance
         <div className="bg-white p-3 border border-gray-200 rounded shadow-lg">
           <p className="text-sm font-semibold">{payload[0].payload.date}</p>
           <p className="text-sm text-gray-600">
-            Price: {formatCurrency(payload[0].value, currency)}
+            Price: {formatCurrencyBase(payload[0].value, currency)}
           </p>
           {investment.quantity && (
             <p className="text-xs text-gray-500 mt-1">
-              Value: {formatCurrency(investment.quantity * payload[0].value, currency)}
+              Value: {formatCurrencyBase(investment.quantity * payload[0].value, currency)}
             </p>
           )}
         </div>
@@ -105,7 +109,7 @@ export function StockPerformanceChart({ investment, currency }: StockPerformance
           <p className="text-sm text-gray-500">{investment.name}</p>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-bold">{formatCurrency(currentPrice, currency)}</p>
+          <p className="text-2xl font-bold">{formatCurrencyBase(currentPrice, currency)}</p>
           <div className={`flex items-center justify-end gap-1 ${trendColor}`}>
             <TrendIcon className="h-4 w-4" />
             <span className="text-sm font-semibold">
@@ -118,7 +122,7 @@ export function StockPerformanceChart({ investment, currency }: StockPerformance
       {totalValue !== null && (
         <div className="flex justify-between items-center py-2 mb-3 border-t border-gray-100">
           <span className="text-sm text-gray-600">Total Value:</span>
-          <span className="font-semibold">{formatCurrency(totalValue, currency)}</span>
+          <span className="font-semibold">{formatCurrencyBase(totalValue, currency)}</span>
         </div>
       )}
 
@@ -126,7 +130,7 @@ export function StockPerformanceChart({ investment, currency }: StockPerformance
         <div className="flex justify-between items-center pb-3 border-b border-gray-100">
           <span className="text-sm text-gray-600">Total Gain/Loss:</span>
           <span className={`font-semibold ${getChangeColorClass(totalGain)}`}>
-            {isPositive ? '+' : ''}{formatCurrency(totalGain, currency)}
+            {isPositive ? '+' : ''}{formatCurrencyBase(totalGain, currency)}
           </span>
         </div>
       )}
@@ -140,14 +144,14 @@ export function StockPerformanceChart({ investment, currency }: StockPerformance
           <div className="flex justify-between text-sky-900 dark:text-sky-100">
             <span>Current:</span>
             <span className="font-semibold">
-              {formatCurrency(nativeCurrentValue, nativeCurrency, investment.locale || 'en-US')}
+              {formatCurrencyWithLocale(nativeCurrentValue, nativeCurrency, investment.locale || 'en-US')}
             </span>
           </div>
           {typeof investment.nativeInitialAmount === 'number' && (
             <div className="flex justify-between text-sky-900 dark:text-sky-100 mt-1">
               <span>Initial:</span>
               <span className="font-semibold">
-                {formatCurrency(investment.nativeInitialAmount, nativeCurrency, investment.locale || 'en-US')}
+                {formatCurrencyWithLocale(investment.nativeInitialAmount, nativeCurrency, investment.locale || 'en-US')}
               </span>
             </div>
           )}
@@ -168,7 +172,7 @@ export function StockPerformanceChart({ investment, currency }: StockPerformance
             tick={{ fontSize: 11 }}
             stroke="#999"
             domain={['dataMin - 5', 'dataMax + 5']}
-            tickFormatter={(value) => formatCurrency(value, currency)}
+            tickFormatter={(value) => formatCurrencyBase(value, currency)}
           />
             <Tooltip content={<CustomTooltip />} />
             <Line

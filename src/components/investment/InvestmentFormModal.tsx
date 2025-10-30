@@ -8,16 +8,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { fetchStockPrice, validateTicker } from '@/lib/services/stockApi';
-import { SUPPORTED_CURRENCIES, convertCurrency, formatCurrency as formatCurrencyValue } from '@/lib/services/currency';
+import {
+  SUPPORTED_CURRENCIES,
+  convertCurrency,
+  formatCurrency as formatCurrencyValue,
+} from '@/lib/services/currency';
+import { formatCurrency } from '@/lib/currency';
+import { CurrencyBadge } from '@/components/investment/CurrencyBadge';
 
 interface InvestmentFormData {
   name: string;
@@ -293,16 +293,12 @@ export function InvestmentFormModal({
               rules={{ required: 'Asset type is required' }}
               render={({ field }) => (
                 <Select
+                  id="assetType"
                   value={field.value}
-                  onValueChange={value => field.onChange(value as AssetType)}
+                  onChange={event => field.onChange(event.target.value as AssetType)}
                 >
-                  <SelectTrigger id="assetType">
-                    <SelectValue placeholder="Select asset type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="stock">Stock Ticker (Auto-Track)</SelectItem>
-                    <SelectItem value="manual">Manual Entry</SelectItem>
-                  </SelectContent>
+                  <option value="stock">Stock Ticker (Auto-Track)</option>
+                  <option value="manual">Manual Entry</option>
                 </Select>
               )}
             />
@@ -323,20 +319,12 @@ export function InvestmentFormModal({
               control={control}
               rules={{ required: 'Currency is required' }}
               render={({ field }) => (
-                <Select
-                  value={field.value}
-                  onValueChange={value => field.onChange(value)}
-                >
-                  <SelectTrigger id="currency">
-                    <SelectValue placeholder="Select currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SUPPORTED_CURRENCIES.map(code => (
-                      <SelectItem key={code} value={code}>
-                        {code}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                <Select id="currency" value={field.value} onChange={event => field.onChange(event.target.value)}>
+                  {SUPPORTED_CURRENCIES.map(code => (
+                    <option key={code} value={code}>
+                      {code}
+                    </option>
+                  ))}
                 </Select>
               )}
             />
@@ -424,21 +412,17 @@ export function InvestmentFormModal({
               rules={{ required: 'Category is required' }}
               render={({ field }) => (
                 <Select
+                  id="type"
                   value={field.value}
-                  onValueChange={value => field.onChange(value as InvestmentType)}
+                  onChange={event => field.onChange(event.target.value as InvestmentType)}
                 >
-                  <SelectTrigger id="type">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="stocks">Stocks</SelectItem>
-                    <SelectItem value="bonds">Bonds</SelectItem>
-                    <SelectItem value="crypto">Cryptocurrency</SelectItem>
-                    <SelectItem value="real-estate">Real Estate</SelectItem>
-                    <SelectItem value="retirement">Retirement Account</SelectItem>
-                    <SelectItem value="mutual-funds">Mutual Funds</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
+                  <option value="stocks">Stocks</option>
+                  <option value="bonds">Bonds</option>
+                  <option value="crypto">Cryptocurrency</option>
+                  <option value="real-estate">Real Estate</option>
+                  <option value="retirement">Retirement Account</option>
+                  <option value="mutual-funds">Mutual Funds</option>
+                  <option value="other">Other</option>
                 </Select>
               )}
             />
