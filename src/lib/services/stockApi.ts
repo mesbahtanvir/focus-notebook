@@ -105,8 +105,8 @@ export async function fetchMultipleStockPrices(
  * Validate ticker symbol format
  */
 export function validateTicker(ticker: string): boolean {
-  // Basic validation: 1-5 uppercase letters
-  const tickerRegex = /^[A-Z]{1,5}$/;
+  // Allow 1-5 alphanumeric characters per segment separated by . or - (e.g., BRK.B, VUN.TO)
+  const tickerRegex = /^[A-Z0-9]{1,5}(?:[.-][A-Z0-9]{1,5})*$/;
   return tickerRegex.test(ticker.toUpperCase());
 }
 

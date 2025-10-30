@@ -90,7 +90,7 @@ export function InvestmentFormModal({
 
         // Validate ticker format
         if (!validateTicker(upperTicker)) {
-          setTickerError('Invalid ticker format (1-5 letters only)');
+          setTickerError('Invalid ticker format. Use letters/numbers with optional . or - separators.');
           setCurrentStockPrice(null);
           return;
         }
@@ -233,9 +233,8 @@ export function InvestmentFormModal({
                     {...register('ticker', {
                       required: assetType === 'stock' ? 'Ticker is required' : false
                     })}
-                    placeholder="e.g., AAPL, TSLA, MSFT"
+                    placeholder="e.g., AAPL, BRK.B, VUN.TO"
                     className="uppercase"
-                    maxLength={5}
                   />
                   {isFetchingPrice && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -269,7 +268,7 @@ export function InvestmentFormModal({
                     required: assetType === 'stock' ? 'Quantity is required' : false,
                     min: { value: 0.001, message: 'Must be greater than 0' },
                   })}
-                  placeholder="e.g., 100"
+                  placeholder="e.g., 0.009"
                 />
                 {errors.quantity && (
                   <p className="text-sm text-red-500 mt-1">{errors.quantity.message}</p>
