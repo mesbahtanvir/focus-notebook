@@ -35,9 +35,9 @@ interface SubscriptionsState {
 
   // CRUD methods
   subscribe: (userId: string) => void;
-  add: (subscription: Omit<Subscription, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
-  update: (id: string, updates: Partial<Omit<Subscription, 'id' | 'createdAt'>>) => Promise<void>;
-  delete: (id: string) => Promise<void>;
+  add: (userId: string, subscription: Omit<Subscription, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
+  update: (userId: string, id: string, updates: Partial<Omit<Subscription, 'id' | 'createdAt'>>) => Promise<void>;
+  delete: (userId: string, id: string) => Promise<void>;
 
   // Utility methods
   getSubscription: (id: string) => Subscription | undefined;
@@ -84,7 +84,7 @@ export const useSubscriptions = create<SubscriptionsState>((set, get) => ({
     set({ unsubscribe });
   },
 
-  add: async (subscription) => {
+  add: async (userId, subscription) => {
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
 
@@ -94,19 +94,19 @@ export const useSubscriptions = create<SubscriptionsState>((set, get) => ({
       createdAt: now,
     };
 
-    await createAt(`subscriptions/${id}`, newSubscription);
+    await createAt(`users/${userId}/subscriptions/${id}`, newSubscription);
     return id;
   },
 
-  update: async (id, updates) => {
-    await updateAt(`subscriptions/${id}`, {
+  update: async (userId, id, updates) => {
+    await updateAt(`users/${userId}/subscriptions/${id}`, {
       ...updates,
       updatedAt: Date.now(),
     });
   },
 
-  delete: async (id) => {
-    await deleteAt(`subscriptions/${id}`);
+  delete: async (userId, id) => {
+    await deleteAt(`users/${userId}/subscriptions/${id}`);
   },
 
   getSubscription: (id) => {

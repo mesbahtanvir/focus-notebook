@@ -10,6 +10,7 @@ import {
   SubscriptionStatus,
   useSubscriptions,
 } from '@/store/useSubscriptions';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -49,6 +50,7 @@ export function SubscriptionFormModal({
   onClose,
   subscription,
 }: SubscriptionFormModalProps) {
+  const { user } = useAuth();
   const { add, update } = useSubscriptions();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -91,10 +93,15 @@ export function SubscriptionFormModal({
   const autoRenew = watch('autoRenew');
 
   const onSubmit = async (data: SubscriptionFormData) => {
+    if (!user?.uid) {
+      toast({ title: 'Error', description: 'You must be logged in', variant: 'destructive' });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       if (subscription) {
-        await update(subscription.id, {
+        await update(user.uid, subscription.id, {
           name: data.name,
           category: data.category,
           cost: Number(data.cost),
@@ -109,7 +116,7 @@ export function SubscriptionFormModal({
         });
         toast({ title: 'Success', description: 'Subscription updated successfully!' });
       } else {
-        await add({
+        await add(user.uid, {
           name: data.name,
           category: data.category,
           cost: Number(data.cost),

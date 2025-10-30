@@ -67,9 +67,14 @@ export default function SubscriptionsPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!user?.uid) {
+      toast({ title: 'Error', description: 'You must be logged in', variant: 'destructive' });
+      return;
+    }
+
     if (confirm('Are you sure you want to delete this subscription?')) {
       try {
-        await deleteSubscription(id);
+        await deleteSubscription(user.uid, id);
         toast({ title: 'Success', description: 'Subscription deleted' });
       } catch (error) {
         toast({ title: 'Error', description: 'Failed to delete subscription', variant: 'destructive' });
