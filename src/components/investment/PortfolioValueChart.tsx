@@ -3,21 +3,25 @@
 import { Card } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts';
 import { Portfolio, PortfolioSnapshot } from '@/store/useInvestments';
-import { formatPrice } from '@/lib/services/stockApi';
+import { BASE_CURRENCY, convertCurrency, formatCurrency, SupportedCurrency } from '@/lib/utils/currency';
 
 interface PortfolioValueChartProps {
   portfolio: Portfolio;
   snapshots?: PortfolioSnapshot[];
   predictions?: Array<{ date: string; predictedPrice: number }>;
   showPredictions?: boolean;
+  currency: SupportedCurrency;
 }
 
 export function PortfolioValueChart({
   portfolio,
   snapshots = [],
   predictions = [],
-  showPredictions = false
+  showPredictions = false,
+  currency
 }: PortfolioValueChartProps) {
+  const toDisplay = (value: number) => convertCurrency(value, BASE_CURRENCY, currency);
+
   // Define chart data type
   type ChartDataPoint = {
     date: string;
@@ -29,12 +33,13 @@ export function PortfolioValueChart({
   // Combine historical snapshots with current value
   const historicalData: ChartDataPoint[] = snapshots.map(snapshot => ({
     date: new Date(snapshot.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    value: snapshot.totalValue,
+    value: toDisplay(snapshot.totalValue),
     type: 'historical' as const
   }));
 
   // Add current value
-  const currentValue = portfolio.investments.reduce((sum, inv) => sum + inv.currentValue, 0);
+  const currentValueBase = portfolio.investments.reduce((sum, inv) => sum + inv.currentValue, 0);
+  const currentValue = toDisplay(currentValueBase);
   const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   const currentData: ChartDataPoint = {
@@ -46,7 +51,7 @@ export function PortfolioValueChart({
   // Format predictions data
   const predictedData: ChartDataPoint[] = showPredictions ? predictions.map(pred => ({
     date: new Date(pred.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    predicted: pred.predictedPrice,
+    predicted: toDisplay(pred.predictedPrice),
     type: 'predicted' as const
   })) : [];
 
@@ -88,12 +93,12 @@ export function PortfolioValueChart({
           <p className="text-sm font-semibold">{payload[0].payload.date}</p>
           {payload[0].payload.value !== undefined && (
             <p className="text-sm text-green-600">
-              Value: {formatPrice(payload[0].payload.value)}
+              Value: {formatCurrency(payload[0].payload.value, currency)}
             </p>
           )}
           {payload[0].payload.predicted !== undefined && (
             <p className="text-sm text-blue-600">
-              Predicted: {formatPrice(payload[0].payload.predicted)}
+              Predicted: {formatCurrency(payload[0].payload.predicted, currency)}
             </p>
           )}
         </div>
@@ -122,7 +127,7 @@ export function PortfolioValueChart({
         <div>
           <h3 className="text-lg font-semibold">Portfolio Value Over Time</h3>
           <p className="text-sm text-gray-500 mt-1">
-            Current: {formatPrice(currentValue)}
+            Current: {formatCurrency(currentValue, currency)}
           </p>
         </div>
         {historicalData.length > 0 && (
@@ -131,7 +136,7 @@ export function PortfolioValueChart({
               {isPositive ? '+' : ''}{percentChange}%
             </p>
             <p className={`text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-              {isPositive ? '+' : ''}{formatPrice(valueChange)}
+              {isPositive ? '+' : ''}{formatCurrency(valueChange, currency)}
             </p>
           </div>
         )}
@@ -148,7 +153,7 @@ export function PortfolioValueChart({
           <YAxis
             tick={{ fontSize: 12 }}
             stroke="#888"
-            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+            tickFormatter={(value) => formatCurrency(value, currency)}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend />

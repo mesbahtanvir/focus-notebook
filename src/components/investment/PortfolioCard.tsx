@@ -7,13 +7,15 @@ import { TrendingUp, TrendingDown, DollarSign, Target, Trash2 } from 'lucide-rea
 import { Portfolio, useInvestments } from '@/store/useInvestments';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { BASE_CURRENCY, convertCurrency, formatCurrency, SupportedCurrency } from '@/lib/utils/currency';
 
 interface PortfolioCardProps {
   portfolio: Portfolio;
   index: number;
+  currency: SupportedCurrency;
 }
 
-export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
+export function PortfolioCard({ portfolio, index, currency }: PortfolioCardProps) {
   const router = useRouter();
   const {
     getTotalPortfolioValue,
@@ -22,11 +24,17 @@ export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
     deletePortfolio,
   } = useInvestments();
 
-  const totalValue = getTotalPortfolioValue(portfolio.id);
-  const totalInvested = getTotalInvested(portfolio.id);
-  const roi = getPortfolioROI(portfolio.id);
+  const totalValue = getTotalPortfolioValue(portfolio.id, currency);
+  const totalInvested = getTotalInvested(portfolio.id, currency);
+  const roi = getPortfolioROI(portfolio.id, currency);
   const gain = totalValue - totalInvested;
   const isPositive = gain >= 0;
+
+  const targetAmount = portfolio.targetAmount
+    ? convertCurrency(portfolio.targetAmount, BASE_CURRENCY, currency)
+    : undefined;
+
+  const formatValue = (amount: number) => formatCurrency(amount, currency);
 
   const getStatusColor = (status: Portfolio['status']) => {
     switch (status) {
@@ -37,16 +45,8 @@ export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
-
-  const progressPercent = portfolio.targetAmount
-    ? Math.min((totalValue / portfolio.targetAmount) * 100, 100)
+  const progressPercent = targetAmount
+    ? Math.min((totalValue / targetAmount) * 100, 100)
     : 0;
 
   const handleDelete = async (event: MouseEvent<HTMLButtonElement>) => {
@@ -119,7 +119,7 @@ export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
             </div>
             <div className="text-right">
               <p className={`font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(gain)}
+                {formatValue(gain)}
               </p>
               <p className={`text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                 {roi.toFixed(2)}%
@@ -171,7 +171,7 @@ export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
                 <span>Progress to target</span>
-                <span>{formatCurrency(portfolio.targetAmount)}</span>
+                <span>{targetAmount !== undefined ? formatValue(targetAmount) : ''}</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div
