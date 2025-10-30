@@ -169,7 +169,7 @@ export function SubscriptionFormModal({
               <Label htmlFor="category">Category *</Label>
               <Select
                 value={category}
-                onValueChange={(value) => setValue('category', value as SubscriptionCategory)}
+                onChange={(e) => setValue('category', e.target.value as SubscriptionCategory)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -189,7 +189,7 @@ export function SubscriptionFormModal({
               <Label htmlFor="status">Status *</Label>
               <Select
                 value={status}
-                onValueChange={(value) => setValue('status', value as SubscriptionStatus)}
+                onChange={(e) => setValue('status', e.target.value as SubscriptionStatus)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -225,7 +225,7 @@ export function SubscriptionFormModal({
               <Label htmlFor="billingCycle">Billing *</Label>
               <Select
                 value={billingCycle}
-                onValueChange={(value) => setValue('billingCycle', value as BillingCycle)}
+                onChange={(e) => setValue('billingCycle', e.target.value as BillingCycle)}
               >
                 <SelectTrigger>
                   <SelectValue />

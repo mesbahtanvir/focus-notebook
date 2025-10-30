@@ -3,12 +3,17 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import Page from '@/app/page'
 import type { Task, TaskStatus, TaskCategory } from '@/store/useTasks'
 import { useTasks } from '@/store/useTasks'
+import { useThoughts } from '@/store/useThoughts'
 
-// Mock the module and define useTasks as a jest.fn inside the factory
+// Mock the modules
 jest.mock('@/store/useTasks', () => ({
   __esModule: true,
-  // This jest.fn will be available via the imported useTasks symbol
   useTasks: jest.fn(),
+}))
+
+jest.mock('@/store/useThoughts', () => ({
+  __esModule: true,
+  useThoughts: jest.fn(),
 }))
 
 describe('Home Page', () => {
@@ -17,10 +22,11 @@ describe('Home Page', () => {
   const mockToggle = jest.fn()
   const mockLoadTasks = jest.fn()
 
-  // Mock the Zustand store with all required methods and properties
-  const mockStore = {
+  // Mock the Zustand task store
+  const mockTaskStore = {
     tasks: mockTasks,
     isLoading: false,
+    fromCache: false,
     add: mockAdd,
     toggle: mockToggle,
     updateTask: jest.fn(),
@@ -30,16 +36,33 @@ describe('Home Page', () => {
     getTasksByCategory: (category: TaskCategory) => mockTasks.filter(task => task.category === category),
   }
 
+  // Mock the Zustand thought store
+  const mockThoughtStore = {
+    thoughts: [],
+    isLoading: false,
+    fromCache: false,
+    add: jest.fn(),
+    deleteThought: jest.fn(),
+  }
+
   beforeEach(() => {
     // Reset mocks before each test
     jest.clearAllMocks()
-    
-    // Setup the mock implementation
+
+    // Setup the task store mock
     ;(useTasks as unknown as jest.Mock).mockImplementation((selector) => {
       if (selector) {
-        return selector(mockStore)
+        return selector(mockTaskStore)
       }
-      return mockStore
+      return mockTaskStore
+    })
+
+    // Setup the thought store mock
+    ;(useThoughts as unknown as jest.Mock).mockImplementation((selector) => {
+      if (selector) {
+        return selector(mockThoughtStore)
+      }
+      return mockThoughtStore
     })
   })
 

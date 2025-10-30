@@ -97,7 +97,7 @@ export function ContributionFormModal({
             <Label htmlFor="type">Type *</Label>
             <Select
               value={contributionType}
-              onValueChange={(value) => setValue('type', value as ContributionType)}
+              onChange={(e) => setValue('type', e.target.value as ContributionType)}
             >
               <SelectTrigger>
                 <SelectValue />

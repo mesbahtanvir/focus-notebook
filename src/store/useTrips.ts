@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { createAt, deleteAt, updateAt } from '@/lib/data/gateway';
 import { subscribeCol } from '@/lib/data/subscribe';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebaseClient';
 import type { Unsubscribe } from 'firebase/firestore';
 
 export type TripStatus = 'planning' | 'upcoming' | 'in-progress' | 'completed' | 'cancelled';
@@ -91,11 +93,13 @@ export const useTrips = create<TripsState>((set, get) => ({
     set({ isLoading: true });
 
     // Subscribe to trips
+    const tripsQuery = query(
+      collection(db, `users/${userId}/trips`),
+      orderBy('createdAt', 'desc')
+    );
+
     const tripsUnsubscribe = subscribeCol<Trip>(
-      {
-        path: `users/${userId}/trips`,
-        queryConstraints: [],
-      },
+      tripsQuery,
       (data, metadata) => {
         set({
           trips: data.map(trip => ({
@@ -110,11 +114,13 @@ export const useTrips = create<TripsState>((set, get) => ({
     );
 
     // Subscribe to standalone expenses
+    const expensesQuery = query(
+      collection(db, `users/${userId}/expenses`),
+      orderBy('createdAt', 'desc')
+    );
+
     const expensesUnsubscribe = subscribeCol<Expense>(
-      {
-        path: `users/${userId}/expenses`,
-        queryConstraints: [],
-      },
+      expensesQuery,
       (data, metadata) => {
         set({
           standaloneExpenses: data,

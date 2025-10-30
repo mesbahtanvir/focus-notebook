@@ -133,7 +133,7 @@ export function InvestmentFormModal({
             <Label htmlFor="type">Type *</Label>
             <Select
               value={investmentType}
-              onValueChange={(value) => setValue('type', value as InvestmentType)}
+              onChange={(e) => setValue('type', e.target.value as InvestmentType)}
             >
               <SelectTrigger>
                 <SelectValue />

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { createAt, deleteAt, updateAt } from '@/lib/data/gateway';
 import { subscribeCol } from '@/lib/data/subscribe';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebaseClient';
 import type { Unsubscribe } from 'firebase/firestore';
 
 export type InvestmentType = 'stocks' | 'bonds' | 'crypto' | 'real-estate' | 'retirement' | 'mutual-funds' | 'other';
@@ -87,11 +89,13 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
 
     set({ isLoading: true });
 
+    const portfoliosQuery = query(
+      collection(db, `users/${userId}/portfolios`),
+      orderBy('createdAt', 'desc')
+    );
+
     const unsubscribe = subscribeCol<Portfolio>(
-      {
-        path: `users/${userId}/portfolios`,
-        queryConstraints: [],
-      },
+      portfoliosQuery,
       (data, metadata) => {
         set({
           portfolios: data.map(portfolio => ({

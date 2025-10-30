@@ -207,8 +207,8 @@ export function FocusSession() {
       });
 
       // Link it as a follow-up task
-      if (newTask?.id) {
-        await addFollowUpTask(currentTaskIndex, newTask.id);
+      if (newTask) {
+        await addFollowUpTask(currentTaskIndex, newTask);
       }
 
       // Reset and close modal

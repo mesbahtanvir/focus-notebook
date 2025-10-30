@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { createAt, deleteAt, updateAt } from '@/lib/data/gateway';
 import { subscribeCol } from '@/lib/data/subscribe';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebaseClient';
 import type { Unsubscribe } from 'firebase/firestore';
 
 export type SubscriptionCategory = 'entertainment' | 'productivity' | 'health' | 'utilities' | 'education' | 'other';
@@ -62,11 +64,13 @@ export const useSubscriptions = create<SubscriptionsState>((set, get) => ({
 
     set({ isLoading: true });
 
+    const subscriptionsQuery = query(
+      collection(db, `users/${userId}/subscriptions`),
+      orderBy('createdAt', 'desc')
+    );
+
     const unsubscribe = subscribeCol<Subscription>(
-      {
-        path: `users/${userId}/subscriptions`,
-        queryConstraints: [],
-      },
+      subscriptionsQuery,
       (data, metadata) => {
         set({
           subscriptions: data,

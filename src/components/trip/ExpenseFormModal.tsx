@@ -178,7 +178,7 @@ export function ExpenseFormModal({
             <Label htmlFor="category">Category *</Label>
             <Select
               value={category}
-              onValueChange={(value) => setValue('category', value as ExpenseCategory)}
+              onChange={(e) => setValue('category', e.target.value as ExpenseCategory)}
             >
               <SelectTrigger>
                 <SelectValue />

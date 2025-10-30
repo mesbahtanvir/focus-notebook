@@ -209,7 +209,7 @@ export function TripFormModal({ isOpen, onClose, trip }: TripFormModalProps) {
             <Label htmlFor="status">Status *</Label>
             <Select
               value={status}
-              onValueChange={(value) => setValue('status', value as TripStatus)}
+              onChange={(e) => setValue('status', e.target.value as TripStatus)}
             >
               <SelectTrigger>
                 <SelectValue />

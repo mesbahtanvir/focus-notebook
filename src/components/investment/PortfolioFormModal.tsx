@@ -135,7 +135,7 @@ export function PortfolioFormModal({ isOpen, onClose, portfolio }: PortfolioForm
             <Label htmlFor="status">Status *</Label>
             <Select
               value={status}
-              onValueChange={(value) => setValue('status', value as PortfolioStatus)}
+              onChange={(e) => setValue('status', e.target.value as PortfolioStatus)}
             >
               <SelectTrigger>
                 <SelectValue />
