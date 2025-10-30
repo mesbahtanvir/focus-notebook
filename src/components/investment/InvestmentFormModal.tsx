@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { X, TrendingUp, Loader2 } from 'lucide-react';
 import { Investment, InvestmentType, AssetType, useInvestments } from '@/store/useInvestments';
 import { Button } from '@/components/ui/button';
@@ -61,6 +61,7 @@ export function InvestmentFormModal({
     reset,
     setValue,
     watch,
+    control,
   } = useForm<InvestmentFormData>({
     defaultValues: investment
       ? {
@@ -230,15 +231,28 @@ export function InvestmentFormModal({
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
           <div>
             <Label htmlFor="assetType">Asset Type *</Label>
-            <Select
-              value={assetType}
-              onChange={(e) => setValue('assetType', e.target.value as AssetType)}
-            >
-              <SelectContent>
-                <SelectItem value="stock">Stock Ticker (Auto-Track)</SelectItem>
-                <SelectItem value="manual">Manual Entry</SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              name="assetType"
+              control={control}
+              rules={{ required: 'Asset type is required' }}
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={value => field.onChange(value as AssetType)}
+                >
+                  <SelectTrigger id="assetType">
+                    <SelectValue placeholder="Select asset type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="stock">Stock Ticker (Auto-Track)</SelectItem>
+                    <SelectItem value="manual">Manual Entry</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.assetType && (
+              <p className="text-sm text-red-500 mt-1">{errors.assetType.message}</p>
+            )}
             <p className="text-xs text-gray-500 mt-1">
               {assetType === 'stock'
                 ? 'Automatically fetch and track stock prices'
@@ -248,18 +262,28 @@ export function InvestmentFormModal({
 
           <div>
             <Label htmlFor="currency">Currency *</Label>
-            <Select
-              id="currency"
-              {...register('currency', { required: 'Currency is required' })}
-            >
-              <SelectContent>
-                {SUPPORTED_CURRENCIES.map(code => (
-                  <SelectItem key={code} value={code}>
-                    {code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              name="currency"
+              control={control}
+              rules={{ required: 'Currency is required' }}
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={value => field.onChange(value)}
+                >
+                  <SelectTrigger id="currency">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUPPORTED_CURRENCIES.map(code => (
+                      <SelectItem key={code} value={code}>
+                        {code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
             <p className="text-xs text-gray-500 mt-1">
               Amounts will be stored in {currency || DEFAULT_CURRENCY}. Stock quotes fetched in USD are converted
               automatically.
@@ -338,20 +362,33 @@ export function InvestmentFormModal({
 
           <div>
             <Label htmlFor="type">Category *</Label>
-            <Select
-              value={investmentType}
-              onChange={(e) => setValue('type', e.target.value as InvestmentType)}
-            >
-              <SelectContent>
-                <SelectItem value="stocks">Stocks</SelectItem>
-                <SelectItem value="bonds">Bonds</SelectItem>
-                <SelectItem value="crypto">Cryptocurrency</SelectItem>
-                <SelectItem value="real-estate">Real Estate</SelectItem>
-                <SelectItem value="retirement">Retirement Account</SelectItem>
-                <SelectItem value="mutual-funds">Mutual Funds</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              name="type"
+              control={control}
+              rules={{ required: 'Category is required' }}
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={value => field.onChange(value as InvestmentType)}
+                >
+                  <SelectTrigger id="type">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="stocks">Stocks</SelectItem>
+                    <SelectItem value="bonds">Bonds</SelectItem>
+                    <SelectItem value="crypto">Cryptocurrency</SelectItem>
+                    <SelectItem value="real-estate">Real Estate</SelectItem>
+                    <SelectItem value="retirement">Retirement Account</SelectItem>
+                    <SelectItem value="mutual-funds">Mutual Funds</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.type && (
+              <p className="text-sm text-red-500 mt-1">{errors.type.message}</p>
+            )}
           </div>
 
           <div>

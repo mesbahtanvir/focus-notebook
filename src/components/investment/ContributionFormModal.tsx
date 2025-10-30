@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { X } from 'lucide-react';
 import { ContributionType, Investment, useInvestments } from '@/store/useInvestments';
 import { Button } from '@/components/ui/button';
@@ -52,6 +52,7 @@ export function ContributionFormModal({
     reset,
     setValue,
     watch,
+    control,
   } = useForm<ContributionFormData>({
     defaultValues: {
       type: 'deposit',
@@ -114,19 +115,29 @@ export function ContributionFormModal({
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
           <div>
             <Label htmlFor="type">Type *</Label>
-            <Select
-              value={contributionType}
-              onChange={(e) => setValue('type', e.target.value as ContributionType)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="deposit">Deposit (Add funds)</SelectItem>
-                <SelectItem value="withdrawal">Withdrawal (Remove funds)</SelectItem>
-                <SelectItem value="value-update">Value Update (Set new value)</SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              name="type"
+              control={control}
+              rules={{ required: 'Type is required' }}
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={value => field.onChange(value as ContributionType)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select contribution type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="deposit">Deposit (Add funds)</SelectItem>
+                    <SelectItem value="withdrawal">Withdrawal (Remove funds)</SelectItem>
+                    <SelectItem value="value-update">Value Update (Set new value)</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.type && (
+              <p className="text-sm text-red-500 mt-1">{errors.type.message}</p>
+            )}
             <p className="text-xs text-gray-500 mt-1">
               {contributionType === 'deposit' && 'Add money to this investment'}
               {contributionType === 'withdrawal' && 'Remove money from this investment'}
@@ -136,15 +147,28 @@ export function ContributionFormModal({
 
           <div>
             <Label htmlFor="currency">Currency *</Label>
-            <Select id="currency" {...register('currency', { required: 'Currency is required' })}>
-              <SelectContent>
-                {SUPPORTED_CURRENCIES.map(code => (
-                  <SelectItem key={code} value={code}>
-                    {code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              name="currency"
+              control={control}
+              rules={{ required: 'Currency is required' }}
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={value => field.onChange(value)}
+                >
+                  <SelectTrigger id="currency">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUPPORTED_CURRENCIES.map(code => (
+                      <SelectItem key={code} value={code}>
+                        {code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
             {errors.currency && (
               <p className="text-sm text-red-500 mt-1">{errors.currency.message}</p>
             )}
