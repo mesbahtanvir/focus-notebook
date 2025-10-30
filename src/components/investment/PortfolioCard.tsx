@@ -7,17 +7,18 @@ import { TrendingUp, TrendingDown, DollarSign, Target } from 'lucide-react';
 import { Portfolio, useInvestments } from '@/store/useInvestments';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency as formatCurrencyValue } from '@/lib/services/currency';
+import { formatCurrency as formatCurrencyValue, normalizeCurrencyCode } from '@/lib/services/currency';
 
 interface PortfolioCardProps {
   portfolio: Portfolio;
   index: number;
+  displayCurrency?: string;
 }
 
-export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
+export function PortfolioCard({ portfolio, index, displayCurrency: displayCurrencyProp }: PortfolioCardProps) {
   const router = useRouter();
   const { getTotalPortfolioValueInCurrency, getTotalInvestedInCurrency } = useInvestments();
-  const displayCurrency = 'CAD';
+  const displayCurrency = normalizeCurrencyCode(displayCurrencyProp);
   const [totals, setTotals] = useState({ totalValue: 0, totalInvested: 0, roi: 0 });
 
   useEffect(() => {
