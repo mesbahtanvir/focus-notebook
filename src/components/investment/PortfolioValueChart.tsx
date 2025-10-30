@@ -1,22 +1,25 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts';
 import { Portfolio, PortfolioSnapshot } from '@/store/useInvestments';
-import { formatPrice } from '@/lib/services/stockApi';
+import { convertAmountsToCurrency, formatCurrency as formatCurrencyValue } from '@/lib/services/currency';
 
 interface PortfolioValueChartProps {
   portfolio: Portfolio;
   snapshots?: PortfolioSnapshot[];
   predictions?: Array<{ date: string; predictedPrice: number }>;
   showPredictions?: boolean;
+  displayCurrency?: string;
 }
 
 export function PortfolioValueChart({
   portfolio,
   snapshots = [],
   predictions = [],
-  showPredictions = false
+  showPredictions = false,
+  displayCurrency = 'CAD'
 }: PortfolioValueChartProps) {
   // Define chart data type
   type ChartDataPoint = {
@@ -26,15 +29,64 @@ export function PortfolioValueChart({
     type: 'historical' | 'current' | 'transition' | 'predicted';
   };
 
-  // Combine historical snapshots with current value
-  const historicalData: ChartDataPoint[] = snapshots.map(snapshot => ({
-    date: new Date(snapshot.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    value: snapshot.totalValue,
-    type: 'historical' as const
-  }));
+  const [historicalData, setHistoricalData] = useState<ChartDataPoint[]>([]);
+  const [currentValue, setCurrentValue] = useState(0);
+  useEffect(() => {
+    let isMounted = true;
 
-  // Add current value
-  const currentValue = portfolio.investments.reduce((sum, inv) => sum + inv.currentValue, 0);
+    const computeValues = async () => {
+      try {
+        const investmentsForConversion = portfolio.investments.map(inv => ({
+          amount: inv.currentValue,
+          currency: inv.currency,
+        }));
+
+        const snapshotAmounts = snapshots.map(snapshot => ({
+          amount: snapshot.totalValue,
+          currency: snapshot.currency,
+        }));
+
+        const [convertedInvestments, convertedSnapshots] = await Promise.all([
+          convertAmountsToCurrency(investmentsForConversion, displayCurrency),
+          snapshotAmounts.length
+            ? convertAmountsToCurrency(snapshotAmounts, displayCurrency)
+            : Promise.resolve([] as number[]),
+        ]);
+
+        const totalCurrent = convertedInvestments.reduce((sum, value) => sum + value, 0);
+
+        const mappedHistorical = snapshots.map((snapshot, index) => ({
+          date: new Date(snapshot.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          value: convertedSnapshots[index] ?? snapshot.totalValue,
+          type: 'historical' as const,
+        }));
+
+        if (isMounted) {
+          setCurrentValue(totalCurrent);
+          setHistoricalData(mappedHistorical);
+        }
+      } catch (error) {
+        console.error('Failed to prepare portfolio chart data', error);
+        if (isMounted) {
+          const fallbackHistorical = snapshots.map(snapshot => ({
+            date: new Date(snapshot.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            value: snapshot.totalValue,
+            type: 'historical' as const,
+          }));
+          const fallbackCurrent = portfolio.investments.reduce((sum, inv) => sum + inv.currentValue, 0);
+          setHistoricalData(fallbackHistorical);
+          setCurrentValue(fallbackCurrent);
+        }
+      }
+    };
+
+    computeValues();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [portfolio.investments, snapshots, displayCurrency]);
+
   const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   const currentData: ChartDataPoint = {
@@ -88,12 +140,12 @@ export function PortfolioValueChart({
           <p className="text-sm font-semibold">{payload[0].payload.date}</p>
           {payload[0].payload.value !== undefined && (
             <p className="text-sm text-green-600">
-              Value: {formatPrice(payload[0].payload.value)}
+              Value: {formatCurrencyValue(payload[0].payload.value, displayCurrency)}
             </p>
           )}
           {payload[0].payload.predicted !== undefined && (
             <p className="text-sm text-blue-600">
-              Predicted: {formatPrice(payload[0].payload.predicted)}
+              Predicted: {formatCurrencyValue(payload[0].payload.predicted, displayCurrency)}
             </p>
           )}
         </div>
@@ -122,7 +174,7 @@ export function PortfolioValueChart({
         <div>
           <h3 className="text-lg font-semibold">Portfolio Value Over Time</h3>
           <p className="text-sm text-gray-500 mt-1">
-            Current: {formatPrice(currentValue)}
+            Current: {formatCurrencyValue(currentValue, displayCurrency)}
           </p>
         </div>
         {historicalData.length > 0 && (
@@ -131,7 +183,7 @@ export function PortfolioValueChart({
               {isPositive ? '+' : ''}{percentChange}%
             </p>
             <p className={`text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-              {isPositive ? '+' : ''}{formatPrice(valueChange)}
+              {isPositive ? '+' : ''}{formatCurrencyValue(valueChange, displayCurrency)}
             </p>
           </div>
         )}
@@ -145,11 +197,13 @@ export function PortfolioValueChart({
             tick={{ fontSize: 12 }}
             stroke="#888"
           />
-          <YAxis
-            tick={{ fontSize: 12 }}
-            stroke="#888"
-            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-          />
+            <YAxis
+              tick={{ fontSize: 12 }}
+              stroke="#888"
+              tickFormatter={(value) =>
+                formatCurrencyValue(value, displayCurrency, { maximumFractionDigits: 0 })
+              }
+            />
           <Tooltip content={<CustomTooltip />} />
           <Legend />
           <Line

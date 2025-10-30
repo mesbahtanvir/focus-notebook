@@ -1,11 +1,13 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { TrendingUp, TrendingDown, DollarSign, Target } from 'lucide-react';
 import { Portfolio, useInvestments } from '@/store/useInvestments';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { formatCurrency as formatCurrencyValue } from '@/lib/services/currency';
 
 interface PortfolioCardProps {
   portfolio: Portfolio;
@@ -14,11 +16,38 @@ interface PortfolioCardProps {
 
 export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
   const router = useRouter();
-  const { getTotalPortfolioValue, getTotalInvested, getPortfolioROI } = useInvestments();
+  const { getTotalPortfolioValueInCurrency, getTotalInvestedInCurrency } = useInvestments();
+  const displayCurrency = 'CAD';
+  const [totals, setTotals] = useState({ totalValue: 0, totalInvested: 0, roi: 0 });
 
-  const totalValue = getTotalPortfolioValue(portfolio.id);
-  const totalInvested = getTotalInvested(portfolio.id);
-  const roi = getPortfolioROI(portfolio.id);
+  useEffect(() => {
+    let isMounted = true;
+
+    const computeTotals = async () => {
+      try {
+        const [value, invested] = await Promise.all([
+          getTotalPortfolioValueInCurrency(portfolio.id, displayCurrency),
+          getTotalInvestedInCurrency(portfolio.id, displayCurrency),
+        ]);
+
+        const roiValue = invested === 0 ? 0 : ((value - invested) / invested) * 100;
+
+        if (isMounted) {
+          setTotals({ totalValue: value, totalInvested: invested, roi: roiValue });
+        }
+      } catch (error) {
+        console.error('Failed to compute portfolio card totals', error);
+      }
+    };
+
+    computeTotals();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [portfolio.id, portfolio.investments, displayCurrency, getTotalPortfolioValueInCurrency, getTotalInvestedInCurrency]);
+
+  const { totalValue, totalInvested, roi } = totals;
   const gain = totalValue - totalInvested;
   const isPositive = gain >= 0;
 
@@ -31,12 +60,8 @@ export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(amount);
+  const formatCurrency = (amount: number, currencyCode: string = displayCurrency) => {
+    return formatCurrencyValue(amount, currencyCode);
   };
 
   const progressPercent = portfolio.targetAmount

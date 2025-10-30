@@ -16,7 +16,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { fetchStockPrice, formatPrice, validateTicker } from '@/lib/services/stockApi';
+import { fetchStockPrice, validateTicker } from '@/lib/services/stockApi';
+import { SUPPORTED_CURRENCIES, convertCurrency, formatCurrency as formatCurrencyValue } from '@/lib/services/currency';
 
 interface InvestmentFormData {
   name: string;
@@ -27,6 +28,7 @@ interface InvestmentFormData {
   initialAmount: number;
   currentValue: number;
   notes?: string;
+  currency: string;
 }
 
 interface InvestmentFormModalProps {
@@ -35,6 +37,9 @@ interface InvestmentFormModalProps {
   portfolioId: string;
   investment?: Investment;
 }
+
+const DEFAULT_CURRENCY = 'CAD';
+const STOCK_QUOTE_CURRENCY = 'USD';
 
 export function InvestmentFormModal({
   isOpen,
@@ -67,6 +72,7 @@ export function InvestmentFormModal({
           initialAmount: investment.initialAmount,
           currentValue: investment.currentValue,
           notes: investment.notes || '',
+          currency: investment.currency || DEFAULT_CURRENCY,
         }
       : {
           type: 'stocks',
@@ -74,6 +80,7 @@ export function InvestmentFormModal({
           initialAmount: 0,
           currentValue: 0,
           quantity: 0,
+          currency: DEFAULT_CURRENCY,
         },
   });
 
@@ -81,12 +88,22 @@ export function InvestmentFormModal({
   const investmentType = watch('type');
   const ticker = watch('ticker');
   const quantity = watch('quantity');
+  const currency = watch('currency');
+
+  useEffect(() => {
+    if (investment) {
+      setCurrentStockPrice(investment.currentPricePerShare ?? null);
+    } else {
+      setCurrentStockPrice(null);
+    }
+  }, [investment]);
 
   // Auto-fetch stock price when ticker changes
   useEffect(() => {
     const fetchPrice = async () => {
       if (assetType === 'stock' && ticker && ticker.length >= 1) {
         const upperTicker = ticker.toUpperCase();
+        const targetCurrency = currency || DEFAULT_CURRENCY;
 
         // Validate ticker format
         if (!validateTicker(upperTicker)) {
@@ -102,12 +119,16 @@ export function InvestmentFormModal({
           setIsFetchingPrice(true);
           try {
             const quote = await fetchStockPrice(upperTicker);
-            setCurrentStockPrice(quote.price);
+            const fetchedPrice =
+              targetCurrency === STOCK_QUOTE_CURRENCY
+                ? quote.price
+                : await convertCurrency(quote.price, STOCK_QUOTE_CURRENCY, targetCurrency);
+            setCurrentStockPrice(fetchedPrice);
             setTickerError('');
 
             // Auto-calculate current value if quantity is set
             if (quantity && quantity > 0) {
-              setValue('currentValue', quote.price * quantity);
+              setValue('currentValue', fetchedPrice * quantity);
             }
           } catch (error: any) {
             console.error('Error fetching stock price:', error);
@@ -126,11 +147,11 @@ export function InvestmentFormModal({
     // Debounce the fetch
     const timeoutId = setTimeout(fetchPrice, 500);
     return () => clearTimeout(timeoutId);
-  }, [ticker, assetType, quantity, setValue]);
+  }, [ticker, assetType, quantity, setValue, currency]);
 
   // Update current value when quantity changes for stocks
   useEffect(() => {
-    if (assetType === 'stock' && currentStockPrice && quantity) {
+    if (assetType === 'stock' && currentStockPrice !== null && quantity) {
       setValue('currentValue', currentStockPrice * quantity);
     }
   }, [quantity, currentStockPrice, assetType, setValue]);
@@ -145,6 +166,7 @@ export function InvestmentFormModal({
         initialAmount: Number(data.initialAmount),
         currentValue: Number(data.currentValue),
         notes: data.notes,
+        currency: data.currency,
       };
 
       // Add stock-specific fields
@@ -158,13 +180,14 @@ export function InvestmentFormModal({
         investmentData.ticker = data.ticker.toUpperCase();
         investmentData.quantity = Number(data.quantity) || 0;
 
-        if (currentStockPrice) {
+        if (currentStockPrice !== null) {
           investmentData.currentPricePerShare = currentStockPrice;
           investmentData.lastPriceUpdate = new Date().toISOString();
           investmentData.priceHistory = [{
             date: new Date().toISOString(),
             price: currentStockPrice,
-            source: 'api' as const
+            source: 'api' as const,
+            currency: data.currency,
           }];
         }
       }
@@ -223,6 +246,29 @@ export function InvestmentFormModal({
             </p>
           </div>
 
+          <div>
+            <Label htmlFor="currency">Currency *</Label>
+            <Select
+              id="currency"
+              {...register('currency', { required: 'Currency is required' })}
+            >
+              <SelectContent>
+                {SUPPORTED_CURRENCIES.map(code => (
+                  <SelectItem key={code} value={code}>
+                    {code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500 mt-1">
+              Amounts will be stored in {currency || DEFAULT_CURRENCY}. Stock quotes fetched in USD are converted
+              automatically.
+            </p>
+            {errors.currency && (
+              <p className="text-sm text-red-500 mt-1">{errors.currency.message}</p>
+            )}
+          </div>
+
           {assetType === 'stock' && (
             <>
               <div>
@@ -245,11 +291,12 @@ export function InvestmentFormModal({
                 {tickerError && (
                   <p className="text-sm text-red-500 mt-1">{tickerError}</p>
                 )}
-                {currentStockPrice && !tickerError && (
+                {currentStockPrice !== null && !tickerError && (
                   <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-green-600" />
                     <span className="text-sm text-green-700">
-                      Current price: <strong>{formatPrice(currentStockPrice)}</strong>
+                      Current price:{' '}
+                      <strong>{formatCurrencyValue(currentStockPrice, currency || DEFAULT_CURRENCY)}</strong>
                     </span>
                   </div>
                 )}
@@ -343,16 +390,16 @@ export function InvestmentFormModal({
             </div>
           )}
 
-          {assetType === 'stock' && currentStockPrice && quantity && (
+          {assetType === 'stock' && currentStockPrice !== null && quantity && (
             <div className="p-3 bg-gray-50 border border-gray-200 rounded">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Calculated Value:</span>
                 <span className="font-semibold text-lg">
-                  {formatPrice(currentStockPrice * (quantity || 0))}
+                  {formatCurrencyValue(currentStockPrice * (quantity || 0), currency || DEFAULT_CURRENCY)}
                 </span>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                {quantity} shares × {formatPrice(currentStockPrice)}
+                {quantity} shares × {formatCurrencyValue(currentStockPrice, currency || DEFAULT_CURRENCY)}
               </p>
             </div>
           )}

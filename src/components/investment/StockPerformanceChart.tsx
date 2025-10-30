@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Investment, PricePoint } from '@/store/useInvestments';
 import { formatPrice, getChangeColorClass } from '@/lib/services/stockApi';
+import { formatCurrency as formatCurrencyValue } from '@/lib/services/currency';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 interface StockPerformanceChartProps {
@@ -27,7 +28,7 @@ export function StockPerformanceChart({ investment }: StockPerformanceChartProps
           </div>
           {investment.currentPricePerShare && (
             <div className="text-right">
-              <p className="font-semibold">{formatPrice(investment.currentPricePerShare)}</p>
+              <p className="font-semibold">{formatPrice(investment.currentPricePerShare, investment.currency)}</p>
               <p className="text-xs text-gray-500">per share</p>
             </div>
           )}
@@ -65,11 +66,11 @@ export function StockPerformanceChart({ investment }: StockPerformanceChartProps
         <div className="bg-white p-3 border border-gray-200 rounded shadow-lg">
           <p className="text-sm font-semibold">{payload[0].payload.date}</p>
           <p className="text-sm text-gray-600">
-            Price: {formatPrice(payload[0].value)}
+            Price: {formatPrice(payload[0].value, investment.currency)}
           </p>
           {investment.quantity && (
             <p className="text-xs text-gray-500 mt-1">
-              Value: {formatPrice(investment.quantity * payload[0].value)}
+              Value: {formatPrice(investment.quantity * payload[0].value, investment.currency)}
             </p>
           )}
         </div>
@@ -95,7 +96,7 @@ export function StockPerformanceChart({ investment }: StockPerformanceChartProps
           <p className="text-sm text-gray-500">{investment.name}</p>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-bold">{formatPrice(currentPrice)}</p>
+          <p className="text-2xl font-bold">{formatPrice(currentPrice, investment.currency)}</p>
           <div className={`flex items-center justify-end gap-1 ${trendColor}`}>
             <TrendIcon className="h-4 w-4" />
             <span className="text-sm font-semibold">
@@ -108,7 +109,7 @@ export function StockPerformanceChart({ investment }: StockPerformanceChartProps
       {totalValue !== null && (
         <div className="flex justify-between items-center py-2 mb-3 border-t border-gray-100">
           <span className="text-sm text-gray-600">Total Value:</span>
-          <span className="font-semibold">{formatPrice(totalValue)}</span>
+          <span className="font-semibold">{formatPrice(totalValue, investment.currency)}</span>
         </div>
       )}
 
@@ -116,7 +117,7 @@ export function StockPerformanceChart({ investment }: StockPerformanceChartProps
         <div className="flex justify-between items-center pb-3 border-b border-gray-100">
           <span className="text-sm text-gray-600">Total Gain/Loss:</span>
           <span className={`font-semibold ${getChangeColorClass(totalGain)}`}>
-            {isPositive ? '+' : ''}{formatPrice(totalGain)}
+            {isPositive ? '+' : ''}{formatPrice(totalGain, investment.currency)}
           </span>
         </div>
       )}
@@ -135,7 +136,9 @@ export function StockPerformanceChart({ investment }: StockPerformanceChartProps
               tick={{ fontSize: 11 }}
               stroke="#999"
               domain={['dataMin - 5', 'dataMax + 5']}
-              tickFormatter={(value) => `$${value.toFixed(0)}`}
+              tickFormatter={(value) =>
+                formatCurrencyValue(value, investment.currency, { maximumFractionDigits: 0 })
+              }
             />
             <Tooltip content={<CustomTooltip />} />
             <Line

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { X } from 'lucide-react';
-import { ContributionType, useInvestments } from '@/store/useInvestments';
+import { ContributionType, Investment, useInvestments } from '@/store/useInvestments';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,12 +16,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { SUPPORTED_CURRENCIES } from '@/lib/services/currency';
 
 interface ContributionFormData {
   type: ContributionType;
   amount: number;
   date: string;
   note?: string;
+  currency: string;
 }
 
 interface ContributionFormModalProps {
@@ -29,6 +31,7 @@ interface ContributionFormModalProps {
   onClose: () => void;
   portfolioId: string;
   investmentId: string;
+  investment?: Investment;
 }
 
 export function ContributionFormModal({
@@ -36,6 +39,7 @@ export function ContributionFormModal({
   onClose,
   portfolioId,
   investmentId,
+  investment,
 }: ContributionFormModalProps) {
   const { addContribution } = useInvestments();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,10 +56,18 @@ export function ContributionFormModal({
     defaultValues: {
       type: 'deposit',
       date: new Date().toISOString().split('T')[0],
+      currency: investment?.currency || 'CAD',
     },
   });
 
   const contributionType = watch('type');
+  const currency = watch('currency');
+
+  useEffect(() => {
+    if (investment) {
+      setValue('currency', investment.currency || 'CAD');
+    }
+  }, [investment, setValue]);
 
   const onSubmit = async (data: ContributionFormData) => {
     setIsSubmitting(true);
@@ -65,9 +77,16 @@ export function ContributionFormModal({
         amount: Number(data.amount),
         date: data.date,
         note: data.note,
+        currency: data.currency,
       });
       toast({ title: 'Success', description: 'Contribution added successfully!' });
-      reset();
+      reset({
+        type: 'deposit',
+        date: new Date().toISOString().split('T')[0],
+        currency: investment?.currency || 'CAD',
+        amount: undefined,
+        note: undefined,
+      });
       onClose();
     } catch (error) {
       console.error('Error adding contribution:', error);
@@ -116,8 +135,24 @@ export function ContributionFormModal({
           </div>
 
           <div>
+            <Label htmlFor="currency">Currency *</Label>
+            <Select id="currency" {...register('currency', { required: 'Currency is required' })}>
+              <SelectContent>
+                {SUPPORTED_CURRENCIES.map(code => (
+                  <SelectItem key={code} value={code}>
+                    {code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.currency && (
+              <p className="text-sm text-red-500 mt-1">{errors.currency.message}</p>
+            )}
+          </div>
+
+          <div>
             <Label htmlFor="amount">
-              Amount * {contributionType === 'value-update' && '(New Total Value)'}
+              Amount ({currency}) * {contributionType === 'value-update' && '(New Total Value)'}
             </Label>
             <Input
               id="amount"

@@ -18,6 +18,7 @@ import { Edit, Trash2, Plus, TrendingUp, TrendingDown, DollarSign, RefreshCw, Sp
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/store/useSettings';
 import { fetchStockHistory } from '@/lib/services/stockApi';
+import { formatCurrency as formatCurrencyValue } from '@/lib/services/currency';
 
 export default function PortfolioDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -26,9 +27,8 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   const {
     subscribe,
     getPortfolio,
-    getTotalPortfolioValue,
-    getTotalInvested,
-    getPortfolioROI,
+    getTotalPortfolioValueInCurrency,
+    getTotalInvestedInCurrency,
     deleteInvestment,
     deleteContribution,
     refreshAllPrices,
@@ -47,6 +47,8 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
   const [predictions, setPredictions] = useState<any>(null);
   const [showPredictions, setShowPredictions] = useState(false);
+  const displayCurrency = 'CAD';
+  const [portfolioTotals, setPortfolioTotals] = useState({ totalValue: 0, totalInvested: 0, roi: 0 });
 
   useEffect(() => {
     if (user?.uid) {
@@ -55,6 +57,38 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   }, [user?.uid, subscribe]);
 
   const portfolio = getPortfolio(params.id);
+
+  useEffect(() => {
+    if (!portfolio) {
+      setPortfolioTotals({ totalValue: 0, totalInvested: 0, roi: 0 });
+      return;
+    }
+
+    let isMounted = true;
+
+    const computeTotals = async () => {
+      try {
+        const [value, invested] = await Promise.all([
+          getTotalPortfolioValueInCurrency(portfolio.id, displayCurrency),
+          getTotalInvestedInCurrency(portfolio.id, displayCurrency),
+        ]);
+
+        const roiValue = invested === 0 ? 0 : ((value - invested) / invested) * 100;
+
+        if (isMounted) {
+          setPortfolioTotals({ totalValue: value, totalInvested: invested, roi: roiValue });
+        }
+      } catch (error) {
+        console.error('Failed to compute portfolio totals', error);
+      }
+    };
+
+    computeTotals();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [portfolio, displayCurrency, getTotalPortfolioValueInCurrency, getTotalInvestedInCurrency]);
 
   if (!portfolio) {
     return (
@@ -69,18 +103,12 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
     );
   }
 
-  const totalValue = getTotalPortfolioValue(portfolio.id);
-  const totalInvested = getTotalInvested(portfolio.id);
-  const roi = getPortfolioROI(portfolio.id);
+  const { totalValue, totalInvested, roi } = portfolioTotals;
   const gain = totalValue - totalInvested;
   const isPositive = gain >= 0;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(amount);
+  const formatCurrency = (amount: number, currencyCode: string = displayCurrency) => {
+    return formatCurrencyValue(amount, currencyCode);
   };
 
   const formatDate = (dateString: string) => {
@@ -310,6 +338,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
           portfolio={portfolio}
           predictions={showPredictions && predictions ? predictions.predictions : []}
           showPredictions={showPredictions}
+          displayCurrency={displayCurrency}
         />
 
         {/* AI Prediction Summary */}
@@ -347,19 +376,19 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                       <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
                         <p className="text-xs text-gray-600 dark:text-gray-400">30-Day Target</p>
                         <p className="text-lg font-bold text-purple-600">
-                          {formatCurrency(predictions.targetPrice30Days)}
+                          {formatCurrency(predictions.targetPrice30Days, displayCurrency)}
                         </p>
                       </div>
                       <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
                         <p className="text-xs text-gray-600 dark:text-gray-400">Support Level</p>
                         <p className="text-lg font-bold text-green-600">
-                          {formatCurrency(predictions.supportLevel)}
+                          {formatCurrency(predictions.supportLevel, displayCurrency)}
                         </p>
                       </div>
                       <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
                         <p className="text-xs text-gray-600 dark:text-gray-400">Resistance Level</p>
                         <p className="text-lg font-bold text-red-600">
-                          {formatCurrency(predictions.resistanceLevel)}
+                          {formatCurrency(predictions.resistanceLevel, displayCurrency)}
                         </p>
                       </div>
                     </div>
@@ -450,18 +479,18 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Initial</p>
-                        <p className="font-semibold">{formatCurrency(investment.initialAmount)}</p>
+                        <p className="font-semibold">{formatCurrency(investment.initialAmount, investment.currency)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Current</p>
                         <p className="font-semibold text-amber-600">
-                          {formatCurrency(investment.currentValue)}
+                          {formatCurrency(investment.currentValue, investment.currency)}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Gain/Loss</p>
                         <p className={`font-semibold ${isInvestmentPositive ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatCurrency(investmentGain)}
+                          {formatCurrency(investmentGain, investment.currency)}
                         </p>
                       </div>
                       <div>
@@ -500,7 +529,10 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="font-medium">
-                                    {formatCurrency(contribution.amount)}
+                                    {formatCurrency(
+                                      contribution.amount,
+                                      contribution.currency || investment.currency
+                                    )}
                                   </span>
                                   <Button
                                     variant="ghost"
@@ -546,6 +578,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
             }}
             portfolioId={portfolio.id}
             investmentId={selectedInvestment}
+            investment={portfolio.investments.find(inv => inv.id === selectedInvestment)}
           />
         )}
       </div>
