@@ -8,15 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { SUPPORTED_CURRENCIES } from '@/lib/services/currency';
+import { BASE_CURRENCY } from '@/lib/utils/currency';
+import { CurrencyBadge } from '@/components/investment/CurrencyBadge';
+import { formatCurrency } from '@/lib/currency';
 
 interface ContributionFormData {
   type: ContributionType;
@@ -44,7 +41,7 @@ export function ContributionFormModal({
   const { addContribution } = useInvestments();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const effectiveBaseCurrency = baseCurrency || investment?.baseCurrency || 'USD';
+  const effectiveBaseCurrency = investment?.baseCurrency || BASE_CURRENCY;
 
   const {
     register,
@@ -161,16 +158,11 @@ export function ContributionFormModal({
               render={({ field }) => (
                 <Select
                   value={field.value}
-                  onValueChange={value => field.onChange(value as ContributionType)}
+                  onChange={event => field.onChange(event.target.value as ContributionType)}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select contribution type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="deposit">Deposit (Add funds)</SelectItem>
-                    <SelectItem value="withdrawal">Withdrawal (Remove funds)</SelectItem>
-                    <SelectItem value="value-update">Value Update (Set new value)</SelectItem>
-                  </SelectContent>
+                  <option value="deposit">Deposit (Add funds)</option>
+                  <option value="withdrawal">Withdrawal (Remove funds)</option>
+                  <option value="value-update">Value Update (Set new value)</option>
                 </Select>
               )}
             />
@@ -191,20 +183,12 @@ export function ContributionFormModal({
               control={control}
               rules={{ required: 'Currency is required' }}
               render={({ field }) => (
-                <Select
-                  value={field.value}
-                  onValueChange={value => field.onChange(value)}
-                >
-                  <SelectTrigger id="currency">
-                    <SelectValue placeholder="Select currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SUPPORTED_CURRENCIES.map(code => (
-                      <SelectItem key={code} value={code}>
-                        {code}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                <Select id="currency" value={field.value} onChange={event => field.onChange(event.target.value)}>
+                  {SUPPORTED_CURRENCIES.map(code => (
+                    <option key={code} value={code}>
+                      {code}
+                    </option>
+                  ))}
                 </Select>
               )}
             />

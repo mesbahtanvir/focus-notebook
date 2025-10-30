@@ -2,8 +2,6 @@
  * Stock API Service
  * Handles stock price fetching and historical data retrieval
  */
-import { formatCurrency } from './currency';
-
 import { formatCurrency } from '@/lib/currency';
 
 export interface StockQuote {

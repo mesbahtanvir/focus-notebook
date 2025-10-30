@@ -8,6 +8,7 @@ import { Portfolio, useInvestments } from '@/store/useInvestments';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BASE_CURRENCY, convertCurrency, formatCurrency, SupportedCurrency } from '@/lib/utils/currency';
+import { formatCurrency as formatCurrencyWithLocale } from '@/lib/currency';
 
 interface PortfolioCardProps {
   portfolio: Portfolio;
@@ -32,7 +33,7 @@ export function PortfolioCard({ portfolio, index, currency }: PortfolioCardProps
   const baseCurrency = portfolio.baseCurrency || 'USD';
   const locale = portfolio.locale || 'en-US';
 
-  const formatAmount = (amount: number) => formatCurrency(amount, baseCurrency, locale);
+  const formatAmount = (amount: number) => formatCurrencyWithLocale(amount, baseCurrency, locale);
 
   const targetAmount = portfolio.targetAmount
     ? convertCurrency(portfolio.targetAmount, BASE_CURRENCY, currency)
@@ -100,13 +101,13 @@ export function PortfolioCard({ portfolio, index, currency }: PortfolioCardProps
           <div>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Value</p>
             <p className="text-xl md:text-2xl font-bold text-amber-600 dark:text-amber-400">
-              {formatCurrency(totalValue)}
+              {formatValue(totalValue)}
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Invested</p>
             <p className="text-lg md:text-xl font-semibold">
-              {formatCurrency(totalInvested)}
+              {formatValue(totalInvested)}
             </p>
           </div>
         </div>

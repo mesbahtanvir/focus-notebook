@@ -8,6 +8,7 @@ import { InvestmentFormModal } from '@/components/investment/InvestmentFormModal
 import { ContributionFormModal } from '@/components/investment/ContributionFormModal';
 import { PortfolioValueChart } from '@/components/investment/PortfolioValueChart';
 import { StockPerformanceChart } from '@/components/investment/StockPerformanceChart';
+import { CurrencyBadge } from '@/components/investment/CurrencyBadge';
 import { ToolHeader } from '@/components/tools/ToolHeader';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { Card } from '@/components/ui/card';
@@ -20,6 +21,7 @@ import { useSettings } from '@/store/useSettings';
 import { fetchStockHistory } from '@/lib/services/stockApi';
 import { useCurrency } from '@/store/useCurrency';
 import { BASE_CURRENCY, convertCurrency, formatCurrency as formatCurrencyValue } from '@/lib/utils/currency';
+import { normalizeCurrencyCode } from '@/lib/services/currency';
 
 export default function PortfolioDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -28,6 +30,9 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   const {
     subscribe,
     getPortfolio,
+    getTotalPortfolioValue,
+    getTotalInvested,
+    getPortfolioROI,
     getTotalPortfolioValueInCurrency,
     getTotalInvestedInCurrency,
     deleteInvestment,
@@ -114,7 +119,16 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   const locale = portfolio.locale || 'en-US';
 
   const convertAmount = (amount: number | undefined | null) => convertCurrency(amount ?? 0, BASE_CURRENCY, currency);
-  const formatAmount = (amount: number) => formatCurrencyValue(amount, currency);
+  const formatAmount = (amount: number, code?: string) =>
+    formatCurrencyValue(amount, normalizeCurrencyCode(code ?? currency));
+
+  const formatExchangeRate = (value: number, code?: string) =>
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: normalizeCurrencyCode(code ?? currency),
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4,
+    }).format(value);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -540,10 +554,9 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                         </div>
                         {investment.conversionRate && (
                           <p className="mt-2 text-xs text-sky-800/80 dark:text-sky-200">
-                            Conversion rate: 1 {investment.nativeCurrency} ≈ {formatAmount(
+                            Conversion rate: 1 {investment.nativeCurrency} ≈ {formatExchangeRate(
                               investment.conversionRate,
-                              investment.baseCurrency || baseCurrency,
-                              { minimumFractionDigits: 4, maximumFractionDigits: 4 }
+                              investment.baseCurrency || baseCurrency
                             )}
                           </p>
                         )}
@@ -625,8 +638,8 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
               setSelectedInvestment(null);
             }}
             portfolioId={portfolio.id}
-            investmentId={selectedInvestment}
-            investment={portfolio.investments.find(inv => inv.id === selectedInvestment)}
+            investmentId={selectedInvestment.id}
+            investment={selectedInvestment}
           />
         )}
       </div>

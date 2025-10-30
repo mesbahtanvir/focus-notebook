@@ -1,6 +1,8 @@
-export const SUPPORTED_CURRENCIES = ['CAD', 'USD', 'BDT', 'SGD', 'COP'] as const;
+import type { SupportedCurrency } from '@/lib/utils/currency';
 
-export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
+export type { SupportedCurrency } from '@/lib/utils/currency';
+
+export const SUPPORTED_CURRENCIES = ['CAD', 'USD', 'BDT', 'SGD', 'COP'] as const satisfies readonly SupportedCurrency[];
 
 const FALLBACK_RATES: Record<SupportedCurrency, number> = {
   CAD: 1,
