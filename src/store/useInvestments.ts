@@ -6,8 +6,16 @@ import { db } from '@/lib/firebaseClient';
 import type { Unsubscribe } from 'firebase/firestore';
 
 export type InvestmentType = 'stocks' | 'bonds' | 'crypto' | 'real-estate' | 'retirement' | 'mutual-funds' | 'other';
+export type AssetType = 'stock' | 'manual';
 export type PortfolioStatus = 'active' | 'closed' | 'archived';
 export type ContributionType = 'deposit' | 'withdrawal' | 'value-update';
+
+export interface PricePoint {
+  date: string;
+  price: number;
+  volume?: number;
+  source?: 'api' | 'manual';
+}
 
 export interface Contribution {
   id: string;
@@ -23,12 +31,30 @@ export interface Investment {
   portfolioId: string;
   name: string;
   type: InvestmentType;
+  assetType: AssetType; // NEW: 'stock' or 'manual'
+  ticker?: string; // NEW: Stock ticker symbol (e.g., "AAPL")
+  quantity?: number; // NEW: Number of shares owned
+  currentPricePerShare?: number; // NEW: Current price per share
   initialAmount: number;
   currentValue: number;
+  priceHistory?: PricePoint[]; // NEW: Historical price data
+  lastPriceUpdate?: string; // NEW: Last time price was updated
   contributions: Contribution[];
   notes?: string;
   createdAt: string;
   updatedAt?: number;
+}
+
+export interface PortfolioSnapshot {
+  id: string;
+  date: string;
+  totalValue: number;
+  investments: {
+    id: string;
+    value: number;
+    ticker?: string;
+  }[];
+  createdAt: string;
 }
 
 export interface Portfolio {
@@ -64,6 +90,14 @@ interface InvestmentsState {
   // Contribution methods
   addContribution: (portfolioId: string, investmentId: string, contribution: Omit<Contribution, 'id' | 'createdAt'>) => Promise<void>;
   deleteContribution: (portfolioId: string, investmentId: string, contributionId: string) => Promise<void>;
+
+  // Stock price methods
+  refreshInvestmentPrice: (portfolioId: string, investmentId: string) => Promise<void>;
+  refreshAllPrices: (portfolioId: string) => Promise<void>;
+
+  // Snapshot methods
+  createSnapshot: (portfolioId: string) => Promise<void>;
+  getSnapshots: (portfolioId: string) => PortfolioSnapshot[];
 
   // Utility methods
   getPortfolio: (id: string) => Portfolio | undefined;
@@ -280,5 +314,100 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     return get().portfolios.reduce((sum, portfolio) => {
       return sum + get().getTotalPortfolioValue(portfolio.id);
     }, 0);
+  },
+
+  refreshInvestmentPrice: async (portfolioId, investmentId) => {
+    const portfolio = get().getPortfolio(portfolioId);
+    if (!portfolio) throw new Error('Portfolio not found');
+
+    const investment = get().getInvestment(portfolioId, investmentId);
+    if (!investment || !investment.ticker || investment.assetType !== 'stock') {
+      throw new Error('Investment is not a stock or has no ticker');
+    }
+
+    try {
+      // Import the stock API service
+      const { fetchStockPrice } = await import('@/lib/services/stockApi');
+      const quote = await fetchStockPrice(investment.ticker);
+
+      // Update investment with new price
+      const newPricePoint: PricePoint = {
+        date: new Date().toISOString(),
+        price: quote.price,
+        source: 'api'
+      };
+
+      const updatedPriceHistory = [
+        ...(investment.priceHistory || []),
+        newPricePoint
+      ].slice(-100); // Keep only last 100 price points
+
+      const newCurrentValue = (investment.quantity || 0) * quote.price;
+
+      await get().updateInvestment(portfolioId, investmentId, {
+        currentPricePerShare: quote.price,
+        currentValue: newCurrentValue,
+        lastPriceUpdate: quote.timestamp,
+        priceHistory: updatedPriceHistory,
+      });
+    } catch (error) {
+      console.error('Failed to refresh investment price:', error);
+      throw error;
+    }
+  },
+
+  refreshAllPrices: async (portfolioId) => {
+    const portfolio = get().getPortfolio(portfolioId);
+    if (!portfolio) throw new Error('Portfolio not found');
+
+    const stockInvestments = portfolio.investments.filter(
+      inv => inv.assetType === 'stock' && inv.ticker
+    );
+
+    if (stockInvestments.length === 0) {
+      return; // No stocks to update
+    }
+
+    // Refresh prices sequentially to respect rate limits
+    for (const investment of stockInvestments) {
+      try {
+        await get().refreshInvestmentPrice(portfolioId, investment.id);
+        // Small delay between requests
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (error) {
+        console.error(`Failed to refresh price for ${investment.ticker}:`, error);
+        // Continue with other investments even if one fails
+      }
+    }
+  },
+
+  createSnapshot: async (portfolioId) => {
+    const portfolio = get().getPortfolio(portfolioId);
+    if (!portfolio) throw new Error('Portfolio not found');
+
+    const today = new Date().toISOString().split('T')[0];
+    const id = crypto.randomUUID();
+
+    const snapshot: PortfolioSnapshot = {
+      id,
+      date: today,
+      totalValue: get().getTotalPortfolioValue(portfolioId),
+      investments: portfolio.investments.map(inv => ({
+        id: inv.id,
+        value: inv.currentValue,
+        ticker: inv.ticker,
+      })),
+      createdAt: new Date().toISOString(),
+    };
+
+    // Store snapshot in Firestore
+    await createAt(`portfolios/${portfolioId}/snapshots/${id}`, snapshot);
+  },
+
+  getSnapshots: (portfolioId) => {
+    // Note: Snapshots would need to be loaded separately via subscription
+    // This is a placeholder that would be enhanced with actual snapshot loading
+    // For now, we can calculate historical value from price history
+    return [];
   },
 }));

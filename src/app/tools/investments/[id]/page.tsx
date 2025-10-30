@@ -6,14 +6,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useInvestments } from '@/store/useInvestments';
 import { InvestmentFormModal } from '@/components/investment/InvestmentFormModal';
 import { ContributionFormModal } from '@/components/investment/ContributionFormModal';
+import { PortfolioValueChart } from '@/components/investment/PortfolioValueChart';
+import { StockPerformanceChart } from '@/components/investment/StockPerformanceChart';
 import { ToolHeader } from '@/components/tools/ToolHeader';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toolThemes } from '@/components/tools/themes';
-import { Edit, Trash2, Plus, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { Edit, Trash2, Plus, TrendingUp, TrendingDown, DollarSign, RefreshCw, Sparkles, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useSettings } from '@/store/useSettings';
+import { fetchStockHistory } from '@/lib/services/stockApi';
 
 export default function PortfolioDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -27,11 +31,20 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
     getPortfolioROI,
     deleteInvestment,
     deleteContribution,
+    refreshAllPrices,
+    createSnapshot,
   } = useInvestments();
+
+  const { openAIKey, openAIModel } = useSettings();
 
   const [isInvestmentFormOpen, setIsInvestmentFormOpen] = useState(false);
   const [isContributionFormOpen, setIsContributionFormOpen] = useState(false);
   const [selectedInvestment, setSelectedInvestment] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isGeneratingPrediction, setIsGeneratingPrediction] = useState(false);
+  const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
+  const [predictions, setPredictions] = useState<any>(null);
+  const [showPredictions, setShowPredictions] = useState(false);
 
   useEffect(() => {
     if (user?.uid) {
@@ -95,6 +108,106 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
     }
   };
 
+  const handleRefreshPrices = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshAllPrices(portfolio.id);
+      toast({ title: 'Success', description: 'Stock prices updated successfully!' });
+    } catch (error: any) {
+      console.error('Error refreshing prices:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to refresh prices',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleGeneratePrediction = async () => {
+    if (!openAIKey) {
+      toast({
+        title: 'OpenAI API Key Required',
+        description: 'Please configure your OpenAI API key in settings to use predictions.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Get a stock investment with history
+    const stockInvestment = portfolio.investments.find(
+      inv => inv.assetType === 'stock' && inv.priceHistory && inv.priceHistory.length >= 30
+    );
+
+    if (!stockInvestment) {
+      toast({
+        title: 'Insufficient Data',
+        description: 'Need at least 30 days of stock price history to generate predictions. Try refreshing prices first.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsGeneratingPrediction(true);
+    try {
+      // Fetch more historical data if needed
+      let historicalData = stockInvestment.priceHistory || [];
+
+      if (historicalData.length < 90 && stockInvestment.ticker) {
+        const history = await fetchStockHistory(stockInvestment.ticker, 90);
+        historicalData = history.data;
+      }
+
+      const response = await fetch('/api/predict-investment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          historicalData,
+          symbol: stockInvestment.ticker,
+          apiKey: openAIKey,
+          model: openAIModel || 'gpt-4o-mini'
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setPredictions(data.prediction);
+        setShowPredictions(true);
+        toast({ title: 'Success', description: 'AI prediction generated!' });
+      } else {
+        throw new Error(data.error || 'Failed to generate prediction');
+      }
+    } catch (error: any) {
+      console.error('Error generating prediction:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to generate prediction',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingPrediction(false);
+    }
+  };
+
+  const handleCreateSnapshot = async () => {
+    setIsCreatingSnapshot(true);
+    try {
+      await createSnapshot(portfolio.id);
+      toast({ title: 'Success', description: 'Daily snapshot created!' });
+    } catch (error) {
+      console.error('Error creating snapshot:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create snapshot',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsCreatingSnapshot(false);
+    }
+  };
+
   const theme = toolThemes.gold;
 
   return (
@@ -147,6 +260,125 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
           </Card>
         </div>
 
+        {/* Action Buttons for Stock Features */}
+        {portfolio.investments.some(inv => inv.assetType === 'stock') && (
+          <Card className="p-4">
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={handleRefreshPrices}
+                disabled={isRefreshing}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh Stock Prices'}
+              </Button>
+
+              <Button
+                onClick={handleGeneratePrediction}
+                disabled={isGeneratingPrediction}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                <Sparkles className={`w-4 h-4 mr-2 ${isGeneratingPrediction ? 'animate-pulse' : ''}`} />
+                {isGeneratingPrediction ? 'Generating...' : 'AI Prediction'}
+              </Button>
+
+              <Button
+                onClick={handleCreateSnapshot}
+                disabled={isCreatingSnapshot}
+                variant="outline"
+              >
+                <Camera className={`w-4 h-4 mr-2 ${isCreatingSnapshot ? 'animate-pulse' : ''}`} />
+                {isCreatingSnapshot ? 'Creating...' : 'Create Snapshot'}
+              </Button>
+
+              {showPredictions && (
+                <Button
+                  onClick={() => setShowPredictions(false)}
+                  variant="outline"
+                >
+                  Hide Predictions
+                </Button>
+              )}
+            </div>
+          </Card>
+        )}
+
+        {/* Portfolio Value Chart */}
+        <PortfolioValueChart
+          portfolio={portfolio}
+          predictions={showPredictions && predictions ? predictions.predictions : []}
+          showPredictions={showPredictions}
+        />
+
+        {/* AI Prediction Summary */}
+        {showPredictions && predictions && (
+          <Card className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-purple-200">
+            <div className="flex items-start gap-3 mb-4">
+              <Sparkles className="w-6 h-6 text-purple-600 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-100 mb-2">
+                  AI Investment Analysis
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">Trend: </span>
+                    <Badge className={
+                      predictions.trend === 'bullish' ? 'bg-green-500' :
+                      predictions.trend === 'bearish' ? 'bg-red-500' : 'bg-gray-500'
+                    }>
+                      {predictions.trend}
+                    </Badge>
+                  </div>
+
+                  <div>
+                    <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">Summary: </span>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{predictions.summary}</p>
+                  </div>
+
+                  <div>
+                    <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">Analysis: </span>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{predictions.reasoning}</p>
+                  </div>
+
+                  {predictions.targetPrice30Days && (
+                    <div className="grid grid-cols-3 gap-4 mt-4">
+                      <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
+                        <p className="text-xs text-gray-600 dark:text-gray-400">30-Day Target</p>
+                        <p className="text-lg font-bold text-purple-600">
+                          {formatCurrency(predictions.targetPrice30Days)}
+                        </p>
+                      </div>
+                      <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
+                        <p className="text-xs text-gray-600 dark:text-gray-400">Support Level</p>
+                        <p className="text-lg font-bold text-green-600">
+                          {formatCurrency(predictions.supportLevel)}
+                        </p>
+                      </div>
+                      <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
+                        <p className="text-xs text-gray-600 dark:text-gray-400">Resistance Level</p>
+                        <p className="text-lg font-bold text-red-600">
+                          {formatCurrency(predictions.resistanceLevel)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {predictions.riskFactors && predictions.riskFactors.length > 0 && (
+                    <div>
+                      <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">Risk Factors: </span>
+                      <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 mt-1 space-y-1">
+                        {predictions.riskFactors.map((risk: string, idx: number) => (
+                          <li key={idx}>{risk}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
         <div>
           <h2 className="text-2xl font-bold mb-4">Investments</h2>
           {portfolio.investments.length === 0 ? (
@@ -169,32 +401,49 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                 const isInvestmentPositive = investmentGain >= 0;
 
                 return (
-                  <Card key={investment.id} className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-lg font-semibold">{investment.name}</h3>
-                        <Badge className="mt-2">{investment.type}</Badge>
+                  <div key={investment.id} className="space-y-4">
+                    {/* Stock Performance Chart (if it's a stock) */}
+                    {investment.assetType === 'stock' && investment.ticker && (
+                      <StockPerformanceChart investment={investment} />
+                    )}
+
+                    {/* Investment Details Card */}
+                    <Card className="p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-lg font-semibold">{investment.name}</h3>
+                          <div className="flex gap-2 mt-2">
+                            <Badge className="mt-2">{investment.type}</Badge>
+                            <Badge variant="outline" className="mt-2">
+                              {investment.assetType === 'stock' ? 'Auto-Tracked' : 'Manual'}
+                            </Badge>
+                            {investment.ticker && (
+                              <Badge variant="outline" className="mt-2 font-mono bg-blue-50 text-blue-700">
+                                {investment.ticker}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedInvestment(investment.id);
+                              setIsContributionFormOpen(true);
+                            }}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteInvestment(investment.id)}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedInvestment(investment.id);
-                            setIsContributionFormOpen(true);
-                          }}
-                        >
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteInvestment(investment.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                       <div>
@@ -270,7 +519,8 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                         <p className="text-sm text-gray-600 dark:text-gray-400">{investment.notes}</p>
                       </div>
                     )}
-                  </Card>
+                    </Card>
+                  </div>
                 );
               })}
             </div>

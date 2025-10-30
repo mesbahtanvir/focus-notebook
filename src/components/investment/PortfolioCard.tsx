@@ -119,6 +119,29 @@ export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
             )}
           </div>
 
+          {/* Show stock tickers if any */}
+          {portfolio.investments.some(inv => inv.ticker) && (
+            <div className="flex flex-wrap gap-1.5 pt-2 border-t border-gray-200 dark:border-gray-700">
+              {portfolio.investments
+                .filter(inv => inv.ticker)
+                .slice(0, 5)
+                .map(inv => (
+                  <Badge
+                    key={inv.id}
+                    variant="outline"
+                    className="text-xs font-mono bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
+                  >
+                    {inv.ticker}
+                  </Badge>
+                ))}
+              {portfolio.investments.filter(inv => inv.ticker).length > 5 && (
+                <Badge variant="outline" className="text-xs">
+                  +{portfolio.investments.filter(inv => inv.ticker).length - 5} more
+                </Badge>
+              )}
+            </div>
+          )}
+
           {portfolio.targetAmount && (
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
