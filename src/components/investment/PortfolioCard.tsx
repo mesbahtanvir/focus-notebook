@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { TrendingUp, TrendingDown, DollarSign, Target } from 'lucide-react';
@@ -18,7 +18,19 @@ interface PortfolioCardProps {
 export function PortfolioCard({ portfolio, index, displayCurrency: displayCurrencyProp }: PortfolioCardProps) {
   const router = useRouter();
   const { getTotalPortfolioValueInCurrency, getTotalInvestedInCurrency } = useInvestments();
-  const displayCurrency = normalizeCurrencyCode(displayCurrencyProp);
+  const displayCurrency = useMemo(() => {
+    if (displayCurrencyProp) {
+      return normalizeCurrencyCode(displayCurrencyProp);
+    }
+
+    const investmentCurrency = portfolio.investments.find(investment => investment.currency)?.currency;
+
+    if (investmentCurrency) {
+      return normalizeCurrencyCode(investmentCurrency);
+    }
+
+    return 'CAD';
+  }, [displayCurrencyProp, portfolio.investments]);
   const [totals, setTotals] = useState({ totalValue: 0, totalInvested: 0, roi: 0 });
 
   useEffect(() => {
