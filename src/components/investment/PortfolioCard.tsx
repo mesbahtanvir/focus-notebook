@@ -1,8 +1,9 @@
 'use client';
 
+import type { MouseEvent } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { TrendingUp, TrendingDown, DollarSign, Target } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Target, Trash2 } from 'lucide-react';
 import { Portfolio, useInvestments } from '@/store/useInvestments';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +15,12 @@ interface PortfolioCardProps {
 
 export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
   const router = useRouter();
-  const { getTotalPortfolioValue, getTotalInvested, getPortfolioROI } = useInvestments();
+  const {
+    getTotalPortfolioValue,
+    getTotalInvested,
+    getPortfolioROI,
+    deletePortfolio,
+  } = useInvestments();
 
   const totalValue = getTotalPortfolioValue(portfolio.id);
   const totalInvested = getTotalInvested(portfolio.id);
@@ -43,6 +49,13 @@ export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
     ? Math.min((totalValue / portfolio.targetAmount) * 100, 100)
     : 0;
 
+  const handleDelete = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    if (confirm(`Delete portfolio "${portfolio.name}"? This cannot be undone.`)) {
+      await deletePortfolio(portfolio.id);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -53,30 +66,42 @@ export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
         className="p-6 hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-amber-500"
         onClick={() => router.push(`/tools/investments/${portfolio.id}`)}
       >
-        <div className="flex justify-between items-start mb-4">
+        <div className="flex justify-between items-start mb-4 gap-3">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold mb-1">{portfolio.name}</h3>
+            <h3 className="text-base md:text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">
+              {portfolio.name}
+            </h3>
             {portfolio.description && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-2">
                 {portfolio.description}
               </p>
             )}
           </div>
-          <Badge className={getStatusColor(portfolio.status)}>
-            {portfolio.status}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge className={getStatusColor(portfolio.status)}>
+              {portfolio.status}
+            </Badge>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              aria-label={`Delete ${portfolio.name}`}
+            >
+              <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Value</p>
-            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+            <p className="text-xl md:text-2xl font-bold text-amber-600 dark:text-amber-400">
               {formatCurrency(totalValue)}
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Invested</p>
-            <p className="text-xl font-semibold">
+            <p className="text-lg md:text-xl font-semibold">
               {formatCurrency(totalInvested)}
             </p>
           </div>
