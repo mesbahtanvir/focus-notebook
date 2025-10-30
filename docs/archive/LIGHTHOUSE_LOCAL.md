@@ -116,7 +116,7 @@ The authentication flow:
 
 ## What Gets Tested
 
-The workflow tests all 22 pages in `lighthouserc.json`:
+The workflow tests all 22 pages in `lighthouserc.js`:
 
 - Home page
 - Login, Dashboard, Profile, Settings, Admin, Learn
@@ -126,7 +126,7 @@ The workflow tests all 22 pages in `lighthouserc.json`:
 ## Configuration
 
 Configuration is in:
-- `lighthouserc.json` - Main configuration
+- `lighthouserc.js` - Main configuration
 - `puppeteer-login.js` - Authentication script
 - `.github/workflows/lighthouse.yml` - GitHub Actions workflow
 
