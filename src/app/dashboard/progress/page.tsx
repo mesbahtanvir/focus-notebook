@@ -8,8 +8,10 @@ import { useGoals } from "@/store/useGoals";
 import { useProjects } from "@/store/useProjects";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
-
-type ProgressPeriod = 'week' | 'month' | 'all-time';
+import {
+  computeProgressAnalytics,
+  type ProgressPeriod,
+} from "@/lib/analytics/progress";
 
 export default function ProgressDashboard() {
   const { user } = useAuth();
@@ -29,90 +31,16 @@ export default function ProgressDashboard() {
     }
   }, [user?.uid, subscribeTasks, subscribeGoals, subscribeProjects]);
 
-  const progress = useMemo(() => {
-    const now = new Date();
-    let startDate = new Date(0); // All time by default
-
-    if (progressPeriod === 'week') {
-      const dayOfWeek = now.getDay();
-      startDate = new Date(now.getTime() - dayOfWeek * 24 * 60 * 60 * 1000);
-      startDate.setHours(0, 0, 0, 0);
-    } else if (progressPeriod === 'month') {
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    }
-
-    // Goals Progress
-    const activeGoals = goals.filter(g => g.status === 'active');
-    const completedGoals = goals.filter(g => g.status === 'completed');
-    const totalGoals = goals.length;
-    
-    const goalsProgress = totalGoals > 0 ? (completedGoals.length / totalGoals) * 100 : 0;
-
-    // Projects Progress
-    const activeProjects = projects.filter(p => p.status === 'active' || p.status === 'on-hold');
-    const completedProjects = projects.filter(p => p.status === 'completed');
-    const totalProjects = projects.length;
-
-    const projectsProgress = totalProjects > 0 ? (completedProjects.length / totalProjects) * 100 : 0;
-
-    // Tasks Progress
-    const totalTasks = tasks.length;
-    const completedTasks = tasks.filter(t => t.done);
-    const activeTasks = tasks.filter(t => !t.done && t.status === 'active');
-
-    const tasksProgress = totalTasks > 0 ? (completedTasks.length / totalTasks) * 100 : 0;
-
-    // Filter by date if needed
-    const filteredCompletedGoals = completedGoals.filter(g => {
-      if (!g.completedAt) return false;
-      return new Date(g.completedAt) >= startDate;
-    });
-
-    const filteredCompletedProjects = completedProjects.filter(p => {
-      if (!p.completedAt) return false;
-      return new Date(p.completedAt) >= startDate;
-    });
-
-    const filteredCompletedTasks = tasks.filter(t => {
-      if (!t.completedAt) return false;
-      return new Date(t.completedAt) >= startDate;
-    });
-
-    // Calculate time spent on completed items
-    const totalTimeSpent = filteredCompletedTasks.reduce((sum, t) => {
-      return sum + (t.actualMinutes || t.estimatedMinutes || 0);
-    }, 0);
-
-    return {
-      goals: {
-        total: totalGoals,
-        active: activeGoals.length,
-        completed: completedGoals.length,
-        progress: goalsProgress,
-        recentCompleted: filteredCompletedGoals.length,
-      },
-      projects: {
-        total: totalProjects,
-        active: activeProjects.length,
-        completed: completedProjects.length,
-        progress: projectsProgress,
-        recentCompleted: filteredCompletedProjects.length,
-      },
-      tasks: {
-        total: totalTasks,
-        active: activeTasks.length,
-        completed: completedTasks.length,
-        progress: tasksProgress,
-        recentCompleted: filteredCompletedTasks.length,
-        timeSpent: totalTimeSpent,
-      },
-      milestones: {
-        goalsCompleted: filteredCompletedGoals.length,
-        projectsCompleted: filteredCompletedProjects.length,
-        tasksCompleted: filteredCompletedTasks.length,
-      },
-    };
-  }, [goals, projects, tasks, progressPeriod]);
+  const progress = useMemo(
+    () =>
+      computeProgressAnalytics({
+        tasks,
+        goals,
+        projects,
+        period: progressPeriod,
+      }),
+    [goals, projects, tasks, progressPeriod]
+  );
 
   return (
     <div className="container mx-auto py-6 md:py-8 px-4 md:px-0 max-w-7xl">
