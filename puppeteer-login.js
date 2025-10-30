@@ -1,6 +1,5 @@
 // puppeteer-login.js
 const puppeteer = require('puppeteer');
-const { execSync } = require('child_process');
 
 module.exports = async ({ url, options, config }) => {
   // Check if credentials are set
@@ -67,6 +66,107 @@ module.exports = async ({ url, options, config }) => {
   // Set a reasonable viewport
   await page.setViewport({ width: 1280, height: 800 });
 
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const sanitizeText = (text) => (text || '').replace(/\s+/g, ' ').trim();
+
+  async function waitForAuthResult(timeoutMs = 45000) {
+    const startTime = Date.now();
+    let lastSuccessMessage = '';
+
+    while (Date.now() - startTime < timeoutMs) {
+      const state = await page.evaluate(() => {
+        const url = window.location.href;
+        const errorEl = document.querySelector('[data-testid="email-auth-error"]');
+        const successEl = document.querySelector('[data-testid="email-auth-success"]');
+        const dashboardInput =
+          document.querySelector('input[placeholder*="on your mind"]') ||
+          document.querySelector('form input[type="text"]');
+
+        return {
+          url,
+          errorText: errorEl ? errorEl.textContent || '' : '',
+          successText: successEl ? successEl.textContent || '' : '',
+          loggedIn: !!dashboardInput || !url.includes('/login'),
+        };
+      });
+
+      if (state.loggedIn) {
+        return { status: 'success', url: state.url };
+      }
+
+      if (state.errorText) {
+        return {
+          status: 'error',
+          message: sanitizeText(state.errorText),
+          url: state.url,
+        };
+      }
+
+      if (state.successText) {
+        const message = sanitizeText(state.successText);
+        if (message && message !== lastSuccessMessage) {
+          console.log('Authentication status:', message);
+          lastSuccessMessage = message;
+        }
+      }
+
+      await wait(500);
+    }
+
+    return { status: 'timeout', url: await page.url() };
+  }
+
+  async function attemptAccountCreation() {
+    console.log('Attempting to create test account since it was not found...');
+
+    const toggled = await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      const toggle = buttons.find((btn) => btn.textContent && btn.textContent.includes("Don't have an account"));
+      if (toggle) {
+        toggle.click();
+        return true;
+      }
+      return false;
+    });
+
+    if (!toggled) {
+      throw new Error('Could not switch to account creation form');
+    }
+
+    await wait(500);
+
+    const submitBtn = await page.$('button[type="submit"]');
+    if (!submitBtn) {
+      throw new Error('Sign up submit button not found');
+    }
+
+    const buttonLabel = sanitizeText(await submitBtn.evaluate((el) => el.textContent || ''));
+    if (buttonLabel) {
+      console.log(`Submitting "${buttonLabel}" to create the account...`);
+    }
+
+    await submitBtn.click();
+
+    const creationResult = await waitForAuthResult(60000);
+    if (creationResult.status === 'success') {
+      console.log('Account created and authenticated! Current URL:', creationResult.url);
+      return;
+    }
+
+    if (creationResult.status === 'error') {
+      throw new Error(`Account creation failed - ${creationResult.message}`);
+    }
+
+    try {
+      await page.screenshot({ path: 'login-error.png', fullPage: true });
+      console.log('Screenshot saved to login-error.png');
+    } catch (e) {
+      // Ignore screenshot errors
+    }
+
+    throw new Error(`Account creation timeout at ${creationResult.url}`);
+  }
+
   console.log('Navigating to login page...');
 
   // 1) Go to login page with longer timeout
@@ -105,7 +205,7 @@ module.exports = async ({ url, options, config }) => {
   }
 
   // Wait for form transition animation
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await wait(1000);
 
   // 3) Wait for email form to appear and fill credentials
   console.log('Waiting for email form...');
@@ -150,45 +250,39 @@ module.exports = async ({ url, options, config }) => {
   await submitButton.click();
 
   // Wait for authentication to complete - Firebase auth may not trigger traditional navigation
-  // Instead, wait for either:
-  // 1. URL to change away from /login
-  // 2. Authenticated content to appear
   console.log('Waiting for authentication to complete...');
+  let authResult = await waitForAuthResult(45000);
 
-  try {
-    // Wait for URL to not include 'login' OR for authenticated content
-    await Promise.race([
-      // Option 1: Wait for URL change away from login
-      page.waitForFunction(
-        () => !window.location.href.includes('/login'),
-        { timeout: 45000 }
-      ),
-      // Option 2: Wait for authenticated page elements
-      page.waitForSelector('input[placeholder*="on your mind"], form input[type="text"]', { timeout: 45000 })
-    ]);
+  if (authResult.status === 'success') {
+    console.log('Authentication successful! Current URL:', authResult.url);
+  } else if (authResult.status === 'error') {
+    console.log('Authentication error detected:', authResult.message);
+    const lowerMessage = authResult.message.toLowerCase();
 
-    console.log('Authentication successful! Current URL:', page.url());
-  } catch (error) {
-    const currentUrl = page.url();
-    console.log('Authentication wait timeout. Current URL:', currentUrl);
-
-    // Check if we're on an authenticated page despite the timeout
-    if (currentUrl.includes('yourthoughts.ca') && !currentUrl.includes('login')) {
-      console.log('Already on authenticated page, continuing...');
+    if (lowerMessage.includes('no account found')) {
+      await attemptAccountCreation();
     } else {
-      // Take a screenshot for debugging
       try {
         await page.screenshot({ path: 'login-error.png', fullPage: true });
         console.log('Screenshot saved to login-error.png');
       } catch (e) {
         // Ignore screenshot errors
       }
-      throw new Error(`Login failed - authentication timeout at ${currentUrl}`);
+      throw new Error(`Login failed - ${authResult.message}`);
     }
+  } else {
+    console.log('Authentication wait timeout. Current URL:', authResult.url);
+    try {
+      await page.screenshot({ path: 'login-error.png', fullPage: true });
+      console.log('Screenshot saved to login-error.png');
+    } catch (e) {
+      // Ignore screenshot errors
+    }
+    throw new Error(`Login failed - authentication timeout at ${authResult.url}`);
   }
 
   // Give Firebase some extra time to settle
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  await wait(2000);
 
   // 5) Verify we're logged in by checking for authenticated user elements
   console.log('Verifying login status...');

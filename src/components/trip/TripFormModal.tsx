@@ -3,18 +3,11 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { X } from 'lucide-react';
-import { Trip, TripStatus, useTrips } from '@/store/useTrips';
+import { Trip, useTrips } from '@/store/useTrips';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 
 interface TripFormData {
@@ -24,7 +17,6 @@ interface TripFormData {
   endDate: string;
   budget: number;
   currency: string;
-  status: TripStatus;
   notes?: string;
 }
 
@@ -44,8 +36,6 @@ export function TripFormModal({ isOpen, onClose, trip }: TripFormModalProps) {
     handleSubmit,
     formState: { errors },
     reset,
-    setValue,
-    watch,
   } = useForm<TripFormData>({
     defaultValues: trip
       ? {
@@ -55,18 +45,14 @@ export function TripFormModal({ isOpen, onClose, trip }: TripFormModalProps) {
           endDate: trip.endDate,
           budget: trip.budget,
           currency: trip.currency,
-          status: trip.status,
           notes: trip.notes || '',
         }
       : {
-          status: 'planning',
           currency: 'USD',
           startDate: new Date().toISOString().split('T')[0],
           endDate: new Date().toISOString().split('T')[0],
         },
   });
-
-  const status = watch('status');
 
   const onSubmit = async (data: TripFormData) => {
     setIsSubmitting(true);
@@ -79,7 +65,6 @@ export function TripFormModal({ isOpen, onClose, trip }: TripFormModalProps) {
           endDate: data.endDate,
           budget: Number(data.budget),
           currency: data.currency,
-          status: data.status,
           notes: data.notes,
         });
         toast({ title: 'Success', description: 'Trip updated successfully!' });
@@ -91,7 +76,6 @@ export function TripFormModal({ isOpen, onClose, trip }: TripFormModalProps) {
           endDate: data.endDate,
           budget: Number(data.budget),
           currency: data.currency,
-          status: data.status,
           notes: data.notes,
         });
         toast({ title: 'Success', description: 'Trip created successfully!' });
@@ -174,6 +158,19 @@ export function TripFormModal({ isOpen, onClose, trip }: TripFormModalProps) {
             </div>
           </div>
 
+          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 text-xs text-blue-800 dark:text-blue-200">
+            <p>
+              Trip status updates automatically based on your dates: before the start it stays in
+              planning, during the trip it switches to in-progress, and after the end date it moves
+              to completed.
+            </p>
+            {trip && (
+              <p className="mt-2">
+                Current status: <span className="font-semibold capitalize">{trip.status}</span>
+              </p>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="budget">Budget *</Label>
@@ -203,25 +200,6 @@ export function TripFormModal({ isOpen, onClose, trip }: TripFormModalProps) {
                 <p className="text-sm text-red-500 mt-1">{errors.currency.message}</p>
               )}
             </div>
-          </div>
-
-          <div>
-            <Label htmlFor="status">Status *</Label>
-            <Select
-              value={status}
-              onChange={(e) => setValue('status', e.target.value as TripStatus)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="planning">Planning</SelectItem>
-                <SelectItem value="upcoming">Upcoming</SelectItem>
-                <SelectItem value="in-progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           <div>

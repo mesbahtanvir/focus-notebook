@@ -254,6 +254,7 @@ export default function LoginPage() {
                 {/* Error Message */}
                 {error && (
                   <motion.div
+                    data-testid="email-auth-error"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2"
@@ -266,6 +267,7 @@ export default function LoginPage() {
                 {/* Success Message */}
                 {successMessage && (
                   <motion.div
+                    data-testid="email-auth-success"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="p-3 rounded-lg bg-green-50 border border-green-200"

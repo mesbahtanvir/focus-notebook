@@ -9,7 +9,6 @@ import { ToolHeader } from '@/components/tools/ToolHeader';
 import { SearchAndFilters } from '@/components/tools/SearchAndFilters';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { toolThemes } from '@/components/tools/themes';
-import { MapPin, Plane, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function TripsPage() {
@@ -18,9 +17,7 @@ export default function TripsPage() {
   const { trips, isLoading, subscribe, deleteTrip } = useTrips();
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<
-    'all' | 'planning' | 'upcoming' | 'in-progress' | 'completed' | 'cancelled'
-  >('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'planning' | 'in-progress' | 'completed'>('all');
 
   useEffect(() => {
     if (user?.uid) {
@@ -36,7 +33,7 @@ export default function TripsPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const activeTrips = trips.filter((t) => t.status === 'in-progress' || t.status === 'upcoming');
+  const activeTrips = trips.filter((t) => t.status === 'in-progress');
   const totalBudget = trips.reduce((sum, trip) => sum + trip.budget, 0);
 
   const handleDelete = async (id: string) => {
@@ -83,7 +80,7 @@ export default function TripsPage() {
           showFilterToggle={true}
           filterContent={
             <div className="flex gap-2 flex-wrap">
-              {['all', 'planning', 'upcoming', 'in-progress', 'completed', 'cancelled'].map((status) => (
+              {['all', 'planning', 'in-progress', 'completed'].map((status) => (
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status as any)}

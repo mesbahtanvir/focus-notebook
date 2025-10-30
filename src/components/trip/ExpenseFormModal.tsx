@@ -178,17 +178,19 @@ export function ExpenseFormModal({
             <Label htmlFor="category">Category *</Label>
             <Select
               value={category}
-              onChange={(e) => setValue('category', e.target.value as ExpenseCategory)}
+              onChange={(e) => setValue('category', (e.target?.value ?? '') as ExpenseCategory)}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="food">Food</SelectItem>
-                <SelectItem value="transport">Transport</SelectItem>
+                <SelectItem value="airfare">Airfare</SelectItem>
                 <SelectItem value="accommodation">Accommodation</SelectItem>
-                <SelectItem value="entertainment">Entertainment</SelectItem>
+                <SelectItem value="food">Food</SelectItem>
+                <SelectItem value="transportation">Transportation</SelectItem>
+                <SelectItem value="activities">Activities</SelectItem>
                 <SelectItem value="shopping">Shopping</SelectItem>
+                <SelectItem value="misc">Miscellaneous</SelectItem>
                 <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>

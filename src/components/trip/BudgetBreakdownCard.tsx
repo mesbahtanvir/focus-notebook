@@ -13,13 +13,13 @@ interface BudgetBreakdownCardProps {
 }
 
 const EXPENSE_CATEGORIES: ExpenseCategory[] = [
-  'air-ticket',
+  'airfare',
   'accommodation',
   'food',
-  'transport',
-  'entertainment',
+  'transportation',
+  'activities',
   'shopping',
-  'gift',
+  'misc',
   'other',
 ];
 
@@ -28,9 +28,10 @@ export function BudgetBreakdownCard({ trip }: BudgetBreakdownCardProps) {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [budgetBreakdown, setBudgetBreakdown] = useState<Record<ExpenseCategory, number>>(
-    trip.budgetBreakdown || ({} as Record<ExpenseCategory, number>)
+  const [budgetBreakdown, setBudgetBreakdown] = useState<Partial<Record<ExpenseCategory, number>>>(
+    trip.budgetBreakdown ?? {}
   );
+  const canEdit = trip.status === 'planning';
 
   const handleCategoryChange = (category: ExpenseCategory, value: number) => {
     setBudgetBreakdown((prev) => ({
@@ -40,6 +41,7 @@ export function BudgetBreakdownCard({ trip }: BudgetBreakdownCardProps) {
   };
 
   const handleSave = async () => {
+    if (!canEdit) return;
     setIsSaving(true);
     try {
       await updateBudgetBreakdown(trip.id, budgetBreakdown);
@@ -58,7 +60,7 @@ export function BudgetBreakdownCard({ trip }: BudgetBreakdownCardProps) {
   };
 
   const handleCancel = () => {
-    setBudgetBreakdown(trip.budgetBreakdown || ({} as Record<ExpenseCategory, number>));
+    setBudgetBreakdown(trip.budgetBreakdown ?? {});
     setIsEditing(false);
   };
 
@@ -71,10 +73,12 @@ export function BudgetBreakdownCard({ trip }: BudgetBreakdownCardProps) {
         <div>
           <h2 className="text-lg font-semibold">Budget Breakdown</h2>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Planning mode - Set estimated spending by category
+            {canEdit
+              ? 'Estimate your spend by category to stay on track when the trip begins.'
+              : 'Planned budget by category for this trip.'}
           </p>
         </div>
-        {!isEditing && (
+        {canEdit && !isEditing && (
           <Button
             variant="outline"
             size="sm"
@@ -187,7 +191,11 @@ export function BudgetBreakdownCard({ trip }: BudgetBreakdownCardProps) {
           ) : (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               <p>No budget breakdown set yet.</p>
-              <p className="text-sm mt-1">Click Edit to plan your budget by category.</p>
+              <p className="text-sm mt-1">
+                {canEdit
+                  ? 'Click Edit to plan your budget by category.'
+                  : 'Budgets can be planned before the trip begins.'}
+              </p>
             </div>
           )}
         </div>

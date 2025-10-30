@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Expense, useTrips } from '@/store/useTrips';
+import { Expense, ExpenseCategory, useTrips } from '@/store/useTrips';
 import { ExpenseFormModal } from '@/components/trip/ExpenseFormModal';
 import { ToolHeader } from '@/components/tools/ToolHeader';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { toolThemes } from '@/components/tools/themes';
 import { MapPin, Calendar, DollarSign, Trash2, TrendingDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { BudgetBreakdownCard } from '@/components/trip/BudgetBreakdownCard';
 
 export default function TripDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -55,6 +56,9 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
   const budgetPercent = trip.budget > 0 ? (totalSpent / trip.budget) * 100 : 0;
   const isOverBudget = budgetPercent > 100;
   const avgDaily = getAverageDailySpend(trip.id);
+  const isPlanning = trip.status === 'planning';
+  const canAddExpenses = trip.status !== 'planning';
+  const hasBudgetBreakdown = !!(trip.budgetBreakdown && Object.keys(trip.budgetBreakdown).length > 0);
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {
     return new Intl.NumberFormat('en-US', {
@@ -80,11 +84,36 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
     }
   };
 
-  const categories: Array<Expense['category']> = ['food', 'transport', 'accommodation', 'entertainment', 'shopping', 'other'];
-  const categorySpending = categories.map((category) => ({
-    category,
-    amount: getSpentByCategory(trip.id, category),
-  })).filter((item) => item.amount > 0);
+  const categories: ExpenseCategory[] = [
+    'airfare',
+    'accommodation',
+    'food',
+    'transportation',
+    'activities',
+    'shopping',
+    'misc',
+    'other',
+  ];
+
+  const spendByCategory = categories.reduce<Record<ExpenseCategory, number>>((acc, category) => {
+    acc[category] = getSpentByCategory(trip.id, category);
+    return acc;
+  }, {} as Record<ExpenseCategory, number>);
+
+  const categorySpending = categories
+    .map((category) => ({
+      category,
+      amount: spendByCategory[category],
+    }))
+    .filter((item) => item.amount > 0);
+
+  const budgetVsActual = categories
+    .map((category) => ({
+      category,
+      planned: trip.budgetBreakdown?.[category] || 0,
+      actual: spendByCategory[category],
+    }))
+    .filter((item) => item.planned > 0 || item.actual > 0);
 
   const theme = toolThemes.teal;
 
@@ -177,6 +206,45 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
           </Card>
         </div>
 
+        {(isPlanning || hasBudgetBreakdown) && <BudgetBreakdownCard trip={trip} />}
+
+        {!isPlanning && budgetVsActual.length > 0 && (
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Planned vs. Actual Spend</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <th className="py-2 pr-4 font-medium">Category</th>
+                    <th className="py-2 pr-4 font-medium">Planned</th>
+                    <th className="py-2 pr-4 font-medium">Actual</th>
+                    <th className="py-2 font-medium">Variance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                  {budgetVsActual.map(({ category, planned, actual }) => {
+                    const variance = actual - planned;
+                    return (
+                      <tr key={category}>
+                        <td className="py-2 pr-4 capitalize">{category}</td>
+                        <td className="py-2 pr-4">
+                          {formatCurrency(planned, trip.currency)}
+                        </td>
+                        <td className="py-2 pr-4">
+                          {formatCurrency(actual, trip.currency)}
+                        </td>
+                        <td className={`py-2 ${variance > 0 ? 'text-red-600' : variance < 0 ? 'text-green-600' : 'text-gray-600 dark:text-gray-400'}`}>
+                          {formatCurrency(variance, trip.currency)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+
         {categorySpending.length > 0 && (
           <Card className="p-6">
             <h3 className="text-lg font-semibold mb-4">Spending by Category</h3>
@@ -186,7 +254,7 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
                   <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">{category}</p>
                   <p className="text-lg font-bold">{formatCurrency(amount, trip.currency)}</p>
                   <p className="text-xs text-gray-500">
-                    {((amount / totalSpent) * 100).toFixed(0)}%
+                    {totalSpent > 0 ? `${((amount / totalSpent) * 100).toFixed(0)}%` : '—'}
                   </p>
                 </div>
               ))}
@@ -196,7 +264,14 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
 
         <div>
           <h2 className="text-2xl font-bold mb-4">Expenses</h2>
-          {trip.expenses.length === 0 ? (
+          {isPlanning ? (
+            <Card className="p-8 text-center">
+              <p className="text-gray-600 dark:text-gray-400">
+                Expense tracking unlocks once your trip starts. Use the budget planner above to
+                outline expected spending by category.
+              </p>
+            </Card>
+          ) : trip.expenses.length === 0 ? (
             <Card className="p-8 text-center">
               <p className="text-gray-600 dark:text-gray-400 mb-4">No expenses recorded yet</p>
               <Button
@@ -262,10 +337,12 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
           </Card>
         )}
 
-        <FloatingActionButton onClick={() => setIsExpenseFormOpen(true)} title="Add" />
+        {canAddExpenses && (
+          <FloatingActionButton onClick={() => setIsExpenseFormOpen(true)} title="Add" />
+        )}
 
         <ExpenseFormModal
-          isOpen={isExpenseFormOpen}
+          isOpen={canAddExpenses && isExpenseFormOpen}
           onClose={() => {
             setIsExpenseFormOpen(false);
             setEditingExpense(undefined);

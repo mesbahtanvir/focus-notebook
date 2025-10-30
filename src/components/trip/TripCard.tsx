@@ -17,22 +17,33 @@ export function TripCard({ trip, index }: TripCardProps) {
   const { getTotalSpent, getBudgetRemaining } = useTrips();
 
   const totalSpent = getTotalSpent(trip.id);
-  const remaining = getBudgetRemaining(trip.id);
-  const budgetPercent = trip.budget > 0 ? (totalSpent / trip.budget) * 100 : 0;
+  const totalPlanned = trip.budgetBreakdown
+    ? Object.values(trip.budgetBreakdown).reduce((sum, value) => sum + (value || 0), 0)
+    : 0;
+  const isPlanning = trip.status === 'planning';
+  const plannedCategoryCount = Object.entries(trip.budgetBreakdown || {}).filter(
+    ([, value]) => typeof value === 'number' && value > 0
+  ).length;
+  const spendValue = isPlanning ? totalPlanned : totalSpent;
+  const spendLabel = isPlanning ? 'Planned' : 'Spent';
+  const secondaryLabel = isPlanning ? 'Unallocated' : 'Remaining';
+  const secondaryValue = isPlanning ? trip.budget - totalPlanned : getBudgetRemaining(trip.id);
+  const budgetPercent = trip.budget > 0 ? (spendValue / trip.budget) * 100 : 0;
   const isOverBudget = budgetPercent > 100;
+  const footerLabel = isPlanning
+    ? plannedCategoryCount > 0
+      ? `${plannedCategoryCount} Planned categor${plannedCategoryCount === 1 ? 'y' : 'ies'}`
+      : 'No categories planned yet'
+    : `${trip.expenses.length} Expense${trip.expenses.length !== 1 ? 's' : ''}`;
 
   const getStatusColor = (status: Trip['status']) => {
     switch (status) {
       case 'planning':
         return 'bg-blue-500/10 text-blue-700 dark:text-blue-400';
-      case 'upcoming':
-        return 'bg-purple-500/10 text-purple-700 dark:text-purple-400';
       case 'in-progress':
         return 'bg-green-500/10 text-green-700 dark:text-green-400';
       case 'completed':
         return 'bg-gray-500/10 text-gray-700 dark:text-gray-400';
-      case 'cancelled':
-        return 'bg-red-500/10 text-red-700 dark:text-red-400';
       default:
         return 'bg-gray-500/10 text-gray-700 dark:text-gray-400';
     }
@@ -85,9 +96,9 @@ export function TripCard({ trip, index }: TripCardProps) {
             <p className="text-xl font-semibold">{formatCurrency(trip.budget, trip.currency)}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Spent</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{spendLabel}</p>
             <p className={`text-xl font-bold ${isOverBudget ? 'text-red-600' : 'text-teal-600'}`}>
-              {formatCurrency(totalSpent, trip.currency)}
+              {formatCurrency(spendValue, trip.currency)}
             </p>
           </div>
         </div>
@@ -113,17 +124,21 @@ export function TripCard({ trip, index }: TripCardProps) {
           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <div className="flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-gray-600" />
-              <span className="text-sm font-medium">Remaining</span>
+              <span className="text-sm font-medium">{secondaryLabel}</span>
             </div>
-            <p className={`font-bold ${remaining < 0 ? 'text-red-600' : 'text-green-600'}`}>
-              {formatCurrency(remaining, trip.currency)}
+            <p
+              className={`font-bold ${
+                secondaryValue < 0 ? 'text-red-600' : 'text-green-600'
+              }`}
+            >
+              {formatCurrency(secondaryValue, trip.currency)}
             </p>
           </div>
 
           <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4" />
-              <span>{trip.expenses.length} Expense{trip.expenses.length !== 1 ? 's' : ''}</span>
+              <span>{footerLabel}</span>
             </div>
           </div>
         </div>

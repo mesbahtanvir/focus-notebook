@@ -2,11 +2,19 @@ import { create } from 'zustand';
 import { createAt, deleteAt, updateAt } from '@/lib/data/gateway';
 import { subscribeCol } from '@/lib/data/subscribe';
 import { collection, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebaseClient';
+import { auth, db } from '@/lib/firebaseClient';
 import type { Unsubscribe } from 'firebase/firestore';
 
-export type TripStatus = 'planning' | 'upcoming' | 'in-progress' | 'completed' | 'cancelled';
-export type ExpenseCategory = 'food' | 'transport' | 'accommodation' | 'entertainment' | 'shopping' | 'air-ticket' | 'gift' | 'other';
+export type TripStatus = 'planning' | 'in-progress' | 'completed';
+export type ExpenseCategory =
+  | 'airfare'
+  | 'accommodation'
+  | 'food'
+  | 'transportation'
+  | 'activities'
+  | 'shopping'
+  | 'misc'
+  | 'other';
 
 export interface Expense {
   id: string;
@@ -31,7 +39,7 @@ export interface Trip {
   currency: string;
   status: TripStatus;
   expenses: Expense[];
-  budgetBreakdown?: Record<ExpenseCategory, number>; // For planning/upcoming trips
+  budgetBreakdown?: Partial<Record<ExpenseCategory, number>>; // Planned budgets per category
   notes?: string;
   createdAt: string;
   updatedAt?: number;
@@ -48,10 +56,15 @@ interface TripsState {
 
   // Trip methods
   subscribe: (userId: string) => void;
-  addTrip: (trip: Omit<Trip, 'id' | 'createdAt' | 'updatedAt' | 'expenses'>) => Promise<string>;
+  addTrip: (
+    trip: Omit<Trip, 'id' | 'createdAt' | 'updatedAt' | 'expenses' | 'status'>
+  ) => Promise<string>;
   updateTrip: (id: string, updates: Partial<Omit<Trip, 'id' | 'createdAt' | 'expenses'>>) => Promise<void>;
   deleteTrip: (id: string) => Promise<void>;
-  updateBudgetBreakdown: (id: string, budgetBreakdown: Record<ExpenseCategory, number>) => Promise<void>;
+  updateBudgetBreakdown: (
+    id: string,
+    budgetBreakdown: Partial<Record<ExpenseCategory, number>>
+  ) => Promise<void>;
 
   // Expense methods (trip-specific)
   addExpense: (tripId: string, expense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt' | 'tripId'>) => Promise<string>;
@@ -102,14 +115,11 @@ export const useTrips = create<TripsState>((set, get) => ({
       orderBy('createdAt', 'desc')
     );
 
-    const tripsUnsubscribe = subscribeCol<Trip>(
+  const tripsUnsubscribe = subscribeCol<Trip>(
       tripsQuery,
       (data, metadata) => {
         set({
-          trips: data.map(trip => ({
-            ...trip,
-            expenses: trip.expenses || []
-          })),
+          trips: data.map((trip) => normalizeTrip(trip)),
           isLoading: false,
           fromCache: metadata.fromCache,
           hasPendingWrites: metadata.hasPendingWrites,
@@ -141,31 +151,44 @@ export const useTrips = create<TripsState>((set, get) => ({
   addTrip: async (trip) => {
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
+    const status = determineStatus(trip.startDate, trip.endDate);
 
     const newTrip: Trip = {
       ...trip,
       id,
+      status,
       expenses: [],
+      budgetBreakdown: trip.budgetBreakdown ?? {},
       createdAt: now,
     };
 
-    await createAt(`trips/${id}`, newTrip);
+    const userId = requireUserId();
+    await createAt(`users/${userId}/trips/${id}`, newTrip);
     return id;
   },
 
   updateTrip: async (id, updates) => {
-    await updateAt(`trips/${id}`, {
+    const userId = requireUserId();
+    const status =
+      updates.startDate || updates.endDate
+        ? determineStatus(updates.startDate ?? get().getTrip(id)?.startDate, updates.endDate ?? get().getTrip(id)?.endDate)
+        : undefined;
+
+    await updateAt(`users/${userId}/trips/${id}`, {
       ...updates,
+      ...(status ? { status } : {}),
       updatedAt: Date.now(),
     });
   },
 
   deleteTrip: async (id) => {
-    await deleteAt(`trips/${id}`);
+    const userId = requireUserId();
+    await deleteAt(`users/${userId}/trips/${id}`);
   },
 
   updateBudgetBreakdown: async (id, budgetBreakdown) => {
-    await updateAt(`trips/${id}`, {
+    const userId = requireUserId();
+    await updateAt(`users/${userId}/trips/${id}`, {
       budgetBreakdown,
       updatedAt: Date.now(),
     });
@@ -174,6 +197,9 @@ export const useTrips = create<TripsState>((set, get) => ({
   addExpense: async (tripId, expense) => {
     const trip = get().getTrip(tripId);
     if (!trip) throw new Error('Trip not found');
+    if (trip.status === 'planning') {
+      throw new Error('Cannot add expenses to a planning trip');
+    }
 
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
@@ -186,7 +212,8 @@ export const useTrips = create<TripsState>((set, get) => ({
     };
 
     const updatedExpenses = [...trip.expenses, newExpense];
-    await updateAt(`trips/${tripId}`, {
+    const userId = requireUserId();
+    await updateAt(`users/${userId}/trips/${tripId}`, {
       expenses: updatedExpenses,
       updatedAt: Date.now(),
     });
@@ -202,7 +229,8 @@ export const useTrips = create<TripsState>((set, get) => ({
       exp.id === expenseId ? { ...exp, ...updates, updatedAt: Date.now() } : exp
     );
 
-    await updateAt(`trips/${tripId}`, {
+    const userId = requireUserId();
+    await updateAt(`users/${userId}/trips/${tripId}`, {
       expenses: updatedExpenses,
       updatedAt: Date.now(),
     });
@@ -213,7 +241,8 @@ export const useTrips = create<TripsState>((set, get) => ({
     if (!trip) throw new Error('Trip not found');
 
     const updatedExpenses = trip.expenses.filter(exp => exp.id !== expenseId);
-    await updateAt(`trips/${tripId}`, {
+    const userId = requireUserId();
+    await updateAt(`users/${userId}/trips/${tripId}`, {
       expenses: updatedExpenses,
       updatedAt: Date.now(),
     });
@@ -229,19 +258,22 @@ export const useTrips = create<TripsState>((set, get) => ({
       createdAt: now,
     };
 
-    await createAt(`expenses/${id}`, newExpense);
+    const userId = requireUserId();
+    await createAt(`users/${userId}/expenses/${id}`, newExpense);
     return id;
   },
 
   updateStandaloneExpense: async (expenseId, updates) => {
-    await updateAt(`expenses/${expenseId}`, {
+    const userId = requireUserId();
+    await updateAt(`users/${userId}/expenses/${expenseId}`, {
       ...updates,
       updatedAt: Date.now(),
     });
   },
 
   deleteStandaloneExpense: async (expenseId) => {
-    await deleteAt(`expenses/${expenseId}`);
+    const userId = requireUserId();
+    await deleteAt(`users/${userId}/expenses/${expenseId}`);
   },
 
   getTrip: (id) => {
@@ -290,7 +322,7 @@ export const useTrips = create<TripsState>((set, get) => ({
   getTotalPlannedBudget: (tripId) => {
     const trip = get().getTrip(tripId);
     if (!trip || !trip.budgetBreakdown) return 0;
-    return Object.values(trip.budgetBreakdown).reduce((sum, amount) => sum + amount, 0);
+    return Object.values(trip.budgetBreakdown).reduce((sum, amount) => sum + (amount || 0), 0);
   },
 
   getPlannedBudgetByCategory: (tripId, category) => {
@@ -299,3 +331,38 @@ export const useTrips = create<TripsState>((set, get) => ({
     return trip.budgetBreakdown[category] || 0;
   },
 }));
+
+function requireUserId(): string {
+  const userId = auth.currentUser?.uid;
+  if (!userId) throw new Error('Not authenticated');
+  return userId;
+}
+
+function determineStatus(startDate?: string, endDate?: string): TripStatus {
+  if (!startDate && !endDate) {
+    return 'planning';
+  }
+
+  const now = new Date();
+  const start = startDate ? new Date(startDate) : now;
+  const end = endDate ? new Date(endDate) : start;
+
+  if (now < start) {
+    return 'planning';
+  }
+
+  if (now > end) {
+    return 'completed';
+  }
+
+  return 'in-progress';
+}
+
+function normalizeTrip(trip: Trip): Trip {
+  return {
+    ...trip,
+    status: determineStatus(trip.startDate, trip.endDate),
+    expenses: Array.isArray(trip.expenses) ? trip.expenses : [],
+    budgetBreakdown: trip.budgetBreakdown ?? {},
+  };
+}

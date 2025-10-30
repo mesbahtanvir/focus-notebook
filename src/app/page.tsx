@@ -4,13 +4,14 @@ import { useTasks } from "@/store/useTasks";
 import { useThoughts, Thought } from "@/store/useThoughts";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import TaskList from "@/components/TaskList";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { Sparkles, Lock, MessageSquare, Lightbulb, Trash2, Timer, Play, Coffee, ShoppingBag, MapPin, Brain, Rocket, Heart, Zap } from "lucide-react";
 import { ThoughtDetailModal } from "@/components/ThoughtDetailModal";
 import { MostUsedTools } from "@/components/MostUsedTools";
+import { useTrips } from "@/store/useTrips";
 
 // Disable static generation for now
 export const dynamic = 'force-dynamic';
@@ -31,6 +32,10 @@ export default function Page() {
   const addTask = useTasks((s) => s.add);
   const [showAll, setShowAll] = useState(false);
   const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
+  const trips = useTrips((s) => s.trips);
+  const subscribeTrips = useTrips((s) => s.subscribe);
+  const getTripTotalSpent = useTrips((s) => s.getTotalSpent);
+  const getTripRemaining = useTrips((s) => s.getBudgetRemaining);
 
   // Global loading state - show if either is loading from network (not cache)
   const thoughtsFromCache = useThoughts((s) => s.fromCache);
@@ -56,6 +61,33 @@ export default function Page() {
     });
     reset();
   };
+
+  useEffect(() => {
+    if (user?.uid) {
+      subscribeTrips(user.uid);
+    }
+  }, [user?.uid, subscribeTrips]);
+
+  const liveTrips = useMemo(
+    () => trips.filter((trip) => trip.status === 'in-progress'),
+    [trips]
+  );
+
+  const liveTripPreview = liveTrips.slice(0, 2);
+
+  const formatCurrency = (amount: number, currency: string = 'USD') =>
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+
+  const formatTripDate = (value: string) =>
+    new Date(value).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
 
 
   // Show loading indicator if initial load is in progress
@@ -133,6 +165,95 @@ export default function Page() {
           </form>
         </div>
       </section>
+
+      {liveTripPreview.length > 0 && (
+        <section className="rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-950/20 dark:to-emerald-950/20 border-4 border-teal-200 dark:border-teal-800 shadow-xl overflow-hidden">
+          <div className="px-6 py-4 bg-gradient-to-r from-teal-100 via-emerald-100 to-cyan-100 dark:from-teal-900 dark:via-emerald-900 dark:to-cyan-900 border-b-4 border-teal-200 dark:border-teal-800 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold bg-gradient-to-r from-teal-600 to-emerald-600 dark:from-teal-400 dark:to-emerald-400 bg-clip-text text-transparent">
+                ✈️ Live Trip
+              </h2>
+              <p className="text-xs text-teal-800 dark:text-teal-300">
+                Quick access to trips currently in progress
+              </p>
+            </div>
+            <Link
+              href="/tools/trips"
+              className="text-xs font-semibold px-3 py-1 rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors shadow-md"
+            >
+              Manage Trips
+            </Link>
+          </div>
+          <div className="p-6 space-y-4">
+            {liveTripPreview.map((trip) => {
+              const spent = getTripTotalSpent(trip.id);
+              const remainingBudget = getTripRemaining(trip.id);
+              const usage = trip.budget > 0 ? (spent / trip.budget) * 100 : 0;
+
+              return (
+                <Link
+                  href={`/tools/trips/${trip.id}`}
+                  key={trip.id}
+                  className="block rounded-xl border border-teal-200 dark:border-teal-800 bg-white/80 dark:bg-gray-900/60 backdrop-blur-sm px-5 py-4 transition-all hover:shadow-lg hover:-translate-y-0.5"
+                >
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-teal-600 dark:text-teal-300">
+                        In Progress
+                      </p>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        {trip.name}
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{trip.destination}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                        {formatTripDate(trip.startDate)} – {formatTripDate(trip.endDate)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Spent</p>
+                      <p className="text-base font-bold text-teal-700 dark:text-teal-300">
+                        {formatCurrency(spent, trip.currency)}
+                      </p>
+                      <p
+                        className={`text-xs mt-1 ${
+                          remainingBudget < 0
+                            ? 'text-red-600 dark:text-red-400'
+                            : 'text-gray-500 dark:text-gray-400'
+                        }`}
+                      >
+                        Remaining {formatCurrency(remainingBudget, trip.currency)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 mb-1">
+                      <span>Budget usage</span>
+                      <span className={usage > 100 ? 'text-red-600 font-medium' : ''}>
+                        {Math.min(usage, 999).toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="h-2 bg-teal-100 dark:bg-teal-900/40 rounded-full overflow-hidden">
+                      <div
+                        className={`h-2 rounded-full ${usage > 100 ? 'bg-red-500' : 'bg-teal-500'}`}
+                        style={{ width: `${Math.min(usage, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+
+            {liveTrips.length > liveTripPreview.length && (
+              <Link
+                href="/tools/trips"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:underline"
+              >
+                View all {liveTrips.length} active trip{liveTrips.length > 1 ? 's' : ''} →
+              </Link>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-4 border-blue-200 dark:border-blue-800 shadow-xl overflow-hidden">
         <div className="px-6 py-4 bg-gradient-to-r from-blue-100 via-cyan-100 to-teal-100 dark:from-blue-900 dark:via-cyan-900 dark:to-teal-900 border-b-4 border-blue-200 dark:border-blue-800 flex items-center justify-between">
