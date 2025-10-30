@@ -5,7 +5,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { Investment, PricePoint } from '@/store/useInvestments';
 import { getChangeColorClass } from '@/lib/services/stockApi';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { BASE_CURRENCY, convertCurrency, formatCurrency as formatCurrencyBase, SupportedCurrency } from '@/lib/utils/currency';
+import { convertCurrency, formatCurrency as formatCurrencyBase, normalizeCurrencyCode, SupportedCurrency } from '@/lib/utils/currency';
 import { formatCurrency as formatCurrencyWithLocale } from '@/lib/currency';
 import { CurrencyBadge } from '@/components/investment/CurrencyBadge';
 
@@ -19,16 +19,29 @@ export function StockPerformanceChart({ investment, currency }: StockPerformance
     return null;
   }
 
+  const investmentCurrency = normalizeCurrencyCode(investment.currency);
   const priceHistory = investment.priceHistory || [];
-  const toDisplay = (value: number) => convertCurrency(value, BASE_CURRENCY, currency);
 
-  const convertHistoryPoint = (point: PricePoint) => ({
-    date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    price: toDisplay(point.price),
-    fullDate: point.date
+  const convertToDisplay = (value: number, sourceCurrency?: string) => {
+    const fromCurrency = normalizeCurrencyCode(sourceCurrency || investmentCurrency);
+    return convertCurrency(value, fromCurrency, currency);
+  };
+
+  const formatPointDate = (date: string) =>
+    new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  const chartData = priceHistory.map(point => {
+    const pointCurrency = normalizeCurrencyCode(point.currency || investmentCurrency);
+    return {
+      date: formatPointDate(point.date),
+      price: convertToDisplay(point.price, pointCurrency),
+      fullDate: point.date,
+    };
   });
 
-  const currentPricePerShare = investment.currentPricePerShare ? toDisplay(investment.currentPricePerShare) : null;
+  const currentPricePerShare = typeof investment.currentPricePerShare === 'number'
+    ? convertToDisplay(investment.currentPricePerShare, investment.currency)
+    : null;
 
   if (priceHistory.length < 2) {
     return (
@@ -52,23 +65,20 @@ export function StockPerformanceChart({ investment, currency }: StockPerformance
     );
   }
 
-  // Format data for chart
-  const chartData = priceHistory.map(convertHistoryPoint);
-
   // Calculate statistics
-  const firstPriceBase = priceHistory[0].price;
-  const currentPriceBase = priceHistory[priceHistory.length - 1].price;
-  const firstPrice = toDisplay(firstPriceBase);
-  const currentPrice = toDisplay(currentPriceBase);
-  const priceChangeBase = currentPriceBase - firstPriceBase;
-  const priceChange = toDisplay(priceChangeBase);
-  const percentChange = ((priceChangeBase / firstPriceBase) * 100).toFixed(2);
+  const firstPoint = priceHistory[0];
+  const lastPoint = priceHistory[priceHistory.length - 1];
+  const firstPrice = firstPoint ? convertToDisplay(firstPoint.price, firstPoint.currency) : 0;
+  const currentPrice = lastPoint ? convertToDisplay(lastPoint.price, lastPoint.currency) : 0;
+  const priceChange = currentPrice - firstPrice;
+  const percentChange = firstPrice > 0 ? ((priceChange / firstPrice) * 100).toFixed(2) : '0.00';
   const isPositive = priceChange >= 0;
   const isNeutral = priceChange === 0;
 
   // Calculate total value if quantity is available
-  const totalValue = investment.quantity ? toDisplay(investment.quantity * currentPriceBase) : null;
-  const totalGain = investment.quantity ? toDisplay(investment.quantity * priceChangeBase) : null;
+  const quantity = investment.quantity ?? 0;
+  const totalValue = quantity ? currentPrice * quantity : null;
+  const totalGain = quantity ? priceChange * quantity : null;
   const nativeCurrency = investment.nativeCurrency;
   const nativeCurrentValue = investment.nativeCurrentValue;
 

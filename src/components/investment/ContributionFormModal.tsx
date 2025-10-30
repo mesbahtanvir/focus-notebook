@@ -10,8 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { SUPPORTED_CURRENCIES } from '@/lib/services/currency';
-import { BASE_CURRENCY } from '@/lib/utils/currency';
+import { BASE_CURRENCY, DEFAULT_DISPLAY_CURRENCY, SUPPORTED_CURRENCIES } from '@/lib/utils/currency';
 import { CurrencyBadge } from '@/components/investment/CurrencyBadge';
 import { formatCurrency } from '@/lib/currency';
 
@@ -55,7 +54,7 @@ export function ContributionFormModal({
     defaultValues: {
       type: 'deposit',
       date: new Date().toISOString().split('T')[0],
-      currency: investment?.currency || 'CAD',
+      currency: investment?.currency || DEFAULT_DISPLAY_CURRENCY,
     },
   });
 
@@ -64,7 +63,7 @@ export function ContributionFormModal({
 
   useEffect(() => {
     if (investment) {
-      setValue('currency', investment.currency || 'CAD');
+      setValue('currency', investment.currency || DEFAULT_DISPLAY_CURRENCY);
     }
   }, [investment, setValue]);
 
@@ -82,7 +81,7 @@ export function ContributionFormModal({
       reset({
         type: 'deposit',
         date: new Date().toISOString().split('T')[0],
-        currency: investment?.currency || 'CAD',
+        currency: investment?.currency || DEFAULT_DISPLAY_CURRENCY,
         amount: undefined,
         note: undefined,
       });

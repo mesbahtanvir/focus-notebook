@@ -11,8 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { fetchStockPrice, validateTicker } from '@/lib/services/stockApi';
+import { SUPPORTED_CURRENCIES, DEFAULT_DISPLAY_CURRENCY } from '@/lib/utils/currency';
 import {
-  SUPPORTED_CURRENCIES,
   convertCurrency,
   formatCurrency as formatCurrencyValue,
 } from '@/lib/services/currency';
@@ -39,7 +39,7 @@ interface InvestmentFormModalProps {
   baseCurrency?: string;
 }
 
-const DEFAULT_CURRENCY = 'CAD';
+const DEFAULT_CURRENCY = DEFAULT_DISPLAY_CURRENCY;
 const STOCK_QUOTE_CURRENCY = 'USD';
 
 export function InvestmentFormModal({

@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { ToolTheme } from "./themes";
 import { Label } from "@/components/ui/label";
 import { Select, SelectItem } from "@/components/ui/select";
-import { DEFAULT_DISPLAY_CURRENCY, SupportedCurrency } from "@/lib/utils/currency";
+import { DEFAULT_DISPLAY_CURRENCY, SUPPORTED_CURRENCIES, SupportedCurrency } from "@/lib/utils/currency";
 import { useCurrency } from "@/store/useCurrency";
 
 interface SearchAndFiltersProps {
@@ -99,11 +99,11 @@ export function SearchAndFilters({
               onChange={(event) => handleCurrencyChange(event.target.value as SupportedCurrency)}
               className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700"
             >
-              <SelectItem value="CAD">CAD</SelectItem>
-              <SelectItem value="BDT">BDT</SelectItem>
-              <SelectItem value="SGD">SGD</SelectItem>
-              <SelectItem value="USD">USD</SelectItem>
-              <SelectItem value="COP">COP</SelectItem>
+              {SUPPORTED_CURRENCIES.map(code => (
+                <SelectItem key={code} value={code}>
+                  {code}
+                </SelectItem>
+              ))}
             </Select>
           </div>
         )}

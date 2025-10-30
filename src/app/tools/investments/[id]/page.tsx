@@ -20,8 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/store/useSettings';
 import { fetchStockHistory } from '@/lib/services/stockApi';
 import { useCurrency } from '@/store/useCurrency';
-import { BASE_CURRENCY, convertCurrency, formatCurrency as formatCurrencyValue } from '@/lib/utils/currency';
-import { normalizeCurrencyCode } from '@/lib/services/currency';
+import { BASE_CURRENCY, convertCurrency, formatCurrency as formatCurrencyValue, normalizeCurrencyCode } from '@/lib/utils/currency';
 
 export default function PortfolioDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -54,7 +53,6 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
   const [predictions, setPredictions] = useState<any>(null);
   const [showPredictions, setShowPredictions] = useState(false);
-  const displayCurrency = 'CAD';
   const [portfolioTotals, setPortfolioTotals] = useState({ totalValue: 0, totalInvested: 0, roi: 0 });
 
   useEffect(() => {
@@ -76,8 +74,8 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
     const computeTotals = async () => {
       try {
         const [value, invested] = await Promise.all([
-          getTotalPortfolioValueInCurrency(portfolio.id, displayCurrency),
-          getTotalInvestedInCurrency(portfolio.id, displayCurrency),
+          getTotalPortfolioValueInCurrency(portfolio.id, currency),
+          getTotalInvestedInCurrency(portfolio.id, currency),
         ]);
 
         const roiValue = invested === 0 ? 0 : ((value - invested) / invested) * 100;
@@ -95,7 +93,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
     return () => {
       isMounted = false;
     };
-  }, [portfolio, displayCurrency, getTotalPortfolioValueInCurrency, getTotalInvestedInCurrency]);
+  }, [portfolio, currency, getTotalPortfolioValueInCurrency, getTotalInvestedInCurrency]);
 
   if (!portfolio) {
     return (
@@ -118,9 +116,26 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   const baseCurrency = portfolio.baseCurrency || 'USD';
   const locale = portfolio.locale || 'en-US';
 
-  const convertAmount = (amount: number | undefined | null) => convertCurrency(amount ?? 0, BASE_CURRENCY, currency);
+  const convertFromBase = (amount: number | undefined | null) => {
+    if (!Number.isFinite(amount ?? NaN)) {
+      return 0;
+    }
+    return convertCurrency(amount ?? 0, BASE_CURRENCY, currency);
+  };
+
+  const convertFromCurrency = (amount: number | undefined | null, sourceCurrency?: string) => {
+    if (!Number.isFinite(amount ?? NaN)) {
+      return 0;
+    }
+    const normalizedSource = normalizeCurrencyCode(sourceCurrency || currency);
+    return convertCurrency(amount ?? 0, normalizedSource, currency);
+  };
+
   const formatAmount = (amount: number, code?: string) =>
     formatCurrencyValue(amount, normalizeCurrencyCode(code ?? currency));
+
+  const formatConvertedAmount = (amount: number | undefined | null, sourceCurrency?: string) =>
+    formatAmount(convertFromCurrency(amount, sourceCurrency));
 
   const formatExchangeRate = (value: number, code?: string) =>
     new Intl.NumberFormat('en-US', {
@@ -395,19 +410,19 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                       <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
                         <p className="text-xs text-gray-600 dark:text-gray-400">30-Day Target</p>
                         <p className="text-lg font-bold text-purple-600">
-                          {formatAmount(convertAmount(predictions.targetPrice30Days))}
+                          {formatAmount(convertFromBase(predictions.targetPrice30Days))}
                         </p>
                       </div>
                       <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
                         <p className="text-xs text-gray-600 dark:text-gray-400">Support Level</p>
                         <p className="text-lg font-bold text-green-600">
-                          {formatAmount(convertAmount(predictions.supportLevel))}
+                          {formatAmount(convertFromBase(predictions.supportLevel))}
                         </p>
                       </div>
                       <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
                         <p className="text-xs text-gray-600 dark:text-gray-400">Resistance Level</p>
                         <p className="text-lg font-bold text-red-600">
-                          {formatAmount(convertAmount(predictions.resistanceLevel))}
+                          {formatAmount(convertFromBase(predictions.resistanceLevel))}
                         </p>
                       </div>
                     </div>
@@ -443,8 +458,8 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
           ) : (
             <div className="space-y-4">
               {portfolio.investments.map((investment) => {
-                const initialAmount = convertAmount(investment.initialAmount);
-                const currentAmount = convertAmount(investment.currentValue);
+                const initialAmount = convertFromCurrency(investment.initialAmount, investment.currency);
+                const currentAmount = convertFromCurrency(investment.currentValue, investment.currency);
                 const investmentGain = currentAmount - initialAmount;
                 const investmentROI =
                   initialAmount > 0
@@ -591,7 +606,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="font-medium">
-                                    {formatAmount(convertAmount(contribution.amount))}
+                                    {formatConvertedAmount(contribution.amount, contribution.currency)}
                                   </span>
                                   <CurrencyBadge code={investment.baseCurrency || baseCurrency} tone="base" />
                                   <Button

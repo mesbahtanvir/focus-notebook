@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts';
 import { Portfolio, PortfolioSnapshot } from '@/store/useInvestments';
-import { BASE_CURRENCY, convertCurrency, formatCurrency, SupportedCurrency } from '@/lib/utils/currency';
+import { BASE_CURRENCY, convertCurrency, formatCurrency, normalizeCurrencyCode, SupportedCurrency } from '@/lib/utils/currency';
 
 interface PortfolioValueChartProps {
   portfolio: Portfolio;
@@ -32,14 +32,23 @@ export function PortfolioValueChart({
   };
 
   // Combine historical snapshots with current value
-  const historicalData: ChartDataPoint[] = snapshots.map(snapshot => ({
-    date: new Date(snapshot.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    value: toDisplay(snapshot.totalValue),
-    type: 'historical' as const
-  }));
+  const historicalData: ChartDataPoint[] = snapshots.map(snapshot => {
+    const snapshotCurrency = normalizeCurrencyCode(snapshot.currency || BASE_CURRENCY);
+    return {
+      date: new Date(snapshot.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      value: convertCurrency(snapshot.totalValue, snapshotCurrency, currency),
+      type: 'historical' as const,
+    };
+  });
 
   // Add current value
-  const currentValueBase = portfolio.investments.reduce((sum, inv) => sum + inv.currentValue, 0);
+  const currentValueBase = portfolio.investments.reduce((sum, inv) => {
+    if (!Number.isFinite(inv.currentValue)) {
+      return sum;
+    }
+    const investmentCurrency = normalizeCurrencyCode(inv.currency);
+    return sum + convertCurrency(inv.currentValue, investmentCurrency, BASE_CURRENCY);
+  }, 0);
   const currentValue = toDisplay(currentValueBase);
   const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
