@@ -26,7 +26,20 @@ export interface Contribution {
   createdAt: string;
 }
 
-export interface Investment {
+export interface CurrencyMetadata {
+  /** Currency used for aggregate calculations (converted/base currency) */
+  baseCurrency?: string;
+  /** Original currency code reported by the asset */
+  nativeCurrency?: string;
+  /** Exchange rate used to convert from native to base currency */
+  conversionRate?: number;
+  /** Timestamp of the last conversion rate update */
+  conversionUpdatedAt?: string;
+  /** Optional locale used when formatting currency values */
+  locale?: string;
+}
+
+export interface Investment extends CurrencyMetadata {
   id: string;
   portfolioId: string;
   name: string;
@@ -37,6 +50,10 @@ export interface Investment {
   currentPricePerShare?: number; // NEW: Current price per share
   initialAmount: number;
   currentValue: number;
+  /** The original/local currency initial amount before conversion */
+  nativeInitialAmount?: number;
+  /** The original/local currency current value before conversion */
+  nativeCurrentValue?: number;
   priceHistory?: PricePoint[]; // NEW: Historical price data
   lastPriceUpdate?: string; // NEW: Last time price was updated
   contributions: Contribution[];
@@ -57,7 +74,7 @@ export interface PortfolioSnapshot {
   createdAt: string;
 }
 
-export interface Portfolio {
+export interface Portfolio extends CurrencyMetadata {
   id: string;
   name: string;
   description?: string;
@@ -146,10 +163,22 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
       portfoliosQuery,
       (data, metadata) => {
         set({
-          portfolios: data.map(portfolio => ({
-            ...portfolio,
-            investments: portfolio.investments || []
-          })),
+          portfolios: data.map(portfolio => {
+            const baseCurrency = portfolio.baseCurrency || 'USD';
+            const locale = portfolio.locale || 'en-US';
+
+            return {
+              ...portfolio,
+              baseCurrency,
+              locale,
+              investments: (portfolio.investments || []).map(inv => ({
+                ...inv,
+                baseCurrency: inv.baseCurrency || baseCurrency,
+                locale: inv.locale || locale,
+                nativeCurrency: inv.nativeCurrency,
+              })),
+            };
+          }),
           isLoading: false,
           fromCache: metadata.fromCache,
           hasPendingWrites: metadata.hasPendingWrites,
@@ -170,6 +199,8 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     const newPortfolio: Portfolio = {
       ...portfolio,
       id,
+      baseCurrency: portfolio.baseCurrency || 'USD',
+      locale: portfolio.locale || 'en-US',
       investments: [],
       createdAt: now,
     };
@@ -202,10 +233,14 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
 
+    const portfolioBaseCurrency = portfolio.baseCurrency || 'USD';
+
     const newInvestment: Investment = {
       ...investment,
       id,
       portfolioId,
+      baseCurrency: investment.baseCurrency || portfolioBaseCurrency,
+      locale: investment.locale || portfolio.locale || 'en-US',
       contributions: [],
       createdAt: now,
     };

@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { fetchStockPrice, formatPrice, validateTicker } from '@/lib/services/stockApi';
+import { CurrencyBadge } from '@/components/investment/CurrencyBadge';
+import { formatCurrency } from '@/lib/currency';
 
 interface InvestmentFormData {
   name: string;
@@ -34,6 +36,7 @@ interface InvestmentFormModalProps {
   onClose: () => void;
   portfolioId: string;
   investment?: Investment;
+  baseCurrency?: string;
 }
 
 export function InvestmentFormModal({
@@ -41,6 +44,7 @@ export function InvestmentFormModal({
   onClose,
   portfolioId,
   investment,
+  baseCurrency,
 }: InvestmentFormModalProps) {
   const { addInvestment, updateInvestment } = useInvestments();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,6 +52,8 @@ export function InvestmentFormModal({
   const [currentStockPrice, setCurrentStockPrice] = useState<number | null>(null);
   const [tickerError, setTickerError] = useState<string>('');
   const { toast } = useToast();
+  const effectiveBaseCurrency = investment?.baseCurrency || baseCurrency || 'USD';
+  const locale = investment?.locale || 'en-US';
 
   const {
     register,
@@ -205,6 +211,58 @@ export function InvestmentFormModal({
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+          <div className="rounded-md border border-amber-200 bg-amber-50/70 p-3 text-sm dark:border-amber-800 dark:bg-amber-900/30">
+            <div className="flex items-center gap-2 mb-2">
+              <CurrencyBadge code={effectiveBaseCurrency} tone="base" label="Converted" />
+              <span className="font-medium text-amber-900 dark:text-amber-100">Converted/base currency</span>
+            </div>
+            <p className="text-amber-900/80 dark:text-amber-100">
+              Enter investment totals using the converted currency used for portfolio calculations.
+            </p>
+            {investment?.nativeCurrency && (
+              <div className="mt-3 rounded border border-sky-200 bg-sky-50/70 p-3 text-xs text-sky-900 dark:border-sky-800 dark:bg-sky-900/20 dark:text-sky-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <CurrencyBadge code={investment.nativeCurrency} tone="native" label="Native" />
+                  <span className="font-semibold text-sky-900 dark:text-sky-100">Native snapshot</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {typeof investment.nativeInitialAmount === 'number' && (
+                    <div>
+                      <p className="uppercase tracking-wide text-[0.6rem] opacity-70">Initial</p>
+                      <p className="font-semibold">
+                        {formatCurrency(
+                          investment.nativeInitialAmount,
+                          investment.nativeCurrency,
+                          investment.locale || 'en-US'
+                        )}
+                      </p>
+                    </div>
+                  )}
+                  {typeof investment.nativeCurrentValue === 'number' && (
+                    <div>
+                      <p className="uppercase tracking-wide text-[0.6rem] opacity-70">Current</p>
+                      <p className="font-semibold">
+                        {formatCurrency(
+                          investment.nativeCurrentValue,
+                          investment.nativeCurrency,
+                          investment.locale || 'en-US'
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {investment.conversionRate && (
+                  <p className="mt-2 text-[0.65rem] text-sky-800/80 dark:text-sky-200">
+                    1 {investment.nativeCurrency} ≈ {formatCurrency(investment.conversionRate, effectiveBaseCurrency, locale, {
+                      minimumFractionDigits: 4,
+                      maximumFractionDigits: 4,
+                    })}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           <div>
             <Label htmlFor="assetType">Asset Type *</Label>
             <Select
@@ -249,7 +307,8 @@ export function InvestmentFormModal({
                   <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-green-600" />
                     <span className="text-sm text-green-700">
-                      Current price: <strong>{formatPrice(currentStockPrice)}</strong>
+                      Current price:{' '}
+                      <strong>{formatPrice(currentStockPrice, effectiveBaseCurrency, locale)}</strong>
                     </span>
                   </div>
                 )}
@@ -309,6 +368,10 @@ export function InvestmentFormModal({
 
           <div>
             <Label htmlFor="initialAmount">Initial Amount Invested *</Label>
+            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
+              <CurrencyBadge code={effectiveBaseCurrency} tone="base" />
+              <span>Converted amount</span>
+            </div>
             <Input
               id="initialAmount"
               type="number"
@@ -327,6 +390,10 @@ export function InvestmentFormModal({
           {assetType === 'manual' && (
             <div>
               <Label htmlFor="currentValue">Current Value *</Label>
+              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <CurrencyBadge code={effectiveBaseCurrency} tone="base" />
+                <span>Converted amount</span>
+              </div>
               <Input
                 id="currentValue"
                 type="number"
@@ -348,11 +415,11 @@ export function InvestmentFormModal({
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Calculated Value:</span>
                 <span className="font-semibold text-lg">
-                  {formatPrice(currentStockPrice * (quantity || 0))}
+                  {formatPrice(currentStockPrice * (quantity || 0), effectiveBaseCurrency, locale)}
                 </span>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                {quantity} shares × {formatPrice(currentStockPrice)}
+                {quantity} shares × {formatPrice(currentStockPrice, effectiveBaseCurrency, locale)}
               </p>
             </div>
           )}

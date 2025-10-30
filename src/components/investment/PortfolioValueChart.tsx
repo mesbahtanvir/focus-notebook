@@ -4,6 +4,8 @@ import { Card } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts';
 import { Portfolio, PortfolioSnapshot } from '@/store/useInvestments';
 import { formatPrice } from '@/lib/services/stockApi';
+import { formatCurrency, formatCurrencyCompact } from '@/lib/currency';
+import { CurrencyBadge } from '@/components/investment/CurrencyBadge';
 
 interface PortfolioValueChartProps {
   portfolio: Portfolio;
@@ -18,6 +20,9 @@ export function PortfolioValueChart({
   predictions = [],
   showPredictions = false
 }: PortfolioValueChartProps) {
+  const baseCurrency = portfolio.baseCurrency || 'USD';
+  const locale = portfolio.locale || 'en-US';
+
   // Define chart data type
   type ChartDataPoint = {
     date: string;
@@ -88,12 +93,12 @@ export function PortfolioValueChart({
           <p className="text-sm font-semibold">{payload[0].payload.date}</p>
           {payload[0].payload.value !== undefined && (
             <p className="text-sm text-green-600">
-              Value: {formatPrice(payload[0].payload.value)}
+              Value: {formatPrice(payload[0].payload.value, baseCurrency, locale)}
             </p>
           )}
           {payload[0].payload.predicted !== undefined && (
             <p className="text-sm text-blue-600">
-              Predicted: {formatPrice(payload[0].payload.predicted)}
+              Predicted: {formatPrice(payload[0].payload.predicted, baseCurrency, locale)}
             </p>
           )}
         </div>
@@ -122,7 +127,11 @@ export function PortfolioValueChart({
         <div>
           <h3 className="text-lg font-semibold">Portfolio Value Over Time</h3>
           <p className="text-sm text-gray-500 mt-1">
-            Current: {formatPrice(currentValue)}
+            <span className="mr-2">Current:</span>
+            <span className="font-semibold text-amber-600 dark:text-amber-300">
+              {formatPrice(currentValue, baseCurrency, locale)}
+            </span>
+            <CurrencyBadge code={baseCurrency} tone="base" className="ml-2" />
           </p>
         </div>
         {historicalData.length > 0 && (
@@ -131,7 +140,7 @@ export function PortfolioValueChart({
               {isPositive ? '+' : ''}{percentChange}%
             </p>
             <p className={`text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-              {isPositive ? '+' : ''}{formatPrice(valueChange)}
+              {isPositive ? '+' : ''}{formatCurrency(valueChange, baseCurrency, locale)}
             </p>
           </div>
         )}
@@ -148,7 +157,7 @@ export function PortfolioValueChart({
           <YAxis
             tick={{ fontSize: 12 }}
             stroke="#888"
-            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+            tickFormatter={(value) => formatCurrencyCompact(value, baseCurrency, locale)}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend />

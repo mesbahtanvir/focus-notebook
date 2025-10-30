@@ -3,6 +3,8 @@
  * Handles stock price fetching and historical data retrieval
  */
 
+import { formatCurrency } from '@/lib/currency';
+
 export interface StockQuote {
   symbol: string;
   price: number;
@@ -113,13 +115,12 @@ export function validateTicker(ticker: string): boolean {
 /**
  * Format price for display
  */
-export function formatPrice(price: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(price);
+export function formatPrice(
+  price: number,
+  currency: string = 'USD',
+  locale: string = 'en-US'
+): string {
+  return formatCurrency(price, currency, locale);
 }
 
 /**

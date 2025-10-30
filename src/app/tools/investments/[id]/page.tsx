@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { useInvestments } from '@/store/useInvestments';
+import { useInvestments, Investment } from '@/store/useInvestments';
 import { InvestmentFormModal } from '@/components/investment/InvestmentFormModal';
 import { ContributionFormModal } from '@/components/investment/ContributionFormModal';
 import { PortfolioValueChart } from '@/components/investment/PortfolioValueChart';
@@ -14,10 +14,12 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toolThemes } from '@/components/tools/themes';
-import { Edit, Trash2, Plus, TrendingUp, TrendingDown, DollarSign, RefreshCw, Sparkles, Camera } from 'lucide-react';
+import { Trash2, Plus, RefreshCw, Sparkles, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/store/useSettings';
 import { fetchStockHistory } from '@/lib/services/stockApi';
+import { CurrencyBadge } from '@/components/investment/CurrencyBadge';
+import { formatCurrency as formatCurrencyValue } from '@/lib/currency';
 
 export default function PortfolioDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -41,7 +43,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
 
   const [isInvestmentFormOpen, setIsInvestmentFormOpen] = useState(false);
   const [isContributionFormOpen, setIsContributionFormOpen] = useState(false);
-  const [selectedInvestment, setSelectedInvestment] = useState<string | null>(null);
+  const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isGeneratingPrediction, setIsGeneratingPrediction] = useState(false);
   const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
@@ -74,14 +76,14 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   const roi = getPortfolioROI(portfolio.id);
   const gain = totalValue - totalInvested;
   const isPositive = gain >= 0;
+  const baseCurrency = portfolio.baseCurrency || 'USD';
+  const locale = portfolio.locale || 'en-US';
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
+  const formatAmount = (
+    amount: number,
+    currency: string = baseCurrency,
+    options?: Intl.NumberFormatOptions
+  ) => formatCurrencyValue(amount, currency, locale, options);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -222,7 +224,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
           stats={[
             {
               label: 'Current Value',
-              value: formatCurrency(totalValue),
+              value: formatAmount(totalValue),
               variant: 'default',
             },
             {
@@ -243,19 +245,28 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="p-6">
             <h3 className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Invested</h3>
-            <p className="text-2xl font-bold">{formatCurrency(totalInvested)}</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-2xl font-bold">{formatAmount(totalInvested)}</p>
+              <CurrencyBadge code={baseCurrency} tone="base" />
+            </div>
           </Card>
 
           <Card className="p-6">
             <h3 className="text-sm text-gray-600 dark:text-gray-400 mb-2">Current Value</h3>
-            <p className="text-2xl font-bold text-amber-600">{formatCurrency(totalValue)}</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-2xl font-bold text-amber-600">{formatAmount(totalValue)}</p>
+              <CurrencyBadge code={baseCurrency} tone="base" />
+            </div>
           </Card>
 
           <Card className="p-6">
             <h3 className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Gain/Loss</h3>
-            <p className={`text-2xl font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(gain)}
-            </p>
+            <div className="flex items-baseline gap-2">
+              <p className={`text-2xl font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                {formatAmount(gain)}
+              </p>
+              <CurrencyBadge code={baseCurrency} tone="base" />
+            </div>
             <p className={`text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
               {roi.toFixed(2)}%
             </p>
@@ -347,19 +358,19 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                       <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
                         <p className="text-xs text-gray-600 dark:text-gray-400">30-Day Target</p>
                         <p className="text-lg font-bold text-purple-600">
-                          {formatCurrency(predictions.targetPrice30Days)}
+                          {formatAmount(predictions.targetPrice30Days)}
                         </p>
                       </div>
                       <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
                         <p className="text-xs text-gray-600 dark:text-gray-400">Support Level</p>
                         <p className="text-lg font-bold text-green-600">
-                          {formatCurrency(predictions.supportLevel)}
+                          {formatAmount(predictions.supportLevel)}
                         </p>
                       </div>
                       <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
                         <p className="text-xs text-gray-600 dark:text-gray-400">Resistance Level</p>
                         <p className="text-lg font-bold text-red-600">
-                          {formatCurrency(predictions.resistanceLevel)}
+                          {formatAmount(predictions.resistanceLevel)}
                         </p>
                       </div>
                     </div>
@@ -431,7 +442,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              setSelectedInvestment(investment.id);
+                              setSelectedInvestment(investment);
                               setIsContributionFormOpen(true);
                             }}
                           >
@@ -450,18 +461,24 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Initial</p>
-                        <p className="font-semibold">{formatCurrency(investment.initialAmount)}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold">{formatAmount(investment.initialAmount, investment.baseCurrency || baseCurrency)}</p>
+                          <CurrencyBadge code={investment.baseCurrency || baseCurrency} tone="base" />
+                        </div>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Current</p>
-                        <p className="font-semibold text-amber-600">
-                          {formatCurrency(investment.currentValue)}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-amber-600">
+                            {formatAmount(investment.currentValue, investment.baseCurrency || baseCurrency)}
+                          </p>
+                          <CurrencyBadge code={investment.baseCurrency || baseCurrency} tone="base" />
+                        </div>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Gain/Loss</p>
                         <p className={`font-semibold ${isInvestmentPositive ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatCurrency(investmentGain)}
+                          {formatAmount(investmentGain, investment.baseCurrency || baseCurrency)}
                         </p>
                       </div>
                       <div>
@@ -471,6 +488,48 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                         </p>
                       </div>
                     </div>
+
+                    {investment.nativeCurrency && (
+                      <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50/70 p-4 dark:border-sky-800 dark:bg-sky-900/20">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CurrencyBadge code={investment.nativeCurrency} tone="native" label="Native" />
+                          <span className="text-sm font-semibold text-sky-900 dark:text-sky-100">Native totals</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-sky-900 dark:text-sky-100">
+                          {typeof investment.nativeInitialAmount === 'number' && (
+                            <div>
+                              <p className="uppercase tracking-wide text-[0.65rem] opacity-70">Initial</p>
+                              <p className="font-semibold">
+                                {formatAmount(
+                                  investment.nativeInitialAmount,
+                                  investment.nativeCurrency
+                                )}
+                              </p>
+                            </div>
+                          )}
+                          {typeof investment.nativeCurrentValue === 'number' && (
+                            <div>
+                              <p className="uppercase tracking-wide text-[0.65rem] opacity-70">Current</p>
+                              <p className="font-semibold">
+                                {formatAmount(
+                                  investment.nativeCurrentValue,
+                                  investment.nativeCurrency
+                                )}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        {investment.conversionRate && (
+                          <p className="mt-2 text-xs text-sky-800/80 dark:text-sky-200">
+                            Conversion rate: 1 {investment.nativeCurrency} ≈ {formatAmount(
+                              investment.conversionRate,
+                              investment.baseCurrency || baseCurrency,
+                              { minimumFractionDigits: 4, maximumFractionDigits: 4 }
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    )}
 
                     {investment.contributions.length > 0 && (
                       <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -500,8 +559,9 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="font-medium">
-                                    {formatCurrency(contribution.amount)}
+                                    {formatAmount(contribution.amount, investment.baseCurrency || baseCurrency)}
                                   </span>
+                                  <CurrencyBadge code={investment.baseCurrency || baseCurrency} tone="base" />
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -535,6 +595,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
           isOpen={isInvestmentFormOpen}
           onClose={() => setIsInvestmentFormOpen(false)}
           portfolioId={portfolio.id}
+          baseCurrency={baseCurrency}
         />
 
         {selectedInvestment && (
@@ -545,7 +606,9 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
               setSelectedInvestment(null);
             }}
             portfolioId={portfolio.id}
-            investmentId={selectedInvestment}
+            investmentId={selectedInvestment.id}
+            baseCurrency={baseCurrency}
+            investment={selectedInvestment}
           />
         )}
       </div>

@@ -5,6 +5,8 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { Investment, PricePoint } from '@/store/useInvestments';
 import { formatPrice, getChangeColorClass } from '@/lib/services/stockApi';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { CurrencyBadge } from '@/components/investment/CurrencyBadge';
+import { formatCurrency } from '@/lib/currency';
 
 interface StockPerformanceChartProps {
   investment: Investment;
@@ -16,6 +18,8 @@ export function StockPerformanceChart({ investment }: StockPerformanceChartProps
   }
 
   const priceHistory = investment.priceHistory || [];
+  const baseCurrency = investment.baseCurrency || 'USD';
+  const locale = investment.locale || 'en-US';
 
   if (priceHistory.length < 2) {
     return (
@@ -27,7 +31,9 @@ export function StockPerformanceChart({ investment }: StockPerformanceChartProps
           </div>
           {investment.currentPricePerShare && (
             <div className="text-right">
-              <p className="font-semibold">{formatPrice(investment.currentPricePerShare)}</p>
+              <p className="font-semibold">
+                {formatPrice(investment.currentPricePerShare, baseCurrency, locale)}
+              </p>
               <p className="text-xs text-gray-500">per share</p>
             </div>
           )}
@@ -57,6 +63,8 @@ export function StockPerformanceChart({ investment }: StockPerformanceChartProps
   // Calculate total value if quantity is available
   const totalValue = investment.quantity ? investment.quantity * currentPrice : null;
   const totalGain = investment.quantity ? investment.quantity * priceChange : null;
+  const nativeCurrency = investment.nativeCurrency;
+  const nativeCurrentValue = investment.nativeCurrentValue;
 
   // Custom tooltip
   const CustomTooltip = ({ active, payload }: any) => {
@@ -65,11 +73,11 @@ export function StockPerformanceChart({ investment }: StockPerformanceChartProps
         <div className="bg-white p-3 border border-gray-200 rounded shadow-lg">
           <p className="text-sm font-semibold">{payload[0].payload.date}</p>
           <p className="text-sm text-gray-600">
-            Price: {formatPrice(payload[0].value)}
+            Price: {formatPrice(payload[0].value, baseCurrency, locale)}
           </p>
           {investment.quantity && (
             <p className="text-xs text-gray-500 mt-1">
-              Value: {formatPrice(investment.quantity * payload[0].value)}
+              Value: {formatPrice(investment.quantity * payload[0].value, baseCurrency, locale)}
             </p>
           )}
         </div>
@@ -95,7 +103,10 @@ export function StockPerformanceChart({ investment }: StockPerformanceChartProps
           <p className="text-sm text-gray-500">{investment.name}</p>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-bold">{formatPrice(currentPrice)}</p>
+          <div className="flex items-center justify-end gap-2">
+            <p className="text-2xl font-bold">{formatPrice(currentPrice, baseCurrency, locale)}</p>
+            <CurrencyBadge code={baseCurrency} tone="base" />
+          </div>
           <div className={`flex items-center justify-end gap-1 ${trendColor}`}>
             <TrendIcon className="h-4 w-4" />
             <span className="text-sm font-semibold">
@@ -108,7 +119,7 @@ export function StockPerformanceChart({ investment }: StockPerformanceChartProps
       {totalValue !== null && (
         <div className="flex justify-between items-center py-2 mb-3 border-t border-gray-100">
           <span className="text-sm text-gray-600">Total Value:</span>
-          <span className="font-semibold">{formatPrice(totalValue)}</span>
+          <span className="font-semibold">{formatPrice(totalValue, baseCurrency, locale)}</span>
         </div>
       )}
 
@@ -116,8 +127,31 @@ export function StockPerformanceChart({ investment }: StockPerformanceChartProps
         <div className="flex justify-between items-center pb-3 border-b border-gray-100">
           <span className="text-sm text-gray-600">Total Gain/Loss:</span>
           <span className={`font-semibold ${getChangeColorClass(totalGain)}`}>
-            {isPositive ? '+' : ''}{formatPrice(totalGain)}
+            {isPositive ? '+' : ''}{formatPrice(totalGain, baseCurrency, locale)}
           </span>
+        </div>
+      )}
+
+      {nativeCurrency && typeof nativeCurrentValue === 'number' && (
+        <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50/60 p-3 text-sm dark:border-sky-800 dark:bg-sky-900/20">
+          <div className="flex items-center gap-2 mb-2">
+            <CurrencyBadge code={nativeCurrency} tone="native" label="Native" />
+            <span className="font-medium text-sky-900 dark:text-sky-100">Native valuation</span>
+          </div>
+          <div className="flex justify-between text-sky-900 dark:text-sky-100">
+            <span>Current:</span>
+            <span className="font-semibold">
+              {formatCurrency(nativeCurrentValue, nativeCurrency, investment.locale || 'en-US')}
+            </span>
+          </div>
+          {typeof investment.nativeInitialAmount === 'number' && (
+            <div className="flex justify-between text-sky-900 dark:text-sky-100 mt-1">
+              <span>Initial:</span>
+              <span className="font-semibold">
+                {formatCurrency(investment.nativeInitialAmount, nativeCurrency, investment.locale || 'en-US')}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
@@ -135,7 +169,7 @@ export function StockPerformanceChart({ investment }: StockPerformanceChartProps
               tick={{ fontSize: 11 }}
               stroke="#999"
               domain={['dataMin - 5', 'dataMax + 5']}
-              tickFormatter={(value) => `$${value.toFixed(0)}`}
+              tickFormatter={(value) => formatCurrency(value, baseCurrency, locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             />
             <Tooltip content={<CustomTooltip />} />
             <Line

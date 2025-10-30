@@ -6,6 +6,8 @@ import { TrendingUp, TrendingDown, DollarSign, Target } from 'lucide-react';
 import { Portfolio, useInvestments } from '@/store/useInvestments';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { formatCurrency } from '@/lib/currency';
+import { CurrencyBadge } from '@/components/investment/CurrencyBadge';
 
 interface PortfolioCardProps {
   portfolio: Portfolio;
@@ -21,6 +23,10 @@ export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
   const roi = getPortfolioROI(portfolio.id);
   const gain = totalValue - totalInvested;
   const isPositive = gain >= 0;
+  const baseCurrency = portfolio.baseCurrency || 'USD';
+  const locale = portfolio.locale || 'en-US';
+
+  const formatAmount = (amount: number) => formatCurrency(amount, baseCurrency, locale);
 
   const getStatusColor = (status: Portfolio['status']) => {
     switch (status) {
@@ -29,14 +35,6 @@ export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
       case 'archived': return 'bg-orange-500/10 text-orange-700 dark:text-orange-400';
       default: return 'bg-gray-500/10 text-gray-700 dark:text-gray-400';
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(amount);
   };
 
   const progressPercent = portfolio.targetAmount
@@ -69,15 +67,21 @@ export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
 
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Value</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-2">
+              <span>Current Value</span>
+              <CurrencyBadge code={baseCurrency} tone="base" />
+            </p>
             <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-              {formatCurrency(totalValue)}
+              {formatAmount(totalValue)}
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Invested</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-2">
+              <span>Total Invested</span>
+              <CurrencyBadge code={baseCurrency} tone="base" />
+            </p>
             <p className="text-xl font-semibold">
-              {formatCurrency(totalInvested)}
+              {formatAmount(totalInvested)}
             </p>
           </div>
         </div>
@@ -94,7 +98,7 @@ export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
             </div>
             <div className="text-right">
               <p className={`font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(gain)}
+                {formatAmount(gain)}
               </p>
               <p className={`text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                 {roi.toFixed(2)}%
@@ -146,7 +150,7 @@ export function PortfolioCard({ portfolio, index }: PortfolioCardProps) {
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
                 <span>Progress to target</span>
-                <span>{formatCurrency(portfolio.targetAmount)}</span>
+                <span>{formatAmount(portfolio.targetAmount)}</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div
