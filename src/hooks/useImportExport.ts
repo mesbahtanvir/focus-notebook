@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { ImportService } from '@/services/import-export/ImportService';
 import { ExportService } from '@/services/import-export/ExportService';
 import {
@@ -17,8 +17,246 @@ import { useThoughts } from '@/store/useThoughts';
 import { useMoods } from '@/store/useMoods';
 import { useFocus } from '@/store/useFocus';
 import { useRelationships } from '@/store/useRelationships';
-import { auth } from '@/lib/firebaseClient';
-import { createAt } from '@/lib/data/gateway';
+import { auth, db } from '@/lib/firebaseClient';
+import { doc, setDoc, Timestamp } from 'firebase/firestore';
+
+function generateId(prefix: string): string {
+  return `${prefix}-${Math.random().toString(36).slice(2, 10)}-${Date.now()}`;
+}
+
+function sanitizeForFirestore(value: any): any {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => sanitizeForFirestore(entry))
+      .filter((entry) => entry !== undefined);
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === 'object') {
+    if (
+      Object.prototype.hasOwnProperty.call(value, 'seconds') &&
+      Object.prototype.hasOwnProperty.call(value, 'nanoseconds') &&
+      typeof (value as any).seconds === 'number' &&
+      typeof (value as any).nanoseconds === 'number'
+    ) {
+      return new Timestamp((value as any).seconds, (value as any).nanoseconds);
+    }
+
+    const sanitized: Record<string, any> = {};
+    for (const [key, nestedValue] of Object.entries(value)) {
+      const nestedSanitized = sanitizeForFirestore(nestedValue);
+      if (nestedSanitized !== undefined) {
+        sanitized[key] = nestedSanitized;
+      }
+    }
+    return sanitized;
+  }
+
+  return value;
+}
+
+function withBaseMetadata(entity: any, userId: string, prefix: string) {
+  const nowIso = new Date().toISOString();
+  const id =
+    entity?.id && String(entity.id).trim().length > 0
+      ? String(entity.id)
+      : generateId(prefix);
+  const createdAt = entity?.createdAt ?? nowIso;
+
+  return {
+    ...entity,
+    id,
+    createdAt,
+    updatedAt: entity?.updatedAt ?? createdAt,
+    updatedBy: entity?.updatedBy ?? userId,
+    version: entity?.version ?? 1,
+  };
+}
+
+function normalizeTask(task: any, userId: string) {
+  const base = withBaseMetadata(task ?? {}, userId, 'task');
+
+  return {
+    ...base,
+    title: base.title ?? 'Untitled Task',
+    done: base.done ?? false,
+    status: base.status ?? 'active',
+    priority: base.priority ?? 'medium',
+    focusEligible:
+      base.focusEligible !== undefined ? base.focusEligible : true,
+    steps: Array.isArray(base.steps) ? base.steps : [],
+    tags: Array.isArray(base.tags) ? base.tags : [],
+    completionHistory: Array.isArray(base.completionHistory)
+      ? base.completionHistory
+      : [],
+  };
+}
+
+function normalizeProject(project: any, userId: string) {
+  const base = withBaseMetadata(project ?? {}, userId, 'project');
+
+  return {
+    ...base,
+    title: base.title ?? 'Untitled Project',
+    status: base.status ?? 'active',
+    priority: base.priority ?? 'medium',
+    progress:
+      typeof base.progress === 'number' ? base.progress : base.progress ? Number(base.progress) || 0 : 0,
+    linkedTaskIds: Array.isArray(base.linkedTaskIds)
+      ? base.linkedTaskIds
+      : [],
+    linkedThoughtIds: Array.isArray(base.linkedThoughtIds)
+      ? base.linkedThoughtIds
+      : [],
+  };
+}
+
+function normalizeGoal(goal: any, userId: string) {
+  const base = withBaseMetadata(goal ?? {}, userId, 'goal');
+
+  return {
+    ...base,
+    progress:
+      typeof base.progress === 'number' ? base.progress : base.progress ? Number(base.progress) || 0 : 0,
+    tags: Array.isArray(base.tags) ? base.tags : base.tags ? [base.tags] : [],
+  };
+}
+
+function normalizeThought(thought: any, userId: string) {
+  const base = withBaseMetadata(thought ?? {}, userId, 'thought');
+
+  return {
+    ...base,
+    linkedTaskIds: Array.isArray(base.linkedTaskIds)
+      ? base.linkedTaskIds
+      : [],
+    linkedProjectIds: Array.isArray(base.linkedProjectIds)
+      ? base.linkedProjectIds
+      : [],
+    linkedMoodIds: Array.isArray(base.linkedMoodIds)
+      ? base.linkedMoodIds
+      : [],
+  };
+}
+
+function normalizeMood(mood: any, userId: string) {
+  const base = withBaseMetadata(mood ?? {}, userId, 'mood');
+
+  return {
+    ...base,
+    metadata: base.metadata ?? null,
+  };
+}
+
+function normalizePerson(person: any, userId: string) {
+  const base = withBaseMetadata(person ?? {}, userId, 'person');
+
+  return {
+    ...base,
+    linkedThoughtIds: Array.isArray(base.linkedThoughtIds)
+      ? base.linkedThoughtIds
+      : [],
+    interactionLogs: Array.isArray(base.interactionLogs)
+      ? base.interactionLogs
+      : [],
+  };
+}
+
+function normalizeFocusSession(
+  session: any,
+  userId: string,
+  taskLookup: (taskId: string) => any
+) {
+  const base = withBaseMetadata(session ?? {}, userId, 'session');
+  const rawTasks = Array.isArray(session?.tasks)
+    ? session.tasks
+    : session?.tasksData
+    ? (() => {
+        try {
+          return JSON.parse(session.tasksData);
+        } catch {
+          return [];
+        }
+      })()
+    : [];
+
+  const normalizedTasks = rawTasks.map((entry: any) => {
+    if (entry?.task) {
+      const normalizedTask = normalizeTask(entry.task, userId);
+      return {
+        timeSpent: entry.timeSpent ?? 0,
+        completed: entry.completed ?? false,
+        notes: entry.notes ?? '',
+        followUpTaskIds: Array.isArray(entry.followUpTaskIds)
+          ? entry.followUpTaskIds
+          : [],
+        task: normalizedTask,
+      };
+    }
+
+    const referencedTask =
+      entry?.id && typeof entry.id === 'string'
+        ? taskLookup(entry.id)
+        : undefined;
+
+    const fallbackTask = referencedTask
+      ? referencedTask
+      : normalizeTask(
+          {
+            id: entry?.id ?? generateId('task'),
+            title: entry?.title ?? 'Imported Task',
+            done: entry?.completed ?? false,
+            status: entry?.status ?? 'active',
+            priority: entry?.priority ?? 'medium',
+            category: entry?.category,
+            tags: entry?.tags,
+          },
+          userId
+        );
+
+    return {
+      timeSpent: entry?.timeSpent ?? 0,
+      completed: entry?.completed ?? false,
+      notes: entry?.notes ?? '',
+      followUpTaskIds: Array.isArray(entry?.followUpTaskIds)
+        ? entry.followUpTaskIds
+        : [],
+      task: fallbackTask,
+    };
+  });
+
+  const clampedIndex =
+    normalizedTasks.length === 0
+      ? 0
+      : Math.min(
+          Math.max(base.currentTaskIndex ?? 0, 0),
+          normalizedTasks.length - 1
+        );
+
+  return {
+    ...base,
+    duration: base.duration ?? 0,
+    startTime: base.startTime ?? new Date().toISOString(),
+    endTime: base.endTime ?? null,
+    isActive: base.isActive ?? false,
+    isOnBreak: base.isOnBreak ?? false,
+    currentTaskIndex: clampedIndex,
+    breaks: Array.isArray(base.breaks) ? base.breaks : [],
+    tasks: normalizedTasks,
+    tasksData: JSON.stringify(normalizedTasks),
+  };
+}
 
 export function useImportExport() {
   const [importService] = useState(() => new ImportService());
@@ -38,6 +276,24 @@ export function useImportExport() {
   const moods = useMoods();
   const focus = useFocus();
   const relationships = useRelationships();
+
+  const importedTasksRef = useRef<Map<string, any>>(new Map());
+
+  const getUserId = useCallback((): string => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
+    return userId;
+  }, []);
+
+  const writeDocument = useCallback(
+    async (userId: string, collection: string, payload: any) => {
+      const docRef = doc(db, `users/${userId}/${collection}/${payload.id}`);
+      await setDoc(docRef, sanitizeForFirestore(payload));
+    },
+    []
+  );
 
   /**
    * Parse an import file
@@ -92,42 +348,73 @@ export function useImportExport() {
           existingData
         );
 
+        // Prepare runtime helpers
+        importedTasksRef.current.clear();
+
+        const taskLookup = (taskId: string) =>
+          importedTasksRef.current.get(taskId) ||
+          tasks.tasks.find((t) => t.id === taskId);
+
         // Execute import
         const result = await importService.executeImport(
           data,
           selection,
           options,
           {
-            tasks: { add: async (task) => { await tasks.add(task); } },
-            projects: { add: async (project) => { await projects.add(project); } },
-            goals: { add: (goal) => goals.add(goal) },
-            thoughts: { add: (thought) => thoughts.add(thought) },
-            moods: { add: async (mood) => { await moods.add(mood); } },
-            focusSessions: { 
-              add: async (session: any) => { 
-                if (!auth.currentUser) throw new Error('Not authenticated');
-                // Create session in Firestore directly
-                await createAt(`users/${auth.currentUser.uid}/focusSessions/${session.id}`, {
-                  duration: session.duration,
-                  startTime: session.startTime,
-                  endTime: session.endTime,
-                  tasksData: JSON.stringify(session.tasks || []),
-                  currentTaskIndex: session.currentTaskIndex || 0,
-                  isActive: false,
-                  isOnBreak: session.isOnBreak || false,
-                  breaks: session.breaks || [],
-                  feedback: session.feedback,
-                  rating: session.rating,
-                  pausedAt: session.pausedAt,
-                  totalPausedTime: session.totalPausedTime || 0,
-                  createdAt: session.createdAt || session.startTime,
-                  updatedAt: session.updatedAt || session.endTime,
-                  updatedBy: session.updatedBy || auth.currentUser.uid,
-                  version: session.version || 1
-                });
-              } 
+            tasks: {
+              add: async (task: any) => {
+                const userId = getUserId();
+                const normalized = normalizeTask(task, userId);
+                await writeDocument(userId, 'tasks', normalized);
+                importedTasksRef.current.set(normalized.id, normalized);
+              },
             },
-            people: { add: async (person) => { await relationships.add(person); } },
+            projects: {
+              add: async (project: any) => {
+                const userId = getUserId();
+                const normalized = normalizeProject(project, userId);
+                await writeDocument(userId, 'projects', normalized);
+              },
+            },
+            goals: {
+              add: async (goal: any) => {
+                const userId = getUserId();
+                const normalized = normalizeGoal(goal, userId);
+                await writeDocument(userId, 'goals', normalized);
+              },
+            },
+            thoughts: {
+              add: async (thought: any) => {
+                const userId = getUserId();
+                const normalized = normalizeThought(thought, userId);
+                await writeDocument(userId, 'thoughts', normalized);
+              },
+            },
+            moods: {
+              add: async (mood: any) => {
+                const userId = getUserId();
+                const normalized = normalizeMood(mood, userId);
+                await writeDocument(userId, 'moods', normalized);
+              },
+            },
+            focusSessions: {
+              add: async (session: any) => {
+                const userId = getUserId();
+                const normalized = normalizeFocusSession(
+                  session,
+                  userId,
+                  taskLookup
+                );
+                await writeDocument(userId, 'focusSessions', normalized);
+              },
+            },
+            people: {
+              add: async (person: any) => {
+                const userId = getUserId();
+                const normalized = normalizePerson(person, userId);
+                await writeDocument(userId, 'people', normalized);
+              },
+            },
           },
           (progress) => {
             setImportProgress(progress);
@@ -141,9 +428,10 @@ export function useImportExport() {
         throw error;
       } finally {
         setIsImporting(false);
+        importedTasksRef.current.clear();
       }
     },
-    [importService, tasks, projects, goals, thoughts, moods, focus, relationships]
+    [importService, tasks, projects, goals, thoughts, moods, focus, relationships, getUserId, writeDocument]
   );
 
   /**

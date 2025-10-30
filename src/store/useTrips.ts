@@ -6,7 +6,7 @@ import { db } from '@/lib/firebaseClient';
 import type { Unsubscribe } from 'firebase/firestore';
 
 export type TripStatus = 'planning' | 'upcoming' | 'in-progress' | 'completed' | 'cancelled';
-export type ExpenseCategory = 'food' | 'transport' | 'accommodation' | 'entertainment' | 'shopping' | 'other';
+export type ExpenseCategory = 'food' | 'transport' | 'accommodation' | 'entertainment' | 'shopping' | 'air-ticket' | 'gift' | 'other';
 
 export interface Expense {
   id: string;
@@ -31,6 +31,7 @@ export interface Trip {
   currency: string;
   status: TripStatus;
   expenses: Expense[];
+  budgetBreakdown?: Record<ExpenseCategory, number>; // For planning/upcoming trips
   notes?: string;
   createdAt: string;
   updatedAt?: number;
@@ -50,6 +51,7 @@ interface TripsState {
   addTrip: (trip: Omit<Trip, 'id' | 'createdAt' | 'updatedAt' | 'expenses'>) => Promise<string>;
   updateTrip: (id: string, updates: Partial<Omit<Trip, 'id' | 'createdAt' | 'expenses'>>) => Promise<void>;
   deleteTrip: (id: string) => Promise<void>;
+  updateBudgetBreakdown: (id: string, budgetBreakdown: Record<ExpenseCategory, number>) => Promise<void>;
 
   // Expense methods (trip-specific)
   addExpense: (tripId: string, expense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt' | 'tripId'>) => Promise<string>;
@@ -68,6 +70,8 @@ interface TripsState {
   getSpentByCategory: (tripId: string, category: ExpenseCategory) => number;
   getAverageDailySpend: (tripId: string) => number;
   getAllExpenses: () => Expense[];
+  getTotalPlannedBudget: (tripId: string) => number;
+  getPlannedBudgetByCategory: (tripId: string, category: ExpenseCategory) => number;
 }
 
 export const useTrips = create<TripsState>((set, get) => ({
@@ -158,6 +162,13 @@ export const useTrips = create<TripsState>((set, get) => ({
 
   deleteTrip: async (id) => {
     await deleteAt(`trips/${id}`);
+  },
+
+  updateBudgetBreakdown: async (id, budgetBreakdown) => {
+    await updateAt(`trips/${id}`, {
+      budgetBreakdown,
+      updatedAt: Date.now(),
+    });
   },
 
   addExpense: async (tripId, expense) => {
@@ -274,5 +285,17 @@ export const useTrips = create<TripsState>((set, get) => ({
     const tripExpenses = get().trips.flatMap(trip => trip.expenses);
     const standalone = get().standaloneExpenses;
     return [...tripExpenses, ...standalone];
+  },
+
+  getTotalPlannedBudget: (tripId) => {
+    const trip = get().getTrip(tripId);
+    if (!trip || !trip.budgetBreakdown) return 0;
+    return Object.values(trip.budgetBreakdown).reduce((sum, amount) => sum + amount, 0);
+  },
+
+  getPlannedBudgetByCategory: (tripId, category) => {
+    const trip = get().getTrip(tripId);
+    if (!trip || !trip.budgetBreakdown) return 0;
+    return trip.budgetBreakdown[category] || 0;
   },
 }));

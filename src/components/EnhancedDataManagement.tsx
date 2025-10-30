@@ -1,16 +1,21 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Upload, Database } from 'lucide-react';
+import { Download, Upload, Database, Trash2, AlertTriangle } from 'lucide-react';
 import { useImportExport } from '@/hooks/useImportExport';
 import { ImportPreviewModal } from '@/components/import-export/ImportPreviewModal';
 import { ImportProgressModal } from '@/components/import-export/ImportProgressModal';
 import { ExportOptionsModal } from '@/components/import-export/ExportOptionsModal';
 import { ImportSelection, ImportOptions } from '@/types/import-export';
+import { deleteAllUserData } from '@/lib/utils/data-management';
 
-export function EnhancedDataManagement() {
+interface EnhancedDataManagementProps {
+  onDataChanged?: () => void;
+}
+
+export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagementProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,9 +38,25 @@ export function EnhancedDataManagement() {
   const [showImportPreview, setShowImportPreview] = useState(false);
   const [showImportProgress, setShowImportProgress] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const availableCounts = getAvailableCounts();
   const totalItems = Object.values(availableCounts).reduce((sum, count) => sum + count, 0);
+
+  const statsEntries = useMemo(
+    () => [
+      { label: 'Tasks', value: availableCounts.tasks, accent: 'text-purple-600 dark:text-purple-400', border: 'border-purple-200 dark:border-purple-800', bg: 'bg-purple-50 dark:bg-purple-950/20' },
+      { label: 'Projects', value: availableCounts.projects, accent: 'text-blue-600 dark:text-blue-400', border: 'border-blue-200 dark:border-blue-800', bg: 'bg-blue-50 dark:bg-blue-950/20' },
+      { label: 'Goals', value: availableCounts.goals, accent: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-200 dark:border-emerald-800', bg: 'bg-emerald-50 dark:bg-emerald-950/20' },
+      { label: 'Thoughts', value: availableCounts.thoughts, accent: 'text-yellow-600 dark:text-yellow-400', border: 'border-yellow-200 dark:border-yellow-800', bg: 'bg-yellow-50 dark:bg-yellow-950/20' },
+      { label: 'Moods', value: availableCounts.moods, accent: 'text-pink-600 dark:text-pink-400', border: 'border-pink-200 dark:border-pink-800', bg: 'bg-pink-50 dark:bg-pink-950/20' },
+      { label: 'Focus Sessions', value: availableCounts.focusSessions, accent: 'text-cyan-600 dark:text-cyan-400', border: 'border-cyan-200 dark:border-cyan-800', bg: 'bg-cyan-50 dark:bg-cyan-950/20' },
+      { label: 'People', value: availableCounts.people, accent: 'text-teal-600 dark:text-teal-400', border: 'border-teal-200 dark:border-teal-800', bg: 'bg-teal-50 dark:bg-teal-950/20' },
+      { label: 'Total Items', value: totalItems, accent: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-300 dark:border-emerald-800', bg: 'bg-emerald-50 dark:bg-emerald-950/20', highlight: true },
+    ],
+    [availableCounts, totalItems]
+  );
 
   // Handle file selection
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,6 +121,10 @@ export function EnhancedDataManagement() {
           variant: 'destructive',
         });
       }
+
+      if (result.totalImported > 0) {
+        onDataChanged?.();
+      }
     } catch (error) {
       toast({
         title: 'Import Failed',
@@ -144,6 +169,27 @@ export function EnhancedDataManagement() {
     }
   };
 
+  const handleDeleteAllData = async () => {
+    try {
+      setIsDeleting(true);
+      await deleteAllUserData();
+      toast({
+        title: 'All Data Deleted',
+        description: 'Your workspace has been cleared. You can restore from a backup at any time.',
+      });
+      setShowDeleteConfirm(false);
+      onDataChanged?.();
+    } catch (error) {
+      toast({
+        title: 'Delete Failed',
+        description: error instanceof Error ? error.message : 'Failed to delete data. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Close progress modal when import is complete
   useEffect(() => {
     if (
@@ -177,32 +223,27 @@ export function EnhancedDataManagement() {
         </p>
 
         {/* Data Statistics */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-              {availableCounts.tasks}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          {statsEntries.map((entry) => (
+            <div
+              key={entry.label}
+              className={`p-4 text-center rounded-lg border shadow-sm ${entry.border} ${entry.bg} ${
+                entry.highlight ? 'ring-1 ring-emerald-400/60 shadow-lg' : ''
+              }`}
+            >
+              <div className={`text-2xl font-bold ${entry.accent}`}>{entry.value}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                {entry.label}
+              </div>
             </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">Tasks</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              {availableCounts.projects}
-            </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">Projects</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {availableCounts.goals}
-            </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">Goals</div>
-          </div>
-          <div className="text-center border-l-2 border-gray-300 dark:border-gray-600">
-            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-              {totalItems}
-            </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">Total Items</div>
-          </div>
+          ))}
         </div>
+
+        {totalItems === 0 && (
+          <div className="mb-6 rounded-lg border border-dashed border-green-300 dark:border-green-800 bg-white/70 dark:bg-gray-900/40 p-3 text-xs text-gray-600 dark:text-gray-400">
+            No data yet. Import a backup file or keep using the app and your insights will appear here.
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3">
@@ -247,8 +288,93 @@ export function EnhancedDataManagement() {
           />
         </div>
 
+        {/* Danger Zone */}
+        <div className="mt-6">
+          <div className="rounded-lg border-2 border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/10 p-4">
+            {!showDeleteConfirm ? (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-start gap-2">
+                  <div className="p-2 bg-red-600/10 text-red-700 dark:text-red-300 rounded-full">
+                    <Trash2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-red-700 dark:text-red-200">
+                      Delete All Data
+                    </div>
+                    <p className="text-xs text-red-600 dark:text-red-300">
+                      Permanently remove all tasks, goals, projects, thoughts, moods, focus sessions, and people from your account.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={totalItems === 0}
+                  variant="outline"
+                  className="border-red-300 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Everything
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-300 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-semibold text-red-700 dark:text-red-200 mb-1">
+                      Confirm permanent deletion
+                    </div>
+                    <p className="text-xs text-red-600 dark:text-red-300 mb-2">
+                      This action cannot be undone and will remove:
+                    </p>
+                    <ul className="text-xs text-red-600 dark:text-red-300 list-disc list-inside space-y-0.5">
+                      <li>{availableCounts.tasks} tasks</li>
+                      <li>{availableCounts.projects} projects</li>
+                      <li>{availableCounts.goals} goals</li>
+                      <li>{availableCounts.thoughts} thoughts</li>
+                      <li>{availableCounts.moods} moods</li>
+                      <li>{availableCounts.focusSessions} focus sessions</li>
+                      <li>{availableCounts.people} people</li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    onClick={handleDeleteAllData}
+                    disabled={isDeleting}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {isDeleting ? (
+                      <>
+                        <span className="animate-spin mr-2">⏳</span>
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Yes, delete everything
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    disabled={isDeleting}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+          <p className="mt-2 text-xs text-red-700 dark:text-red-300">
+            Tip: Export a backup before deleting so you can restore your data later from the Import flow.
+          </p>
+        </div>
+
         {/* Features List */}
-        <div className="mt-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-green-200 dark:border-green-800">
+        <div className="mt-6 p-3 bg-white dark:bg-gray-800 rounded-lg border border-green-200 dark:border-green-800">
           <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
             New Features:
           </p>
