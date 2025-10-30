@@ -4,12 +4,7 @@ import { subscribeCol } from '@/lib/data/subscribe';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebaseClient';
 import type { Unsubscribe } from 'firebase/firestore';
-import {
-  convertAmountsToCurrency,
-  convertCurrency,
-  convertCurrencySync,
-  normalizeCurrencyCode,
-} from '@/lib/services/currency';
+import { BASE_CURRENCY, SupportedCurrency, convertCurrency } from '@/lib/utils/currency';
 
 export type InvestmentType = 'stocks' | 'bonds' | 'crypto' | 'real-estate' | 'retirement' | 'mutual-funds' | 'other';
 export type AssetType = 'stock' | 'manual';
@@ -120,14 +115,10 @@ interface InvestmentsState {
   // Utility methods
   getPortfolio: (id: string) => Portfolio | undefined;
   getInvestment: (portfolioId: string, investmentId: string) => Investment | undefined;
-  getTotalPortfolioValue: (portfolioId: string) => number;
-  getTotalInvested: (portfolioId: string) => number;
-  getPortfolioROI: (portfolioId: string) => number;
-  getAllPortfoliosValue: () => number;
-  convertAmount: (amount: number, fromCurrency: string, toCurrency: string) => Promise<number>;
-  getInvestmentValueInCurrency: (portfolioId: string, investmentId: string, targetCurrency: string) => Promise<number>;
-  getTotalPortfolioValueInCurrency: (portfolioId: string, targetCurrency: string) => Promise<number>;
-  getTotalInvestedInCurrency: (portfolioId: string, targetCurrency: string) => Promise<number>;
+  getTotalPortfolioValue: (portfolioId: string, targetCurrency?: SupportedCurrency) => number;
+  getTotalInvested: (portfolioId: string, targetCurrency?: SupportedCurrency) => number;
+  getPortfolioROI: (portfolioId: string, targetCurrency?: SupportedCurrency) => number;
+  getAllPortfoliosValue: (targetCurrency?: SupportedCurrency) => number;
 }
 
 const BASE_CURRENCY = 'CAD';
@@ -414,21 +405,17 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     return portfolio?.investments.find(inv => inv.id === investmentId);
   },
 
-  getTotalPortfolioValue: (portfolioId) => {
+  getTotalPortfolioValue: (portfolioId, targetCurrency = BASE_CURRENCY) => {
     const portfolio = get().getPortfolio(portfolioId);
     if (!portfolio) return 0;
-    return portfolio.investments.reduce((sum, inv) => {
-      const investmentCurrency = normalizeCurrencyCode(inv.currency);
-      const convertedValue = convertCurrencySync(inv.currentValue, investmentCurrency, BASE_CURRENCY);
-      return sum + convertedValue;
-    }, 0);
+    const totalInBase = portfolio.investments.reduce((sum, inv) => sum + inv.currentValue, 0);
+    return convertCurrency(totalInBase, BASE_CURRENCY, targetCurrency);
   },
 
-  getTotalInvested: (portfolioId) => {
+  getTotalInvested: (portfolioId, targetCurrency = BASE_CURRENCY) => {
     const portfolio = get().getPortfolio(portfolioId);
     if (!portfolio) return 0;
-    return portfolio.investments.reduce((sum, inv) => {
-      const investmentCurrency = normalizeCurrencyCode(inv.currency);
+    const totalInvestedInBase = portfolio.investments.reduce((sum, inv) => {
       const deposits = inv.contributions
         .filter(c => c.type === 'deposit')
         .reduce((s, c) => s + (c.amountInInvestmentCurrency ?? c.amount), 0);
@@ -438,19 +425,21 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
       const investedTotal = inv.initialAmount + deposits - withdrawals;
       return sum + convertCurrencySync(investedTotal, investmentCurrency, BASE_CURRENCY);
     }, 0);
+    return convertCurrency(totalInvestedInBase, BASE_CURRENCY, targetCurrency);
   },
 
-  getPortfolioROI: (portfolioId) => {
-    const currentValue = get().getTotalPortfolioValue(portfolioId);
-    const invested = get().getTotalInvested(portfolioId);
+  getPortfolioROI: (portfolioId, targetCurrency = BASE_CURRENCY) => {
+    const currentValue = get().getTotalPortfolioValue(portfolioId, targetCurrency);
+    const invested = get().getTotalInvested(portfolioId, targetCurrency);
     if (invested === 0) return 0;
     return ((currentValue - invested) / invested) * 100;
   },
 
-  getAllPortfoliosValue: () => {
-    return get().portfolios.reduce((sum, portfolio) => {
-      return sum + get().getTotalPortfolioValue(portfolio.id);
+  getAllPortfoliosValue: (targetCurrency = BASE_CURRENCY) => {
+    const totalInBase = get().portfolios.reduce((sum, portfolio) => {
+      return sum + get().getTotalPortfolioValue(portfolio.id, BASE_CURRENCY);
     }, 0);
+    return convertCurrency(totalInBase, BASE_CURRENCY, targetCurrency);
   },
 
   convertAmount: async (amount, fromCurrency, toCurrency) => {
