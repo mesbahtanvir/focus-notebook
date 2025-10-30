@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createAt, deleteAt, updateAt } from '@/lib/data/gateway';
 import { subscribeCol } from '@/lib/data/subscribe';
 import { collection, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebaseClient';
+import { auth, db } from '@/lib/firebaseClient';
 import type { Unsubscribe } from 'firebase/firestore';
 
 export type InvestmentType = 'stocks' | 'bonds' | 'crypto' | 'real-estate' | 'retirement' | 'mutual-funds' | 'other';
@@ -75,6 +75,7 @@ interface InvestmentsState {
   fromCache: boolean;
   hasPendingWrites: boolean;
   unsubscribe: Unsubscribe | null;
+  currentUserId: string | null;
 
   // Portfolio methods
   subscribe: (userId: string) => void;
@@ -114,6 +115,7 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
   fromCache: false,
   hasPendingWrites: false,
   unsubscribe: null,
+  currentUserId: null,
 
   subscribe: (userId: string) => {
     const currentUnsub = get().unsubscribe;
@@ -121,7 +123,19 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
       currentUnsub();
     }
 
-    set({ isLoading: true });
+    if (!userId) {
+      set({
+        portfolios: [],
+        isLoading: false,
+        fromCache: false,
+        hasPendingWrites: false,
+        unsubscribe: null,
+        currentUserId: null,
+      });
+      return;
+    }
+
+    set({ isLoading: true, currentUserId: userId });
 
     const portfoliosQuery = query(
       collection(db, `users/${userId}/portfolios`),
@@ -143,10 +157,13 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
       }
     );
 
-    set({ unsubscribe });
+    set({ unsubscribe, currentUserId: userId });
   },
 
   addPortfolio: async (portfolio) => {
+    const userId = get().currentUserId ?? auth.currentUser?.uid;
+    if (!userId) throw new Error('User not authenticated');
+
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
 
@@ -157,21 +174,30 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
       createdAt: now,
     };
 
-    await createAt(`portfolios/${id}`, newPortfolio);
+    await createAt(`users/${userId}/portfolios/${id}`, newPortfolio);
     return id;
   },
 
   updatePortfolio: async (id, updates) => {
-    await updateAt(`portfolios/${id}`, updates);
+    const userId = get().currentUserId ?? auth.currentUser?.uid;
+    if (!userId) throw new Error('User not authenticated');
+
+    await updateAt(`users/${userId}/portfolios/${id}`, updates);
   },
 
   deletePortfolio: async (id) => {
-    await deleteAt(`portfolios/${id}`);
+    const userId = get().currentUserId ?? auth.currentUser?.uid;
+    if (!userId) throw new Error('User not authenticated');
+
+    await deleteAt(`users/${userId}/portfolios/${id}`);
   },
 
   addInvestment: async (portfolioId, investment) => {
     const portfolio = get().getPortfolio(portfolioId);
     if (!portfolio) throw new Error('Portfolio not found');
+
+    const userId = get().currentUserId ?? auth.currentUser?.uid;
+    if (!userId) throw new Error('User not authenticated');
 
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
@@ -185,7 +211,7 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     };
 
     const updatedInvestments = [...portfolio.investments, newInvestment];
-    await updateAt(`portfolios/${portfolioId}`, {
+    await updateAt(`users/${userId}/portfolios/${portfolioId}`, {
       investments: updatedInvestments,
     });
 
@@ -196,11 +222,14 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     const portfolio = get().getPortfolio(portfolioId);
     if (!portfolio) throw new Error('Portfolio not found');
 
+    const userId = get().currentUserId ?? auth.currentUser?.uid;
+    if (!userId) throw new Error('User not authenticated');
+
     const updatedInvestments = portfolio.investments.map(inv =>
       inv.id === investmentId ? { ...inv, ...updates, updatedAt: Date.now() } : inv
     );
 
-    await updateAt(`portfolios/${portfolioId}`, {
+    await updateAt(`users/${userId}/portfolios/${portfolioId}`, {
       investments: updatedInvestments,
     });
   },
@@ -209,8 +238,11 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     const portfolio = get().getPortfolio(portfolioId);
     if (!portfolio) throw new Error('Portfolio not found');
 
+    const userId = get().currentUserId ?? auth.currentUser?.uid;
+    if (!userId) throw new Error('User not authenticated');
+
     const updatedInvestments = portfolio.investments.filter(inv => inv.id !== investmentId);
-    await updateAt(`portfolios/${portfolioId}`, {
+    await updateAt(`users/${userId}/portfolios/${portfolioId}`, {
       investments: updatedInvestments,
     });
   },
@@ -221,6 +253,9 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
 
     const investment = get().getInvestment(portfolioId, investmentId);
     if (!investment) throw new Error('Investment not found');
+
+    const userId = get().currentUserId ?? auth.currentUser?.uid;
+    if (!userId) throw new Error('User not authenticated');
 
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
@@ -249,7 +284,7 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
         : inv
     );
 
-    await updateAt(`portfolios/${portfolioId}`, {
+    await updateAt(`users/${userId}/portfolios/${portfolioId}`, {
       investments: updatedInvestments,
     });
   },
@@ -261,6 +296,9 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     const investment = get().getInvestment(portfolioId, investmentId);
     if (!investment) throw new Error('Investment not found');
 
+    const userId = get().currentUserId ?? auth.currentUser?.uid;
+    if (!userId) throw new Error('User not authenticated');
+
     const updatedContributions = investment.contributions.filter(c => c.id !== contributionId);
 
     const updatedInvestments = portfolio.investments.map(inv =>
@@ -269,7 +307,7 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
         : inv
     );
 
-    await updateAt(`portfolios/${portfolioId}`, {
+    await updateAt(`users/${userId}/portfolios/${portfolioId}`, {
       investments: updatedInvestments,
     });
   },
@@ -401,7 +439,10 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     };
 
     // Store snapshot in Firestore
-    await createAt(`portfolios/${portfolioId}/snapshots/${id}`, snapshot);
+    const userId = get().currentUserId ?? auth.currentUser?.uid;
+    if (!userId) throw new Error('User not authenticated');
+
+    await createAt(`users/${userId}/portfolios/${portfolioId}/snapshots/${id}`, snapshot);
   },
 
   getSnapshots: (portfolioId) => {
