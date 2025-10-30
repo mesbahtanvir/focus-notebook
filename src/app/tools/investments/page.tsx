@@ -9,7 +9,8 @@ import { ToolHeader } from '@/components/tools/ToolHeader';
 import { SearchAndFilters } from '@/components/tools/SearchAndFilters';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { toolThemes } from '@/components/tools/themes';
-import { DollarSign, TrendingUp, Briefcase } from 'lucide-react';
+import { useCurrency } from '@/store/useCurrency';
+import { formatCurrency } from '@/lib/utils/currency';
 
 export default function InvestmentsPage() {
   const { user } = useAuth();
@@ -17,6 +18,7 @@ export default function InvestmentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'closed' | 'archived'>('all');
+  const { currency, setCurrency } = useCurrency();
 
   useEffect(() => {
     if (user?.uid) {
@@ -33,7 +35,7 @@ export default function InvestmentsPage() {
   });
 
   const activePortfolios = portfolios.filter((p) => p.status === 'active');
-  const totalValue = getAllPortfoliosValue();
+  const totalValue = getAllPortfoliosValue(currency);
 
   const theme = toolThemes.gold;
 
@@ -47,7 +49,7 @@ export default function InvestmentsPage() {
           stats={[
             {
               label: 'Total Value',
-              value: `$${totalValue.toFixed(2)}`,
+              value: formatCurrency(totalValue, currency),
               variant: 'default',
             },
             {
@@ -66,6 +68,9 @@ export default function InvestmentsPage() {
           totalCount={portfolios.length}
           filteredCount={filteredPortfolios.length}
           showFilterToggle={true}
+          showCurrencySelector
+          currencyValue={currency}
+          onCurrencyChange={setCurrency}
           filterContent={
             <div className="flex gap-2">
               <button
@@ -128,7 +133,7 @@ export default function InvestmentsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPortfolios.map((portfolio, index) => (
-              <PortfolioCard key={portfolio.id} portfolio={portfolio} index={index} />
+              <PortfolioCard key={portfolio.id} portfolio={portfolio} index={index} currency={currency} />
             ))}
           </div>
         )}

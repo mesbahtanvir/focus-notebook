@@ -18,6 +18,8 @@ import { Edit, Trash2, Plus, TrendingUp, TrendingDown, DollarSign, RefreshCw, Sp
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/store/useSettings';
 import { fetchStockHistory } from '@/lib/services/stockApi';
+import { useCurrency } from '@/store/useCurrency';
+import { BASE_CURRENCY, convertCurrency, formatCurrency as formatCurrencyValue } from '@/lib/utils/currency';
 
 export default function PortfolioDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -38,6 +40,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   const { settings } = useSettings();
   const openAIKey = settings.openaiApiKey;
   const openAIModel = settings.aiModel;
+  const { currency } = useCurrency();
 
   const [isInvestmentFormOpen, setIsInvestmentFormOpen] = useState(false);
   const [isContributionFormOpen, setIsContributionFormOpen] = useState(false);
@@ -69,19 +72,14 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
     );
   }
 
-  const totalValue = getTotalPortfolioValue(portfolio.id);
-  const totalInvested = getTotalInvested(portfolio.id);
-  const roi = getPortfolioROI(portfolio.id);
+  const totalValue = getTotalPortfolioValue(portfolio.id, currency);
+  const totalInvested = getTotalInvested(portfolio.id, currency);
+  const roi = getPortfolioROI(portfolio.id, currency);
   const gain = totalValue - totalInvested;
   const isPositive = gain >= 0;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
+  const convertAmount = (amount: number | undefined | null) => convertCurrency(amount ?? 0, BASE_CURRENCY, currency);
+  const formatAmount = (amount: number) => formatCurrencyValue(amount, currency);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -222,7 +220,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
           stats={[
             {
               label: 'Current Value',
-              value: formatCurrency(totalValue),
+              value: formatAmount(totalValue),
               variant: 'default',
             },
             {
@@ -243,18 +241,18 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="p-6">
             <h3 className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Invested</h3>
-            <p className="text-2xl font-bold">{formatCurrency(totalInvested)}</p>
+            <p className="text-2xl font-bold">{formatAmount(totalInvested)}</p>
           </Card>
 
           <Card className="p-6">
             <h3 className="text-sm text-gray-600 dark:text-gray-400 mb-2">Current Value</h3>
-            <p className="text-2xl font-bold text-amber-600">{formatCurrency(totalValue)}</p>
+            <p className="text-2xl font-bold text-amber-600">{formatAmount(totalValue)}</p>
           </Card>
 
           <Card className="p-6">
             <h3 className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Gain/Loss</h3>
             <p className={`text-2xl font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(gain)}
+              {formatAmount(gain)}
             </p>
             <p className={`text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
               {roi.toFixed(2)}%
@@ -310,6 +308,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
           portfolio={portfolio}
           predictions={showPredictions && predictions ? predictions.predictions : []}
           showPredictions={showPredictions}
+          currency={currency}
         />
 
         {/* AI Prediction Summary */}
@@ -347,19 +346,19 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                       <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
                         <p className="text-xs text-gray-600 dark:text-gray-400">30-Day Target</p>
                         <p className="text-lg font-bold text-purple-600">
-                          {formatCurrency(predictions.targetPrice30Days)}
+                          {formatAmount(convertAmount(predictions.targetPrice30Days))}
                         </p>
                       </div>
                       <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
                         <p className="text-xs text-gray-600 dark:text-gray-400">Support Level</p>
                         <p className="text-lg font-bold text-green-600">
-                          {formatCurrency(predictions.supportLevel)}
+                          {formatAmount(convertAmount(predictions.supportLevel))}
                         </p>
                       </div>
                       <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
                         <p className="text-xs text-gray-600 dark:text-gray-400">Resistance Level</p>
                         <p className="text-lg font-bold text-red-600">
-                          {formatCurrency(predictions.resistanceLevel)}
+                          {formatAmount(convertAmount(predictions.resistanceLevel))}
                         </p>
                       </div>
                     </div>
@@ -395,10 +394,12 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
           ) : (
             <div className="space-y-4">
               {portfolio.investments.map((investment) => {
-                const investmentGain = investment.currentValue - investment.initialAmount;
+                const initialAmount = convertAmount(investment.initialAmount);
+                const currentAmount = convertAmount(investment.currentValue);
+                const investmentGain = currentAmount - initialAmount;
                 const investmentROI =
-                  investment.initialAmount > 0
-                    ? ((investmentGain / investment.initialAmount) * 100)
+                  initialAmount > 0
+                    ? ((investmentGain / initialAmount) * 100)
                     : 0;
                 const isInvestmentPositive = investmentGain >= 0;
 
@@ -406,7 +407,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                   <div key={investment.id} className="space-y-4">
                     {/* Stock Performance Chart (if it's a stock) */}
                     {investment.assetType === 'stock' && investment.ticker && (
-                      <StockPerformanceChart investment={investment} />
+                      <StockPerformanceChart investment={investment} currency={currency} />
                     )}
 
                     {/* Investment Details Card */}
@@ -450,18 +451,18 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Initial</p>
-                        <p className="font-semibold">{formatCurrency(investment.initialAmount)}</p>
+                        <p className="font-semibold">{formatAmount(initialAmount)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Current</p>
                         <p className="font-semibold text-amber-600">
-                          {formatCurrency(investment.currentValue)}
+                          {formatAmount(currentAmount)}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Gain/Loss</p>
                         <p className={`font-semibold ${isInvestmentPositive ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatCurrency(investmentGain)}
+                          {formatAmount(investmentGain)}
                         </p>
                       </div>
                       <div>
@@ -500,7 +501,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="font-medium">
-                                    {formatCurrency(contribution.amount)}
+                                    {formatAmount(convertAmount(contribution.amount))}
                                   </span>
                                   <Button
                                     variant="ghost"
