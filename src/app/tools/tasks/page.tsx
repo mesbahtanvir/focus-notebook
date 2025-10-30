@@ -440,7 +440,11 @@ function TaskGroup({
     'daily': '🌅 Daily Tasks',
     'workweek': '💼 Workweek Tasks (Mon-Fri)',
     'weekly': '📅 Weekly Tasks',
-    'monthly': '📆 Monthly Tasks'
+    'biweekly': '📅 Biweekly Tasks (Every 2 Weeks)',
+    'monthly': '📆 Monthly Tasks',
+    'bimonthly': '📆 Bimonthly Tasks (Every 2 Months)',
+    'halfyearly': '📅 Half-Yearly Tasks (Twice a Year)',
+    'yearly': '🎊 Yearly Tasks'
   };
 
   const groupColors: Record<string, string> = {
@@ -448,7 +452,11 @@ function TaskGroup({
     'daily': 'from-orange-500 to-amber-600',
     'workweek': 'from-blue-500 to-indigo-600',
     'weekly': 'from-green-500 to-emerald-600',
-    'monthly': 'from-purple-500 to-violet-600'
+    'biweekly': 'from-teal-500 to-cyan-600',
+    'monthly': 'from-purple-500 to-violet-600',
+    'bimonthly': 'from-fuchsia-500 to-pink-600',
+    'halfyearly': 'from-rose-500 to-red-600',
+    'yearly': 'from-yellow-500 to-orange-600'
   };
 
   return (

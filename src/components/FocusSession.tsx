@@ -10,7 +10,8 @@ import {
   Play,
   X,
   Check,
-  Clock
+  Clock,
+  Plus
 } from "lucide-react";
 import { FormattedNotes } from '@/lib/formatNotes';
 import { ConfirmModal } from "./ConfirmModal";
@@ -25,17 +26,22 @@ export function FocusSession() {
   const markTaskComplete = useFocus((s) => s.markTaskComplete);
   const updateTaskTime = useFocus ((s) => s.updateTaskTime);
   const updateTaskNotes = useFocus((s) => s.updateTaskNotes);
+  const addFollowUpTask = useFocus((s) => s.addFollowUpTask);
   const pauseSession = useFocus((s) => s.pauseSession);
   const resumeSession = useFocus((s) => s.resumeSession);
   const toggleTask = useTasks((s) => s.toggle);
+  const addTask = useTasks((s) => s.add);
 
   const [currentTime, setCurrentTime] = useState(0);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const [followUpTitle, setFollowUpTitle] = useState("");
   const [localNotes, setLocalNotes] = useState("");
   const [autoSaving, setAutoSaving] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
+  const hasPendingChangesRef = useRef<boolean>(false);
 
   // Timer effect - uses elapsed time instead of interval ticks to work reliably in background
   useEffect(() => {
@@ -87,7 +93,7 @@ export function FocusSession() {
 
   // Load notes for current task (only when task index changes, not on every session update)
   useEffect(() => {
-    if (currentSession) {
+    if (currentSession && !hasPendingChangesRef.current) {
       const currentTask = currentSession.tasks[currentSession.currentTaskIndex];
       setLocalNotes(currentTask.notes || "");
     }
@@ -102,23 +108,33 @@ export function FocusSession() {
     }
 
     if (localNotes !== (currentSession?.tasks[currentSession.currentTaskIndex].notes || "")) {
+      hasPendingChangesRef.current = true;
       setAutoSaving(true);
-      autoSaveTimeoutRef.current = setTimeout(() => {
+      autoSaveTimeoutRef.current = setTimeout(async () => {
         if (currentSession) {
-          updateTaskNotes(currentSession.currentTaskIndex, localNotes);
-          // Also save to actual task
-          const currentFocusTask = currentSession.tasks[currentSession.currentTaskIndex];
-          const taskId = currentFocusTask.task.id;
-          const sessionNotes = localNotes.trim();
-          
-          if (sessionNotes) {
-            const timestamp = new Date().toLocaleString();
-            const updatedNotes = `**Focus Session Notes (${timestamp})**\n${sessionNotes}`;
-            useTasks.getState().updateTask(taskId, { notes: updatedNotes });
+          try {
+            await updateTaskNotes(currentSession.currentTaskIndex, localNotes);
+            // Also save to actual task
+            const currentFocusTask = currentSession.tasks[currentSession.currentTaskIndex];
+            const taskId = currentFocusTask.task.id;
+            const sessionNotes = localNotes.trim();
+
+            if (sessionNotes) {
+              const timestamp = new Date().toLocaleString();
+              const updatedNotes = `**Focus Session Notes (${timestamp})**\n${sessionNotes}`;
+              await useTasks.getState().updateTask(taskId, { notes: updatedNotes });
+            }
+            hasPendingChangesRef.current = false;
+            setAutoSaving(false);
+          } catch (error) {
+            console.error('Failed to save notes:', error);
+            setAutoSaving(false);
+            // Keep pending changes flag set on error so notes aren't overwritten
           }
-          setAutoSaving(false);
         }
       }, 1500); // Auto-save after 1.5 seconds of no typing
+    } else {
+      hasPendingChangesRef.current = false;
     }
 
     return () => {
@@ -174,6 +190,32 @@ export function FocusSession() {
       await endSession();
       // Redirect to summary page
       router.push(`/tools/focus/summary?sessionId=${currentSession.id}`);
+    }
+  };
+
+  const handleCreateFollowUp = async () => {
+    if (!followUpTitle.trim() || !currentSession) return;
+
+    try {
+      // Create a new task
+      const newTask = await addTask({
+        title: followUpTitle.trim(),
+        category: currentFocusTask.task.category,
+        priority: currentFocusTask.task.priority,
+        status: 'active' as const,
+        focusEligible: true,
+      });
+
+      // Link it as a follow-up task
+      if (newTask?.id) {
+        await addFollowUpTask(currentTaskIndex, newTask.id);
+      }
+
+      // Reset and close modal
+      setFollowUpTitle("");
+      setShowFollowUpModal(false);
+    } catch (error) {
+      console.error('Failed to create follow-up task:', error);
     }
   };
 
@@ -329,30 +371,41 @@ export function FocusSession() {
               )}
 
               {/* Primary Actions */}
-              <div className="flex gap-3">
-                {!currentFocusTask.completed ? (
-                  <button
-                    onClick={handleMarkComplete}
-                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors"
-                  >
-                    <Check className="h-5 w-5" />
-                    Mark Complete
-                  </button>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 rounded-lg font-semibold">
-                    <Check className="h-5 w-5" />
-                    Completed
-                  </div>
-                )}
-                
-                {currentTaskIndex < totalTasks - 1 && (
-                  <button
-                    onClick={handleNext}
-                    className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium text-gray-700 dark:text-gray-300"
-                  >
-                    Next →
-                  </button>
-                )}
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  {!currentFocusTask.completed ? (
+                    <button
+                      onClick={handleMarkComplete}
+                      className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors"
+                    >
+                      <Check className="h-5 w-5" />
+                      Mark Complete
+                    </button>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 rounded-lg font-semibold">
+                      <Check className="h-5 w-5" />
+                      Completed
+                    </div>
+                  )}
+
+                  {currentTaskIndex < totalTasks - 1 && (
+                    <button
+                      onClick={handleNext}
+                      className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      Next →
+                    </button>
+                  )}
+                </div>
+
+                {/* Follow-up Task Button */}
+                <button
+                  onClick={() => setShowFollowUpModal(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-indigo-300 dark:border-indigo-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors text-indigo-600 dark:text-indigo-400 font-medium text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Follow-up Task
+                </button>
               </div>
 
               {/* Notes */}
@@ -395,6 +448,72 @@ export function FocusSession() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Follow-up Task Modal */}
+      {showFollowUpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full"
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Create Follow-up Task</h3>
+                <button
+                  onClick={() => {
+                    setShowFollowUpModal(false);
+                    setFollowUpTitle("");
+                  }}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                    Task Title
+                  </label>
+                  <input
+                    type="text"
+                    value={followUpTitle}
+                    onChange={(e) => setFollowUpTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleCreateFollowUp();
+                      }
+                    }}
+                    placeholder="e.g., Review notes from this session"
+                    className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg focus:border-indigo-500 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/50 bg-white dark:bg-gray-800 outline-none transition-colors"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowFollowUpModal(false);
+                      setFollowUpTitle("");
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateFollowUp}
+                    disabled={!followUpTitle.trim()}
+                    className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors"
+                  >
+                    Create Task
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Exit Confirmation Modal */}
       <ConfirmModal

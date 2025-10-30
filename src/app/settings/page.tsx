@@ -646,10 +646,10 @@ export default function SettingsPage() {
                     </div>
                     
                     <div className="flex items-center gap-3">
-                      <label htmlFor="import-file" className="flex-1 cursor-pointer">
-                        <div className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-600 transition-colors">
+                      <label htmlFor="import-file" className="flex-1 cursor-pointer group">
+                        <div className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all">
                           <FileJson className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                          <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                             {selectedFile ? selectedFile.name : 'Choose JSON file...'}
                           </span>
                         </div>
@@ -661,11 +661,12 @@ export default function SettingsPage() {
                           className="hidden"
                         />
                       </label>
-                      
+
                       <Button
                         onClick={handleImportData}
                         disabled={!selectedFile || isImporting}
-                        className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+                        className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={!selectedFile ? 'Please select a file first' : isImporting ? 'Importing...' : 'Click to import data'}
                       >
                         {isImporting ? (
                           <>
@@ -680,6 +681,12 @@ export default function SettingsPage() {
                         )}
                       </Button>
                     </div>
+
+                    {!selectedFile && !isImporting && (
+                      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 italic">
+                        💡 Tip: Select a JSON file exported from this app to import your data
+                      </div>
+                    )}
                     
                     {selectedFile && !isImporting && (
                       <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs text-blue-800 dark:text-blue-200">

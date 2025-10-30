@@ -22,13 +22,20 @@ export default function Page() {
   const { register, handleSubmit, reset } = useForm<FormValues>();
   // Thoughts store
   const thoughts = useThoughts((s) => s.thoughts);
+  const thoughtsLoading = useThoughts((s) => s.isLoading);
   const addThought = useThoughts((s) => s.add);
   const deleteThought = useThoughts((s) => s.deleteThought);
   // Tasks store (for New Task button only; TaskList handles its own reads)
   const tasks = useTasks((s) => s.tasks);
+  const tasksLoading = useTasks((s) => s.isLoading);
   const addTask = useTasks((s) => s.add);
   const [showAll, setShowAll] = useState(false);
   const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
+
+  // Global loading state - show if either is loading from network (not cache)
+  const thoughtsFromCache = useThoughts((s) => s.fromCache);
+  const tasksFromCache = useTasks((s) => s.fromCache);
+  const isInitialLoading = (thoughtsLoading && !thoughtsFromCache) || (tasksLoading && !tasksFromCache);
   
   // Get errands count (non-focus-eligible tasks)
   const activeErrands = useMemo(() => 
@@ -50,6 +57,19 @@ export default function Page() {
     reset();
   };
 
+
+  // Show loading indicator if initial load is in progress
+  if (isInitialLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto"></div>
+          <p className="text-gray-600 dark:text-gray-400 font-medium">Loading your workspace...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-500">Syncing with cloud</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
