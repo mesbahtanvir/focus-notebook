@@ -18,8 +18,16 @@ export function PortfolioValueChart({
   predictions = [],
   showPredictions = false
 }: PortfolioValueChartProps) {
+  // Define chart data type
+  type ChartDataPoint = {
+    date: string;
+    value?: number;
+    predicted?: number;
+    type: 'historical' | 'current' | 'transition' | 'predicted';
+  };
+
   // Combine historical snapshots with current value
-  const historicalData = snapshots.map(snapshot => ({
+  const historicalData: ChartDataPoint[] = snapshots.map(snapshot => ({
     date: new Date(snapshot.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     value: snapshot.totalValue,
     type: 'historical' as const
@@ -29,21 +37,21 @@ export function PortfolioValueChart({
   const currentValue = portfolio.investments.reduce((sum, inv) => sum + inv.currentValue, 0);
   const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-  const currentData = {
+  const currentData: ChartDataPoint = {
     date: today,
     value: currentValue,
     type: 'current' as const
   };
 
   // Format predictions data
-  const predictedData = showPredictions ? predictions.map(pred => ({
+  const predictedData: ChartDataPoint[] = showPredictions ? predictions.map(pred => ({
     date: new Date(pred.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     predicted: pred.predictedPrice,
     type: 'predicted' as const
   })) : [];
 
   // Merge all data
-  const chartData = [...historicalData, currentData];
+  const chartData: ChartDataPoint[] = [...historicalData, currentData];
 
   // If we have predictions, add them to the chart
   if (showPredictions && predictedData.length > 0) {

@@ -153,8 +153,7 @@ Generate predictions for the next 30 days (every 3 days for efficiency).`;
           promptTokens: data.usage.prompt_tokens || 0,
           completionTokens: data.usage.completion_tokens || 0,
           totalTokens: data.usage.total_tokens || 0,
-          endpoint: '/api/predict-investment',
-          metadata: { symbol }
+          endpoint: `/api/predict-investment/${symbol}`,
         });
         console.log('📊 Token usage tracked:', data.usage);
       } catch (error) {

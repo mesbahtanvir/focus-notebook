@@ -10,7 +10,7 @@ import { SearchAndFilters } from '@/components/tools/SearchAndFilters';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { Card } from '@/components/ui/card';
 import { toolThemes } from '@/components/tools/themes';
-import { DollarSign, Calendar, CreditCard } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function SubscriptionsPage() {
@@ -204,12 +204,11 @@ export default function SubscriptionsPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredSubscriptions.map((subscription, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredSubscriptions.map((subscription) => (
               <SubscriptionCard
                 key={subscription.id}
                 subscription={subscription}
-                index={index}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
               />

@@ -35,7 +35,9 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
     createSnapshot,
   } = useInvestments();
 
-  const { openAIKey, openAIModel } = useSettings();
+  const { settings } = useSettings();
+  const openAIKey = settings.openaiApiKey;
+  const openAIModel = settings.aiModel;
 
   const [isInvestmentFormOpen, setIsInvestmentFormOpen] = useState(false);
   const [isContributionFormOpen, setIsContributionFormOpen] = useState(false);

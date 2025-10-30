@@ -209,11 +209,8 @@ export function InvestmentFormModal({
             <Label htmlFor="assetType">Asset Type *</Label>
             <Select
               value={assetType}
-              onValueChange={(value) => setValue('assetType', value as AssetType)}
+              onChange={(e) => setValue('assetType', e.target.value as AssetType)}
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="stock">Stock Ticker (Auto-Track)</SelectItem>
                 <SelectItem value="manual">Manual Entry</SelectItem>
@@ -297,11 +294,8 @@ export function InvestmentFormModal({
             <Label htmlFor="type">Category *</Label>
             <Select
               value={investmentType}
-              onValueChange={(value) => setValue('type', value as InvestmentType)}
+              onChange={(e) => setValue('type', e.target.value as InvestmentType)}
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="stocks">Stocks</SelectItem>
                 <SelectItem value="bonds">Bonds</SelectItem>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { X } from 'lucide-react';
 import {
@@ -20,8 +20,6 @@ import {
   Select,
   SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 
@@ -91,6 +89,40 @@ export function SubscriptionFormModal({
   const billingCycle = watch('billingCycle');
   const status = watch('status');
   const autoRenew = watch('autoRenew');
+
+  // Reset form when subscription changes or modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      if (subscription) {
+        reset({
+          name: subscription.name,
+          category: subscription.category,
+          cost: subscription.cost,
+          billingCycle: subscription.billingCycle,
+          nextBillingDate: subscription.nextBillingDate,
+          startDate: subscription.startDate,
+          endDate: subscription.endDate,
+          status: subscription.status,
+          autoRenew: subscription.autoRenew,
+          paymentMethod: subscription.paymentMethod || '',
+          notes: subscription.notes || '',
+        });
+      } else {
+        reset({
+          name: '',
+          category: 'entertainment',
+          cost: 0,
+          billingCycle: 'monthly',
+          status: 'active',
+          autoRenew: true,
+          startDate: new Date().toISOString().split('T')[0],
+          nextBillingDate: new Date().toISOString().split('T')[0],
+          paymentMethod: '',
+          notes: '',
+        });
+      }
+    }
+  }, [isOpen, subscription, reset]);
 
   const onSubmit = async (data: SubscriptionFormData) => {
     if (!user?.uid) {
@@ -175,12 +207,10 @@ export function SubscriptionFormModal({
             <div>
               <Label htmlFor="category">Category *</Label>
               <Select
+                id="category"
                 value={category}
                 onChange={(e) => setValue('category', e.target.value as SubscriptionCategory)}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="entertainment">Entertainment</SelectItem>
                   <SelectItem value="productivity">Productivity</SelectItem>
@@ -195,12 +225,10 @@ export function SubscriptionFormModal({
             <div>
               <Label htmlFor="status">Status *</Label>
               <Select
+                id="status"
                 value={status}
                 onChange={(e) => setValue('status', e.target.value as SubscriptionStatus)}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="paused">Paused</SelectItem>
@@ -231,12 +259,10 @@ export function SubscriptionFormModal({
             <div>
               <Label htmlFor="billingCycle">Billing *</Label>
               <Select
+                id="billingCycle"
                 value={billingCycle}
                 onChange={(e) => setValue('billingCycle', e.target.value as BillingCycle)}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="monthly">Monthly</SelectItem>
                   <SelectItem value="quarterly">Quarterly</SelectItem>
