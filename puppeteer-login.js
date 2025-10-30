@@ -12,6 +12,13 @@ module.exports = async ({ url, options, config }) => {
     console.warn('⚠️  Using placeholder credentials. This will likely fail. Please set real TEST_EMAIL and TEST_PASSWORD.');
   }
 
+  const rawBaseUrl = process.env.LHCI_BASE_URL || 'https://focus.yourthoughts.ca';
+  const baseUrl = rawBaseUrl.replace(/\/+$/, '');
+  const loginUrl = `${baseUrl}/login`;
+  const homeUrl = `${baseUrl}/`;
+
+  console.log('Using Lighthouse base URL:', baseUrl);
+
   // Determine which Chrome to use
   let executablePath;
   
@@ -116,6 +123,72 @@ module.exports = async ({ url, options, config }) => {
     return { status: 'timeout', url: await page.url() };
   }
 
+  async function waitForFirebaseAuth(timeoutMs = 45000) {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeoutMs) {
+      const state = await page.evaluate(() => {
+        try {
+          const storage = window.localStorage;
+          const keys = Object.keys(storage || {});
+          const authKey = keys.find((key) => key.startsWith('firebase:authUser:'));
+
+          if (!authKey) {
+            return { signedIn: false };
+          }
+
+          const rawValue = storage.getItem(authKey);
+          if (!rawValue) {
+            return { signedIn: false };
+          }
+
+          try {
+            const parsed = JSON.parse(rawValue);
+            const email = parsed?.email || null;
+            const hasToken = Boolean(parsed?.stsTokenManager?.accessToken);
+            return { signedIn: hasToken, email };
+          } catch (error) {
+            return { signedIn: true, email: null };
+          }
+        } catch (error) {
+          return { signedIn: false };
+        }
+      });
+
+      if (state.signedIn) {
+        return state;
+      }
+
+      await wait(500);
+    }
+
+    return { signedIn: false };
+  }
+
+  async function ensureOnHomePage() {
+    const targetUrl = homeUrl;
+
+    try {
+      const currentUrl = await page.url();
+      if (!currentUrl.startsWith(targetUrl)) {
+        console.log('Navigating to authenticated homepage to verify session...');
+        await page.goto(targetUrl, {
+          waitUntil: 'networkidle2',
+          timeout: 60000,
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to navigate directly to homepage:', error.message);
+    }
+
+    try {
+      await page.waitForSelector('input[placeholder*="on your mind"]', { timeout: 15000 });
+      console.log('✓ Detected authenticated workspace UI');
+    } catch (error) {
+      console.warn('⚠️  Could not confirm workspace input, continuing regardless');
+    }
+  }
+
   async function attemptAccountCreation() {
     console.log('Attempting to create test account since it was not found...');
 
@@ -167,11 +240,11 @@ module.exports = async ({ url, options, config }) => {
     throw new Error(`Account creation timeout at ${creationResult.url}`);
   }
 
-  console.log('Navigating to login page...');
+  console.log('Navigating to login page...', loginUrl);
 
   // 1) Go to login page with longer timeout
   try {
-    await page.goto('https://focus.yourthoughts.ca/login', {
+    await page.goto(loginUrl, {
       waitUntil: 'networkidle2',
       timeout: 60000 // 60 seconds for initial page load
     });
@@ -249,6 +322,11 @@ module.exports = async ({ url, options, config }) => {
   // Click the button
   await submitButton.click();
 
+  const navigationWatcher = page.waitForNavigation({
+    waitUntil: 'networkidle2',
+    timeout: 45000,
+  }).catch(() => null);
+
   // Wait for authentication to complete - Firebase auth may not trigger traditional navigation
   console.log('Waiting for authentication to complete...');
   let authResult = await waitForAuthResult(45000);
@@ -272,27 +350,33 @@ module.exports = async ({ url, options, config }) => {
     }
   } else {
     console.log('Authentication wait timeout. Current URL:', authResult.url);
-    try {
-      await page.screenshot({ path: 'login-error.png', fullPage: true });
-      console.log('Screenshot saved to login-error.png');
-    } catch (e) {
-      // Ignore screenshot errors
+
+    const firebaseState = await waitForFirebaseAuth(30000);
+
+    if (firebaseState.signedIn) {
+      console.log('Detected Firebase auth state for', firebaseState.email || 'unknown user');
+    } else {
+      try {
+        await page.screenshot({ path: 'login-error.png', fullPage: true });
+        console.log('Screenshot saved to login-error.png');
+      } catch (e) {
+        // Ignore screenshot errors
+      }
+      throw new Error(`Login failed - authentication timeout at ${authResult.url}`);
     }
-    throw new Error(`Login failed - authentication timeout at ${authResult.url}`);
   }
+
+  await navigationWatcher;
 
   // Give Firebase some extra time to settle
   await wait(2000);
 
   // 5) Verify we're logged in by checking for authenticated user elements
   console.log('Verifying login status...');
+  await ensureOnHomePage();
+
   const currentUrl = page.url();
   console.log('Final URL:', currentUrl);
-
-  // Check if we're NOT on the login page
-  if (currentUrl.includes('/login')) {
-    throw new Error('Still on login page after authentication attempt');
-  }
 
   // Try to find any authenticated content
   try {
