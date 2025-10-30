@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState, useEffect } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { X } from 'lucide-react';
 import { ContributionType, Investment, useInvestments } from '@/store/useInvestments';
 import { Button } from '@/components/ui/button';
@@ -16,14 +16,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { CurrencyBadge } from '@/components/investment/CurrencyBadge';
-import { formatCurrency } from '@/lib/currency';
+import { SUPPORTED_CURRENCIES } from '@/lib/services/currency';
 
 interface ContributionFormData {
   type: ContributionType;
   amount: number;
   date: string;
   note?: string;
+  currency: string;
 }
 
 interface ContributionFormModalProps {
@@ -31,8 +31,7 @@ interface ContributionFormModalProps {
   onClose: () => void;
   portfolioId: string;
   investmentId: string;
-  baseCurrency?: string;
-  investment?: Investment | null;
+  investment?: Investment;
 }
 
 export function ContributionFormModal({
@@ -40,7 +39,6 @@ export function ContributionFormModal({
   onClose,
   portfolioId,
   investmentId,
-  baseCurrency,
   investment,
 }: ContributionFormModalProps) {
   const { addContribution } = useInvestments();
@@ -55,14 +53,23 @@ export function ContributionFormModal({
     reset,
     setValue,
     watch,
+    control,
   } = useForm<ContributionFormData>({
     defaultValues: {
       type: 'deposit',
       date: new Date().toISOString().split('T')[0],
+      currency: investment?.currency || 'CAD',
     },
   });
 
   const contributionType = watch('type');
+  const currency = watch('currency');
+
+  useEffect(() => {
+    if (investment) {
+      setValue('currency', investment.currency || 'CAD');
+    }
+  }, [investment, setValue]);
 
   const onSubmit = async (data: ContributionFormData) => {
     setIsSubmitting(true);
@@ -72,9 +79,16 @@ export function ContributionFormModal({
         amount: Number(data.amount),
         date: data.date,
         note: data.note,
+        currency: data.currency,
       });
       toast({ title: 'Success', description: 'Contribution added successfully!' });
-      reset();
+      reset({
+        type: 'deposit',
+        date: new Date().toISOString().split('T')[0],
+        currency: investment?.currency || 'CAD',
+        amount: undefined,
+        note: undefined,
+      });
       onClose();
     } catch (error) {
       console.error('Error adding contribution:', error);
@@ -140,19 +154,29 @@ export function ContributionFormModal({
 
           <div>
             <Label htmlFor="type">Type *</Label>
-            <Select
-              value={contributionType}
-              onChange={(e) => setValue('type', e.target.value as ContributionType)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="deposit">Deposit (Add funds)</SelectItem>
-                <SelectItem value="withdrawal">Withdrawal (Remove funds)</SelectItem>
-                <SelectItem value="value-update">Value Update (Set new value)</SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              name="type"
+              control={control}
+              rules={{ required: 'Type is required' }}
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={value => field.onChange(value as ContributionType)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select contribution type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="deposit">Deposit (Add funds)</SelectItem>
+                    <SelectItem value="withdrawal">Withdrawal (Remove funds)</SelectItem>
+                    <SelectItem value="value-update">Value Update (Set new value)</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.type && (
+              <p className="text-sm text-red-500 mt-1">{errors.type.message}</p>
+            )}
             <p className="text-xs text-gray-500 mt-1">
               {contributionType === 'deposit' && 'Add money to this investment'}
               {contributionType === 'withdrawal' && 'Remove money from this investment'}
@@ -161,12 +185,38 @@ export function ContributionFormModal({
           </div>
 
           <div>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="amount">
-                Amount * {contributionType === 'value-update' && '(New Total Value)'}
-              </Label>
-              <CurrencyBadge code={effectiveBaseCurrency} tone="base" />
-            </div>
+            <Label htmlFor="currency">Currency *</Label>
+            <Controller
+              name="currency"
+              control={control}
+              rules={{ required: 'Currency is required' }}
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={value => field.onChange(value)}
+                >
+                  <SelectTrigger id="currency">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUPPORTED_CURRENCIES.map(code => (
+                      <SelectItem key={code} value={code}>
+                        {code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.currency && (
+              <p className="text-sm text-red-500 mt-1">{errors.currency.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="amount">
+              Amount ({currency}) * {contributionType === 'value-update' && '(New Total Value)'}
+            </Label>
             <Input
               id="amount"
               type="number"

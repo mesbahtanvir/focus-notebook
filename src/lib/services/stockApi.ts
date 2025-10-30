@@ -2,6 +2,7 @@
  * Stock API Service
  * Handles stock price fetching and historical data retrieval
  */
+import { formatCurrency } from './currency';
 
 import { formatCurrency } from '@/lib/currency';
 
@@ -115,12 +116,8 @@ export function validateTicker(ticker: string): boolean {
 /**
  * Format price for display
  */
-export function formatPrice(
-  price: number,
-  currency: string = 'USD',
-  locale: string = 'en-US'
-): string {
-  return formatCurrency(price, currency, locale);
+export function formatPrice(price: number, currency: string = 'USD'): string {
+  return formatCurrency(price, currency);
 }
 
 /**
