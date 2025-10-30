@@ -28,9 +28,8 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   const {
     subscribe,
     getPortfolio,
-    getTotalPortfolioValue,
-    getTotalInvested,
-    getPortfolioROI,
+    getTotalPortfolioValueInCurrency,
+    getTotalInvestedInCurrency,
     deleteInvestment,
     deleteContribution,
     refreshAllPrices,
@@ -50,6 +49,8 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
   const [predictions, setPredictions] = useState<any>(null);
   const [showPredictions, setShowPredictions] = useState(false);
+  const displayCurrency = 'CAD';
+  const [portfolioTotals, setPortfolioTotals] = useState({ totalValue: 0, totalInvested: 0, roi: 0 });
 
   useEffect(() => {
     if (user?.uid) {
@@ -58,6 +59,38 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   }, [user?.uid, subscribe]);
 
   const portfolio = getPortfolio(params.id);
+
+  useEffect(() => {
+    if (!portfolio) {
+      setPortfolioTotals({ totalValue: 0, totalInvested: 0, roi: 0 });
+      return;
+    }
+
+    let isMounted = true;
+
+    const computeTotals = async () => {
+      try {
+        const [value, invested] = await Promise.all([
+          getTotalPortfolioValueInCurrency(portfolio.id, displayCurrency),
+          getTotalInvestedInCurrency(portfolio.id, displayCurrency),
+        ]);
+
+        const roiValue = invested === 0 ? 0 : ((value - invested) / invested) * 100;
+
+        if (isMounted) {
+          setPortfolioTotals({ totalValue: value, totalInvested: invested, roi: roiValue });
+        }
+      } catch (error) {
+        console.error('Failed to compute portfolio totals', error);
+      }
+    };
+
+    computeTotals();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [portfolio, displayCurrency, getTotalPortfolioValueInCurrency, getTotalInvestedInCurrency]);
 
   if (!portfolio) {
     return (
@@ -547,6 +580,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
             }}
             portfolioId={portfolio.id}
             investmentId={selectedInvestment}
+            investment={portfolio.investments.find(inv => inv.id === selectedInvestment)}
           />
         )}
       </div>

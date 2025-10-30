@@ -16,6 +16,7 @@ export interface PricePoint {
   price: number;
   volume?: number;
   source?: 'api' | 'manual';
+  currency?: string;
 }
 
 export interface Contribution {
@@ -25,6 +26,8 @@ export interface Contribution {
   type: ContributionType;
   note?: string;
   createdAt: string;
+  currency?: string;
+  amountInInvestmentCurrency?: number;
 }
 
 export interface Investment {
@@ -44,16 +47,20 @@ export interface Investment {
   notes?: string;
   createdAt: string;
   updatedAt?: number;
+  currency: string;
 }
 
 export interface PortfolioSnapshot {
   id: string;
   date: string;
   totalValue: number;
+  currency: string;
   investments: {
     id: string;
     value: number;
     ticker?: string;
+    currency: string;
+    sourceCurrency: string;
   }[];
   createdAt: string;
 }
@@ -90,7 +97,11 @@ interface InvestmentsState {
   deleteInvestment: (portfolioId: string, investmentId: string) => Promise<void>;
 
   // Contribution methods
-  addContribution: (portfolioId: string, investmentId: string, contribution: Omit<Contribution, 'id' | 'createdAt'>) => Promise<void>;
+  addContribution: (
+    portfolioId: string,
+    investmentId: string,
+    contribution: Omit<Contribution, 'id' | 'createdAt' | 'amountInInvestmentCurrency'>
+  ) => Promise<void>;
   deleteContribution: (portfolioId: string, investmentId: string, contributionId: string) => Promise<void>;
 
   // Stock price methods
@@ -109,6 +120,8 @@ interface InvestmentsState {
   getPortfolioROI: (portfolioId: string, targetCurrency?: SupportedCurrency) => number;
   getAllPortfoliosValue: (targetCurrency?: SupportedCurrency) => number;
 }
+
+const BASE_CURRENCY = 'CAD';
 
 export const useInvestments = create<InvestmentsState>((set, get) => ({
   portfolios: [],
@@ -149,7 +162,41 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
         set({
           portfolios: data.map(portfolio => ({
             ...portfolio,
-            investments: portfolio.investments || []
+            investments: (portfolio.investments || []).map(investment => {
+              const investmentCurrency = normalizeCurrencyCode(investment.currency);
+
+              const contributions = (investment.contributions || []).map(contribution => {
+                const contributionCurrency = normalizeCurrencyCode(
+                  contribution.currency || investmentCurrency
+                );
+                const amountInInvestmentCurrency =
+                  contribution.amountInInvestmentCurrency !== undefined
+                    ? contribution.amountInInvestmentCurrency
+                    : convertCurrencySync(
+                        contribution.amount,
+                        contributionCurrency,
+                        investmentCurrency
+                      );
+
+                return {
+                  ...contribution,
+                  currency: contributionCurrency,
+                  amountInInvestmentCurrency,
+                };
+              });
+
+              const priceHistory = (investment.priceHistory || []).map(point => ({
+                ...point,
+                currency: point.currency || investmentCurrency,
+              }));
+
+              return {
+                ...investment,
+                currency: investmentCurrency,
+                contributions,
+                priceHistory,
+              };
+            })
           })),
           isLoading: false,
           fromCache: metadata.fromCache,
@@ -203,12 +250,20 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
 
+    const investmentCurrency = normalizeCurrencyCode(investment.currency);
+    const priceHistory = (investment.priceHistory || []).map(point => ({
+      ...point,
+      currency: point.currency || investmentCurrency,
+    }));
+
     const newInvestment: Investment = {
       ...investment,
       id,
       portfolioId,
       contributions: [],
       createdAt: now,
+      currency: investmentCurrency,
+      priceHistory,
     };
 
     const updatedInvestments = [...portfolio.investments, newInvestment];
@@ -226,9 +281,28 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     const userId = get().currentUserId ?? auth.currentUser?.uid;
     if (!userId) throw new Error('User not authenticated');
 
-    const updatedInvestments = portfolio.investments.map(inv =>
-      inv.id === investmentId ? { ...inv, ...updates, updatedAt: Date.now() } : inv
-    );
+    const updatedInvestments = portfolio.investments.map(inv => {
+      if (inv.id !== investmentId) return inv;
+
+      const updatedCurrency = updates.currency
+        ? normalizeCurrencyCode(updates.currency)
+        : inv.currency;
+
+      const sanitizedPriceHistory = updates.priceHistory
+        ? updates.priceHistory.map(point => ({
+            ...point,
+            currency: point.currency || updatedCurrency,
+          }))
+        : undefined;
+
+      return {
+        ...inv,
+        ...updates,
+        currency: updatedCurrency,
+        priceHistory: sanitizedPriceHistory ?? inv.priceHistory,
+        updatedAt: Date.now(),
+      };
+    });
 
     await updateAt(`users/${userId}/portfolios/${portfolioId}`, {
       investments: updatedInvestments,
@@ -261,10 +335,19 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
 
+    const investmentCurrency = normalizeCurrencyCode(investment.currency);
+    const contributionCurrency = normalizeCurrencyCode(contribution.currency || investmentCurrency);
+    const normalizedAmount =
+      contributionCurrency === investmentCurrency
+        ? contribution.amount
+        : await convertCurrency(contribution.amount, contributionCurrency, investmentCurrency);
+
     const newContribution: Contribution = {
       ...contribution,
       id,
       createdAt: now,
+      currency: contributionCurrency,
+      amountInInvestmentCurrency: normalizedAmount,
     };
 
     const updatedContributions = [...investment.contributions, newContribution];
@@ -272,11 +355,11 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     // Update current value based on contribution type
     let newCurrentValue = investment.currentValue;
     if (contribution.type === 'deposit') {
-      newCurrentValue += contribution.amount;
+      newCurrentValue += normalizedAmount;
     } else if (contribution.type === 'withdrawal') {
-      newCurrentValue -= contribution.amount;
+      newCurrentValue -= normalizedAmount;
     } else if (contribution.type === 'value-update') {
-      newCurrentValue = contribution.amount;
+      newCurrentValue = normalizedAmount;
     }
 
     const updatedInvestments = portfolio.investments.map(inv =>
@@ -335,11 +418,12 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     const totalInvestedInBase = portfolio.investments.reduce((sum, inv) => {
       const deposits = inv.contributions
         .filter(c => c.type === 'deposit')
-        .reduce((s, c) => s + c.amount, 0);
+        .reduce((s, c) => s + (c.amountInInvestmentCurrency ?? c.amount), 0);
       const withdrawals = inv.contributions
         .filter(c => c.type === 'withdrawal')
-        .reduce((s, c) => s + c.amount, 0);
-      return sum + inv.initialAmount + deposits - withdrawals;
+        .reduce((s, c) => s + (c.amountInInvestmentCurrency ?? c.amount), 0);
+      const investedTotal = inv.initialAmount + deposits - withdrawals;
+      return sum + convertCurrencySync(investedTotal, investmentCurrency, BASE_CURRENCY);
     }, 0);
     return convertCurrency(totalInvestedInBase, BASE_CURRENCY, targetCurrency);
   },
@@ -358,6 +442,53 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     return convertCurrency(totalInBase, BASE_CURRENCY, targetCurrency);
   },
 
+  convertAmount: async (amount, fromCurrency, toCurrency) => {
+    return convertCurrency(amount, fromCurrency, toCurrency);
+  },
+
+  getInvestmentValueInCurrency: async (portfolioId, investmentId, targetCurrency) => {
+    const investment = get().getInvestment(portfolioId, investmentId);
+    if (!investment) return 0;
+    return convertCurrency(investment.currentValue, investment.currency, targetCurrency);
+  },
+
+  getTotalPortfolioValueInCurrency: async (portfolioId, targetCurrency) => {
+    const portfolio = get().getPortfolio(portfolioId);
+    if (!portfolio) return 0;
+
+    const conversions = await convertAmountsToCurrency(
+      portfolio.investments.map(inv => ({
+        amount: inv.currentValue,
+        currency: inv.currency,
+      })),
+      targetCurrency
+    );
+
+    return conversions.reduce((sum, value) => sum + value, 0);
+  },
+
+  getTotalInvestedInCurrency: async (portfolioId, targetCurrency) => {
+    const portfolio = get().getPortfolio(portfolioId);
+    if (!portfolio) return 0;
+
+    const investedAmounts = portfolio.investments.map(inv => {
+      const deposits = inv.contributions
+        .filter(c => c.type === 'deposit')
+        .reduce((s, c) => s + (c.amountInInvestmentCurrency ?? c.amount), 0);
+      const withdrawals = inv.contributions
+        .filter(c => c.type === 'withdrawal')
+        .reduce((s, c) => s + (c.amountInInvestmentCurrency ?? c.amount), 0);
+
+      return {
+        amount: inv.initialAmount + deposits - withdrawals,
+        currency: inv.currency,
+      };
+    });
+
+    const converted = await convertAmountsToCurrency(investedAmounts, targetCurrency);
+    return converted.reduce((sum, value) => sum + value, 0);
+  },
+
   refreshInvestmentPrice: async (portfolioId, investmentId) => {
     const portfolio = get().getPortfolio(portfolioId);
     if (!portfolio) throw new Error('Portfolio not found');
@@ -372,11 +503,18 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
       const { fetchStockPrice } = await import('@/lib/services/stockApi');
       const quote = await fetchStockPrice(investment.ticker);
 
+      const investmentCurrency = normalizeCurrencyCode(investment.currency);
+      const convertedPrice =
+        investmentCurrency === 'USD'
+          ? quote.price
+          : await convertCurrency(quote.price, 'USD', investmentCurrency);
+
       // Update investment with new price
       const newPricePoint: PricePoint = {
         date: new Date().toISOString(),
-        price: quote.price,
-        source: 'api'
+        price: convertedPrice,
+        source: 'api',
+        currency: investmentCurrency,
       };
 
       const updatedPriceHistory = [
@@ -384,10 +522,10 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
         newPricePoint
       ].slice(-100); // Keep only last 100 price points
 
-      const newCurrentValue = (investment.quantity || 0) * quote.price;
+      const newCurrentValue = (investment.quantity || 0) * convertedPrice;
 
       await get().updateInvestment(portfolioId, investmentId, {
-        currentPricePerShare: quote.price,
+        currentPricePerShare: convertedPrice,
         currentValue: newCurrentValue,
         lastPriceUpdate: quote.timestamp,
         priceHistory: updatedPriceHistory,
@@ -430,15 +568,32 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     const today = new Date().toISOString().split('T')[0];
     const id = crypto.randomUUID();
 
+    const targetCurrency = BASE_CURRENCY;
+    const investmentsForConversion = portfolio.investments.map(inv => ({
+      amount: inv.currentValue,
+      currency: inv.currency,
+    }));
+    const convertedValues = await convertAmountsToCurrency(investmentsForConversion, targetCurrency);
+
+    const snapshotInvestments = portfolio.investments.map((inv, index) => {
+      const sourceCurrency = normalizeCurrencyCode(inv.currency);
+      return {
+        id: inv.id,
+        value: convertedValues[index] ?? 0,
+        ticker: inv.ticker,
+        currency: targetCurrency,
+        sourceCurrency,
+      };
+    });
+
+    const totalValue = snapshotInvestments.reduce((sum, item) => sum + item.value, 0);
+
     const snapshot: PortfolioSnapshot = {
       id,
       date: today,
-      totalValue: get().getTotalPortfolioValue(portfolioId),
-      investments: portfolio.investments.map(inv => ({
-        id: inv.id,
-        value: inv.currentValue,
-        ticker: inv.ticker,
-      })),
+      totalValue,
+      currency: targetCurrency,
+      investments: snapshotInvestments,
       createdAt: new Date().toISOString(),
     };
 
