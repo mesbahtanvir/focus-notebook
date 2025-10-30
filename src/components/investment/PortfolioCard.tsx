@@ -18,19 +18,47 @@ interface PortfolioCardProps {
 export function PortfolioCard({ portfolio, index, displayCurrency: displayCurrencyProp }: PortfolioCardProps) {
   const router = useRouter();
   const { getTotalPortfolioValueInCurrency, getTotalInvestedInCurrency } = useInvestments();
+  const investmentCurrencies = useMemo(
+    () =>
+      portfolio.investments
+        .map(investment => investment.currency)
+        .filter((currency): currency is string => Boolean(currency)),
+    [portfolio.investments]
+  );
+
   const displayCurrency = useMemo(() => {
     if (displayCurrencyProp) {
       return normalizeCurrencyCode(displayCurrencyProp);
     }
 
-    const investmentCurrency = portfolio.investments.find(investment => investment.currency)?.currency;
+    const investmentCurrency = investmentCurrencies[0];
 
     if (investmentCurrency) {
       return normalizeCurrencyCode(investmentCurrency);
     }
 
     return 'CAD';
-  }, [displayCurrencyProp, portfolio.investments]);
+  }, [displayCurrencyProp, investmentCurrencies]);
+  const investmentsChangeKey = useMemo(
+    () =>
+      JSON.stringify(
+        portfolio.investments.map(investment => ({
+          id: investment.id,
+          currency: investment.currency,
+          currentValue: investment.currentValue,
+          initialAmount: investment.initialAmount,
+          updatedAt: investment.updatedAt,
+          contributions: investment.contributions.map(contribution => ({
+            id: contribution.id,
+            amount: contribution.amountInInvestmentCurrency ?? contribution.amount,
+            currency: contribution.currency,
+            type: contribution.type,
+            date: contribution.date,
+          })),
+        }))
+      ),
+    [portfolio.investments]
+  );
   const [totals, setTotals] = useState({ totalValue: 0, totalInvested: 0, roi: 0 });
 
   useEffect(() => {
@@ -58,7 +86,13 @@ export function PortfolioCard({ portfolio, index, displayCurrency: displayCurren
     return () => {
       isMounted = false;
     };
-  }, [portfolio.id, portfolio.investments, displayCurrency, getTotalPortfolioValueInCurrency, getTotalInvestedInCurrency]);
+  }, [
+    portfolio.id,
+    investmentsChangeKey,
+    displayCurrency,
+    getTotalPortfolioValueInCurrency,
+    getTotalInvestedInCurrency,
+  ]);
 
   const { totalValue, totalInvested, roi } = totals;
   const gain = totalValue - totalInvested;
