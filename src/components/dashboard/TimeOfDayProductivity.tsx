@@ -90,7 +90,7 @@ const TimeOfDayProductivityComponent = ({ data }: TimeOfDayProductivityProps) =>
       {maxCompletion === 0 && (
         <div className="text-center py-8 text-gray-500 dark:text-gray-400">
           <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">No focus sessions yet. Start tracking to see when you're most productive!</p>
+          <p className="text-sm">No focus sessions yet. Start tracking to see when you’re most productive!</p>
         </div>
       )}
     </div>

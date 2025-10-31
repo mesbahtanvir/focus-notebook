@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useCallback, useMemo } from "react";
 
 export interface StackedAreaDatum {
   date: Date;
@@ -14,28 +14,36 @@ const height = 200;
 const padding = 40;
 
 const StackedAreaChartComponent = ({ data }: StackedAreaChartProps) => {
+  const hasData = data.length > 0;
+
   const max = useMemo(() => {
-    if (data.length === 0) {
+    if (!hasData) {
       return 1;
     }
     return Math.max(...data.map((datum) => datum.total), 1);
-  }, [data]);
+  }, [data, hasData]);
 
-  if (data.length === 0) {
-    return <div className="flex items-center justify-center h-[200px] text-muted-foreground">No data available</div>;
-  }
+  const dataLength = data.length;
 
-  const xScale = (index: number) => padding + (index / Math.max(data.length - 1, 1)) * (width - 2 * padding);
-  const yScale = (value: number) => height - padding - (value / max) * (height - 2 * padding);
+  const xScale = useCallback(
+    (index: number) => padding + (index / Math.max(dataLength - 1, 1)) * (width - 2 * padding),
+    [dataLength]
+  );
+
+  const yScale = useCallback((value: number) => height - padding - (value / max) * (height - 2 * padding), [max]);
 
   const totalPath = useMemo(() => {
-    if (data.length === 0) {
+    if (!hasData) {
       return "";
     }
 
     const points = data.map((datum, index) => `L ${xScale(index)} ${yScale(datum.total)}`).join(" ");
-    return [`M ${xScale(0)} ${height - padding}`, points, `L ${xScale(data.length - 1)} ${height - padding}`, "Z"].join(" ");
-  }, [data, max]);
+    return [`M ${xScale(0)} ${height - padding}`, points, `L ${xScale(dataLength - 1)} ${height - padding}`, "Z"].join(" ");
+  }, [data, dataLength, hasData, xScale, yScale]);
+
+  if (!hasData) {
+    return <div className="flex items-center justify-center h-[200px] text-muted-foreground">No data available</div>;
+  }
 
   return (
     <div>

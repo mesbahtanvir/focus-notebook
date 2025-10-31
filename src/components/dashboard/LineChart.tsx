@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useCallback, useMemo } from "react";
 
 export interface LineChartDatum {
   date: Date;
@@ -33,18 +33,26 @@ const LineChartComponent = ({ data, color, maxValue }: LineChartProps) => {
     return computedMax - min;
   }, [computedMax]);
 
-  const xScale = (index: number) => {
-    if (data.length === 1) return width / 2;
-    return padding + (index / Math.max(data.length - 1, 1)) * (width - 2 * padding);
-  };
+  const dataLength = data.length;
 
-  const yScale = (value: number) => {
-    const min = 0;
-    if (range === 0) return height / 2;
-    const normalized = (value - min) / range;
-    if (Number.isNaN(normalized)) return height / 2;
-    return height - padding - normalized * (height - 2 * padding);
-  };
+  const xScale = useCallback(
+    (index: number) => {
+      if (dataLength === 1) return width / 2;
+      return padding + (index / Math.max(dataLength - 1, 1)) * (width - 2 * padding);
+    },
+    [dataLength]
+  );
+
+  const yScale = useCallback(
+    (value: number) => {
+      const min = 0;
+      if (range === 0) return height / 2;
+      const normalized = (value - min) / range;
+      if (Number.isNaN(normalized)) return height / 2;
+      return height - padding - normalized * (height - 2 * padding);
+    },
+    [range]
+  );
 
   const points = useMemo(
     () =>
@@ -58,7 +66,7 @@ const LineChartComponent = ({ data, color, maxValue }: LineChartProps) => {
         })
         .filter(Boolean)
         .join(" "),
-    [data, range]
+    [data, xScale, yScale]
   );
 
   if (validData.length === 0) {
