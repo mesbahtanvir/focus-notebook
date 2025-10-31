@@ -8,7 +8,7 @@ const TRACKED_TICKERS_DOCUMENT = 'trackedTickers';
 const LATEST_PRICES_DOCUMENT = 'latestPrices';
 const PRICE_HISTORY_PARENT = 'daily';
 
-const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
+const getAlphaVantageApiKey = () => process.env.ALPHA_VANTAGE_API_KEY || '';
 const ALPHA_VANTAGE_BASE_URL = 'https://www.alphavantage.co/query';
 const ALPHA_VANTAGE_SOURCE = 'Alpha Vantage';
 const ALPHA_VANTAGE_REQUEST_INTERVAL_MS = 15_000; // 4 requests/minute to stay under free-tier limit
@@ -208,11 +208,11 @@ const parseAlphaVantageQuote = (ticker: string, payload: any): TrackedQuote => {
   };
 };
 
-const fetchTickerQuote = async (ticker: string): Promise<TrackedQuote> => {
+const fetchTickerQuote = async (ticker: string, apiKey: string): Promise<TrackedQuote> => {
   const params = new URLSearchParams({
     function: 'GLOBAL_QUOTE',
     symbol: ticker,
-    apikey: ALPHA_VANTAGE_API_KEY,
+    apikey: apiKey,
   });
 
   const response = await fetch(`${ALPHA_VANTAGE_BASE_URL}?${params.toString()}`);
@@ -224,145 +224,181 @@ const fetchTickerQuote = async (ticker: string): Promise<TrackedQuote> => {
   return parseAlphaVantageQuote(ticker, data);
 };
 
+type UpdateTrackedTickersDependencies = {
+  firestore?: FirebaseFirestore.Firestore;
+  logger?: Pick<typeof functions.logger, 'info' | 'warn' | 'error'>;
+  fieldValue?: typeof admin.firestore.FieldValue;
+};
+
+type RefreshTrackedTickerPricesDependencies = UpdateTrackedTickersDependencies & {
+  apiKey?: string;
+  quoteFetcher?: (ticker: string) => Promise<TrackedQuote>;
+  delayFn?: (duration: number) => Promise<void>;
+  now?: () => Date;
+};
+
+const runUpdateTrackedTickers = async (
+  context: functions.EventContext,
+  dependencies: UpdateTrackedTickersDependencies = {}
+) => {
+  const database = dependencies.firestore ?? db;
+  const logger = dependencies.logger ?? functions.logger;
+  const fieldValue = dependencies.fieldValue ?? admin.firestore.FieldValue;
+
+  const tickers = new Set<string>();
+  const currencies = new Set<string>();
+
+  const portfolioSnapshot = await database.collectionGroup('portfolios').get();
+  logger.info('Scanning portfolios for tracked tickers and currencies', {
+    totalPortfolios: portfolioSnapshot.size,
+    executionId: context.eventId,
+  });
+
+  for (const doc of portfolioSnapshot.docs) {
+    const portfolio = doc.data() as FirestorePortfolio;
+    for (const ticker of collectTickersFromPortfolio(portfolio)) {
+      tickers.add(ticker);
+    }
+    for (const currency of collectCurrenciesFromPortfolio(portfolio)) {
+      currencies.add(currency);
+    }
+  }
+
+  const sortedTickers = Array.from(tickers).sort();
+  const sortedCurrencies = Array.from(currencies).sort();
+  const trackedDocRef = database.collection(MARKET_DATA_COLLECTION).doc(TRACKED_TICKERS_DOCUMENT);
+
+  await trackedDocRef.set({
+    tickers: sortedTickers,
+    currencies: sortedCurrencies,
+    totalTickers: sortedTickers.length,
+    totalCurrencies: sortedCurrencies.length,
+    totalPortfolios: portfolioSnapshot.size,
+    generatedAt: fieldValue.serverTimestamp(),
+  });
+
+  logger.info('Tracked tickers and currencies updated', {
+    totalTickers: sortedTickers.length,
+    totalCurrencies: sortedCurrencies.length,
+    executionId: context.eventId,
+  });
+
+  return null;
+};
+
+const runRefreshTrackedTickerPrices = async (
+  context: functions.EventContext,
+  dependencies: RefreshTrackedTickerPricesDependencies = {}
+) => {
+  const database = dependencies.firestore ?? db;
+  const logger = dependencies.logger ?? functions.logger;
+  const fieldValue = dependencies.fieldValue ?? admin.firestore.FieldValue;
+  const apiKey = dependencies.apiKey ?? getAlphaVantageApiKey();
+
+  if (!apiKey) {
+    logger.error('Alpha Vantage API key missing; skipping price refresh', {
+      executionId: context.eventId,
+    });
+    return null;
+  }
+
+  const trackedDoc = await database.collection(MARKET_DATA_COLLECTION).doc(TRACKED_TICKERS_DOCUMENT).get();
+  if (!trackedDoc.exists) {
+    logger.warn('Tracked tickers document missing; skipping price refresh', {
+      executionId: context.eventId,
+    });
+    return null;
+  }
+
+  const data = trackedDoc.data() as { tickers?: unknown } | undefined;
+  const trackedTickers = Array.isArray(data?.tickers)
+    ? (data?.tickers as unknown[])
+        .map(normalizeTicker)
+        .filter((ticker): ticker is string => Boolean(ticker))
+    : [];
+
+  if (trackedTickers.length === 0) {
+    logger.info('No tracked tickers to refresh', { executionId: context.eventId });
+    return null;
+  }
+
+  const tickerSnapshots: Record<string, TrackedQuote> = {};
+  const failures: Array<{ ticker: string; error: string }> = [];
+  const quoteFetcher =
+    dependencies.quoteFetcher ?? ((ticker: string) => fetchTickerQuote(ticker, apiKey));
+  const delayFn = dependencies.delayFn ?? delay;
+  const nowProvider = dependencies.now ?? (() => new Date());
+
+  logger.info('Refreshing tracked ticker prices', {
+    totalTickers: trackedTickers.length,
+    executionId: context.eventId,
+  });
+
+  for (let index = 0; index < trackedTickers.length; index += 1) {
+    const ticker = trackedTickers[index];
+    try {
+      const quote = await quoteFetcher(ticker);
+      tickerSnapshots[ticker] = quote;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      failures.push({ ticker, error: errorMessage });
+      logger.error('Failed to refresh ticker price', {
+        ticker,
+        error: errorMessage,
+        executionId: context.eventId,
+      });
+    }
+
+    if (index < trackedTickers.length - 1) {
+      await delayFn(ALPHA_VANTAGE_REQUEST_INTERVAL_MS);
+    }
+  }
+
+  const now = nowProvider();
+  const isoDate = now.toISOString();
+  const dateKey = isoDate.slice(0, 10);
+
+  const latestRef = database.collection(MARKET_DATA_COLLECTION).doc(LATEST_PRICES_DOCUMENT);
+  const historyRef = database
+    .collection(MARKET_DATA_COLLECTION)
+    .doc(PRICE_HISTORY_PARENT)
+    .collection('prices')
+    .doc(dateKey);
+
+  const batch = database.batch();
+  const payload = {
+    tickers: tickerSnapshots,
+    generatedAt: fieldValue.serverTimestamp(),
+    source: ALPHA_VANTAGE_SOURCE,
+    totalTickers: trackedTickers.length,
+    totalFailures: failures.length,
+    failures,
+    refreshedAt: isoDate,
+  };
+
+  batch.set(latestRef, payload, { merge: true });
+  batch.set(historyRef, { ...payload, date: dateKey });
+
+  await batch.commit();
+
+  logger.info('Tracked ticker prices refreshed', {
+    totalTickers: trackedTickers.length,
+    totalFailures: failures.length,
+    executionId: context.eventId,
+  });
+
+  return null;
+};
+
 export const updateTrackedTickers = functions.pubsub
   .schedule('0 0 * * *')
   .timeZone('UTC')
-  .onRun(async context => {
-    const tickers = new Set<string>();
-    const currencies = new Set<string>();
-
-    const portfolioSnapshot = await db.collectionGroup('portfolios').get();
-    functions.logger.info('Scanning portfolios for tracked tickers and currencies', {
-      totalPortfolios: portfolioSnapshot.size,
-      executionId: context.eventId,
-    });
-
-    for (const doc of portfolioSnapshot.docs) {
-      const portfolio = doc.data() as FirestorePortfolio;
-      for (const ticker of collectTickersFromPortfolio(portfolio)) {
-        tickers.add(ticker);
-      }
-      for (const currency of collectCurrenciesFromPortfolio(portfolio)) {
-        currencies.add(currency);
-      }
-    }
-
-    const sortedTickers = Array.from(tickers).sort();
-    const sortedCurrencies = Array.from(currencies).sort();
-    const trackedDocRef = db.collection(MARKET_DATA_COLLECTION).doc(TRACKED_TICKERS_DOCUMENT);
-
-    await trackedDocRef.set({
-      tickers: sortedTickers,
-      currencies: sortedCurrencies,
-      totalTickers: sortedTickers.length,
-      totalCurrencies: sortedCurrencies.length,
-      totalPortfolios: portfolioSnapshot.size,
-      generatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    functions.logger.info('Tracked tickers and currencies updated', {
-      totalTickers: sortedTickers.length,
-      totalCurrencies: sortedCurrencies.length,
-      executionId: context.eventId,
-    });
-
-    return null;
-  });
+  .onRun(context => runUpdateTrackedTickers(context));
 
 export const refreshTrackedTickerPrices = functions.pubsub
   .schedule('5 0 * * *')
   .timeZone('UTC')
-  .onRun(async context => {
-    if (!ALPHA_VANTAGE_API_KEY) {
-      functions.logger.error('Alpha Vantage API key missing; skipping price refresh', {
-        executionId: context.eventId,
-      });
-      return null;
-    }
-
-    const trackedDoc = await db.collection(MARKET_DATA_COLLECTION).doc(TRACKED_TICKERS_DOCUMENT).get();
-    if (!trackedDoc.exists) {
-      functions.logger.warn('Tracked tickers document missing; skipping price refresh', {
-        executionId: context.eventId,
-      });
-      return null;
-    }
-
-    const data = trackedDoc.data() as { tickers?: unknown } | undefined;
-    const trackedTickers = Array.isArray(data?.tickers)
-      ? (data?.tickers as unknown[])
-          .map(normalizeTicker)
-          .filter((ticker): ticker is string => Boolean(ticker))
-      : [];
-
-    if (trackedTickers.length === 0) {
-      functions.logger.info('No tracked tickers to refresh', { executionId: context.eventId });
-      return null;
-    }
-
-    const tickerSnapshots: Record<string, TrackedQuote> = {};
-    const failures: Array<{ ticker: string; error: string }> = [];
-
-    functions.logger.info('Refreshing tracked ticker prices', {
-      totalTickers: trackedTickers.length,
-      executionId: context.eventId,
-    });
-
-    for (let index = 0; index < trackedTickers.length; index += 1) {
-      const ticker = trackedTickers[index];
-      try {
-        const quote = await fetchTickerQuote(ticker);
-        tickerSnapshots[ticker] = quote;
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        failures.push({ ticker, error: errorMessage });
-        functions.logger.error('Failed to refresh ticker price', {
-          ticker,
-          error: errorMessage,
-          executionId: context.eventId,
-        });
-      }
-
-      if (index < trackedTickers.length - 1) {
-        await delay(ALPHA_VANTAGE_REQUEST_INTERVAL_MS);
-      }
-    }
-
-    const now = new Date();
-    const isoDate = now.toISOString();
-    const dateKey = isoDate.slice(0, 10);
-
-    const latestRef = db.collection(MARKET_DATA_COLLECTION).doc(LATEST_PRICES_DOCUMENT);
-    const historyRef = db
-      .collection(MARKET_DATA_COLLECTION)
-      .doc(PRICE_HISTORY_PARENT)
-      .collection('prices')
-      .doc(dateKey);
-
-    const batch = db.batch();
-    const payload = {
-      tickers: tickerSnapshots,
-      generatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      source: ALPHA_VANTAGE_SOURCE,
-      totalTickers: trackedTickers.length,
-      totalFailures: failures.length,
-      failures,
-      refreshedAt: isoDate,
-    };
-
-    batch.set(latestRef, payload, { merge: true });
-    batch.set(historyRef, { ...payload, date: dateKey });
-
-    await batch.commit();
-
-    functions.logger.info('Tracked ticker prices refreshed', {
-      totalTickers: trackedTickers.length,
-      totalFailures: failures.length,
-      executionId: context.eventId,
-    });
-
-    return null;
-  });
+  .onRun(context => runRefreshTrackedTickerPrices(context));
 
 export const __private__ = {
   normalizeTicker,
@@ -370,4 +406,8 @@ export const __private__ = {
   collectTickersFromPortfolio,
   collectCurrenciesFromPortfolio,
   parseAlphaVantageQuote,
+  runUpdateTrackedTickers,
+  runRefreshTrackedTickerPrices,
+  fetchTickerQuote,
+  delay,
 };
