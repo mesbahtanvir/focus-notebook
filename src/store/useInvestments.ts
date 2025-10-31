@@ -263,8 +263,11 @@ const sanitizeInvestmentForImport = (
   };
 };
 
-const sanitizePortfolioForImport = (portfolio: Partial<Portfolio> | undefined, portfolioId: string): Portfolio => {
-  const baseCurrency = normalizeCurrency(portfolio?.baseCurrency || portfolio?.currency || BASE_CURRENCY);
+const sanitizePortfolioForImport = (
+  portfolio: Partial<Portfolio> | undefined,
+  portfolioId: string
+): Portfolio => {
+  const baseCurrency = normalizeCurrency(portfolio?.baseCurrency || BASE_CURRENCY);
   const locale = ensureString(portfolio?.locale, DEFAULT_LOCALE);
 
   const investments = Array.isArray(portfolio?.investments)
