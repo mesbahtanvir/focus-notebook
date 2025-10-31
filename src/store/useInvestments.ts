@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { createAt, deleteAt, updateAt } from '@/lib/data/gateway';
+import { createAt, deleteAt, setAt, updateAt } from '@/lib/data/gateway';
 import { subscribeCol } from '@/lib/data/subscribe';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebaseClient';
@@ -133,6 +133,163 @@ const sumContributionAmounts = (contributions: Contribution[], type: Contributio
     .filter(contribution => contribution.type === type)
     .reduce((sum, contribution) => sum + (contribution.amountInInvestmentCurrency ?? contribution.amount ?? 0), 0);
 
+const ensureNumber = (value: any, fallback = 0): number => {
+  const num = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : Number.NaN;
+  return Number.isFinite(num) ? num : fallback;
+};
+
+const ensureString = (value: any, fallback = ''): string => {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value;
+  }
+  return fallback;
+};
+
+const ensureDateString = (value: any, fallback?: string): string => {
+  if (typeof value === 'string' && !Number.isNaN(Date.parse(value))) {
+    return value;
+  }
+  return fallback ?? new Date().toISOString();
+};
+
+const sanitizePortfolioStatus = (status: any): PortfolioStatus => {
+  if (status === 'active' || status === 'closed' || status === 'archived') {
+    return status;
+  }
+  return 'active';
+};
+
+const sanitizeContribution = (
+  contribution: Partial<Contribution> | undefined,
+  investmentCurrency: SupportedCurrency
+): Contribution => {
+  const contributionId = ensureString(contribution?.id, crypto.randomUUID());
+  const contributionCurrency = normalizeCurrency(contribution?.currency || investmentCurrency);
+  const amount = ensureNumber(contribution?.amount, 0);
+  let amountInInvestmentCurrency = ensureNumber(contribution?.amountInInvestmentCurrency);
+  if (!Number.isFinite(amountInInvestmentCurrency) || amountInInvestmentCurrency === 0) {
+    amountInInvestmentCurrency =
+      contributionCurrency === investmentCurrency
+        ? amount
+        : convertCurrencySync(amount, contributionCurrency, investmentCurrency);
+  }
+
+  const contributionType: ContributionType =
+    contribution?.type === 'deposit' || contribution?.type === 'withdrawal' || contribution?.type === 'value-update'
+      ? contribution.type
+      : 'deposit';
+
+  return {
+    id: contributionId,
+    type: contributionType,
+    date: ensureDateString(contribution?.date),
+    amount,
+    note: contribution?.note ? String(contribution.note) : undefined,
+    createdAt: ensureDateString(contribution?.createdAt),
+    currency: contributionCurrency,
+    amountInInvestmentCurrency,
+  };
+};
+
+const sanitizeInvestmentType = (type: any): InvestmentType => {
+  const validTypes: InvestmentType[] = ['stocks', 'bonds', 'crypto', 'real-estate', 'retirement', 'mutual-funds', 'other'];
+  return validTypes.includes(type) ? type : 'other';
+};
+
+const sanitizeAssetType = (assetType: any): AssetType => {
+  return assetType === 'stock' ? 'stock' : 'manual';
+};
+
+const sanitizePriceHistoryPoint = (
+  point: Partial<PricePoint> | undefined,
+  investmentCurrency: SupportedCurrency
+): PricePoint => ({
+  date: ensureDateString(point?.date),
+  price: ensureNumber(point?.price, 0),
+  volume: point?.volume !== undefined ? ensureNumber(point.volume) : undefined,
+  source: point?.source === 'api' ? 'api' : point?.source === 'manual' ? 'manual' : undefined,
+  currency: normalizeCurrency(point?.currency || investmentCurrency),
+});
+
+const sanitizeInvestmentForImport = (
+  investment: Partial<Investment> | undefined,
+  portfolioId: string,
+  portfolioBaseCurrency: SupportedCurrency
+): Investment => {
+  const investmentCurrency = normalizeCurrency(investment?.currency);
+  const contributions = Array.isArray(investment?.contributions)
+    ? investment!.contributions.map(contribution =>
+        sanitizeContribution(contribution, investmentCurrency)
+      )
+    : [];
+
+  const priceHistory = Array.isArray(investment?.priceHistory)
+    ? investment!.priceHistory.map(point =>
+        sanitizePriceHistoryPoint(point, investmentCurrency)
+      )
+    : [];
+
+  const quantity = investment?.quantity !== undefined ? ensureNumber(investment.quantity) : undefined;
+  const currentPricePerShare =
+    investment?.currentPricePerShare !== undefined ? ensureNumber(investment.currentPricePerShare) : undefined;
+
+  return {
+    id: ensureString(investment?.id, crypto.randomUUID()),
+    portfolioId,
+    name: ensureString(investment?.name, 'Imported Investment'),
+    type: sanitizeInvestmentType(investment?.type),
+    assetType: sanitizeAssetType(investment?.assetType),
+    ticker: investment?.ticker ? String(investment.ticker).toUpperCase() : undefined,
+    quantity,
+    currentPricePerShare,
+    initialAmount: ensureNumber(investment?.initialAmount, 0),
+    currentValue: ensureNumber(investment?.currentValue, 0),
+    nativeInitialAmount:
+      investment?.nativeInitialAmount !== undefined ? ensureNumber(investment.nativeInitialAmount) : undefined,
+    nativeCurrentValue:
+      investment?.nativeCurrentValue !== undefined ? ensureNumber(investment.nativeCurrentValue) : undefined,
+    baseCurrency: normalizeCurrency(investment?.baseCurrency || portfolioBaseCurrency),
+    locale: investment?.locale ? String(investment.locale) : undefined,
+    contributions,
+    priceHistory,
+    lastPriceUpdate: investment?.lastPriceUpdate ? ensureDateString(investment.lastPriceUpdate) : undefined,
+    notes: investment?.notes ? String(investment.notes) : undefined,
+    createdAt: ensureDateString(investment?.createdAt),
+    updatedAt: typeof investment?.updatedAt === 'number' ? investment?.updatedAt : undefined,
+    currency: investmentCurrency,
+    conversionRate:
+      investment?.conversionRate !== undefined ? ensureNumber(investment.conversionRate, 1) : undefined,
+    nativeCurrency: investment?.nativeCurrency ? normalizeCurrency(investment.nativeCurrency) : undefined,
+  };
+};
+
+const sanitizePortfolioForImport = (portfolio: Partial<Portfolio> | undefined, portfolioId: string): Portfolio => {
+  const baseCurrency = normalizeCurrency(portfolio?.baseCurrency || portfolio?.currency || BASE_CURRENCY);
+  const locale = ensureString(portfolio?.locale, DEFAULT_LOCALE);
+
+  const investments = Array.isArray(portfolio?.investments)
+    ? portfolio!.investments.map(investment =>
+        sanitizeInvestmentForImport(investment, portfolioId, baseCurrency)
+      )
+    : [];
+
+  return {
+    id: portfolioId,
+    name: ensureString(portfolio?.name, 'Imported Portfolio'),
+    description: portfolio?.description ? String(portfolio.description) : undefined,
+    status: sanitizePortfolioStatus(portfolio?.status),
+    targetAmount:
+      portfolio?.targetAmount !== undefined ? ensureNumber(portfolio.targetAmount) : undefined,
+    targetDate: portfolio?.targetDate ? ensureDateString(portfolio.targetDate) : undefined,
+    investments,
+    createdAt: ensureDateString(portfolio?.createdAt),
+    updatedAt: typeof portfolio?.updatedAt === 'number' ? portfolio.updatedAt : undefined,
+    baseCurrency,
+    nativeCurrency: portfolio?.nativeCurrency ? normalizeCurrency(portfolio.nativeCurrency) : undefined,
+    locale,
+  } as Portfolio;
+};
+
 interface InvestmentsState {
   portfolios: Portfolio[];
   isLoading: boolean;
@@ -179,6 +336,16 @@ interface InvestmentsState {
   getInvestmentValueInCurrency: (portfolioId: string, investmentId: string, targetCurrency: string) => Promise<number>;
   getTotalPortfolioValueInCurrency: (portfolioId: string, targetCurrency: string) => Promise<number>;
   getTotalInvestedInCurrency: (portfolioId: string, targetCurrency: string) => Promise<number>;
+  getPortfoliosForExport: (portfolioIds?: string[]) => Portfolio[];
+  importPortfolios: (
+    portfolios: Partial<Portfolio>[],
+    options?: { preserveIds?: boolean; overwriteExisting?: boolean }
+  ) => Promise<{
+    created: number;
+    updated: number;
+    skipped: number;
+    errors: string[];
+  }>;
 }
 
 export const useInvestments = create<InvestmentsState>((set, get) => ({
@@ -550,6 +717,77 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
 
     const converted = await convertAmountsToCurrency(investedAmounts, targetCurrency);
     return converted.reduce((sum, value) => sum + value, 0);
+  },
+
+  getPortfoliosForExport: (portfolioIds) => {
+    const selectedIds = portfolioIds ? new Set(portfolioIds) : null;
+    const portfolios = get().portfolios.filter(portfolio =>
+      selectedIds ? selectedIds.has(portfolio.id) : true
+    );
+
+    return portfolios.map(portfolio => JSON.parse(JSON.stringify(portfolio)) as Portfolio);
+  },
+
+  importPortfolios: async (portfoliosToImport, options = { preserveIds: true, overwriteExisting: false }) => {
+    const userId = get().currentUserId ?? auth.currentUser?.uid;
+    if (!userId) throw new Error('User not authenticated');
+
+    const results = {
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      errors: [] as string[],
+    };
+
+    if (!Array.isArray(portfoliosToImport) || portfoliosToImport.length === 0) {
+      results.errors.push('No portfolios provided for import');
+      return results;
+    }
+
+    const existingIds = new Set(get().portfolios.map(portfolio => portfolio.id));
+
+    for (const rawPortfolio of portfoliosToImport) {
+      try {
+        if (!rawPortfolio || typeof rawPortfolio !== 'object') {
+          results.skipped += 1;
+          continue;
+        }
+
+        const originalId = typeof rawPortfolio.id === 'string' && rawPortfolio.id.trim().length > 0
+          ? rawPortfolio.id.trim()
+          : '';
+
+        const preserveId = options.preserveIds !== false && originalId.length > 0;
+        const idConflict = preserveId && existingIds.has(originalId);
+        const targetId =
+          preserveId && (!idConflict || options.overwriteExisting)
+            ? originalId
+            : crypto.randomUUID();
+
+        const sanitized = sanitizePortfolioForImport(rawPortfolio as Portfolio, targetId);
+        const portfolioPath = `users/${userId}/portfolios/${targetId}`;
+        await setAt(portfolioPath, {
+          ...sanitized,
+          investments: sanitized.investments.map(investment => ({
+            ...investment,
+            portfolioId: targetId,
+          })),
+        });
+
+        if (idConflict && options.overwriteExisting) {
+          results.updated += 1;
+        } else {
+          results.created += 1;
+          existingIds.add(targetId);
+        }
+      } catch (error) {
+        console.error('Failed to import portfolio', error);
+        results.skipped += 1;
+        results.errors.push(error instanceof Error ? error.message : 'Unknown error');
+      }
+    }
+
+    return results;
   },
 
   refreshInvestmentPrice: async (portfolioId, investmentId) => {
