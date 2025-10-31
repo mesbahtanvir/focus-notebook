@@ -7,15 +7,17 @@ import { TrendingUp, TrendingDown, DollarSign, Target, Trash2 } from 'lucide-rea
 import { Portfolio, useInvestments } from '@/store/useInvestments';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { BASE_CURRENCY, convertCurrency, formatCurrency, SupportedCurrency } from '@/lib/utils/currency';
 
 interface PortfolioCardProps {
   portfolio: Portfolio;
   index: number;
   currency: SupportedCurrency;
+  onExploreHorizon?: (portfolioId: string) => void;
 }
 
-export function PortfolioCard({ portfolio, index, currency }: PortfolioCardProps) {
+export function PortfolioCard({ portfolio, index, currency, onExploreHorizon }: PortfolioCardProps) {
   const router = useRouter();
   const {
     getTotalPortfolioValue,
@@ -189,6 +191,23 @@ export function PortfolioCard({ portfolio, index, currency }: PortfolioCardProps
                 <span className="text-xs text-gray-400">Add tickers to see quick badges here.</span>
               )}
             </div>
+
+            {onExploreHorizon && (
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="w-full border-amber-300 text-amber-700 hover:bg-amber-100 hover:text-amber-800 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/30"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onExploreHorizon(portfolio.id);
+                  }}
+                >
+                  Explore Horizon
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </Card>

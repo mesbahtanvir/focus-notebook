@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { convertCurrency, formatCurrency, normalizeCurrencyCode, SupportedCurrency } from '@/lib/utils/currency';
 import { Download, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { AssetHorizonPanel } from '@/components/investment/AssetHorizonPanel';
 
 export default function InvestmentsPage() {
   const { user } = useAuth();
@@ -31,6 +32,8 @@ export default function InvestmentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'closed' | 'archived'>('all');
+  const [activeView, setActiveView] = useState<'tracker' | 'horizon'>('tracker');
+  const [horizonPortfolioId, setHorizonPortfolioId] = useState<string | null>(null);
   const { currency, setCurrency } = useCurrency();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -227,6 +230,11 @@ export default function InvestmentsPage() {
 
   const theme = toolThemes.gold;
 
+  const handleExploreHorizon = (portfolioId: string) => {
+    setHorizonPortfolioId(portfolioId);
+    setActiveView('horizon');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-yellow-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -249,90 +257,121 @@ export default function InvestmentsPage() {
           theme={theme}
         />
 
-        <SearchAndFilters
-          searchValue={searchQuery}
-          onSearchChange={setSearchQuery}
-          searchPlaceholder="Search portfolios..."
-          totalCount={portfolios.length}
-          filteredCount={filteredPortfolios.length}
-          showFilterToggle={true}
-          showCurrencySelector
-          currencyValue={currency}
-          onCurrencyChange={setCurrency}
-          filterContent={
-            <div className="flex gap-2">
-              <button
-                onClick={() => setStatusFilter('all')}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  statusFilter === 'all'
-                    ? 'bg-amber-600 text-white'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setStatusFilter('active')}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  statusFilter === 'active'
-                    ? 'bg-amber-600 text-white'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                Active
-              </button>
-              <button
-                onClick={() => setStatusFilter('closed')}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  statusFilter === 'closed'
-                    ? 'bg-amber-600 text-white'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                Closed
-              </button>
-              <button
-                onClick={() => setStatusFilter('archived')}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  statusFilter === 'archived'
-                    ? 'bg-amber-600 text-white'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                Archived
-              </button>
-            </div>
-          }
-          theme={theme}
-        />
-
-        <div className="flex flex-wrap justify-end gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            accept="application/json"
-            onChange={handleImportFile}
-          />
-          <Button
-            variant="outline"
-            onClick={handleImportClick}
-            disabled={isImporting}
-            className="flex items-center gap-2"
-          >
-            <Upload className="h-4 w-4" />
-            {isImporting ? 'Importing...' : 'Import Portfolios'}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleExportPortfolios}
-            disabled={isExporting || filteredPortfolioIds.length === 0}
-            className="flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" />
-            {isExporting ? 'Exporting...' : 'Export Portfolios'}
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="inline-flex rounded-xl border border-amber-200 bg-white overflow-hidden dark:bg-gray-900">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveView('tracker');
+                setHorizonPortfolioId(null);
+              }}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                activeView === 'tracker'
+                  ? 'bg-amber-500 text-white'
+                  : 'text-amber-600 dark:text-amber-300'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveView('horizon')}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                activeView === 'horizon'
+                  ? 'bg-amber-500 text-white'
+                  : 'text-amber-600 dark:text-amber-300'
+              }`}
+            >
+              Asset Horizon
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept="application/json"
+              onChange={handleImportFile}
+            />
+            <Button
+              variant="outline"
+              onClick={handleImportClick}
+              disabled={isImporting}
+              className="flex items-center gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              {isImporting ? 'Importing...' : 'Import'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleExportPortfolios}
+              disabled={isExporting || filteredPortfolioIds.length === 0}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              {isExporting ? 'Exporting...' : 'Export'}
+            </Button>
+          </div>
         </div>
+
+        {activeView === 'tracker' ? (
+          <>
+            <SearchAndFilters
+              searchValue={searchQuery}
+              onSearchChange={setSearchQuery}
+              searchPlaceholder="Search portfolios..."
+              totalCount={portfolios.length}
+              filteredCount={filteredPortfolios.length}
+              showFilterToggle={true}
+              showCurrencySelector
+              currencyValue={currency}
+              onCurrencyChange={setCurrency}
+              filterContent={
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setStatusFilter('all')}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      statusFilter === 'all'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('active')}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      statusFilter === 'active'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    Active
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('closed')}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      statusFilter === 'closed'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    Closed
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('archived')}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      statusFilter === 'archived'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    Archived
+                  </button>
+                </div>
+              }
+              theme={theme}
+            />
 
         {!isLoading && filteredPortfolios.length > 0 && (
           <Card className="p-6">
@@ -446,9 +485,19 @@ export default function InvestmentsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
             {filteredPortfolios.map((portfolio, index) => (
-              <PortfolioCard key={portfolio.id} portfolio={portfolio} index={index} currency={currency} />
+              <PortfolioCard
+                key={portfolio.id}
+                portfolio={portfolio}
+                index={index}
+                currency={currency}
+                onExploreHorizon={handleExploreHorizon}
+              />
             ))}
           </div>
+        )}
+          </>
+        ) : (
+          <AssetHorizonPanel focusPortfolioId={horizonPortfolioId} showHeader={false} />
         )}
 
         <FloatingActionButton onClick={() => setIsFormOpen(true)} title="Add" />
