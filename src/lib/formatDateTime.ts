@@ -34,8 +34,8 @@ export function formatDateTime(dateString: string): string {
 // Get time of day as number (for analytics)
 export function getTimeOfDayCategory(dateString: string): 'morning' | 'afternoon' | 'evening' | 'night' {
   const date = new Date(dateString);
-  const hour = date.getHours();
-  
+  const hour = date.getUTCHours();
+
   if (hour >= 5 && hour < 12) return 'morning';
   if (hour >= 12 && hour < 17) return 'afternoon';
   if (hour >= 17 && hour < 21) return 'evening';

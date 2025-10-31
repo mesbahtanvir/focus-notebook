@@ -16,6 +16,7 @@ import {
   Filter,
   CheckSquare,
   Square,
+  Briefcase,
 } from 'lucide-react';
 import { ExportFilterOptions, EntityType } from '@/types/import-export';
 
@@ -34,6 +35,7 @@ const entityIcons: Record<EntityType, React.ComponentType<any>> = {
   moods: Smile,
   focusSessions: Timer,
   people: Users,
+  portfolios: Briefcase,
 };
 
 const entityLabels: Record<EntityType, string> = {
@@ -44,6 +46,7 @@ const entityLabels: Record<EntityType, string> = {
   moods: 'Moods',
   focusSessions: 'Focus Sessions',
   people: 'People',
+  portfolios: 'Portfolios',
 };
 
 export function ExportOptionsModal({
@@ -53,7 +56,7 @@ export function ExportOptionsModal({
   availableCounts,
 }: ExportOptionsModalProps) {
   const [selectedEntities, setSelectedEntities] = useState<Set<EntityType>>(
-    new Set(['tasks', 'projects', 'goals', 'thoughts', 'moods', 'focusSessions', 'people'])
+    new Set(['tasks', 'projects', 'goals', 'thoughts', 'moods', 'focusSessions', 'people', 'portfolios'])
   );
   const [useDateRange, setUseDateRange] = useState(false);
   const [startDate, setStartDate] = useState('');
@@ -72,6 +75,7 @@ export function ExportOptionsModal({
     'moods',
     'focusSessions',
     'people',
+    'portfolios',
   ];
 
   const availableEntityTypes = entityTypes.filter(

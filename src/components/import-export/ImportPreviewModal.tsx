@@ -90,6 +90,7 @@ export function ImportPreviewModal({
         'moods',
         'focusSessions',
         'people',
+        'portfolios',
       ];
 
       for (const entityType of entityTypes) {
@@ -130,6 +131,7 @@ export function ImportPreviewModal({
     'moods',
     'focusSessions',
     'people',
+    'portfolios',
   ];
 
   const availableEntityTypes = entityTypes.filter(

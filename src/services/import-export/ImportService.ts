@@ -207,6 +207,7 @@ export class ImportService {
       moods: { add: (mood: any) => Promise<void> };
       focusSessions: { add: (session: any) => Promise<void> };
       people: { add: (person: any) => Promise<void> };
+      portfolios: { add: (portfolio: any) => Promise<void> };
     },
     onProgress?: ProgressCallback
   ): Promise<ImportResult> {
@@ -463,6 +464,9 @@ export class ImportService {
       case 'people':
         await dataLayer.people.add(item);
         break;
+      case 'portfolios':
+        await dataLayer.portfolios.add(item);
+        break;
     }
   }
 
@@ -497,7 +501,8 @@ export class ImportService {
       'thoughts',
       'moods',
       'focusSessions',
-      'people'
+      'people',
+      'portfolios'
     ];
 
     for (const entityType of entityTypes) {
@@ -521,6 +526,7 @@ export class ImportService {
       moods: entities.moods?.length || 0,
       focusSessions: entities.focusSessions?.length || 0,
       people: entities.people?.length || 0,
+      portfolios: entities.portfolios?.length || 0,
     };
 
     const totalItems = Object.values(itemsByType).reduce((sum, count) => sum + count, 0);
@@ -543,6 +549,7 @@ export class ImportService {
       moods: ImportPhase.IMPORTING_MOODS,
       focusSessions: ImportPhase.IMPORTING_FOCUS_SESSIONS,
       people: ImportPhase.IMPORTING_PEOPLE,
+      portfolios: ImportPhase.IMPORTING_PORTFOLIOS,
     };
     return phaseMap[entityType];
   }
@@ -561,6 +568,8 @@ export class ImportService {
         return `Session: ${item.duration}min`;
       case 'people':
         return item.name || 'Unnamed';
+      case 'portfolios':
+        return item.name || 'Untitled Portfolio';
       default:
         return 'Unknown';
     }
@@ -598,6 +607,7 @@ export class ImportService {
       moods: { processed: 0, total: 0, progress: 0 },
       focusSessions: { processed: 0, total: 0, progress: 0 },
       people: { processed: 0, total: 0, progress: 0 },
+      portfolios: { processed: 0, total: 0, progress: 0 },
     };
   }
 
@@ -610,6 +620,7 @@ export class ImportService {
       moods: 0,
       focusSessions: 0,
       people: 0,
+      portfolios: 0,
     };
   }
 
@@ -622,6 +633,7 @@ export class ImportService {
       moods: { processed: 0, total: stats.itemsByType.moods, progress: 0 },
       focusSessions: { processed: 0, total: stats.itemsByType.focusSessions, progress: 0 },
       people: { processed: 0, total: stats.itemsByType.people, progress: 0 },
+      portfolios: { processed: 0, total: stats.itemsByType.portfolios, progress: 0 },
     };
   }
 
@@ -631,7 +643,7 @@ export class ImportService {
     stats: ImportStats
   ): Record<EntityType, { processed: number; total: number; progress: number }> {
     const result: any = {};
-    const entityTypes: EntityType[] = ['tasks', 'projects', 'goals', 'thoughts', 'moods', 'focusSessions', 'people'];
+    const entityTypes: EntityType[] = ['tasks', 'projects', 'goals', 'thoughts', 'moods', 'focusSessions', 'people', 'portfolios'];
 
     for (const type of entityTypes) {
       const total = stats.itemsByType[type];

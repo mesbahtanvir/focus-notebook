@@ -12,6 +12,7 @@ import { Thought } from "@/store/useThoughts";
 import { MoodEntry } from "@/store/useMoods";
 import { FocusSession } from "@/store/useFocus";
 import { Person } from "@/store/useRelationships";
+import { Portfolio } from "@/store/useInvestments";
 
 /**
  * ValidationService
@@ -82,7 +83,8 @@ export class ValidationService {
       'thoughts',
       'moods',
       'focusSessions',
-      'people'
+      'people',
+      'portfolios'
     ];
 
     for (const entityType of entityTypes) {
@@ -257,6 +259,9 @@ export class ValidationService {
       case 'people':
         errors.push(...this.validatePerson(entity));
         break;
+      case 'portfolios':
+        errors.push(...this.validatePortfolio(entity));
+        break;
     }
 
     return errors;
@@ -430,9 +435,71 @@ export class ValidationService {
         thoughts: 0,
         moods: 0,
         focusSessions: 0,
-        people: 0
+        people: 0,
+        portfolios: 0,
       }
     };
+  }
+
+  private validatePortfolio(portfolio: Portfolio): ValidationError[] {
+    const errors: ValidationError[] = [];
+
+    if (!portfolio.name || typeof portfolio.name !== 'string') {
+      errors.push({
+        type: 'missing_field',
+        entityType: 'portfolios',
+        entityId: portfolio.id,
+        field: 'name',
+        message: 'Portfolio must have a name',
+        severity: 'error',
+      });
+    }
+
+    if (portfolio.investments && !Array.isArray(portfolio.investments)) {
+      errors.push({
+        type: 'invalid_type',
+        entityType: 'portfolios',
+        entityId: portfolio.id,
+        field: 'investments',
+        message: 'Investments must be an array',
+        severity: 'error',
+      });
+    } else if (Array.isArray(portfolio.investments)) {
+      for (const investment of portfolio.investments) {
+        if (!investment.id || typeof investment.id !== 'string') {
+          errors.push({
+            type: 'missing_field',
+            entityType: 'portfolios',
+            entityId: portfolio.id,
+            field: 'investment.id',
+            message: 'Each investment requires a valid ID',
+            severity: 'warning',
+          });
+        }
+        if (!investment.name || typeof investment.name !== 'string') {
+          errors.push({
+            type: 'missing_field',
+            entityType: 'portfolios',
+            entityId: portfolio.id,
+            field: 'investment.name',
+            message: 'Each investment should have a name for clarity',
+            severity: 'warning',
+          });
+        }
+        if (investment.currency && typeof investment.currency !== 'string') {
+          errors.push({
+            type: 'invalid_type',
+            entityType: 'portfolios',
+            entityId: portfolio.id,
+            field: 'investment.currency',
+            message: 'Investment currency must be a string',
+            severity: 'warning',
+          });
+        }
+      }
+    }
+
+    return errors;
   }
 
   /**

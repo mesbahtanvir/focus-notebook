@@ -17,6 +17,7 @@ import { useThoughts } from '@/store/useThoughts';
 import { useMoods } from '@/store/useMoods';
 import { useFocus } from '@/store/useFocus';
 import { useRelationships } from '@/store/useRelationships';
+import { useInvestments } from '@/store/useInvestments';
 import { auth, db } from '@/lib/firebaseClient';
 import { doc, setDoc, Timestamp } from 'firebase/firestore';
 
@@ -276,6 +277,7 @@ export function useImportExport() {
   const moods = useMoods();
   const focus = useFocus();
   const relationships = useRelationships();
+  const investments = useInvestments();
 
   const importedTasksRef = useRef<Map<string, any>>(new Map());
 
@@ -339,6 +341,7 @@ export function useImportExport() {
           moods: moods.moods,
           focusSessions: focus.sessions,
           people: relationships.people,
+          portfolios: investments.portfolios,
         };
 
         // Re-detect conflicts with existing data
@@ -415,6 +418,14 @@ export function useImportExport() {
                 await writeDocument(userId, 'people', normalized);
               },
             },
+            portfolios: {
+              add: async (portfolio: any) => {
+                await investments.importPortfolios([portfolio], {
+                  preserveIds: options.preserveIds,
+                  overwriteExisting: options.strategy === 'replace',
+                });
+              },
+            },
           },
           (progress) => {
             setImportProgress(progress);
@@ -431,7 +442,7 @@ export function useImportExport() {
         importedTasksRef.current.clear();
       }
     },
-    [importService, tasks, projects, goals, thoughts, moods, focus, relationships, getUserId, writeDocument]
+    [importService, tasks, projects, goals, thoughts, moods, focus, relationships, investments, getUserId, writeDocument]
   );
 
   /**
@@ -460,6 +471,9 @@ export function useImportExport() {
           moods: moods.moods,
           focusSessions: focus.sessions,
           people: relationships.people,
+          portfolios: investments.getPortfoliosForExport
+            ? investments.getPortfoliosForExport()
+            : investments.portfolios,
         };
 
         // Export with filters
@@ -480,7 +494,7 @@ export function useImportExport() {
         setIsExporting(false);
       }
     },
-    [exportService, tasks, projects, goals, thoughts, moods, focus, relationships]
+    [exportService, tasks, projects, goals, thoughts, moods, focus, relationships, investments]
   );
 
   /**
@@ -500,6 +514,9 @@ export function useImportExport() {
         moods: moods.moods,
         focusSessions: focus.sessions,
         people: relationships.people,
+        portfolios: investments.getPortfoliosForExport
+          ? investments.getPortfoliosForExport()
+          : investments.portfolios,
       };
 
       const exported = await exportService.exportAll(allData, userId);
@@ -512,7 +529,7 @@ export function useImportExport() {
     } finally {
       setIsExporting(false);
     }
-  }, [exportService, tasks, projects, goals, thoughts, moods, focus, relationships]);
+  }, [exportService, tasks, projects, goals, thoughts, moods, focus, relationships, investments]);
 
   /**
    * Get available entity counts for export
@@ -526,8 +543,9 @@ export function useImportExport() {
       moods: moods.moods.length,
       focusSessions: focus.sessions.length,
       people: relationships.people.length,
+      portfolios: investments.portfolios.length,
     };
-  }, [tasks, projects, goals, thoughts, moods, focus, relationships]);
+  }, [tasks, projects, goals, thoughts, moods, focus, relationships, investments]);
 
   /**
    * Reset import state

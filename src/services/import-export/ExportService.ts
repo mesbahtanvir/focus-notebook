@@ -207,6 +207,9 @@ export class ExportService {
         case 'people':
           filtered.people = this.filterPeople(collection as any[], filters);
           break;
+        case 'portfolios':
+          filtered.portfolios = collection as any;
+          break;
       }
     }
 
@@ -369,6 +372,7 @@ export class ExportService {
       moods: data.moods?.length || 0,
       focusSessions: data.focusSessions?.length || 0,
       people: data.people?.length || 0,
+      portfolios: data.portfolios?.length || 0,
     };
 
     const totalItems = Object.values(entityCounts).reduce((sum, count) => sum + count, 0);

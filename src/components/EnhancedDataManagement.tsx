@@ -53,6 +53,7 @@ export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagement
       { label: 'Moods', value: availableCounts.moods, accent: 'text-pink-600 dark:text-pink-400', border: 'border-pink-200 dark:border-pink-800', bg: 'bg-pink-50 dark:bg-pink-950/20' },
       { label: 'Focus Sessions', value: availableCounts.focusSessions, accent: 'text-cyan-600 dark:text-cyan-400', border: 'border-cyan-200 dark:border-cyan-800', bg: 'bg-cyan-50 dark:bg-cyan-950/20' },
       { label: 'People', value: availableCounts.people, accent: 'text-teal-600 dark:text-teal-400', border: 'border-teal-200 dark:border-teal-800', bg: 'bg-teal-50 dark:bg-teal-950/20' },
+      { label: 'Portfolios', value: availableCounts.portfolios, accent: 'text-amber-600 dark:text-amber-400', border: 'border-amber-200 dark:border-amber-800', bg: 'bg-amber-50 dark:bg-amber-950/20' },
       { label: 'Total Items', value: totalItems, accent: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-300 dark:border-emerald-800', bg: 'bg-emerald-50 dark:bg-emerald-950/20', highlight: true },
     ],
     [availableCounts, totalItems]

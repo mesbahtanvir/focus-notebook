@@ -57,7 +57,8 @@ export class ConflictDetectionService {
       'thoughts',
       'moods',
       'focusSessions',
-      'people'
+      'people',
+      'portfolios'
     ];
 
     for (const entityType of entityTypes) {
@@ -306,6 +307,7 @@ export class ConflictDetectionService {
       moods: new Set((importedEntities.moods || []).map((m: any) => m.id)),
       focusSessions: new Set((importedEntities.focusSessions || []).map((f: any) => f.id)),
       people: new Set((importedEntities.people || []).map((p: any) => p.id)),
+      portfolios: new Set((importedEntities.portfolios || []).map((p: any) => p.id)),
     };
   }
 
@@ -346,6 +348,8 @@ export class ConflictDetectionService {
         return `Session: ${item.duration}min`;
       case 'people':
         return item.name || 'Unnamed';
+      case 'portfolios':
+        return item.name || 'Untitled Portfolio';
       default:
         return 'Unknown';
     }

@@ -15,6 +15,7 @@ import {
   Users,
   AlertTriangle,
   Filter,
+  Briefcase,
 } from 'lucide-react';
 import { EntityType, EntityCollection, Conflict } from '@/types/import-export';
 
@@ -35,6 +36,7 @@ const entityIcons: Record<EntityType, React.ComponentType<any>> = {
   moods: Smile,
   focusSessions: Timer,
   people: Users,
+  portfolios: Briefcase,
 };
 
 export function EntityPreviewTable({
@@ -259,6 +261,8 @@ function getEntityName(entityType: EntityType, entity: any): string {
       return `${entity.duration} min session`;
     case 'people':
       return entity.name || 'Unnamed';
+    case 'portfolios':
+      return entity.name || 'Untitled Portfolio';
     default:
       return 'Unknown';
   }
@@ -299,6 +303,13 @@ function getEntityDetails(entityType: EntityType, entity: any): string[] {
       if (entity.relationshipType) details.push(entity.relationshipType);
       if (entity.tags?.length) details.push(...entity.tags.slice(0, 3).map((t: string) => `#${t}`));
       break;
+    case 'portfolios':
+      if (entity.status) details.push(entity.status);
+      if (entity.baseCurrency) details.push(`Base: ${entity.baseCurrency}`);
+      if (Array.isArray(entity.investments)) {
+        details.push(`${entity.investments.length} investments`);
+      }
+      break;
   }
 
   return details;
@@ -313,6 +324,9 @@ function getSearchableText(entityType: EntityType, entity: any): string {
   if (entity.status) parts.push(entity.status);
   if (entity.notes) parts.push(entity.notes);
   if (entity.description) parts.push(entity.description);
+  if (entityType === 'portfolios' && Array.isArray(entity.investments)) {
+    parts.push(...entity.investments.map((inv: any) => inv.name || inv.ticker || ''));
+  }
 
   return parts.join(' ');
 }

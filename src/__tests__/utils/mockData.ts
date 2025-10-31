@@ -21,6 +21,7 @@ export const mockMetadata: ExportMetadata = {
     moods: 1,
     focusSessions: 0,
     people: 0,
+    portfolios: 0,
   },
 };
 
@@ -173,6 +174,7 @@ export const mockEntityCollection: EntityCollection = {
   moods: mockMoods,
   focusSessions: [],
   people: [],
+  portfolios: [],
 };
 
 export const mockExportedData: ExportedData = {
@@ -221,6 +223,7 @@ export const duplicateIdData: EntityCollection = {
   moods: [],
   focusSessions: [],
   people: [],
+  portfolios: [],
 };
 
 // Empty entity collection
@@ -232,6 +235,7 @@ export const emptyEntityCollection: EntityCollection = {
   moods: [],
   focusSessions: [],
   people: [],
+  portfolios: [],
 };
 
 // Minimal valid export data
@@ -249,6 +253,7 @@ export const minimalValidData: ExportedData = {
       moods: 0,
       focusSessions: 0,
       people: 0,
+      portfolios: 0,
     },
   },
   data: {
@@ -269,5 +274,6 @@ export const minimalValidData: ExportedData = {
     moods: [],
     focusSessions: [],
     people: [],
+    portfolios: [],
   },
 };

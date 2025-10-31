@@ -115,6 +115,7 @@ export class ReferenceMappingService {
       ['moods', entities.moods || []],
       ['focusSessions', entities.focusSessions || []],
       ['people', entities.people || []],
+      ['portfolios', entities.portfolios || []],
     ];
 
     for (const [type, collection] of allEntities) {
@@ -187,6 +188,7 @@ export class ReferenceMappingService {
       'thoughts',      // No dependencies (though may link to tasks/projects later)
       'moods',         // May be linked by thoughts
       'people',        // May link to thoughts
+      'portfolios',    // Independent from other entities
       'projects',      // Depends on goals
       'tasks',         // Depends on projects and thoughts
       'focusSessions', // Depends on tasks (embedded)
@@ -222,7 +224,8 @@ export class ReferenceMappingService {
       'thoughts',
       'moods',
       'focusSessions',
-      'people'
+      'people',
+      'portfolios'
     ];
 
     for (const entityType of entityTypes) {

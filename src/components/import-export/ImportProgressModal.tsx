@@ -17,6 +17,7 @@ import {
   Smile,
   Timer,
   Users,
+  Briefcase,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
@@ -38,6 +39,7 @@ const entityIcons: Record<EntityType, React.ComponentType<any>> = {
   moods: Smile,
   focusSessions: Timer,
   people: Users,
+  portfolios: Briefcase,
 };
 
 const entityLabels: Record<EntityType, string> = {
@@ -48,6 +50,7 @@ const entityLabels: Record<EntityType, string> = {
   moods: 'Moods',
   focusSessions: 'Focus Sessions',
   people: 'People',
+  portfolios: 'Portfolios',
 };
 
 const phaseLabels: Record<ImportPhase, string> = {
@@ -62,6 +65,7 @@ const phaseLabels: Record<ImportPhase, string> = {
   [ImportPhase.IMPORTING_MOODS]: 'Importing moods...',
   [ImportPhase.IMPORTING_FOCUS_SESSIONS]: 'Importing focus sessions...',
   [ImportPhase.IMPORTING_PEOPLE]: 'Importing people...',
+  [ImportPhase.IMPORTING_PORTFOLIOS]: 'Importing portfolios...',
   [ImportPhase.UPDATING_REFERENCES]: 'Updating references...',
   [ImportPhase.COMPLETING]: 'Completing import...',
   [ImportPhase.COMPLETED]: 'Import completed!',
