@@ -440,7 +440,7 @@ export function InvestmentFormModal({
             <Input
               id="initialAmount"
               type="number"
-              step="0.01"
+              step="0.000001"
               {...register('initialAmount', {
                 required: 'Initial amount is required',
                 min: { value: 0, message: 'Must be positive' },
@@ -462,7 +462,7 @@ export function InvestmentFormModal({
               <Input
                 id="currentValue"
                 type="number"
-                step="0.01"
+                step="0.000001"
                 {...register('currentValue', {
                   required: 'Current value is required',
                   min: { value: 0, message: 'Must be positive' },

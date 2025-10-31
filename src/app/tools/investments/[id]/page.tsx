@@ -15,7 +15,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toolThemes } from '@/components/tools/themes';
-import { Trash2, Plus, RefreshCw, Sparkles, Camera } from 'lucide-react';
+import { Trash2, Plus, RefreshCw, Sparkles, Camera, Pencil } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/store/useSettings';
 import { fetchStockHistory } from '@/lib/services/stockApi';
@@ -48,6 +48,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   const [isInvestmentFormOpen, setIsInvestmentFormOpen] = useState(false);
   const [isContributionFormOpen, setIsContributionFormOpen] = useState(false);
   const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
+  const [investmentToEdit, setInvestmentToEdit] = useState<Investment | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isGeneratingPrediction, setIsGeneratingPrediction] = useState(false);
   const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
@@ -131,8 +132,10 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
     return convertCurrency(amount ?? 0, normalizedSource, currency);
   };
 
-  const formatAmount = (amount: number, code?: string) =>
-    formatCurrencyValue(amount, normalizeCurrencyCode(code ?? currency));
+  const formatAmount = (amount: number, code?: string) => {
+    const normalized = normalizeCurrencyCode(code ?? currency);
+    return `${normalized} ${formatCurrencyValue(amount, normalized)}`;
+  };
 
   const formatConvertedAmount = (amount: number | undefined | null, sourceCurrency?: string) =>
     formatAmount(convertFromCurrency(amount, sourceCurrency));
@@ -451,7 +454,13 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 No investments in this portfolio yet
               </p>
-              <Button onClick={() => setIsInvestmentFormOpen(true)} className="bg-amber-600 hover:bg-amber-700">
+              <Button
+                onClick={() => {
+                  setInvestmentToEdit(null);
+                  setIsInvestmentFormOpen(true);
+                }}
+                className="bg-amber-600 hover:bg-amber-700"
+              >
                 Add First Investment
               </Button>
             </Card>
@@ -492,6 +501,16 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                           </div>
                         </div>
                         <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setInvestmentToEdit(investment);
+                              setIsInvestmentFormOpen(true);
+                            }}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -636,13 +655,23 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
           )}
         </div>
 
-        <FloatingActionButton onClick={() => setIsInvestmentFormOpen(true)} title="Add" />
+        <FloatingActionButton
+          onClick={() => {
+            setInvestmentToEdit(null);
+            setIsInvestmentFormOpen(true);
+          }}
+          title="Add"
+        />
 
         <InvestmentFormModal
           isOpen={isInvestmentFormOpen}
-          onClose={() => setIsInvestmentFormOpen(false)}
+          onClose={() => {
+            setIsInvestmentFormOpen(false);
+            setInvestmentToEdit(null);
+          }}
           portfolioId={portfolio.id}
           baseCurrency={baseCurrency}
+          investment={investmentToEdit ?? undefined}
         />
 
         {selectedInvestment && (

@@ -203,7 +203,7 @@ export function ContributionFormModal({
             <Input
               id="amount"
               type="number"
-              step="0.01"
+              step="0.000001"
               {...register('amount', {
                 required: 'Amount is required',
                 min: { value: 0, message: 'Must be positive' },
