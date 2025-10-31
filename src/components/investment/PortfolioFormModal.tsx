@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { X } from 'lucide-react';
-import { Portfolio, PortfolioStatus, useInvestments } from '@/store/useInvestments';
+import { Portfolio, PortfolioStatus, RecurringFrequency, useInvestments } from '@/store/useInvestments';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +23,9 @@ interface PortfolioFormData {
   status: PortfolioStatus;
   targetAmount?: number;
   targetDate?: string;
+  recurringPlanAmount?: number;
+  recurringPlanFrequency: RecurringFrequency;
+  recurringPlanAnnualReturn?: number;
 }
 
 interface PortfolioFormModalProps {
@@ -51,17 +54,35 @@ export function PortfolioFormModal({ isOpen, onClose, portfolio }: PortfolioForm
           status: portfolio.status,
           targetAmount: portfolio.targetAmount,
           targetDate: portfolio.targetDate,
+          recurringPlanAmount: portfolio.recurringPlan?.amount,
+          recurringPlanFrequency: portfolio.recurringPlan?.frequency ?? 'monthly',
+          recurringPlanAnnualReturn: portfolio.recurringPlan?.expectedAnnualReturn,
         }
       : {
           status: 'active',
+          recurringPlanFrequency: 'monthly',
         },
   });
 
   const status = watch('status');
+  const recurringPlanFrequency = watch('recurringPlanFrequency');
 
   const onSubmit = async (data: PortfolioFormData) => {
     setIsSubmitting(true);
     try {
+      const planAmount = Number.isFinite(data.recurringPlanAmount) ? data.recurringPlanAmount : 0;
+      const planReturn = Number.isFinite(data.recurringPlanAnnualReturn)
+        ? data.recurringPlanAnnualReturn
+        : undefined;
+      const hasPlan = planAmount > 0;
+      const recurringPlan = hasPlan
+        ? {
+            amount: planAmount,
+            frequency: data.recurringPlanFrequency,
+            expectedAnnualReturn: planReturn,
+          }
+        : null;
+
       if (portfolio) {
         await updatePortfolio(portfolio.id, {
           name: data.name,
@@ -69,6 +90,7 @@ export function PortfolioFormModal({ isOpen, onClose, portfolio }: PortfolioForm
           status: data.status,
           targetAmount: data.targetAmount ? Number(data.targetAmount) : undefined,
           targetDate: data.targetDate || undefined,
+          recurringPlan,
         });
         toast({ title: 'Success', description: 'Portfolio updated successfully!' });
       } else {
@@ -78,6 +100,7 @@ export function PortfolioFormModal({ isOpen, onClose, portfolio }: PortfolioForm
           status: data.status,
           targetAmount: data.targetAmount ? Number(data.targetAmount) : undefined,
           targetDate: data.targetDate || undefined,
+          recurringPlan: recurringPlan ?? undefined,
         });
         toast({ title: 'Success', description: 'Portfolio created successfully!' });
       }
@@ -166,6 +189,60 @@ export function PortfolioFormModal({ isOpen, onClose, portfolio }: PortfolioForm
               type="date"
               {...register('targetDate')}
             />
+          </div>
+
+          <div className="grid gap-3 border border-dashed border-amber-200 dark:border-amber-800 rounded-lg p-4 bg-amber-50/40 dark:bg-amber-900/10">
+            <p className="text-sm font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-2">
+              Plan Your Recurring Contributions
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="recurringPlanAmount">Recurring Amount</Label>
+                <Input
+                  id="recurringPlanAmount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register('recurringPlanAmount', { valueAsNumber: true })}
+                  placeholder="e.g., 1000"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Amount in the portfolio&#39;s base currency.
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="recurringPlanFrequency">Frequency</Label>
+                <Select
+                  id="recurringPlanFrequency"
+                  value={recurringPlanFrequency}
+                  onChange={(e) => setValue('recurringPlanFrequency', e.target.value as RecurringFrequency)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="annually">Annually</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="recurringPlanAnnualReturn">Expected Annual Return (%)</Label>
+              <Input
+                id="recurringPlanAnnualReturn"
+                type="number"
+                step="0.1"
+                {...register('recurringPlanAnnualReturn', { valueAsNumber: true })}
+                placeholder="e.g., 6"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Optional assumption used for Asset Horizon projections.
+              </p>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">

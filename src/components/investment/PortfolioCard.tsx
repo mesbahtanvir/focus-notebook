@@ -59,12 +59,13 @@ export function PortfolioCard({ portfolio, index, currency }: PortfolioCardProps
 
   return (
     <motion.div
+      className="h-full"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
     >
       <Card
-        className="p-5 sm:p-6 hover:shadow-xl transition-all cursor-pointer border border-gray-100 bg-white/95 dark:bg-gray-900/80"
+        className="p-5 sm:p-6 hover:shadow-xl transition-all cursor-pointer border border-gray-100 bg-white/95 dark:bg-gray-900/80 h-full flex flex-col"
         onClick={() => router.push(`/tools/investments/${portfolio.id}`)}
       >
         <div className="flex items-start justify-between gap-3">
@@ -93,70 +94,76 @@ export function PortfolioCard({ portfolio, index, currency }: PortfolioCardProps
           </div>
         </div>
 
-        <div className="mt-5 space-y-4">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Current Value</p>
-            <p className="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">
-              {currency} {formatValue(totalValue)}
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/50 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Total Invested</p>
-              <p className="mt-1 font-semibold text-gray-800 dark:text-gray-100">
-                {currency} {formatValue(totalInvested)}
+        <div className="mt-5 flex-1 flex flex-col">
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Current Value</p>
+              <p className="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">
+                {currency} {formatValue(totalValue)}
               </p>
             </div>
-            <div className={`rounded-lg border px-3 py-2 ${isPositive ? 'border-green-100 bg-green-50/60 dark:border-green-900/60 dark:bg-green-900/10' : 'border-red-100 bg-red-50/60 dark:border-red-900/60 dark:bg-red-900/10'}`}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Gain / Loss
-                </span>
-                {isPositive ? (
-                  <TrendingUp className="w-4 h-4 text-green-500" />
-                ) : (
-                  <TrendingDown className="w-4 h-4 text-red-500" />
-                )}
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/50 px-3 py-2">
+                <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Total Invested</p>
+                <p className="mt-1 font-semibold text-gray-800 dark:text-gray-100">
+                  {currency} {formatValue(totalInvested)}
+                </p>
               </div>
-              <p className={`mt-1 font-semibold ${isPositive ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300'}`}>
-                {currency} {formatValue(gain)}
-              </p>
-              <p className={`text-xs ${isPositive ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300'}`}>
-                {roi.toFixed(2)}%
-              </p>
+              <div className={`rounded-lg border px-3 py-2 ${isPositive ? 'border-green-100 bg-green-50/60 dark:border-green-900/60 dark:bg-green-900/10' : 'border-red-100 bg-red-50/60 dark:border-red-900/60 dark:bg-red-900/10'}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Gain / Loss
+                  </span>
+                  {isPositive ? (
+                    <TrendingUp className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <TrendingDown className="w-4 h-4 text-red-500" />
+                  )}
+                </div>
+                <p className={`mt-1 font-semibold ${isPositive ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300'}`}>
+                  {currency} {formatValue(gain)}
+                </p>
+                <p className={`text-xs ${isPositive ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300'}`}>
+                  {roi.toFixed(2)}%
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-gray-400" />
+                <span>{portfolio.investments.length} investment{portfolio.investments.length !== 1 ? 's' : ''}</span>
+              </div>
+              {portfolio.targetAmount && (
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-gray-400" />
+                  <span>{progressPercent.toFixed(0)}% to goal</span>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-            <div className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-gray-400" />
-              <span>{portfolio.investments.length} investment{portfolio.investments.length !== 1 ? 's' : ''}</span>
-            </div>
-            {portfolio.targetAmount && (
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-gray-400" />
-                <span>{progressPercent.toFixed(0)}% to goal</span>
+          <div className="mt-auto space-y-3 pt-4">
+            {portfolio.targetAmount ? (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-gray-400">
+                  <span>Progress</span>
+                  <span>{targetAmount !== undefined ? `${currency} ${formatValue(targetAmount)}` : ''}</span>
+                </div>
+                <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-800">
+                  <div
+                    className="h-2 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-800 px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
+                Set a target amount to track progress toward your goal.
               </div>
             )}
-          </div>
 
-          {portfolio.targetAmount && (
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs text-gray-400">
-                <span>Progress</span>
-                <span>{targetAmount !== undefined ? `${currency} ${formatValue(targetAmount)}` : ''}</span>
-              </div>
-              <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-800">
-                <div
-                  className="h-2 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          {portfolio.investments.some(inv => inv.ticker) && (
             <div className="flex flex-wrap gap-1.5 pt-2 border-t border-dashed border-gray-100 dark:border-gray-800">
               {portfolio.investments
                 .filter(inv => inv.ticker)
@@ -178,8 +185,11 @@ export function PortfolioCard({ portfolio, index, currency }: PortfolioCardProps
                   +{portfolio.investments.filter(inv => inv.ticker).length - 4} more
                 </Badge>
               )}
+              {!portfolio.investments.some(inv => inv.ticker) && (
+                <span className="text-xs text-gray-400">Add tickers to see quick badges here.</span>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </Card>
     </motion.div>

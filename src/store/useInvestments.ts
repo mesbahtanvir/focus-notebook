@@ -36,6 +36,18 @@ export interface Contribution {
   amountInInvestmentCurrency?: number;
 }
 
+export type RecurringFrequency = 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'annually';
+
+export interface RecurringPlan {
+  amount: number;
+  frequency: RecurringFrequency;
+  startDate?: string;
+  endDate?: string;
+  currency: SupportedCurrency;
+  expectedAnnualReturn?: number;
+  label?: string;
+}
+
 export interface CurrencyMetadata {
   /** Currency used for aggregate calculations (converted/base currency) */
   baseCurrency?: string;
@@ -95,6 +107,7 @@ export interface Portfolio extends CurrencyMetadata {
   status: PortfolioStatus;
   targetAmount?: number;
   targetDate?: string;
+  recurringPlan?: RecurringPlan;
   investments: Investment[];
   createdAt: string;
   updatedAt?: number;
@@ -150,6 +163,23 @@ const ensureDateString = (value: any, fallback?: string): string => {
     return value;
   }
   return fallback ?? new Date().toISOString();
+};
+
+const normalizeRecurringFrequency = (frequency: any): RecurringFrequency => {
+  const valid: RecurringFrequency[] = ['weekly', 'biweekly', 'monthly', 'quarterly', 'annually'];
+  if (valid.includes(frequency)) {
+    return frequency;
+  }
+
+  if (typeof frequency === 'string') {
+    const normalized = frequency.toLowerCase();
+    const match = valid.find(option => option === normalized);
+    if (match) {
+      return match;
+    }
+  }
+
+  return 'monthly';
 };
 
 const sanitizePortfolioStatus = (status: any): PortfolioStatus => {
@@ -263,6 +293,40 @@ const sanitizeInvestmentForImport = (
   };
 };
 
+const sanitizeRecurringPlan = (
+  plan: Partial<RecurringPlan> | null | undefined,
+  portfolioBaseCurrency: SupportedCurrency
+): RecurringPlan | undefined => {
+  if (!plan) {
+    return undefined;
+  }
+
+  const amount = ensureNumber(plan.amount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return undefined;
+  }
+
+  const currency = normalizeCurrency(plan.currency || portfolioBaseCurrency);
+  const frequency = normalizeRecurringFrequency(plan.frequency);
+  const expectedAnnualReturn =
+    plan.expectedAnnualReturn !== undefined ? ensureNumber(plan.expectedAnnualReturn, 0) : undefined;
+
+  const startDate = plan.startDate ? ensureDateString(plan.startDate) : undefined;
+  const endDate = plan.endDate ? ensureDateString(plan.endDate) : undefined;
+  const label =
+    typeof plan.label === 'string' && plan.label.trim().length > 0 ? plan.label.trim() : undefined;
+
+  return {
+    amount,
+    frequency,
+    currency,
+    expectedAnnualReturn,
+    startDate,
+    endDate,
+    label,
+  };
+};
+
 const sanitizePortfolioForImport = (
   portfolio: Partial<Portfolio> | undefined,
   portfolioId: string
@@ -284,6 +348,7 @@ const sanitizePortfolioForImport = (
     targetAmount:
       portfolio?.targetAmount !== undefined ? ensureNumber(portfolio.targetAmount) : undefined,
     targetDate: portfolio?.targetDate ? ensureDateString(portfolio.targetDate) : undefined,
+    recurringPlan: sanitizeRecurringPlan(portfolio?.recurringPlan, baseCurrency),
     investments,
     createdAt: ensureDateString(portfolio?.createdAt),
     updatedAt: typeof portfolio?.updatedAt === 'number' ? portfolio.updatedAt : undefined,
@@ -388,9 +453,13 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
       portfoliosQuery,
       (data, metadata) => {
         set({
-          portfolios: data.map(portfolio => ({
-            ...portfolio,
-            investments: (portfolio.investments || []).map(investment => {
+          portfolios: data.map(portfolio => {
+            const baseCurrency = normalizeCurrency(portfolio.baseCurrency || BASE_CURRENCY);
+            return {
+              ...portfolio,
+              baseCurrency,
+              locale: portfolio.locale || DEFAULT_LOCALE,
+              investments: (portfolio.investments || []).map(investment => {
               const investmentCurrency = normalizeCurrency(investment.currency);
 
               const contributions = (investment.contributions || []).map(contribution => {
@@ -424,8 +493,10 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
                 contributions,
                 priceHistory,
               };
-            })
-          })),
+              }),
+              recurringPlan: sanitizeRecurringPlan(portfolio.recurringPlan, baseCurrency),
+            };
+          }),
           isLoading: false,
           fromCache: metadata.fromCache,
           hasPendingWrites: metadata.hasPendingWrites,
@@ -445,12 +516,14 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
 
     const portfolioBaseCurrency = normalizeCurrency(portfolio.baseCurrency || BASE_CURRENCY);
     const locale = portfolio.locale || DEFAULT_LOCALE;
+    const recurringPlan = sanitizeRecurringPlan(portfolio.recurringPlan, portfolioBaseCurrency);
 
     const newPortfolio: Portfolio = {
       ...portfolio,
       id,
       baseCurrency: portfolioBaseCurrency,
       locale,
+      recurringPlan,
       investments: [],
       createdAt: now,
     };
@@ -463,7 +536,29 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     const userId = get().currentUserId ?? auth.currentUser?.uid;
     if (!userId) throw new Error('User not authenticated');
 
-    await updateAt(`users/${userId}/portfolios/${id}`, updates);
+    const currentPortfolio = get().getPortfolio(id);
+    const updatesToSave: typeof updates & {
+      baseCurrency?: SupportedCurrency;
+      recurringPlan?: RecurringPlan | null;
+    } = { ...updates };
+
+    if (updates.baseCurrency) {
+      updatesToSave.baseCurrency = normalizeCurrency(updates.baseCurrency);
+    }
+
+    if ('recurringPlan' in updates) {
+      if (updates.recurringPlan === null) {
+        updatesToSave.recurringPlan = null;
+      } else {
+        const currencyForPlan = normalizeCurrency(
+          updatesToSave.baseCurrency ?? currentPortfolio?.baseCurrency ?? BASE_CURRENCY
+        );
+        const sanitizedPlan = sanitizeRecurringPlan(updates.recurringPlan, currencyForPlan);
+        updatesToSave.recurringPlan = sanitizedPlan ?? null;
+      }
+    }
+
+    await updateAt(`users/${userId}/portfolios/${id}`, updatesToSave);
   },
 
   deletePortfolio: async (id) => {
