@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { memo, ReactNode } from "react";
 import { motion } from "framer-motion";
