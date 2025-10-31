@@ -9,6 +9,14 @@ admin.initializeApp();
 
 // Import cloud functions
 import { processNewThought, manualProcessThought, reprocessThought, revertThoughtProcessing } from './processThought';
+import { refreshTrackedTickerPrices, updateTrackedTickers } from './marketData';
 
 // Export cloud functions
-export { processNewThought, manualProcessThought, reprocessThought, revertThoughtProcessing };
+export {
+  processNewThought,
+  manualProcessThought,
+  reprocessThought,
+  revertThoughtProcessing,
+  updateTrackedTickers,
+  refreshTrackedTickerPrices,
+};

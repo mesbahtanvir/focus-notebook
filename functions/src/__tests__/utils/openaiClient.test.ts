@@ -10,8 +10,8 @@ jest.mock('../../config', () => ({
   CONFIG: {
     OPENAI_API_KEY: 'sk-test-key',
     MODELS: {
-      DEFAULT: 'gpt-3.5-turbo',
-      FALLBACK: 'gpt-3.5-turbo',
+      DEFAULT: 'gpt-4o',
+      FALLBACK: 'gpt-4o',
     },
   },
 }));

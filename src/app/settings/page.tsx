@@ -199,23 +199,23 @@ export default function SettingsPage() {
                   </Label>
                   <select
                     id="aiModel"
-                    value={settings.aiModel || 'gpt-3.5-turbo'}
+                    value={settings.aiModel || 'gpt-4o'}
                     onChange={(e) => updateSettings({ aiModel: e.target.value as AIModel })}
                     className="w-full px-4 py-3 rounded-lg border-2 border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
                   >
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo - Fastest & Cheapest (Default) 💰</option>
-                    <option value="gpt-4o-mini">GPT-4o Mini - Good Balance ⚖️</option>
-                    <option value="gpt-4o">GPT-4o - High Quality 🎯</option>
-                    <option value="gpt-4-turbo-preview">GPT-4 Turbo - Highest Quality 💎</option>
+                    <option value="gpt-4o">GPT-4o - Best Overall (Default) 🧠</option>
+                    <option value="gpt-4o-mini">GPT-4o Mini - Balanced ⚖️</option>
+                    <option value="gpt-4-turbo-preview">GPT-4 Turbo - Premium 💎</option>
+                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo - Budget 💰</option>
                   </select>
                   
                   <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-300 dark:border-blue-700 mt-4">
                     <p className="text-xs text-gray-600 dark:text-gray-400">
                       <strong>💡 Pricing Guide:</strong><br/>
-                      • <strong>GPT-3.5 Turbo</strong>: ~$0.002 per request (1000 tokens)<br/>
-                      • <strong>GPT-4o Mini</strong>: ~$0.015 per request<br/>
                       • <strong>GPT-4o</strong>: ~$0.05 per request<br/>
-                      • <strong>GPT-4 Turbo</strong>: ~$0.10 per request
+                      • <strong>GPT-4o Mini</strong>: ~$0.015 per request<br/>
+                      • <strong>GPT-4 Turbo</strong>: ~$0.10 per request<br/>
+                      • <strong>GPT-3.5 Turbo</strong>: ~$0.002 per request (1000 tokens)
                     </p>
                   </div>
                 </div>

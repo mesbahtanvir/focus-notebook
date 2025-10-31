@@ -240,7 +240,7 @@ async function processThoughtRequest(request: LLMRequest) {
       },
       context: request.input.context,
       apiKey: settings.openaiApiKey,
-      model: settings.aiModel || 'gpt-3.5-turbo',
+      model: settings.aiModel || 'gpt-4o',
     }),
   });
 
@@ -269,7 +269,7 @@ async function processBrainstormingRequest(request: LLMRequest) {
       messages: request.input.context?.messages || [],
       context: request.input.context,
       apiKey: settings.openaiApiKey,
-      model: settings.aiModel || 'gpt-3.5-turbo',
+      model: settings.aiModel || 'gpt-4o',
     }),
   });
 

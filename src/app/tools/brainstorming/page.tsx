@@ -117,7 +117,7 @@ export default function BrainstormingPage() {
       method: 'POST /api/chat',
       url: 'OpenAI Chat Completions',
       request: {
-        model: settings.aiModel || 'gpt-3.5-turbo',
+        model: settings.aiModel || 'gpt-4o',
         messageCount: messages.length + 2,
         thought: currentThought.text,
       },
@@ -135,7 +135,7 @@ export default function BrainstormingPage() {
         },
         body: JSON.stringify({
           apiKey: settings.openaiApiKey,
-          model: settings.aiModel || 'gpt-3.5-turbo',
+          model: settings.aiModel || 'gpt-4o',
           messages: [
             {
               role: 'system',

@@ -36,7 +36,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.revertThoughtProcessing = exports.reprocessThought = exports.manualProcessThought = exports.processNewThought = void 0;
+exports.refreshTrackedTickerPrices = exports.updateTrackedTickers = exports.revertThoughtProcessing = exports.reprocessThought = exports.manualProcessThought = exports.processNewThought = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -46,4 +46,7 @@ Object.defineProperty(exports, "processNewThought", { enumerable: true, get: fun
 Object.defineProperty(exports, "manualProcessThought", { enumerable: true, get: function () { return processThought_1.manualProcessThought; } });
 Object.defineProperty(exports, "reprocessThought", { enumerable: true, get: function () { return processThought_1.reprocessThought; } });
 Object.defineProperty(exports, "revertThoughtProcessing", { enumerable: true, get: function () { return processThought_1.revertThoughtProcessing; } });
+const marketData_1 = require("./marketData");
+Object.defineProperty(exports, "refreshTrackedTickerPrices", { enumerable: true, get: function () { return marketData_1.refreshTrackedTickerPrices; } });
+Object.defineProperty(exports, "updateTrackedTickers", { enumerable: true, get: function () { return marketData_1.updateTrackedTickers; } });
 //# sourceMappingURL=index.js.map

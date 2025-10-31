@@ -3,6 +3,8 @@
  * Handles stock price fetching and historical data retrieval
  */
 import { formatCurrency } from '@/lib/currency';
+import { db } from '@/lib/firebase';
+import { Timestamp, doc, getDoc } from 'firebase/firestore';
 
 export interface StockQuote {
   symbol: string;
@@ -12,6 +14,82 @@ export interface StockQuote {
   timestamp: string;
   source: string;
 }
+
+type FirestoreTickerEntry = {
+  price?: number;
+  change?: number;
+  changePercent?: number;
+  timestamp?: string;
+  source?: string;
+  fetchedAt?: string;
+};
+
+type FirestorePriceSnapshot = {
+  tickers?: Record<string, FirestoreTickerEntry>;
+  source?: string;
+  generatedAt?: Timestamp | string | null;
+  refreshedAt?: string | null;
+};
+
+const MARKET_DATA_COLLECTION = 'marketData';
+const LATEST_PRICES_DOCUMENT = 'latestPrices';
+
+const toIsoString = (value: unknown): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (value instanceof Timestamp) {
+    return value.toDate().toISOString();
+  }
+
+  if (typeof value === 'object' && typeof (value as { toDate?: () => Date }).toDate === 'function') {
+    try {
+      return ((value as { toDate: () => Date }).toDate()).toISOString();
+    } catch (error) {
+      console.error('Failed to convert Firestore timestamp-like value to ISO string', error);
+      return null;
+    }
+  }
+
+  return null;
+};
+
+const loadQuoteFromFirestore = async (ticker: string): Promise<StockQuote | null> => {
+  try {
+    const snapshotRef = doc(db, MARKET_DATA_COLLECTION, LATEST_PRICES_DOCUMENT);
+    const snapshot = await getDoc(snapshotRef);
+
+    if (!snapshot.exists()) {
+      return null;
+    }
+
+    const data = snapshot.data() as FirestorePriceSnapshot;
+    const entry = data.tickers?.[ticker];
+
+    if (!entry || typeof entry.price !== 'number') {
+      return null;
+    }
+
+    const timestamp = entry.timestamp || entry.fetchedAt || data.refreshedAt || toIsoString(data.generatedAt) || new Date().toISOString();
+
+    return {
+      symbol: ticker,
+      price: entry.price,
+      change: typeof entry.change === 'number' ? entry.change : 0,
+      changePercent: typeof entry.changePercent === 'number' ? entry.changePercent : 0,
+      timestamp,
+      source: entry.source || data.source || 'Cached Market Data',
+    };
+  } catch (error) {
+    console.error('Error loading stock price from Firestore:', error);
+    return null;
+  }
+};
 
 export interface HistoricalDataPoint {
   date: string;
@@ -30,12 +108,19 @@ export interface StockHistory {
  */
 export async function fetchStockPrice(ticker: string): Promise<StockQuote> {
   try {
+    const upperTicker = ticker.toUpperCase();
+
+    const cachedQuote = await loadQuoteFromFirestore(upperTicker);
+    if (cachedQuote) {
+      return cachedQuote;
+    }
+
     const response = await fetch('/api/stock-price', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ ticker: ticker.toUpperCase() }),
+      body: JSON.stringify({ ticker: upperTicker }),
     });
 
     if (!response.ok) {

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const { thought, apiKey, model, context } = await request.json();
-    const selectedModel = model || 'gpt-3.5-turbo'; // Default to cheapest model
+    const selectedModel = model || 'gpt-4o'; // Default to highest quality model
 
     // Validate API key
     if (!apiKey || !apiKey.trim()) {

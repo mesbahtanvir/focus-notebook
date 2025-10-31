@@ -110,6 +110,9 @@ Only suggest task creation if the thought EXPLICITLY requests it with phrases li
 For task creation:
 - focusEligible: true = Desk work (email, coding, writing, calls, online work)
 - focusEligible: false = Errands (shopping, appointments, travel, physical location changes)
+- category: MUST be either "mastery" or "pleasure" ONLY
+  - "mastery" = Tasks related to skill development, work, learning, personal growth
+  - "pleasure" = Tasks related to enjoyment, leisure, relaxation, fun activities
 
 Confidence Requirements:
 - 95-100%: Auto-apply (text enhancement, tool tags, entity tags)
@@ -160,7 +163,7 @@ ${contextFormatted}
         "priority": "medium",
         "category": "mastery"
       },
-      "reasoning": "Thought explicitly requests creating a task to follow up"
+      "reasoning": "Thought explicitly requests creating a work-related task (use 'mastery' for work/growth, 'pleasure' for leisure/fun)"
     }
   ]
 }
