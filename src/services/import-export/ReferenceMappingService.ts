@@ -260,7 +260,7 @@ export class ReferenceMappingService {
     entities: Partial<EntityCollection>,
     idMapping: IdMapping
   ): Partial<EntityCollection> {
-    const updated: Partial<EntityCollection> = {};
+    const updated: Partial<EntityCollection> = { ...entities };
 
     // Update tasks
     if (entities.tasks) {
@@ -356,6 +356,25 @@ export class ReferenceMappingService {
           ? person.linkedThoughtIds.map(id => idMapping.oldToNew.get(id) || id)
           : person.linkedThoughtIds,
       }));
+    }
+
+    // Update portfolios
+    if (entities.portfolios) {
+      updated.portfolios = entities.portfolios.map(portfolio => {
+        const mappedPortfolioId = idMapping.oldToNew.get(portfolio.id) || portfolio.id;
+        const investments = Array.isArray(portfolio.investments)
+          ? portfolio.investments.map(investment => ({
+              ...investment,
+              portfolioId: mappedPortfolioId,
+            }))
+          : portfolio.investments;
+
+        return {
+          ...portfolio,
+          id: mappedPortfolioId,
+          investments,
+        };
+      });
     }
 
     return updated;

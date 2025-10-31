@@ -95,7 +95,7 @@ export async function deleteAllUserData(): Promise<void> {
   const userId = auth.currentUser?.uid;
   if (!userId) throw new Error('Not authenticated');
 
-  const collections = ['tasks', 'goals', 'projects', 'thoughts', 'moods', 'focusSessions'];
+  const collections = ['tasks', 'goals', 'projects', 'thoughts', 'moods', 'focusSessions', 'portfolios'];
 
   try {
     // Delete all documents in each collection
