@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, ChevronDown, ChevronUp } from "lucide-react";
 
 const TOOLS = [
   {
@@ -170,6 +170,17 @@ const TOOLS = [
     bgGradient: "from-cyan-50 to-blue-50",
     borderColor: "border-cyan-300",
     priority: "high" as const,
+  },
+  {
+    key: "vacation-packing",
+    title: "Vacation Packing",
+    description: "Pack for a two-week getaway with essentials and nice-to-have upgrades.",
+    icon: Plane,
+    emoji: "🧳",
+    gradient: "from-teal-400 to-cyan-500",
+    bgGradient: "from-teal-50 to-cyan-50",
+    borderColor: "border-teal-300",
+    priority: "medium" as const,
   },
   {
     key: "trips",

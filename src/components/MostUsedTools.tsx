@@ -17,6 +17,7 @@ import {
   Heart,
   ShoppingCart,
   Sparkles,
+  Plane,
   TrendingUp
 } from "lucide-react";
 import Link from "next/link";
@@ -34,6 +35,7 @@ const toolIcons: Record<ToolName, any> = {
   cbt: Heart,
   errands: ShoppingCart,
   deepreflect: Sparkles,
+  'vacation-packing': Plane,
 };
 
 const toolColors: Record<ToolName, string> = {
@@ -49,6 +51,7 @@ const toolColors: Record<ToolName, string> = {
   cbt: "from-red-500 to-pink-500",
   errands: "from-cyan-500 to-blue-500",
   deepreflect: "from-violet-500 to-purple-500",
+  'vacation-packing': "from-teal-500 to-cyan-500",
 };
 
 const toolLabels: Record<ToolName, string> = {
@@ -64,6 +67,7 @@ const toolLabels: Record<ToolName, string> = {
   cbt: "CBT",
   errands: "Errands",
   deepreflect: "Deep Reflect",
+  'vacation-packing': "Vacation Packing",
 };
 
 export function MostUsedTools() {
