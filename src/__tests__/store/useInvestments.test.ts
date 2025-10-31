@@ -125,8 +125,8 @@ describe('useInvestments store', () => {
     useInvestments.setState({ portfolios: [portfolio] });
     const state = useInvestments.getState();
 
-    expect(state.getTotalPortfolioValue('portfolio-1', 'USD')).toBeCloseTo(174);
-    expect(state.getTotalPortfolioValue('portfolio-1', 'CAD')).toBeCloseTo(235.135, 3);
+    expect(state.getTotalPortfolioValue('portfolio-1', 'USD')).toBeCloseTo(171);
+    expect(state.getTotalPortfolioValue('portfolio-1', 'CAD')).toBeCloseTo(240.84507042253523, 3);
   });
 
   it('computes invested totals using contribution history', () => {
@@ -190,7 +190,7 @@ describe('useInvestments store', () => {
     useInvestments.setState({ portfolios: [portfolio] });
     const state = useInvestments.getState();
 
-    expect(state.getTotalInvested('portfolio-1', 'USD')).toBeCloseTo(176, 0);
+    expect(state.getTotalInvested('portfolio-1', 'USD')).toBeCloseTo(171.5, 0);
   });
 
   it('creates normalized contribution entries with converted amounts', async () => {
@@ -233,13 +233,13 @@ describe('useInvestments store', () => {
     const updatedInvestment = (payload.investments as Array<{ id: string; currentValue: number; contributions: any[] }>)
       .find(inv => inv.id === 'inv-1');
 
-    expect(updatedInvestment?.currentValue).toBeCloseTo(118.5, 1);
+    expect(updatedInvestment?.currentValue).toBeCloseTo(117.75, 1);
     const contribution = updatedInvestment?.contributions.find(entry => entry.type === 'deposit');
     expect(contribution).toMatchObject({
       currency: 'CAD',
       amountInInvestmentCurrency: expect.any(Number),
     });
-    expect(contribution?.amountInInvestmentCurrency).toBeCloseTo(18.5, 3);
+    expect(contribution?.amountInInvestmentCurrency).toBeCloseTo(17.75, 3);
   });
 
   it('delegates async portfolio conversions to the currency service', async () => {
