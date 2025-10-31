@@ -3,10 +3,10 @@ export type SupportedCurrency = 'USD' | 'CAD' | 'BDT' | 'COP';
 export const SUPPORTED_CURRENCIES = ['USD', 'CAD', 'BDT', 'COP'] as const satisfies readonly SupportedCurrency[];
 
 const FALLBACK_RATES: Record<SupportedCurrency, number> = {
-  USD: 0.71,
+  USD: 0.74,
   CAD: 1,
-  BDT: 87.41,
-  COP: 2776.38,
+  BDT: 81,
+  COP: 2900,
 };
 
 interface CachedRates {

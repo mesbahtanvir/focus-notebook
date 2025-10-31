@@ -8,7 +8,6 @@ import { Portfolio, useInvestments } from '@/store/useInvestments';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BASE_CURRENCY, convertCurrency, formatCurrency, SupportedCurrency } from '@/lib/utils/currency';
-import { formatCurrency as formatCurrencyWithLocale } from '@/lib/currency';
 
 interface PortfolioCardProps {
   portfolio: Portfolio;
@@ -30,10 +29,7 @@ export function PortfolioCard({ portfolio, index, currency }: PortfolioCardProps
   const roi = getPortfolioROI(portfolio.id, currency);
   const gain = totalValue - totalInvested;
   const isPositive = gain >= 0;
-  const baseCurrency = portfolio.baseCurrency || 'USD';
-  const locale = portfolio.locale || 'en-US';
 
-  const formatAmount = (amount: number) => formatCurrencyWithLocale(amount, baseCurrency, locale);
 
   const targetAmount = portfolio.targetAmount
     ? convertCurrency(portfolio.targetAmount, BASE_CURRENCY, currency)
