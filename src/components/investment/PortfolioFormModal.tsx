@@ -70,10 +70,14 @@ export function PortfolioFormModal({ isOpen, onClose, portfolio }: PortfolioForm
   const onSubmit = async (data: PortfolioFormData) => {
     setIsSubmitting(true);
     try {
-      const planAmount = Number.isFinite(data.recurringPlanAmount) ? data.recurringPlanAmount : 0;
-      const planReturn = Number.isFinite(data.recurringPlanAnnualReturn)
-        ? data.recurringPlanAnnualReturn
-        : undefined;
+      const planAmount =
+        typeof data.recurringPlanAmount === 'number' && Number.isFinite(data.recurringPlanAmount)
+          ? data.recurringPlanAmount
+          : 0;
+      const planReturn =
+        typeof data.recurringPlanAnnualReturn === 'number' && Number.isFinite(data.recurringPlanAnnualReturn)
+          ? data.recurringPlanAnnualReturn
+          : undefined;
       const hasPlan = planAmount > 0;
       const recurringPlan = hasPlan
         ? {
@@ -81,7 +85,7 @@ export function PortfolioFormModal({ isOpen, onClose, portfolio }: PortfolioForm
             frequency: data.recurringPlanFrequency,
             expectedAnnualReturn: planReturn,
           }
-        : null;
+        : undefined;
 
       if (portfolio) {
         await updatePortfolio(portfolio.id, {
@@ -90,7 +94,7 @@ export function PortfolioFormModal({ isOpen, onClose, portfolio }: PortfolioForm
           status: data.status,
           targetAmount: data.targetAmount ? Number(data.targetAmount) : undefined,
           targetDate: data.targetDate || undefined,
-          recurringPlan,
+          recurringPlan: recurringPlan ?? null,
         });
         toast({ title: 'Success', description: 'Portfolio updated successfully!' });
       } else {

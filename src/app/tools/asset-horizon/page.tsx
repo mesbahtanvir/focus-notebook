@@ -15,7 +15,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useCurrency } from '@/store/useCurrency';
 import { RecurringFrequency, useInvestments } from '@/store/useInvestments';
-import { formatCurrency, convertCurrency } from '@/lib/utils/currency';
+import { formatCurrency, convertCurrency, normalizeCurrencyCode } from '@/lib/utils/currency';
 import type { SupportedCurrency } from '@/lib/utils/currency';
 import {
   generateProjectionSeries,
@@ -68,14 +68,16 @@ export default function AssetHorizonPage() {
       return null;
     }
     const plan = planPortfolio.recurringPlan;
-    const planCurrency = plan.currency ?? planPortfolio.baseCurrency ?? currency;
+    const planCurrency = normalizeCurrencyCode(
+      plan.currency ?? planPortfolio.baseCurrency ?? currency
+    );
     const amountInDisplay = convertCurrency(plan.amount, planCurrency, currency);
     return {
       amount: amountInDisplay,
       frequency: plan.frequency,
       expectedAnnualReturn: plan.expectedAnnualReturn,
     };
-  }, [portfolios, currency]);
+  }, [currency, portfolios]);
 
   useEffect(() => {
     if (!basePlanFromPortfolio) return;
@@ -94,14 +96,17 @@ export default function AssetHorizonPage() {
 
   const currentValue = useMemo(() => {
     return getAllPortfoliosValue(currency);
-  }, [getAllPortfoliosValue, currency, portfolios]);
+  }, [getAllPortfoliosValue, currency]);
 
   const annualReturnRate = Math.max(0, returnRate) / 100;
   const months = horizons[horizons.length - 1] * 12;
 
-  const baseContributions: ProjectionContribution[] = baseAmount > 0
-    ? [{ amount: baseAmount, frequency: baseFrequency }]
-    : [];
+  const baseContributions = useMemo<ProjectionContribution[]>(() => {
+    if (baseAmount > 0) {
+      return [{ amount: baseAmount, frequency: baseFrequency }];
+    }
+    return [];
+  }, [baseAmount, baseFrequency]);
 
   const baseSeries = useMemo(
     () =>
@@ -111,7 +116,7 @@ export default function AssetHorizonPage() {
         months,
         contributions: baseContributions,
       }),
-    [currentValue, annualReturnRate, months, baseAmount, baseFrequency]
+    [currentValue, annualReturnRate, months, baseContributions]
   );
 
   const scenarioSeries = useMemo(() => {
@@ -129,7 +134,7 @@ export default function AssetHorizonPage() {
           ],
         }),
       }));
-  }, [scenarios, currentValue, annualReturnRate, months, baseAmount, baseFrequency]);
+  }, [scenarios, currentValue, annualReturnRate, months, baseContributions]);
 
   const chartData = useMemo(() => {
     const years = Array.from({ length: horizons[horizons.length - 1] + 1 }, (_, index) => index);

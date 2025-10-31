@@ -43,7 +43,7 @@ export interface RecurringPlan {
   frequency: RecurringFrequency;
   startDate?: string;
   endDate?: string;
-  currency: SupportedCurrency;
+  currency?: SupportedCurrency;
   expectedAnnualReturn?: number;
   label?: string;
 }
@@ -107,7 +107,7 @@ export interface Portfolio extends CurrencyMetadata {
   status: PortfolioStatus;
   targetAmount?: number;
   targetDate?: string;
-  recurringPlan?: RecurringPlan;
+  recurringPlan?: RecurringPlan | null;
   investments: Investment[];
   createdAt: string;
   updatedAt?: number;
@@ -369,7 +369,12 @@ interface InvestmentsState {
   // Portfolio methods
   subscribe: (userId: string) => void;
   addPortfolio: (portfolio: Omit<Portfolio, 'id' | 'createdAt' | 'updatedAt' | 'investments'>) => Promise<string>;
-  updatePortfolio: (id: string, updates: Partial<Omit<Portfolio, 'id' | 'createdAt' | 'investments'>>) => Promise<void>;
+  updatePortfolio: (
+    id: string,
+    updates: Partial<Omit<Portfolio, 'id' | 'createdAt' | 'investments'>> & {
+      recurringPlan?: RecurringPlan | null;
+    }
+  ) => Promise<void>;
   deletePortfolio: (id: string) => Promise<void>;
 
   // Investment methods
@@ -537,23 +542,30 @@ export const useInvestments = create<InvestmentsState>((set, get) => ({
     if (!userId) throw new Error('User not authenticated');
 
     const currentPortfolio = get().getPortfolio(id);
-    const updatesToSave: typeof updates & {
+
+    const {
+      baseCurrency: requestedBaseCurrency,
+      recurringPlan: requestedRecurringPlan,
+      ...otherUpdates
+    } = updates;
+
+    const updatesToSave: Partial<Omit<Portfolio, 'id' | 'createdAt' | 'investments'>> & {
       baseCurrency?: SupportedCurrency;
       recurringPlan?: RecurringPlan | null;
-    } = { ...updates };
+    } = { ...otherUpdates };
 
-    if (updates.baseCurrency) {
-      updatesToSave.baseCurrency = normalizeCurrency(updates.baseCurrency);
+    if (requestedBaseCurrency) {
+      updatesToSave.baseCurrency = normalizeCurrency(requestedBaseCurrency);
     }
 
-    if ('recurringPlan' in updates) {
-      if (updates.recurringPlan === null) {
+    if (requestedRecurringPlan !== undefined) {
+      if (requestedRecurringPlan === null) {
         updatesToSave.recurringPlan = null;
       } else {
         const currencyForPlan = normalizeCurrency(
           updatesToSave.baseCurrency ?? currentPortfolio?.baseCurrency ?? BASE_CURRENCY
         );
-        const sanitizedPlan = sanitizeRecurringPlan(updates.recurringPlan, currencyForPlan);
+        const sanitizedPlan = sanitizeRecurringPlan(requestedRecurringPlan, currencyForPlan);
         updatesToSave.recurringPlan = sanitizedPlan ?? null;
       }
     }
