@@ -36,7 +36,7 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts';
-import { Rocket, Sparkles, Star } from 'lucide-react';
+import { Rocket, Sparkles } from 'lucide-react';
 
 interface AssetHorizonPanelProps {
   focusPortfolioId?: string | null;
@@ -296,77 +296,85 @@ export function AssetHorizonPanel({ focusPortfolioId, showHeader = true }: Asset
         </div>
       )}
 
-      <div className="grid gap-6 px-4 md:px-0 lg:grid-cols-[2fr,1fr]">
-        <Card className="p-6 bg-gradient-to-br from-white via-purple-50/40 to-blue-50/40 border-4 border-indigo-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900/80">
-          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6">
-            <div className="flex-1 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-200">
-                  <Sparkles className="w-6 h-6 text-indigo-500" />
+      <div className="grid gap-6 px-4 md:px-0 lg:grid-cols-[1.75fr,1fr]">
+        <Card className="p-6 border border-slate-200/80 bg-white/95 dark:bg-slate-900/80 shadow-sm">
+          <div className="grid gap-6 lg:grid-cols-[1.1fr,1fr]">
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-slate-200/80 bg-white/80 dark:bg-slate-900/70 p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-indigo-500/10">
+                      <Sparkles className="w-5 h-5 text-indigo-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-indigo-600/80">
+                        Expected Annual Return
+                      </p>
+                      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                        Adventure Dial
+                      </h2>
+                    </div>
+                  </div>
+                  <div className="rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
+                    {returnRate.toFixed(2)}%
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm uppercase tracking-wide text-indigo-600">Adventure Dial</p>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                    Expected Annual Return
-                  </h2>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <input
-                  type="range"
-                  min={0}
-                  max={15}
-                  step={0.25}
-                  value={returnRate}
-                  onChange={(event) => setReturnRate(Number(event.target.value))}
-                  className="w-full accent-indigo-500"
-                />
-                <div className="flex items-center justify-between text-sm text-gray-600">
-                  <span>Cautious</span>
-                  <span className="font-semibold text-indigo-600">{returnRate.toFixed(2)}%</span>
-                  <span>Bold</span>
+                <div className="mt-6 space-y-2">
+                  <input
+                    type="range"
+                    min={0}
+                    max={15}
+                    step={0.25}
+                    value={returnRate}
+                    onChange={(event) => setReturnRate(Number(event.target.value))}
+                    className="w-full accent-indigo-500"
+                  />
+                  <div className="flex items-center justify-between text-xs uppercase tracking-wide text-slate-500">
+                    <span>Cautious</span>
+                    <span>Balanced</span>
+                    <span>Bold</span>
+                  </div>
                 </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl border border-indigo-100 bg-white p-4 shadow-md">
-                  <p className="text-xs uppercase tracking-wide text-indigo-600">Current Portfolio</p>
-                  <p className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 dark:bg-slate-900/70">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Current Portfolio</p>
+                  <p className="mt-3 text-2xl font-semibold text-slate-900 dark:text-slate-100">
                     {formatCurrency(currentValue, currency)}
                   </p>
-                  <p className="text-sm text-gray-500">Today&#39;s balance across all tracked assets</p>
+                  <p className="mt-1 text-sm text-slate-500">Today&#39;s balance across tracked assets</p>
                 </div>
-                <div className="rounded-2xl border border-rose-100 bg-white p-4 shadow-md">
-                  <p className="text-xs uppercase tracking-wide text-rose-600">Recurring Plan</p>
-                  <p className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                    {formatCurrency(baseAmount, currency)} <span className="text-sm text-gray-500">/{baseFrequency}</span>
+                <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 dark:bg-slate-900/70">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Recurring Plan</p>
+                  <p className="mt-3 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+                    {formatCurrency(baseAmount, currency)}{' '}
+                    <span className="text-sm font-normal text-slate-500">/{baseFrequency}</span>
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-slate-500">
                     {basePlanContext ? `Linked to ${basePlanContext.portfolioName}` : 'Set a plan to personalize projections'}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="flex-1 rounded-3xl bg-white/75 dark:bg-slate-900/80 border-2 border-indigo-100 p-5 shadow-lg">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <div className="space-y-5 rounded-2xl border border-slate-200/80 bg-white/90 p-5 shadow-sm dark:bg-slate-900/70">
+              <h3 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100">
                 <Rocket className="w-5 h-5 text-indigo-500" />
                 Base Plan Controls
               </h3>
 
               {planPortfolios.length > 0 && (
-                <div className="mt-4">
-                  <label className="text-xs uppercase tracking-wide text-gray-500">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
                     Source Portfolio
                   </label>
                   <Select
                     value={selectedPlanPortfolioId ?? ''}
                     onChange={(event) => setSelectedPlanPortfolioId(event.target.value || null)}
-                    className="mt-2"
                   >
-                    <SelectTrigger>
-                      <SelectValue />
+                    <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-white/90 text-left text-sm dark:border-slate-700 dark:bg-slate-950/60">
+                      <SelectValue placeholder="Select a plan" />
                     </SelectTrigger>
                     <SelectContent>
                       {planPortfolios.map(portfolio => (
@@ -374,35 +382,32 @@ export function AssetHorizonPanel({ focusPortfolioId, showHeader = true }: Asset
                           {portfolio.name}
                         </SelectItem>
                       ))}
-                      <SelectItem value="">
-                        Custom plan (manual)
-                      </SelectItem>
+                      <SelectItem value="">Custom plan (manual)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               )}
 
-              <div className="mt-4 space-y-4">
-                <div>
-                  <label className="text-xs uppercase tracking-wide text-gray-500">Recurring Amount</label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Recurring Amount</label>
                   <Input
                     type="number"
                     min={0}
                     step={50}
                     value={baseAmount}
                     onChange={(event) => setBaseAmount(Math.max(0, Number(event.target.value)))}
-                    className="mt-2 bg-white/90 dark:bg-slate-950/40 border-indigo-200"
+                    className="h-11 rounded-xl border-slate-200 bg-white/90 text-base dark:border-slate-700 dark:bg-slate-950/60"
                   />
                 </div>
-                <div>
-                  <label className="text-xs uppercase tracking-wide text-gray-500">Frequency</label>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Frequency</label>
                   <Select
                     value={baseFrequency}
                     onChange={(event) => setBaseFrequency(event.target.value as RecurringFrequency)}
-                    className="mt-2"
                   >
-                    <SelectTrigger>
-                      <SelectValue />
+                    <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-white/90 text-left text-sm dark:border-slate-700 dark:bg-slate-950/60">
+                      <SelectValue placeholder="Select frequency" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="monthly">Monthly</SelectItem>
@@ -417,184 +422,172 @@ export function AssetHorizonPanel({ focusPortfolioId, showHeader = true }: Asset
             </div>
           </div>
 
-          <div className="mt-8">
-            <ResponsiveContainer width="100%" height={340}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="4 4" stroke="#e2e8f0" />
-                <XAxis dataKey="yearLabel" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                <YAxis
-                  tickFormatter={(value) => formatLargeCurrency(value as number, currency)}
-                  tick={{ fontSize: 12 }}
-                  stroke="#94a3b8"
-                />
-                <Tooltip
-                  formatter={(value: number) => formatCurrency(value, currency)}
-                  labelClassName="text-sm font-semibold text-indigo-600"
-                />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="base"
-                  stroke="#10b981"
-                  strokeWidth={3}
-                  dot={false}
-                  name="Base Plan"
-                />
-                {scenarioSeries.map(({ scenario }) => (
-                  <Line
-                    key={scenario.id}
-                    type="monotone"
-                    dataKey={scenario.id}
-                    stroke={scenario.color}
-                    strokeWidth={2}
-                    dot={false}
-                    strokeDasharray="6 6"
-                    name={scenario.label}
+          <div className="mt-8 space-y-6">
+            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-5 dark:bg-slate-900/70">
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="4 4" stroke="#e2e8f0" />
+                  <XAxis dataKey="yearLabel" tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                  <YAxis
+                    tickFormatter={(value) => formatLargeCurrency(value as number, currency)}
+                    tick={{ fontSize: 12 }}
+                    stroke="#94a3b8"
                   />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-
-        <div className="space-y-4">
-          <Card className="p-5 border-4 border-rose-100 bg-gradient-to-br from-white via-rose-50/40 to-orange-50/40">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-200">
-                <Star className="w-5 h-5 text-rose-500" />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-rose-600">Highlights</p>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Milestone Snapshots
-                </h3>
-              </div>
+                  <Tooltip
+                    formatter={(value: number) => formatCurrency(value, currency)}
+                    labelClassName="text-sm font-semibold text-indigo-600"
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="base"
+                    stroke="#10b981"
+                    strokeWidth={3}
+                    dot={false}
+                    name="Base Plan"
+                  />
+                  {scenarioSeries.map(({ scenario }) => (
+                    <Line
+                      key={scenario.id}
+                      type="monotone"
+                      dataKey={scenario.id}
+                      stroke={scenario.color}
+                      strokeWidth={2}
+                      dot={false}
+                      name={scenario.label}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
             </div>
 
-            <div className="mt-4 space-y-3">
+            <div className="grid gap-4 sm:grid-cols-3">
               {heroStats.map(stat => (
-                <div key={stat.label} className="rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-rose-100 p-4">
-                  <p className="text-xs uppercase tracking-wide text-rose-600">{stat.label}</p>
-                  <p className="mt-2 text-xl font-semibold text-gray-900 dark:text-gray-100">{stat.value}</p>
-                  <p className="text-xs text-gray-500">
+                <div
+                  key={stat.label}
+                  className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 text-left shadow-sm dark:bg-slate-900/70"
+                >
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{stat.label}</p>
+                  <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-100">{stat.value}</p>
+                  <p className="text-xs text-slate-500">
                     {stat.delta >= 0 ? '+' : ''}
                     {stat.change} growth from today
                   </p>
                 </div>
               ))}
             </div>
-          </Card>
+          </div>
+        </Card>
 
-          <Card className="p-5 border-4 border-indigo-100 bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/30">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-indigo-600">What-if Labs</p>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Hypothetical Boosts</h3>
-                <p className="text-sm text-gray-600">
-                  Layer extra plans to see how your horizon transforms.
-                </p>
+        <Card className="flex h-full flex-col gap-6 rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-indigo-600/90">What-if Labs</p>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Hypothetical Boosts</h3>
+            <p className="text-sm text-slate-500">
+              Layer extra plans to understand how additional contributions reshape your horizon.
+            </p>
+          </div>
+          <Button
+            onClick={addScenario}
+            className="h-11 rounded-xl bg-indigo-500 text-sm font-semibold text-white transition hover:bg-indigo-600"
+          >
+            Add Scenario
+          </Button>
+
+          <div className="space-y-4">
+            {scenarios.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-200/80 bg-white/80 p-5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/60">
+                No scenarios yet. Tap &quot;Add Scenario&quot; to design a boost plan.
               </div>
-              <Button onClick={addScenario} className="bg-indigo-500 hover:bg-indigo-600 text-white">
-                Add Scenario
-              </Button>
-            </div>
+            ) : (
+              scenarios.map((scenario, index) => {
+                const scenarioData = scenarioSeries.find(entry => entry.scenario.id === scenario.id);
+                const base15 = getProjectionPointAtYear(baseSeries, 15)?.totalValue ?? currentValue;
+                const scenario15 = scenarioData
+                  ? getProjectionPointAtYear(scenarioData.series, 15)?.totalValue ?? base15
+                  : base15;
+                const delta = scenario15 - base15;
 
-            <div className="mt-4 space-y-4">
-              {scenarios.length === 0 ? (
-                <div className="rounded-2xl border border-indigo-100 bg-white/70 dark:bg-slate-900/60 p-5 text-sm text-gray-600">
-                  No scenarios yet. Tap &ldquo;Add Scenario&rdquo; to design a boost plan.
-                </div>
-              ) : (
-                scenarios.map((scenario, index) => {
-                  const scenarioData = scenarioSeries.find(entry => entry.scenario.id === scenario.id);
-                  const base15 = getProjectionPointAtYear(baseSeries, 15)?.totalValue ?? currentValue;
-                  const scenario15 = scenarioData
-                    ? getProjectionPointAtYear(scenarioData.series, 15)?.totalValue ?? base15
-                    : base15;
-                  const delta = scenario15 - base15;
+                return (
+                  <div
+                    key={scenario.id}
+                    className="space-y-4 rounded-2xl border border-slate-200/80 bg-white/90 p-5 shadow-sm transition hover:border-indigo-200 dark:bg-slate-900/70"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Scenario #{index + 1}</p>
+                        <h4 className="mt-1 flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100">
+                          <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: scenario.color }} />
+                          {scenario.label}
+                        </h4>
+                      </div>
+                      <Switch
+                        checked={scenario.isEnabled}
+                        onCheckedChange={(checked) => updateScenario(scenario.id, { isEnabled: checked })}
+                      />
+                    </div>
 
-                  return (
-                    <div
-                      key={scenario.id}
-                      className="rounded-3xl border-2 border-indigo-100 bg-white/80 dark:bg-slate-900/70 p-5 shadow-lg"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-xs uppercase tracking-wide text-gray-500">Scenario #{index + 1}</p>
-                          <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                            <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: scenario.color }} />
-                            {scenario.label}
-                          </h4>
-                        </div>
-                        <Switch
-                          checked={scenario.isEnabled}
-                          onCheckedChange={(checked) => updateScenario(scenario.id, { isEnabled: checked })}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Label</label>
+                        <Input
+                          value={scenario.label}
+                          onChange={(event) => updateScenario(scenario.id, { label: event.target.value })}
+                          className="h-11 rounded-xl border-slate-200 bg-white/90 text-sm dark:border-slate-700 dark:bg-slate-950/60"
                         />
                       </div>
-
-                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                        <div>
-                          <label className="text-xs uppercase tracking-wide text-gray-500">Label</label>
-                          <Input
-                            value={scenario.label}
-                            onChange={(event) => updateScenario(scenario.id, { label: event.target.value })}
-                            className="mt-1 bg-white/90 dark:bg-slate-950/40"
-                          />
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Amount</label>
+                        <Input
+                          type="number"
+                          min={0}
+                          step={50}
+                          value={scenario.amount}
+                          onChange={(event) =>
+                            updateScenario(scenario.id, { amount: Math.max(0, Number(event.target.value)) })
+                          }
+                          className="h-11 rounded-xl border-slate-200 bg-white/90 text-sm dark:border-slate-700 dark:bg-slate-950/60"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Frequency</label>
+                        <Select
+                          value={scenario.frequency}
+                          onChange={(event) =>
+                            updateScenario(scenario.id, { frequency: event.target.value as RecurringFrequency })
+                          }
+                        >
+                          <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-white/90 text-left text-sm dark:border-slate-700 dark:bg-slate-950/60">
+                            <SelectValue placeholder="Select frequency" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                            <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                            <SelectItem value="quarterly">Quarterly</SelectItem>
+                            <SelectItem value="annually">Annually</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-end justify-between gap-2">
+                        <div className="rounded-xl bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
+                          {delta >= 0 ? '+' : ''}{formatCurrency(delta, currency)} at 15Y
                         </div>
-                        <div>
-                          <label className="text-xs uppercase tracking-wide text-gray-500">Amount</label>
-                          <Input
-                            type="number"
-                            min={0}
-                            step={50}
-                            value={scenario.amount}
-                            onChange={(event) =>
-                              updateScenario(scenario.id, { amount: Math.max(0, Number(event.target.value)) })
-                            }
-                            className="mt-1 bg-white/90 dark:bg-slate-950/40"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs uppercase tracking-wide text-gray-500">Frequency</label>
-                          <Select
-                            value={scenario.frequency}
-                            onChange={(event) =>
-                              updateScenario(scenario.id, { frequency: event.target.value as RecurringFrequency })
-                            }
-                            className="mt-1"
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="monthly">Monthly</SelectItem>
-                              <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                              <SelectItem value="weekly">Weekly</SelectItem>
-                              <SelectItem value="quarterly">Quarterly</SelectItem>
-                              <SelectItem value="annually">Annually</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="self-end flex justify-end gap-2">
-                          <div className="rounded-2xl bg-indigo-50 text-indigo-600 px-3 py-2 text-sm font-medium">
-                            {delta >= 0 ? '+' : ''}{formatCurrency(delta, currency)} at 15Y
-                          </div>
-                          <Button
-                            variant="outline"
-                            onClick={() => removeScenario(scenario.id)}
-                            className="border-red-200 text-red-500 hover:text-red-600 hover:bg-red-50"
-                          >
-                            Remove
-                          </Button>
-                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() => removeScenario(scenario.id)}
+                          className="h-10 rounded-xl border-slate-200 text-sm font-medium text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-slate-700 dark:text-slate-300 dark:hover:border-red-300 dark:hover:bg-red-500/10"
+                        >
+                          Remove
+                        </Button>
                       </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </Card>
-        </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </Card>
       </div>
     </div>
   );
