@@ -6,7 +6,7 @@ export type AIModel = 'gpt-3.5-turbo' | 'gpt-4-turbo-preview' | 'gpt-4o' | 'gpt-
 export interface UserSettings {
   openaiApiKey?: string;
   theme?: 'light' | 'dark' | 'system';
-  aiModel?: AIModel; // Default: gpt-3.5-turbo (cheapest)
+  aiModel?: AIModel; // Default: gpt-4o (best overall)
 }
 
 type SettingsState = {
@@ -21,7 +21,7 @@ export const useSettings = create<SettingsState>()(
     (set, get) => ({
       settings: {
         theme: 'system',
-        aiModel: 'gpt-3.5-turbo', // Default to cheapest model
+        aiModel: 'gpt-4o', // Default to best overall ChatGPT model
       },
 
       updateSettings: (updates) => {

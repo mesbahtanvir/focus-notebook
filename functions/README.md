@@ -170,7 +170,7 @@ See `src/config.ts` for:
 
 Each processing uses OpenAI tokens:
 - Typical usage: ~500-1500 tokens per thought
-- Cost (GPT-3.5-turbo): ~$0.001-0.003 per thought
+- Cost (GPT-4o): ~$0.01-0.02 per thought (varies with prompt length)
 - Tracked in `processingHistory` for each thought
 
 ## Error Handling

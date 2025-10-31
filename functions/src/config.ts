@@ -22,8 +22,8 @@ export const CONFIG = {
 
   // OpenAI Models
   MODELS: {
-    DEFAULT: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
-    FALLBACK: 'gpt-3.5-turbo',
+    DEFAULT: process.env.OPENAI_MODEL || 'gpt-4o',
+    FALLBACK: 'gpt-4o',
   },
 
   // Processing Options
