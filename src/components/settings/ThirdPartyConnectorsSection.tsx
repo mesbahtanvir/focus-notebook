@@ -2,17 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  BookOpen,
   Cloud,
   Layers,
   RefreshCcw,
@@ -342,24 +334,21 @@ export function ThirdPartyConnectorsSection() {
   };
 
   return (
-    <section className="space-y-6 border-t-4 border-green-200 pt-8">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+    <section className="space-y-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-3">
-          <div className="rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 p-2 text-white shadow-inner">
-            <Cloud className="h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-              Reading Connectors
+          <Cloud className="mt-1 h-5 w-5 text-emerald-600" />
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Reading connectors
             </h3>
             <p className="max-w-2xl text-sm text-gray-600 dark:text-gray-300">
-              Connect to Apple Books, Kindle, and other reading services to pull
-              real highlights and progress into Focus Notebook.
+              Link Apple Books, Kindle, and other reading services to pull real highlights and progress into Focus Notebook.
             </p>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Input
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
@@ -370,67 +359,28 @@ export function ThirdPartyConnectorsSection() {
             type="button"
             variant={showConnectedOnly ? "default" : "outline"}
             onClick={() => setShowConnectedOnly((prev) => !prev)}
-            className={cn(
-              showConnectedOnly
-                ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
-                : ""
-            )}
           >
             {showConnectedOnly ? "Showing connected" : "Show connected only"}
           </Button>
         </div>
       </div>
 
-      <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 dark:border-emerald-800 dark:from-emerald-900/20 dark:to-green-900/10">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold text-emerald-800 dark:text-emerald-200">
-            Connection overview
-          </CardTitle>
-          <CardDescription className="text-sm text-emerald-700/80 dark:text-emerald-200/70">
-            Track the health of your third-party integrations at a glance.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border border-emerald-200/70 bg-white/70 p-4 dark:border-emerald-800/80 dark:bg-emerald-900/40">
-              <p className="mb-1 text-xs uppercase tracking-wide text-emerald-600 dark:text-emerald-300">
-                Connected
-              </p>
-              <p className="text-2xl font-bold text-emerald-800 dark:text-emerald-100">
-                {totals.connected} / {totals.total}
-              </p>
-              <p className="text-xs text-emerald-700/80 dark:text-emerald-200/70">
-                Integrations syncing data right now
-              </p>
-            </div>
-            <div className="rounded-xl border border-emerald-200/70 bg-white/70 p-4 dark:border-emerald-800/80 dark:bg-emerald-900/40">
-              <p className="mb-1 text-xs uppercase tracking-wide text-emerald-600 dark:text-emerald-300">
-                Needs attention
-              </p>
-              <p className="text-2xl font-bold text-emerald-800 dark:text-emerald-100">
-                {totals.attention}
-              </p>
-              <p className="text-xs text-emerald-700/80 dark:text-emerald-200/70">
-                Connectors waiting for setup
-              </p>
-            </div>
-            <div className="rounded-xl border border-emerald-200/70 bg-white/70 p-4 dark:border-emerald-800/80 dark:bg-emerald-900/40">
-              <p className="mb-1 text-xs uppercase tracking-wide text-emerald-600 dark:text-emerald-300">
-                Coverage
-              </p>
-              <p className="text-2xl font-bold text-emerald-800 dark:text-emerald-100">
-                {Math.round((totals.connected / totals.total) * 100)}%
-              </p>
-              <p className="text-xs text-emerald-700/80 dark:text-emerald-200/70">
-                Share of your library with live integrations
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+        <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-gray-700 dark:border-gray-700 dark:text-gray-200">
+          <Layers className="h-3.5 w-3.5" />
+          {totals.connected} of {totals.total} connected
+        </span>
+        <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-gray-700 dark:border-gray-700 dark:text-gray-200">
+          <RefreshCcw className="h-3.5 w-3.5" />
+          {totals.attention} needing setup
+        </span>
+        <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-gray-700 dark:border-gray-700 dark:text-gray-200">
+          {Math.round((totals.connected / totals.total) * 100)}% coverage
+        </span>
+      </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {filteredConnectors.map((connector) => {
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900/30">
+        {filteredConnectors.map((connector, index) => {
           const state = states[connector.id];
           const statusMeta = STATUS_META[state.status];
           const credentialValue = credentials[connector.id] ?? "";
@@ -443,260 +393,208 @@ export function ThirdPartyConnectorsSection() {
           const isAttention = state.status === "action-required";
 
           return (
-            <Card
+            <div
               key={connector.id}
-              className="border-2 border-gray-200 transition-colors hover:border-emerald-400 dark:border-gray-700 dark:hover:border-emerald-600"
+              className={cn(
+                "space-y-4 p-5 sm:p-6",
+                index !== filteredConnectors.length - 1
+                  ? "border-b border-gray-200 dark:border-gray-800"
+                  : undefined
+              )}
             >
-              <CardHeader className="flex flex-col gap-3 pb-2">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={cn(
-                        "rounded-xl bg-gradient-to-br p-2 text-white shadow-md",
-                        connector.accent
-                      )}
-                    >
-                      <BookOpen className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
-                        {connector.name}
-                      </CardTitle>
-                      <CardDescription className="text-sm text-gray-600 dark:text-gray-300">
-                        {connector.vendor}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <Badge className={cn("text-xs font-medium", statusMeta.className)}>
-                    {statusMeta.label}
-                  </Badge>
-                </div>
-
-                <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
-                  {connector.description}
-                </p>
-
-                <div className="flex flex-wrap gap-2">
-                  {connector.tags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="secondary"
-                      className="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-200"
-                    >
-                      {tag}
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-base font-semibold text-gray-900 dark:text-white">
+                      {connector.name}
+                    </h4>
+                    <Badge className={cn("text-xs font-medium", statusMeta.className)}>
+                      {statusMeta.label}
                     </Badge>
-                  ))}
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
-                  <div className="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-200">
-                    <Layers className="mt-1 h-4 w-4 text-emerald-500" />
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">
-                        Data synced
-                      </p>
-                      <ul className="mt-1 space-y-1">
-                        {connector.dataTypes.map((item) => (
-                          <li key={item} className="flex items-center gap-2 text-sm">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                  </div>
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {connector.vendor}
+                  </p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    {connector.description}
+                  </p>
+                  <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    {connector.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-2.5 py-1 dark:border-gray-700"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs text-gray-600 dark:text-gray-300">
+                    {connector.dataTypes.map((item) => (
+                      <span
+                        key={item}
+                        className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2.5 py-1 dark:bg-gray-800"
+                      >
+                        • {item}
+                      </span>
+                    ))}
                   </div>
                 </div>
-
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    <div className="flex items-center gap-2">
-                      <RefreshCcw className="h-3.5 w-3.5" />
-                      <span>Last sync: {state.lastSync ?? "Not yet connected"}</span>
-                    </div>
-                    <a
-                      href={connector.docsUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-1 inline-flex items-center gap-1 text-emerald-600 hover:underline dark:text-emerald-300"
+                <div className="flex gap-2 self-start">
+                  {isAttention ? (
+                    <Button type="button" variant="default" onClick={() => handleResolveAttention(connector.id)}>
+                      Mark resolved
+                    </Button>
+                  ) : state.status === "connected" ? (
+                    <Button type="button" variant="outline" onClick={() => handleDisconnect(connector.id)}>
+                      Disconnect
+                    </Button>
+                  ) : canConnect ? (
+                    <Button
+                      type="button"
+                      onClick={() =>
+                        setActiveConnector((prev) => (prev === connector.id ? null : connector.id))
+                      }
                     >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      View setup guide
-                    </a>
-                  </div>
-
-                  <div className="flex gap-2">
-                    {isAttention ? (
-                      <Button
-                        type="button"
-                        className="bg-gradient-to-r from-amber-500 to-orange-500 text-white"
-                        onClick={() => handleResolveAttention(connector.id)}
-                      >
-                        Mark resolved
-                      </Button>
-                    ) : state.status === "connected" ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => handleDisconnect(connector.id)}
-                      >
-                        Disconnect
-                      </Button>
-                    ) : canConnect ? (
-                      <Button
-                        type="button"
-                        onClick={() =>
-                          setActiveConnector((prev) =>
-                            prev === connector.id ? null : connector.id
-                          )
-                        }
-                      >
-                        Connect
-                      </Button>
-                    ) : (
-                      <Button type="button" variant="outline" disabled>
-                        Coming soon
-                      </Button>
-                    )}
-                  </div>
+                      {isActive ? "Close" : "Connect"}
+                    </Button>
+                  ) : (
+                    <Button type="button" variant="outline" disabled>
+                      Coming soon
+                    </Button>
+                  )}
                 </div>
+              </div>
 
-                {canConnect && (
-                  <div className="space-y-3 rounded-lg border border-dashed border-gray-300 bg-white/70 p-3 dark:border-gray-700 dark:bg-gray-900/40">
-                    <div className="text-xs text-gray-600 dark:text-gray-300">
-                      Provide your Readwise token to securely pull highlights and
-                      progress for this connector.
-                    </div>
+              <div className="flex flex-col gap-2 text-xs text-gray-500 dark:text-gray-400 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="inline-flex items-center gap-2">
+                    <RefreshCcw className="h-3.5 w-3.5" />
+                    Last sync: {state.lastSync ?? "Not yet connected"}
+                  </span>
+                  <a
+                    href={connector.docsUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-emerald-600 hover:underline dark:text-emerald-300"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    View setup guide
+                  </a>
+                </div>
+              </div>
 
-                    {isActive && (
-                      <div className="space-y-2 text-sm">
-                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                            {readwiseConfig?.credentialLabel}
-                        </label>
-                        <Input
-                          type="password"
-                          value={credentialValue}
-                          onChange={(event) =>
-                            handleCredentialChange(
-                              connector.id,
-                              event.target.value
-                            )
-                          }
-                          autoComplete="off"
-                          placeholder="rw_live_..."
+              {canConnect && (
+                <div className="space-y-3 rounded-lg bg-gray-50 p-4 text-sm dark:bg-gray-900/40">
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    Provide your Readwise token to securely pull highlights and progress for this connector.
+                  </p>
+
+                  {isActive && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                        {readwiseConfig?.credentialLabel}
+                      </label>
+                      <Input
+                        type="password"
+                        value={credentialValue}
+                        onChange={(event) =>
+                          handleCredentialChange(connector.id, event.target.value)
+                        }
+                        autoComplete="off"
+                        placeholder="rw_live_..."
+                        disabled={state.loading}
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button size="sm" onClick={() => handleConnection(connector)} disabled={state.loading}>
+                          {state.loading ? "Connecting..." : "Save & sync"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setActiveConnector(null)}
                           disabled={state.loading}
-                        />
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handleConnection(connector)}
-                            disabled={state.loading}
-                          >
-                            {state.loading ? "Connecting..." : "Save & sync"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setActiveConnector(null)}
-                            disabled={state.loading}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="link"
-                            className="px-0 text-xs"
-                            onClick={() =>
-                              readwiseConfig &&
-                              window.open(readwiseConfig.setupHelpUrl, "_blank")
-                            }
-                          >
-                            How to generate a token
-                          </Button>
-                        </div>
-                        {state.error && (
-                          <p className="text-xs text-red-500">{state.error}</p>
-                        )}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="link"
+                          className="px-0 text-xs"
+                          onClick={() =>
+                            readwiseConfig && window.open(readwiseConfig.setupHelpUrl, "_blank")
+                          }
+                        >
+                          How to generate a token
+                        </Button>
                       </div>
-                    )}
+                      {state.error && <p className="text-xs text-red-500">{state.error}</p>}
+                    </div>
+                  )}
 
-                    {state.status === "connected" && state.data && (
-                      <div className="space-y-3 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600 dark:text-gray-300">
-                          <span>
-                            {state.data.totals.books} synced book
-                            {state.data.totals.books === 1 ? "" : "s"}
-                          </span>
-                          <span className="h-1 w-1 rounded-full bg-gray-400/60" />
-                          <span>{state.data.totals.highlights} highlights</span>
-                          <span className="h-1 w-1 rounded-full bg-gray-400/60" />
-                          <span>{state.data.totals.notes} notes</span>
-                        </div>
-                        <div className="space-y-2 text-xs">
-                          <p className="font-medium text-gray-800 dark:text-gray-100">
-                            Recent books
-                          </p>
-                          <ul className="space-y-1 text-gray-600 dark:text-gray-300">
-                            {state.data.books.slice(0, 3).map((book) => (
-                              <li key={book.id}>
-                                <span className="font-medium text-gray-800 dark:text-gray-100">
-                                  {book.title}
-                                </span>{" "}
-                                by {book.author}
-                                {book.lastHighlightAt && (
-                                  <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
-                                    (last highlight {new Date(book.lastHighlightAt).toLocaleDateString()})
-                                  </span>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div className="space-y-2 text-xs">
-                          <p className="font-medium text-gray-800 dark:text-gray-100">
-                            Latest highlights
-                          </p>
-                          <ul className="space-y-2">
-                            {state.data.highlights.slice(0, 2).map((highlight) => (
-                              <li
-                                key={highlight.id}
-                                className="rounded-md border border-gray-200 bg-white/90 p-2 dark:border-gray-700 dark:bg-gray-900/60"
-                              >
-                                <p className="text-sm text-gray-800 dark:text-gray-100">
-                                  “{highlight.text}”
-                                </p>
-                                <p className="mt-1 text-[0.7rem] uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                  {highlight.bookTitle} · {highlight.author}
-                                </p>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
+                  {state.status === "connected" && state.data && (
+                    <div className="space-y-3 text-xs text-gray-600 dark:text-gray-300">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span>
+                          {state.data.totals.books} synced book
+                          {state.data.totals.books === 1 ? "" : "s"}
+                        </span>
+                        <span className="h-1 w-1 rounded-full bg-gray-400/60" />
+                        <span>{state.data.totals.highlights} highlights</span>
+                        <span className="h-1 w-1 rounded-full bg-gray-400/60" />
+                        <span>{state.data.totals.notes} notes</span>
                       </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      <div className="space-y-2">
+                        <p className="font-medium text-gray-800 dark:text-gray-100">Recent books</p>
+                        <ul className="space-y-1 text-gray-600 dark:text-gray-300">
+                          {state.data.books.slice(0, 3).map((book) => (
+                            <li key={book.id}>
+                              <span className="font-medium text-gray-800 dark:text-gray-100">
+                                {book.title}
+                              </span>{" "}
+                              by {book.author}
+                              {book.lastHighlightAt && (
+                                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
+                                  (last highlight {new Date(book.lastHighlightAt).toLocaleDateString()})
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="font-medium text-gray-800 dark:text-gray-100">Latest highlights</p>
+                        <ul className="space-y-2">
+                          {state.data.highlights.slice(0, 2).map((highlight) => (
+                            <li
+                              key={highlight.id}
+                              className="rounded-md border border-gray-200 bg-white/90 p-2 dark:border-gray-700 dark:bg-gray-900/60"
+                            >
+                              <p className="text-sm text-gray-800 dark:text-gray-100">“{highlight.text}”</p>
+                              <p className="mt-1 text-[0.7rem] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                {highlight.bookTitle} · {highlight.author}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           );
         })}
 
         {filteredConnectors.length === 0 && (
-          <Card className="border-2 border-dashed border-gray-300 dark:border-gray-700">
-            <CardContent className="space-y-3 py-12 text-center">
-              <div className="mx-auto inline-flex items-center justify-center rounded-full bg-gray-100 p-3 dark:bg-gray-800">
-                <Cloud className="h-5 w-5 text-gray-500" />
-              </div>
-              <h4 className="text-base font-semibold text-gray-900 dark:text-white">
-                No connectors match your filters yet
-              </h4>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                Try clearing the search or showing all connectors to explore
-                available integrations.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="p-10 text-center text-sm text-gray-500 dark:text-gray-400">
+            <div className="mx-auto mb-3 inline-flex items-center justify-center rounded-full bg-gray-100 p-3 dark:bg-gray-800">
+              <Cloud className="h-5 w-5 text-gray-500" />
+            </div>
+            <p className="font-medium text-gray-700 dark:text-gray-200">
+              No connectors match your filters yet.
+            </p>
+            <p>Try clearing the search or showing all connectors to explore available integrations.</p>
+          </div>
         )}
       </div>
     </section>
