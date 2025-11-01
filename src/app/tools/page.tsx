@@ -183,6 +183,17 @@ const TOOLS = [
     priority: "medium" as const,
   },
   {
+    key: "packing-list",
+    title: "Packing List Planner",
+    description: "Plan your trip, generate a smart checklist, and track packing + timeline progress.",
+    icon: Plane,
+    emoji: "🧭",
+    gradient: "from-blue-400 to-cyan-500",
+    bgGradient: "from-blue-50 to-cyan-50",
+    borderColor: "border-blue-300",
+    priority: "high" as const,
+  },
+  {
     key: "trips",
     title: "Trip & Expense Tracker",
     description: "Plan trips, track expenses, and stay within budget while traveling.",

@@ -17,7 +17,8 @@ export type ToolName =
   | 'cbt'
   | 'errands'
   | 'deepreflect'
-  | 'vacation-packing';
+  | 'vacation-packing'
+  | 'packing-list';
 
 export interface ToolUsageRecord {
   id: string;
