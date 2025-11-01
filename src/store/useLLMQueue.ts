@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { auth } from '@/lib/firebaseClient';
+import { useAnonymousSession } from './useAnonymousSession';
 
 export interface LLMRequest {
   id: string;
@@ -64,6 +66,7 @@ export const useLLMQueue = create<State>()(
       isLoading: false,
 
       addRequest: (request) => {
+        ensureAiAccess();
         const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
         const newRequest: LLMRequest = {
           ...request,
@@ -227,10 +230,14 @@ async function processThoughtRequest(request: LLMRequest) {
   // Import settings dynamically to get API key
   const { useSettings } = await import('./useSettings');
   const settings = useSettings.getState().settings;
-  
+  const idToken = await getIdTokenOrThrow();
+
   const response = await fetch('/api/process-thought', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    },
     body: JSON.stringify({
       thought: {
         id: request.input.thoughtId,
@@ -261,10 +268,14 @@ async function processBrainstormingRequest(request: LLMRequest) {
   // Import settings dynamically to get API key
   const { useSettings } = await import('./useSettings');
   const settings = useSettings.getState().settings;
-  
+  const idToken = await getIdTokenOrThrow();
+
   const response = await fetch('/api/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    },
     body: JSON.stringify({
       messages: request.input.context?.messages || [],
       context: request.input.context,
@@ -299,4 +310,25 @@ async function processCBTRequest(request: LLMRequest) {
 function calculateCost(usage: any): number {
   // Simple cost calculation - would need to be more sophisticated
   return (usage.prompt_tokens * 0.0005 + usage.completion_tokens * 0.0015) / 1000;
+}
+
+function ensureAiAccess() {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error('You must be signed in to use AI-powered features.');
+  }
+
+  if (currentUser.isAnonymous) {
+    const { allowAi } = useAnonymousSession.getState();
+    if (!allowAi) {
+      throw new Error('Anonymous sessions cannot access AI features.');
+    }
+  }
+
+  return currentUser;
+}
+
+async function getIdTokenOrThrow() {
+  const user = ensureAiAccess();
+  return user.getIdToken();
 }

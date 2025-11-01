@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Lightbulb, Loader2 } from "lucide-react";
 import { useLLMQueue } from "@/store/useLLMQueue";
 import type { Goal } from "@/store/useGoals";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface GoalBrainstormingProps {
   goal: Goal;
@@ -18,10 +19,18 @@ export function GoalBrainstorming({ goal, userId }: GoalBrainstormingProps) {
   const [brainstormingInput, setBrainstormingInput] = useState("");
   const [isBrainstorming, setIsBrainstorming] = useState(false);
   const [brainstormingResults, setBrainstormingResults] = useState<string[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { isAnonymous, isAnonymousAiAllowed } = useAuth();
 
   const handleBrainstorming = async () => {
     if (!brainstormingInput.trim()) return;
 
+    if (isAnonymous && !isAnonymousAiAllowed) {
+      setErrorMessage('Anonymous sessions cannot access AI brainstorming. Please sign in with a full account to continue.');
+      return;
+    }
+
+    setErrorMessage(null);
     setIsBrainstorming(true);
     try {
       const requestId = addRequest({
@@ -76,6 +85,9 @@ export function GoalBrainstorming({ goal, userId }: GoalBrainstormingProps) {
       checkStatus();
     } catch (error) {
       setIsBrainstorming(false);
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+      }
     }
   };
 
@@ -99,7 +111,7 @@ export function GoalBrainstorming({ goal, userId }: GoalBrainstormingProps) {
             />
             <button
               onClick={handleBrainstorming}
-              disabled={!brainstormingInput.trim() || isBrainstorming}
+              disabled={!brainstormingInput.trim() || isBrainstorming || (isAnonymous && !isAnonymousAiAllowed)}
               className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 text-sm"
             >
               {isBrainstorming ? (
@@ -110,6 +122,9 @@ export function GoalBrainstorming({ goal, userId }: GoalBrainstormingProps) {
               Brainstorm
             </button>
           </div>
+          {errorMessage && (
+            <p className="mt-2 text-xs text-orange-700 dark:text-orange-300">{errorMessage}</p>
+          )}
         </div>
 
         {brainstormingResults.length > 0 && (

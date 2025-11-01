@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyAiRequest, UnauthorizedError, ForbiddenError } from '@/lib/server/verifyAiRequest';
 
 export async function POST(request: NextRequest) {
   try {
+    await verifyAiRequest(request);
     const { thought, apiKey, model, context } = await request.json();
     const selectedModel = model || 'gpt-4o'; // Default to highest quality model
 
@@ -250,9 +252,12 @@ Rules:
     });
 
   } catch (error) {
+    if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
     console.error('💥 Process thought error:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

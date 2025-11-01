@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyAiRequest, UnauthorizedError, ForbiddenError } from '@/lib/server/verifyAiRequest';
 
 export async function POST(request: NextRequest) {
   try {
+    await verifyAiRequest(request);
     const { historicalData, symbol, apiKey, model } = await request.json();
     const selectedModel = model || 'gpt-4o-mini'; // Use GPT-4 for better predictions
 
@@ -199,6 +201,9 @@ Generate predictions for the next 30 days (every 3 days for efficiency).`;
     });
 
   } catch (error) {
+    if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
     console.error('💥 Prediction error:', error);
     return NextResponse.json(
       {
