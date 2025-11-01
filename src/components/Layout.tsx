@@ -4,7 +4,6 @@ import { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import Sidebar from './Sidebar';
-import Onboarding from './Onboarding';
 import OfflineBanner from './OfflineBanner';
 import { UpgradeBanner } from './UpgradeBanner';
 
@@ -40,7 +39,6 @@ export default function Layout({ children }: { children: ReactNode }) {
           </motion.div>
         </AnimatePresence>
       </main>
-      <Onboarding />
     </div>
   );
 }
