@@ -58,7 +58,7 @@ Ensure your [firebase.json](firebase.json) is properly configured:
     "predeploy": [
       "npm --prefix \"$RESOURCE_DIR\" run build"
     ],
-    "runtime": "nodejs18"
+    "runtime": "nodejs20"
   }
 }
 ```
