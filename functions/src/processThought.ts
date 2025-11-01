@@ -15,6 +15,9 @@ import { getProcessingContext } from './utils/contextGatherer';
 import { callOpenAI } from './utils/openaiClient';
 import { processActions, buildThoughtUpdate } from './utils/actionProcessor';
 
+const ANONYMOUS_SESSION_COLLECTION = 'anonymousSessions';
+const ANONYMOUS_AI_OVERRIDE_KEY = process.env.ANONYMOUS_AI_OVERRIDE_KEY || functions.config()?.ci?.anonymous_key;
+
 // ===== TRIGGER 1: Auto-process on new thought creation =====
 
 export const processNewThought = functions.firestore
@@ -40,6 +43,11 @@ export const processNewThought = functions.firestore
 
     if (currentCount >= CONFIG.RATE_LIMITS.MAX_PROCESSING_PER_DAY_PER_USER) {
       console.log(`Rate limit reached for user ${userId} (${currentCount}/${CONFIG.RATE_LIMITS.MAX_PROCESSING_PER_DAY_PER_USER})`);
+      return;
+    }
+
+    if (!(await isAiAllowedForUser(userId))) {
+      console.log(`Skipping auto-processing for anonymous user ${userId}`);
       return;
     }
 
@@ -150,6 +158,16 @@ async function processThoughtInternal(
     throw new Error('Thought data is null');
   }
 
+  const aiAllowed = await isAiAllowedForUser(userId);
+  if (!aiAllowed) {
+    await thoughtRef.update({
+      aiProcessingStatus: 'blocked',
+      aiError: 'Anonymous sessions cannot run AI processing',
+    });
+    console.log(`AI processing blocked for anonymous user ${userId}`);
+    return;
+  }
+
   // Mark as processing
   await thoughtRef.update({
     aiProcessingStatus: 'processing',
@@ -201,6 +219,51 @@ async function processThoughtInternal(
 
     throw error;
   }
+}
+
+async function isAiAllowedForUser(userId: string): Promise<boolean> {
+  const userRecord = await admin.auth().getUser(userId);
+  const isAnonymous = userRecord.providerData.length === 0;
+
+  if (!isAnonymous) {
+    return true;
+  }
+
+  const sessionRef = admin.firestore().collection(ANONYMOUS_SESSION_COLLECTION).doc(userId);
+  const sessionSnap = await sessionRef.get();
+  const sessionData = sessionSnap.data();
+
+  const expiresAtMillis = sessionData?.expiresAt?.toMillis?.();
+  const cleanupPending = sessionData?.cleanupPending === true;
+  const overrideKeyMatch = ANONYMOUS_AI_OVERRIDE_KEY && sessionData?.ciOverrideKey === ANONYMOUS_AI_OVERRIDE_KEY;
+  const allowAi = sessionData?.allowAi === true || overrideKeyMatch;
+
+  if (!sessionSnap.exists || !allowAi || cleanupPending) {
+    await sessionRef.set(
+      {
+        cleanupPending: true,
+        status: 'blocked',
+        updatedAt: admin.firestore.Timestamp.now(),
+      },
+      { merge: true }
+    );
+    return false;
+  }
+
+  if (typeof expiresAtMillis === 'number' && expiresAtMillis <= Date.now()) {
+    await sessionRef.set(
+      {
+        cleanupPending: true,
+        status: 'expired',
+        expiredAt: admin.firestore.Timestamp.now(),
+        updatedAt: admin.firestore.Timestamp.now(),
+      },
+      { merge: true }
+    );
+    return false;
+  }
+
+  return true;
 }
 
 // ===== REVERT LOGIC =====

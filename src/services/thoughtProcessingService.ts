@@ -6,6 +6,8 @@ import { useMoods } from '@/store/useMoods';
 import { useRelationships } from '@/store/useRelationships';
 import { useLLMQueue } from '@/store/useLLMQueue';
 import { useSettings } from '@/store/useSettings';
+import { auth } from '@/lib/firebaseClient';
+import { useAnonymousSession } from '@/store/useAnonymousSession';
 
 export interface ThoughtProcessingResult {
   success: boolean;
@@ -27,6 +29,14 @@ export class ThoughtProcessingService {
     const hasApiKey = useSettings.getState().hasApiKey();
     if (!hasApiKey) {
       return { success: false, error: 'OpenAI API key not configured' };
+    }
+
+    const currentUser = auth.currentUser;
+    if (currentUser?.isAnonymous) {
+      const { allowAi } = useAnonymousSession.getState();
+      if (!allowAi) {
+        return { success: false, error: 'Anonymous sessions cannot run AI processing' };
+      }
     }
 
     // Check if already processed

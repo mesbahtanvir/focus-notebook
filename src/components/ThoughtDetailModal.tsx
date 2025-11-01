@@ -10,6 +10,7 @@ import { useFriends } from "@/store/useFriends";
 import { ThoughtProcessingService } from "@/services/thoughtProcessingService";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   X,
   Trash2,
@@ -68,6 +69,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const moods = useMoods((s) => s.moods);
   const deleteMood = useMoods((s) => s.delete);
   const friends = useFriends((s) => s.friends);
+  const { isAnonymous, isAnonymousAiAllowed } = useAuth();
   
   const isProcessed = Array.isArray(thought.tags) && thought.tags.includes('processed');
 
@@ -192,6 +194,12 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   };
 
   const handleProcessNow = async () => {
+    if (isAnonymous && !isAnonymousAiAllowed) {
+      setErrorMessage('Anonymous sessions cannot run AI processing. Create an account or sign in with Google to continue.');
+      setShowErrorModal(true);
+      return;
+    }
+
     if (isProcessed) {
       setErrorMessage('This thought has already been processed');
       setShowErrorModal(true);
@@ -328,7 +336,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
               {!isProcessed && (
                 <button
                   onClick={handleProcessNow}
-                  disabled={isProcessing}
+                  disabled={isProcessing || (isAnonymous && !isAnonymousAiAllowed)}
                   className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
                   title="Process this thought with AI"
                 >

@@ -1,9 +1,9 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { 
-  User, 
-  signInWithPopup, 
+import { createContext, useContext, useEffect, useState, ReactNode, useRef, useCallback } from 'react';
+import {
+  User,
+  signInWithPopup,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   signInAnonymously,
@@ -14,11 +14,28 @@ import {
   EmailAuthProvider
 } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebaseClient';
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+  updateDoc,
+} from 'firebase/firestore';
+import { db } from '@/lib/firebaseClient';
+import { useAnonymousSession } from '@/store/useAnonymousSession';
+
+const ANONYMOUS_SESSION_COLLECTION = 'anonymousSessions';
+const ANONYMOUS_SESSION_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
+const CLIENT_ANONYMOUS_AI_OVERRIDE_KEY = process.env.NEXT_PUBLIC_ANONYMOUS_AI_OVERRIDE_KEY;
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   isAnonymous: boolean;
+  anonymousSessionExpiresAt: Date | null;
+  anonymousSessionExpired: boolean;
+  isAnonymousAiAllowed: boolean;
   signInWithGoogle: () => Promise<void>;
   signInAnonymously: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
@@ -32,6 +49,9 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   isAnonymous: false,
+  anonymousSessionExpiresAt: null,
+  anonymousSessionExpired: false,
+  isAnonymousAiAllowed: false,
   signInWithGoogle: async () => {},
   signInAnonymously: async () => {},
   signInWithEmail: async () => {},
@@ -52,23 +72,159 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [anonymousSessionExpiresAt, setAnonymousSessionExpiresAt] = useState<Date | null>(null);
+  const [anonymousSessionExpired, setAnonymousSessionExpired] = useState(false);
+  const expirationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const setAnonymousSession = useAnonymousSession((state) => state.setSession);
+  const clearAnonymousSession = useAnonymousSession((state) => state.clearSession);
+  const markAnonymousSessionExpired = useAnonymousSession((state) => state.markExpired);
+  const allowAnonymousAi = useAnonymousSession((state) => state.allowAi);
+
+  const clearExpirationTimer = useCallback(() => {
+    if (expirationTimeoutRef.current) {
+      clearTimeout(expirationTimeoutRef.current);
+      expirationTimeoutRef.current = null;
+    }
+  }, []);
+
+  const handleAnonymousExpiration = useCallback(
+    async (uid: string) => {
+      clearExpirationTimer();
+      try {
+        const sessionRef = doc(db, ANONYMOUS_SESSION_COLLECTION, uid);
+        await setDoc(
+          sessionRef,
+          {
+            status: 'expired',
+            cleanupPending: true,
+            expiredAt: Timestamp.fromMillis(Date.now()),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } catch (error) {
+        console.error('Failed to mark anonymous session as expired:', error);
+      }
+
+      markAnonymousSessionExpired();
+      setAnonymousSessionExpired(true);
+      setAnonymousSessionExpiresAt(null);
+
+      try {
+        await firebaseSignOut(auth);
+      } catch (error) {
+        console.error('Error signing out expired anonymous session:', error);
+      }
+    },
+    [clearExpirationTimer, markAnonymousSessionExpired]
+  );
+
+  const scheduleAnonymousSignOut = useCallback(
+    (uid: string, expiresAtMillis: number) => {
+      clearExpirationTimer();
+
+      const timeUntilExpiration = expiresAtMillis - Date.now();
+
+      if (timeUntilExpiration <= 0) {
+        void (async () => {
+          await handleAnonymousExpiration(uid);
+        })();
+        return;
+      }
+
+      expirationTimeoutRef.current = setTimeout(() => {
+        void (async () => {
+          await handleAnonymousExpiration(uid);
+        })();
+      }, timeUntilExpiration);
+    },
+    [clearExpirationTimer, handleAnonymousExpiration]
+  );
+
+  const synchronizeAnonymousSession = useCallback(
+    async (currentUser: User) => {
+      const uid = currentUser.uid;
+      try {
+        const sessionRef = doc(db, ANONYMOUS_SESSION_COLLECTION, uid);
+        const sessionSnap = await getDoc(sessionRef);
+        const now = Date.now();
+        const defaultExpiresAt = now + ANONYMOUS_SESSION_DURATION_MS;
+        const expiresAtTimestamp = Timestamp.fromMillis(defaultExpiresAt);
+
+        const existingData = sessionSnap.data();
+        const ciOverrideKey = existingData?.ciOverrideKey ?? null;
+        const overrideMatch =
+          ciOverrideKey && CLIENT_ANONYMOUS_AI_OVERRIDE_KEY && ciOverrideKey === CLIENT_ANONYMOUS_AI_OVERRIDE_KEY;
+        const allowAi = existingData?.allowAi === true || !!overrideMatch;
+        const expiresAt = existingData?.expiresAt?.toMillis?.() ?? defaultExpiresAt;
+        const cleanupPending = existingData?.cleanupPending === true;
+
+        if (!sessionSnap.exists()) {
+          await setDoc(sessionRef, {
+            uid,
+            createdAt: Timestamp.fromMillis(now),
+            expiresAt: expiresAtTimestamp,
+            cleanupPending: false,
+            allowAi: false,
+            ciOverrideKey: null,
+            status: 'active',
+            updatedAt: serverTimestamp(),
+          });
+        } else {
+          await updateDoc(sessionRef, {
+            expiresAt: Timestamp.fromMillis(expiresAt),
+            updatedAt: serverTimestamp(),
+            status: 'active',
+            cleanupPending: false,
+          });
+        }
+
+        const expiresAtDate = new Date(expiresAt);
+        setAnonymousSession({
+          uid,
+          expiresAt: expiresAtDate.toISOString(),
+          allowAi,
+          cleanupPending,
+          ciOverrideKey,
+        });
+
+        setAnonymousSessionExpiresAt(expiresAtDate);
+        setAnonymousSessionExpired(false);
+
+        scheduleAnonymousSignOut(uid, expiresAt);
+      } catch (error) {
+        console.error('Failed to synchronize anonymous session metadata:', error);
+      }
+    },
+    [scheduleAnonymousSignOut, setAnonymousSession]
+  );
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      setUser(authUser);
       setLoading(false);
-      
-      // FirestoreSubscriber component handles all subscriptions automatically
-      // No manual sync needed - real-time listeners take care of everything
-      if (user) {
-        console.log('✅ User logged in:', user.email);
+
+      if (authUser?.isAnonymous) {
+        await synchronizeAnonymousSession(authUser);
+      } else {
+        clearExpirationTimer();
+        setAnonymousSessionExpiresAt(null);
+        setAnonymousSessionExpired(false);
+        clearAnonymousSession();
+      }
+
+      if (authUser) {
+        console.log('✅ User logged in:', authUser.email || authUser.uid);
       } else {
         console.log('👋 User logged out');
       }
     });
 
-    return unsubscribe;
-  }, []);
+    return () => {
+      clearExpirationTimer();
+      unsubscribe();
+    };
+  }, [clearAnonymousSession, clearExpirationTimer, synchronizeAnonymousSession]);
 
   const signInWithGoogle = async () => {
     try {
@@ -81,7 +237,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const handleSignInAnonymously = async () => {
     try {
-      await signInAnonymously(auth);
+      const credential = await signInAnonymously(auth);
+      const anonymousUser = credential.user;
+      if (anonymousUser) {
+        await synchronizeAnonymousSession(anonymousUser);
+      }
     } catch (error) {
       console.error('Error signing in anonymously:', error);
       throw error;
@@ -132,7 +292,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signOut = async () => {
     try {
+      const currentUser = auth.currentUser;
+      if (currentUser?.isAnonymous) {
+        try {
+          const sessionRef = doc(db, ANONYMOUS_SESSION_COLLECTION, currentUser.uid);
+          await setDoc(
+            sessionRef,
+            {
+              status: 'signed-out',
+              cleanupPending: true,
+              signedOutAt: Timestamp.fromMillis(Date.now()),
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+        } catch (error) {
+          console.error('Failed to mark anonymous session for cleanup:', error);
+        }
+      }
       await firebaseSignOut(auth);
+      clearExpirationTimer();
+      setAnonymousSessionExpiresAt(null);
+      setAnonymousSessionExpired(false);
+      clearAnonymousSession();
     } catch (error) {
       console.error('Error signing out:', error);
       throw error;
@@ -143,6 +325,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     loading,
     isAnonymous: user?.isAnonymous || false,
+    anonymousSessionExpiresAt,
+    anonymousSessionExpired,
+    isAnonymousAiAllowed: !user?.isAnonymous || allowAnonymousAi,
     signInWithGoogle,
     signInAnonymously: handleSignInAnonymously,
     signInWithEmail: handleSignInWithEmail,

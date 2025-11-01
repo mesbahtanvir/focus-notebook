@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyAiRequest, UnauthorizedError, ForbiddenError } from '@/lib/server/verifyAiRequest';
 
 export async function POST(request: NextRequest) {
   try {
+    await verifyAiRequest(request);
     const { messages, apiKey, model } = await request.json();
     const selectedModel = model || 'gpt-4o'; // Default to highest quality model
 
@@ -106,9 +108,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: assistantMessage });
 
   } catch (error) {
+    if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
     console.error('Chat API error:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         message: "Oops! Something went wrong on my end. Let's try that again!"
       },

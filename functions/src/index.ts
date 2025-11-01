@@ -10,6 +10,7 @@ admin.initializeApp();
 // Import cloud functions
 import { processNewThought, manualProcessThought, reprocessThought, revertThoughtProcessing } from './processThought';
 import { refreshTrackedTickerPrices, updateTrackedTickers } from './marketData';
+import { cleanupExpiredAnonymousUsers } from './cleanupAnonymous';
 
 // Export cloud functions
 export {
@@ -19,4 +20,5 @@ export {
   revertThoughtProcessing,
   updateTrackedTickers,
   refreshTrackedTickerPrices,
+  cleanupExpiredAnonymousUsers,
 };
