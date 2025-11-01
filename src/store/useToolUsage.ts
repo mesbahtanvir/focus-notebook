@@ -5,6 +5,7 @@ import { createAt, updateAt } from '@/lib/data/gateway';
 import { subscribeCol } from '@/lib/data/subscribe';
 
 export type ToolName =
+  | 'apple-kindle-connector'
   | 'tasks'
   | 'thoughts'
   | 'goals'

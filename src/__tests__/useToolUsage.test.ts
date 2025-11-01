@@ -234,9 +234,20 @@ describe('useToolUsage', () => {
     const { createAt } = require('@/lib/data/gateway');
 
     const toolNames: ToolName[] = [
-      'tasks', 'thoughts', 'goals', 'projects', 'focus',
-      'brainstorming', 'notes', 'relationships', 'moodtracker',
-      'cbt', 'errands', 'deepreflect'
+      'tasks',
+      'thoughts',
+      'goals',
+      'projects',
+      'focus',
+      'brainstorming',
+      'notes',
+      'relationships',
+      'moodtracker',
+      'cbt',
+      'errands',
+      'deepreflect',
+      'vacation-packing',
+      'apple-kindle-connector',
     ];
 
     for (const toolName of toolNames) {
