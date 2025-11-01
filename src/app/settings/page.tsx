@@ -19,6 +19,7 @@ import { useMoods } from '@/store/useMoods'
 import { useFocus } from '@/store/useFocus'
 import { useAuth } from '@/contexts/AuthContext'
 import { EnhancedDataManagement } from '@/components/EnhancedDataManagement';
+import { ThirdPartyConnectorsSection } from '@/components/settings/ThirdPartyConnectorsSection';
 
 type SettingsFormValues = {
   allowBackgroundProcessing: boolean;
@@ -331,6 +332,8 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
+
+            <ThirdPartyConnectorsSection />
 
           </CardContent>
       </Card>

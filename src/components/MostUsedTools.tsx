@@ -19,7 +19,6 @@ import {
   Sparkles,
   Plane,
   TrendingUp,
-  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -37,7 +36,6 @@ const toolIcons: Record<ToolName, any> = {
   errands: ShoppingCart,
   deepreflect: Sparkles,
   'vacation-packing': Plane,
-  'apple-kindle-connector': BookOpen,
 };
 
 const toolColors: Record<ToolName, string> = {
@@ -54,7 +52,6 @@ const toolColors: Record<ToolName, string> = {
   errands: "from-cyan-500 to-blue-500",
   deepreflect: "from-violet-500 to-purple-500",
   'vacation-packing': "from-teal-500 to-cyan-500",
-  'apple-kindle-connector': "from-indigo-500 to-purple-500",
 };
 
 const toolLabels: Record<ToolName, string> = {
@@ -71,7 +68,6 @@ const toolLabels: Record<ToolName, string> = {
   errands: "Errands",
   deepreflect: "Deep Reflect",
   'vacation-packing': "Vacation Packing",
-  'apple-kindle-connector': "Reading Connector",
 };
 
 export function MostUsedTools() {

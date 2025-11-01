@@ -247,7 +247,6 @@ describe('useToolUsage', () => {
       'errands',
       'deepreflect',
       'vacation-packing',
-      'apple-kindle-connector',
     ];
 
     for (const toolName of toolNames) {
