@@ -7,11 +7,10 @@ const ANONYMOUS_SESSION_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 type FirestoreWithRecursiveDelete = admin.firestore.Firestore & {
   recursiveDelete?: (ref: admin.firestore.DocumentReference) => Promise<void>;
 };
-const ANONYMOUS_AI_OVERRIDE_KEY = process.env.ANONYMOUS_AI_OVERRIDE_KEY || functions.config()?.ci?.anonymous_key;
+const ANONYMOUS_AI_OVERRIDE_KEY =
+  process.env.ANONYMOUS_AI_OVERRIDE_KEY || functions.config()?.ci?.anonymous_key;
 
-export const cleanupExpiredAnonymousUsers = functions.pubsub
-  .schedule('every 60 minutes')
-  .onRun(async () => {
+export async function cleanupExpiredAnonymousUsersHandler() {
     console.log('Starting cleanup of expired anonymous users');
 
     let nextPageToken: string | undefined;
@@ -70,7 +69,11 @@ export const cleanupExpiredAnonymousUsers = functions.pubsub
     } while (nextPageToken);
 
     console.log('Completed cleanup run for anonymous users');
-  });
+}
+
+export const cleanupExpiredAnonymousUsers = functions.pubsub
+  .schedule('every 60 minutes')
+  .onRun(cleanupExpiredAnonymousUsersHandler);
 
 async function markSessionPendingDeletion(sessionRef: admin.firestore.DocumentReference) {
   await sessionRef.set(
@@ -140,3 +143,10 @@ async function deleteNestedSubcollections(docRef: admin.firestore.DocumentRefere
     await deleteCollection(nested);
   }
 }
+
+export const __private__ = {
+  markSessionPendingDeletion,
+  deleteUserData,
+  deleteCollection,
+  deleteNestedSubcollections,
+};
