@@ -66,6 +66,8 @@ type CustomItemsState = Record<PackingSectionId, PackingItem[]>;
 
 type TripPurpose = "leisure" | "business" | "adventure" | "family";
 
+type TripLength = "weekend" | "one-week" | "two-week";
+
 type ActivityId = "beach" | "hiking" | "city" | "formal";
 
 type TripDetails = {
@@ -73,6 +75,7 @@ type TripDetails = {
   startDate: string;
   endDate: string;
   purpose: TripPurpose;
+  length: TripLength;
   companions: string;
   accommodations: string;
   activities: ActivityId[];
@@ -114,6 +117,7 @@ const DEFAULT_TRIP: TripDetails = {
   startDate: "",
   endDate: "",
   purpose: "leisure",
+  length: "one-week",
   companions: "",
   accommodations: "",
   activities: [],
@@ -125,6 +129,12 @@ const PURPOSE_OPTIONS: { value: TripPurpose; label: string }[] = [
   { value: "business", label: "Business travel" },
   { value: "adventure", label: "Adventure trip" },
   { value: "family", label: "Family time" },
+];
+
+const TRIP_LENGTH_OPTIONS: { value: TripLength; label: string; description: string }[] = [
+  { value: "weekend", label: "Weekend escape", description: "3-4 days" },
+  { value: "one-week", label: "One week away", description: "5-7 days" },
+  { value: "two-week", label: "Extended stay", description: "12-14 days" },
 ];
 
 const ACTIVITY_OPTIONS: { id: ActivityId; label: string; description: string; icon: string }[] = [
@@ -510,6 +520,295 @@ const ACTIVITY_ENHANCEMENTS: Record<ActivityId, Enhancement> = {
   },
 };
 
+const TRIP_LENGTH_ENHANCEMENTS: Record<TripLength, Enhancement[]> = {
+  weekend: [],
+  "one-week": [],
+  "two-week": [
+    {
+      sectionId: "clothing",
+      group: {
+        id: "two-week-rotation",
+        title: "Two-week rotation",
+        icon: "🧳",
+        description: "Build a laundry-friendly capsule for a longer stay.",
+        items: [
+          {
+            id: "two-week-tops",
+            name: "7-8 versatile tops",
+            quantity: "7-8",
+            tip: "Mix breathable layers for varied climates.",
+          },
+          {
+            id: "two-week-bottoms",
+            name: "3 bottoms",
+            quantity: "3",
+            description: "2 casual options plus one polished pair.",
+          },
+          {
+            id: "two-week-dressy",
+            name: "2 dressier outfits",
+            quantity: "2",
+            tip: "Choose wrinkle-resistant pieces.",
+          },
+          {
+            id: "two-week-sleepwear",
+            name: "2 sets of sleepwear",
+            quantity: "2",
+            description: "Pack quick-dry fabrics.",
+          },
+          {
+            id: "two-week-underwear",
+            name: "14 pairs underwear",
+            quantity: "14",
+            tip: "Add a couple of quick-dry pairs.",
+          },
+          {
+            id: "two-week-socks",
+            name: "7 pairs socks",
+            quantity: "7",
+            description: "Blend ankle and crew socks.",
+          },
+          {
+            id: "two-week-outer-layer",
+            name: "Light jacket or sweater",
+            quantity: "1",
+            description: "Layer for shifting temps.",
+          },
+          {
+            id: "two-week-swim",
+            name: "Swimwear",
+            quantity: "1-2",
+            tip: "Add a quick-dry towel if you’ll swim.",
+          },
+          {
+            id: "two-week-walking-shoes",
+            name: "Comfortable walking shoes",
+            quantity: "1",
+            description: "Break them in before you go.",
+          },
+          {
+            id: "two-week-evening-shoes",
+            name: "Sandals or dress shoes",
+            quantity: "1",
+            description: "Cover evenings out or special plans.",
+          },
+        ],
+      },
+      timeline: [
+        {
+          phaseId: "before",
+          tasks: [
+            {
+              id: "timeline-two-week-laundry-plan",
+              title: "Plan mid-trip laundry options",
+              relativeTo: "start",
+              daysOffset: -5,
+            },
+          ],
+        },
+        {
+          phaseId: "during",
+          tasks: [
+            {
+              id: "timeline-two-week-refresh",
+              title: "Schedule wardrobe refresh",
+              description: "Book laundry or plan a reset day mid-trip.",
+              relativeTo: "start",
+              daysOffset: 6,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      sectionId: "personal",
+      group: {
+        id: "two-week-care",
+        title: "Extended stay care",
+        icon: "🧼",
+        description: "Keep routines steady for longer adventures.",
+        items: [
+          {
+            id: "two-week-laundry-kit",
+            name: "Travel laundry kit",
+            description: "Detergent sheets, sink stopper, clothesline.",
+          },
+          {
+            id: "two-week-meds",
+            name: "Prescription meds (full supply)",
+            description: "Pack copies of prescriptions.",
+          },
+          {
+            id: "two-week-haircare",
+            name: "Hair care essentials",
+            tip: "Brush/comb and travel-sized styling products.",
+          },
+          {
+            id: "two-week-wellness",
+            name: "Wellness extras",
+            tip: "Electrolytes, probiotics, or herbal tea.",
+          },
+        ],
+      },
+    },
+    {
+      sectionId: "tech",
+      group: {
+        id: "two-week-tech",
+        title: "Travel toolkit",
+        icon: "🔋",
+        description: "Keep devices powered for the full stay.",
+        items: [
+          {
+            id: "two-week-power-bank",
+            name: "High-capacity power bank",
+            description: "10,000 mAh or more for long days out.",
+          },
+          {
+            id: "two-week-headphones",
+            name: "Noise-cancelling headphones",
+            description: "Add wired backups for flights.",
+          },
+          {
+            id: "two-week-camera",
+            name: "Camera or action cam",
+            description: "Include batteries and memory cards.",
+          },
+          {
+            id: "two-week-daypack",
+            name: "Daypack or tote",
+            description: "Foldable bag for excursions.",
+          },
+          {
+            id: "two-week-water-bottle",
+            name: "Reusable water bottle",
+            tip: "Collapsible bottles save space.",
+          },
+          {
+            id: "two-week-locks",
+            name: "TSA-approved luggage locks",
+            description: "One per checked bag plus a spare.",
+          },
+        ],
+      },
+    },
+    {
+      sectionId: "extras",
+      group: {
+        id: "two-week-comfort",
+        title: "Comfort upgrades",
+        icon: "💺",
+        description: "Make flights and long rides easier.",
+        items: [
+          {
+            id: "two-week-travel-pillow",
+            name: "Travel pillow",
+            description: "Choose compressible or inflatable styles.",
+          },
+          {
+            id: "two-week-collapsible-mug",
+            name: "Collapsible mug or cup",
+            description: "Perfect for tea or instant meals.",
+          },
+          {
+            id: "two-week-snacks",
+            name: "Favorite snacks",
+            description: "Pack protein-rich options.",
+          },
+        ],
+      },
+    },
+    {
+      sectionId: "extras",
+      group: {
+        id: "two-week-style",
+        title: "Style boosters",
+        icon: "🧣",
+        description: "Accessorize without overpacking.",
+        items: [
+          {
+            id: "two-week-scarf",
+            name: "Lightweight scarf or wrap",
+            description: "Adds warmth and polish.",
+          },
+          {
+            id: "two-week-hat",
+            name: "Sun hat or beanie",
+            tip: "Pick based on climate.",
+          },
+          {
+            id: "two-week-jewelry",
+            name: "Simple jewelry capsule",
+            description: "Keep pieces in a compact organizer.",
+          },
+          {
+            id: "two-week-extra-shoes",
+            name: "Optional extra shoes",
+            tip: "Dress shoes, hiking boots, or specialty footwear.",
+          },
+        ],
+      },
+    },
+    {
+      sectionId: "extras",
+      group: {
+        id: "two-week-wellness",
+        title: "Wellness recharge",
+        icon: "🧘",
+        description: "Keep energy and routines balanced.",
+        items: [
+          {
+            id: "two-week-workout",
+            name: "Travel workout outfit",
+            description: "Resistance bands or jump rope optional.",
+          },
+          {
+            id: "two-week-recovery",
+            name: "Recovery tools",
+            tip: "Massage ball or compact foam roller.",
+          },
+          {
+            id: "two-week-spa",
+            name: "Mini spa kit",
+            description: "Sheet mask, bath salts, or pampering pick.",
+          },
+        ],
+      },
+    },
+    {
+      sectionId: "extras",
+      group: {
+        id: "two-week-optional-tech",
+        title: "Optional tech",
+        icon: "💻",
+        description: "Helpful if you plan to work or create.",
+        items: [
+          {
+            id: "two-week-tablet",
+            name: "Tablet or laptop",
+            description: "Download offline docs ahead of time.",
+          },
+          {
+            id: "two-week-speaker",
+            name: "Portable speaker",
+            tip: "Small Bluetooth speaker for rooms or picnics.",
+          },
+          {
+            id: "two-week-tripod",
+            name: "Compact tripod or selfie stick",
+            description: "Choose lightweight aluminum or carbon.",
+          },
+          {
+            id: "two-week-router",
+            name: "Travel Wi-Fi router",
+            tip: "Great for unreliable hotel connections.",
+          },
+        ],
+      },
+    },
+  ],
+};
+
 function createEmptyCustomItems(): CustomItemsState {
   return {
     essentials: [],
@@ -616,6 +915,9 @@ function sanitizeTripDetails(value: unknown): TripDetails {
     purpose: PURPOSE_OPTIONS.some((option) => option.value === raw.purpose)
       ? (raw.purpose as TripPurpose)
       : "leisure",
+    length: TRIP_LENGTH_OPTIONS.some((option) => option.value === raw.length)
+      ? (raw.length as TripLength)
+      : DEFAULT_TRIP.length,
     companions: typeof raw.companions === "string" ? raw.companions : "",
     accommodations: typeof raw.accommodations === "string" ? raw.accommodations : "",
     activities,
@@ -714,6 +1016,9 @@ function buildPackingSections({
   tripDetails.activities.forEach((activity) => {
     applyEnhancement(sectionMap, null, ACTIVITY_ENHANCEMENTS[activity]);
   });
+  TRIP_LENGTH_ENHANCEMENTS[tripDetails.length].forEach((enhancement) => {
+    applyEnhancement(sectionMap, null, enhancement);
+  });
 
   const sectionsWithCustom = Array.from(sectionMap.values()).map((section) => {
     const custom = customItems[section.id];
@@ -789,6 +1094,9 @@ function buildTimeline({
   applyEnhancement(null, timelineMap, PURPOSE_ENHANCEMENTS[tripDetails.purpose]);
   tripDetails.activities.forEach((activity) => {
     applyEnhancement(null, timelineMap, ACTIVITY_ENHANCEMENTS[activity]);
+  });
+  TRIP_LENGTH_ENHANCEMENTS[tripDetails.length].forEach((enhancement) => {
+    applyEnhancement(null, timelineMap, enhancement);
   });
 
   let totalTasks = 0;
@@ -917,9 +1225,10 @@ export default function PackingListPlannerPage() {
   const packingProgress = totalItems === 0 ? 0 : Math.round((packedCount / totalItems) * 100);
   const timelineProgress = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
 
+  const lengthLabel = TRIP_LENGTH_OPTIONS.find((option) => option.value === tripDetails.length)?.label;
   const subtitle = tripDetails.destination
     ? `Packing support for ${tripDetails.destination}`
-    : "Plan your trip details, adapt the checklist, and track progress.";
+    : `Plan your ${lengthLabel ? lengthLabel.toLowerCase() : "trip"}, adapt the checklist, and track progress.`;
 
   const totalChecklistCount = sections.reduce(
     (count, section) => count + section.groups.reduce((groupTotal, group) => groupTotal + group.items.length, 0),
@@ -1037,7 +1346,7 @@ export default function PackingListPlannerPage() {
                   <Plane className="h-5 w-5" /> Trip setup
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Capture the basics and we’ll adapt the list to match.
+                  Capture the basics (destination, purpose, length) and we’ll adapt the list to match.
                 </p>
               </div>
             </div>
@@ -1067,6 +1376,23 @@ export default function PackingListPlannerPage() {
                   {PURPOSE_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
+                    </SelectItem>
+                  ))}
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="trip-length">Trip length</Label>
+                <Select
+                  id="trip-length"
+                  value={tripDetails.length}
+                  onChange={(event) =>
+                    setTripDetails((current) => ({ ...current, length: event.target.value as TripLength }))
+                  }
+                >
+                  {TRIP_LENGTH_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label} ({option.description})
                     </SelectItem>
                   ))}
                 </Select>
@@ -1444,12 +1770,26 @@ export default function PackingListPlannerPage() {
             theme={theme}
             content={
               <ul className="list-inside list-disc space-y-1 text-sm">
+                <li>Choose the trip length to surface weekend vs. extended-stay suggestions like laundry kits.</li>
                 <li>Save custom items for recurring trips — they stay on this device for easy reuse.</li>
                 <li>Use the timeline to schedule reminders relative to your departure and return dates.</li>
-                <li>Need a lighter list? Filter by keyword or clear packed items once a bag is zipped.</li>
               </ul>
             }
           />
+
+          {tripDetails.length === "two-week" && (
+            <ToolInfoSection
+              title="Two-week spotlight"
+              theme={theme}
+              content={
+                <ul className="list-inside list-disc space-y-1 text-sm">
+                  <li>Pack a larger rotation (7-8 tops, 3 bottoms) and plan a mid-trip laundry reset.</li>
+                  <li>Add comfort upgrades like a travel pillow, collapsible mug, and wellness kit.</li>
+                  <li>Bring optional tech (tablet, speaker, travel router) if you’ll work or create on the go.</li>
+                </ul>
+              }
+            />
+          )}
 
           {tripDetails.destination && (
             <ToolCard className="space-y-2">
@@ -1459,6 +1799,9 @@ export default function PackingListPlannerPage() {
               <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
                 <p>
                   Destination: <span className="font-medium text-gray-900 dark:text-gray-100">{tripDetails.destination || "TBD"}</span>
+                </p>
+                <p>
+                  Trip length: {lengthLabel || "Flexible"}
                 </p>
                 {(tripDetails.startDate || tripDetails.endDate) && (
                   <p>

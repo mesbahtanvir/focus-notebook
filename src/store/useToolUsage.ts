@@ -17,8 +17,17 @@ export type ToolName =
   | 'cbt'
   | 'errands'
   | 'deepreflect'
-  | 'vacation-packing'
   | 'packing-list';
+
+type FirestoreToolName = ToolName | 'vacation-packing';
+
+type RawToolUsageRecord = {
+  id: string;
+  toolName: FirestoreToolName;
+  clickCount: number;
+  lastAccessed: string;
+  createdAt: string;
+};
 
 export interface ToolUsageRecord {
   id: string;
@@ -63,9 +72,19 @@ export const useToolUsage = create<State>((set, get) => ({
       orderBy('clickCount', 'desc')
     );
 
-    const unsub = subscribeCol<ToolUsageRecord>(usageQuery, (records, meta) => {
+    const unsub = subscribeCol<RawToolUsageRecord>(usageQuery, (records, meta) => {
+      const normalizedRecords: ToolUsageRecord[] = records.map(record => {
+        const normalizedToolName: ToolName =
+          record.toolName === 'vacation-packing' ? 'packing-list' : record.toolName;
+
+        return {
+          ...record,
+          toolName: normalizedToolName,
+        };
+      });
+
       set({
-        usageRecords: records,
+        usageRecords: normalizedRecords,
         isLoading: false,
         fromCache: meta.fromCache,
         hasPendingWrites: meta.hasPendingWrites,

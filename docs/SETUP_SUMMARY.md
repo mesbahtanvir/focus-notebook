@@ -141,6 +141,7 @@ For new contributors, the repository now provides:
 - Review and update documentation
 - Celebrate and recognize contributors
 - Monitor CI/CD pipeline
+- Ensure tooling references use the unified Packing List Planner (legacy Vacation Packing tool removed)
 
 ### Quarterly Tasks
 - Review and update roadmap
