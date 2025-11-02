@@ -6,6 +6,7 @@
 
 import { CONFIG } from '../config';
 import { ProcessingContext, formatContextForPrompt } from './contextGatherer';
+import { renderToolSpecsForPrompt, type ToolSpec } from '../../../shared/toolSpecs';
 
 export interface AIAction {
   type: string;
@@ -21,6 +22,8 @@ export interface OpenAIResponse {
     completion_tokens: number;
     total_tokens: number;
   };
+  prompt: string;
+  rawResponse: string;
 }
 
 /**
@@ -28,9 +31,10 @@ export interface OpenAIResponse {
  */
 export async function callOpenAI(
   thoughtText: string,
-  context: ProcessingContext
+  context: ProcessingContext,
+  toolSpecs: ToolSpec[]
 ): Promise<OpenAIResponse> {
-  const prompt = buildPrompt(thoughtText, context);
+  const prompt = buildPrompt(thoughtText, context, toolSpecs);
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -84,16 +88,23 @@ export async function callOpenAI(
   return {
     actions: parsed.actions || [],
     usage: data.usage,
+    prompt,
+    rawResponse: aiResponse,
   };
 }
 
 /**
  * Build the AI prompt with context
  */
-function buildPrompt(thoughtText: string, context: ProcessingContext): string {
+function buildPrompt(thoughtText: string, context: ProcessingContext, toolSpecs: ToolSpec[]): string {
   const contextFormatted = formatContextForPrompt(context);
+  const toolReference = toolSpecs.length > 0 ? renderToolSpecsForPrompt(toolSpecs) : 'No additional tool guidance provided.';
 
   return `You are processing a user's thought in a productivity app.
+
+Use the tool reference below to understand how each tool should behave. Follow the guidance carefully and avoid inventing new details.
+
+${toolReference}
 
 **STEP 1: ENHANCE THE TEXT**
 - Fix grammar, spelling, capitalization

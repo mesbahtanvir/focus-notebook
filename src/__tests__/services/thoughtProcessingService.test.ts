@@ -1,12 +1,13 @@
 import { ThoughtProcessingService } from '@/services/thoughtProcessingService';
 import { useThoughts } from '@/store/useThoughts';
 import { useTasks } from '@/store/useTasks';
-import { useLLMQueue } from '@/store/useLLMQueue';
 import { useProjects } from '@/store/useProjects';
 import { useGoals } from '@/store/useGoals';
 import { useMoods } from '@/store/useMoods';
-import { useRelationships } from '@/store/useRelationships';
+import { useAnonymousSession } from '@/store/useAnonymousSession';
+import { useToolEnrollment } from '@/store/useToolEnrollment';
 import { Thought, AISuggestion } from '@/store/useThoughts';
+import { httpsCallable } from 'firebase/functions';
 
 // Mock the stores
 jest.mock('@/store/useThoughts');
@@ -14,9 +15,16 @@ jest.mock('@/store/useTasks');
 jest.mock('@/store/useProjects');
 jest.mock('@/store/useGoals');
 jest.mock('@/store/useMoods');
-jest.mock('@/store/useRelationships');
-jest.mock('@/store/useLLMQueue');
-jest.mock('@/store/useSettings');
+jest.mock('@/store/useAnonymousSession');
+jest.mock('@/store/useToolEnrollment');
+jest.mock('firebase/functions', () => ({
+  httpsCallable: jest.fn(),
+}));
+jest.mock('@/lib/firebaseClient', () => ({
+  auth: { currentUser: { uid: 'user-123', isAnonymous: false } },
+  db: {} as any,
+  functionsClient: {},
+}));
 
 describe('ThoughtProcessingService', () => {
   const mockThought: Thought = {
@@ -54,16 +62,13 @@ describe('ThoughtProcessingService', () => {
       add: jest.fn(),
     }));
 
-    (useRelationships as any).getState = jest.fn(() => ({
-      people: [],
+    (useAnonymousSession as any).getState = jest.fn(() => ({
+      allowAi: true,
     }));
 
-    (useLLMQueue as any).getState = jest.fn(() => ({
-      addRequest: jest.fn(() => 'request-1'),
-      getRequest: jest.fn(() => ({
-        id: 'request-1',
-        status: 'pending',
-      })),
+    (useToolEnrollment as any).getState = jest.fn(() => ({
+      enrolledToolIds: ['thoughts', 'cbt'],
+      isToolEnrolled: (id: string) => ['thoughts', 'cbt'].includes(id),
     }));
   });
 
@@ -318,10 +323,6 @@ describe('ThoughtProcessingService', () => {
         goals: [],
       }));
 
-      (useRelationships as any).getState = jest.fn(() => ({
-        people: [],
-      }));
-
       await ThoughtProcessingService.applySuggestion('thought-1', 'suggestion-1');
 
       // Should create the task (with high confidence it executes)
@@ -391,6 +392,49 @@ describe('ThoughtProcessingService', () => {
           ]),
         })
       );
+    });
+  });
+
+  describe('processThought scheduling', () => {
+    it('should enqueue thought for processing via callable', async () => {
+      const updateThought = jest.fn();
+      (useThoughts as any).getState = jest.fn(() => ({
+        thoughts: [mockThought],
+        updateThought,
+      }));
+
+      const callableResponse = { data: { success: true, jobId: 'job-123', queued: true } };
+      const callable = jest.fn().mockResolvedValue(callableResponse);
+      (httpsCallable as jest.Mock).mockReturnValue(callable);
+
+      const result = await ThoughtProcessingService.processThought('thought-1');
+
+      expect(httpsCallable).toHaveBeenCalledWith(expect.any(Object), 'manualProcessThought');
+      expect(callable).toHaveBeenCalledWith({
+        thoughtId: 'thought-1',
+        toolSpecIds: expect.arrayContaining(['thoughts']),
+      });
+      expect(updateThought).toHaveBeenCalledWith('thought-1', expect.objectContaining({
+        aiProcessingStatus: 'pending',
+        aiError: undefined,
+      }));
+      expect(result).toEqual({ success: true, queued: true, jobId: 'job-123' });
+    });
+
+    it('should surface callable errors', async () => {
+      const updateThought = jest.fn();
+      (useThoughts as any).getState = jest.fn(() => ({
+        thoughts: [mockThought],
+        updateThought,
+      }));
+
+      const callableError = new Error('call failed');
+      const callable = jest.fn().mockRejectedValue(callableError);
+      (httpsCallable as jest.Mock).mockReturnValue(callable);
+
+      const result = await ThoughtProcessingService.processThought('thought-1');
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('call failed');
     });
   });
 
@@ -471,4 +515,3 @@ describe('ThoughtProcessingService', () => {
     });
   });
 });
-

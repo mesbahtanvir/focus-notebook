@@ -14,3 +14,4 @@ export { toolThemes, type ToolTheme } from './themes';
 export { SimpleListEntry, DetailedCardEntry, CompactGridEntry } from './EntryLayouts';
 export { ToolInfoSection } from './ToolInfoSection';
 export { ToolPageExample } from './ToolPageExample';
+export { ToolAccessGate } from './ToolAccessGate';

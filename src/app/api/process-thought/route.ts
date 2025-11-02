@@ -1,11 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAiRequest, UnauthorizedError, ForbiddenError } from '@/lib/server/verifyAiRequest';
+import { renderToolSpecsForPrompt, getToolSpecById } from '../../../../shared/toolSpecs';
+import { resolveToolSpecIds } from '../../../../shared/toolSpecUtils';
 
 export async function POST(request: NextRequest) {
   try {
     await verifyAiRequest(request);
-    const { thought, apiKey, model, context } = await request.json();
+    const { thought, apiKey, model, context, toolSpecIds: incomingToolSpecIds } = await request.json();
     const selectedModel = model || 'gpt-4o'; // Default to highest quality model
+
+    const resolvedSpecIds = Array.from(
+      new Set(
+        Array.isArray(incomingToolSpecIds) && incomingToolSpecIds.length > 0
+          ? incomingToolSpecIds
+          : resolveToolSpecIds(thought)
+      )
+    );
+    const toolSpecs = resolvedSpecIds.map((id: string) => {
+      try {
+        return getToolSpecById(id);
+      } catch {
+        return getToolSpecById('thoughts');
+      }
+    });
+    const toolReference = renderToolSpecsForPrompt(toolSpecs);
 
     // Validate API key
     if (!apiKey || !apiKey.trim()) {
@@ -58,6 +76,9 @@ ${context.errands && context.errands.length > 0 ? `\nActive Errands (${context.e
 ${context.errands.map((errand: any) => `- ${errand.title || 'Untitled'} (${errand.category || 'no category'})`).join('\n')}` : ''}` : '';
 
     const prompt = `You are an intelligent thought processor for a productivity and mental wellness app.
+
+Tool Reference Guidance:
+${toolReference}
 
 Available Tool Tags (use these to indicate which tools can benefit from this thought):
 - tool-tasks: Thought contains actionable items that should become tasks

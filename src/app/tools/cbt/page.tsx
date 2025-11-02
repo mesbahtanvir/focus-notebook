@@ -75,19 +75,15 @@ export default function CBTPage() {
     return calculateCBTStats(thoughts, unprocessedThoughts.length);
   }, [thoughts, unprocessedThoughts.length]);
 
-  if (selectedThought) {
-    return (
-      <CBTProcessing
-        thought={selectedThought}
-        onBack={() => setSelectedThought(null)}
-        onComplete={handleProcessComplete}
-      />
-    );
-  }
-
   const theme = toolThemes.purple;
 
-  return (
+  const content = selectedThought ? (
+    <CBTProcessing
+      thought={selectedThought}
+      onBack={() => setSelectedThought(null)}
+      onComplete={handleProcessComplete}
+    />
+  ) : (
     <>
     <ToolPageLayout>
       <ToolHeader
@@ -376,6 +372,8 @@ export default function CBTPage() {
     />
     </>
   );
+
+  return content;
 }
 
 function CBTProcessing({ 

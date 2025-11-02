@@ -2,6 +2,11 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MostUsedTools } from '@/components/MostUsedTools';
 
+const mockSubscribeEnrollment = jest.fn();
+const mockEnroll = jest.fn();
+const mockUnenroll = jest.fn();
+let mockEnrollmentState: any;
+
 // Define the ToolUsageRecord type for tests
 type ToolUsageRecord = {
   toolName: string;
@@ -30,6 +35,13 @@ jest.mock('@/store/useToolUsage', () => ({
   }),
 }));
 
+jest.mock('@/store/useToolEnrollment', () => ({
+  useToolEnrollment: jest.fn((selector) => {
+    const state = mockEnrollmentState;
+    return selector ? selector(state) : state;
+  }),
+}));
+
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(() => ({
     user: { uid: 'test-user-123' },
@@ -43,14 +55,42 @@ describe('MostUsedTools Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetMostUsedTools.mockReturnValue([]);
+    mockEnrollmentState = {
+      enrollments: [],
+      enrolledToolIds: [
+        'tasks',
+        'thoughts',
+        'goals',
+        'projects',
+        'focus',
+        'brainstorming',
+        'notes',
+        'relationships',
+        'moodtracker',
+        'cbt',
+        'deepreflect',
+        'errands',
+        'packing-list',
+        'trips',
+        'investments',
+      ],
+      isLoading: false,
+      enroll: mockEnroll,
+      unenroll: mockUnenroll,
+      subscribe: mockSubscribeEnrollment,
+      isToolEnrolled: jest.fn(() => true),
+    };
   });
 
-  it('renders nothing when no tools have been used', () => {
+  it('renders marketplace call-to-action when no tools have been used', () => {
     mockGetMostUsedTools.mockReturnValue([]);
 
-    const { container } = render(<MostUsedTools />);
+    render(<MostUsedTools />);
 
-    expect(container.firstChild).toBeNull();
+    expect(screen.getByText('Your Tools')).toBeInTheDocument();
+    expect(screen.getByText('Enroll in tools from the marketplace to start tracking your most-used workflows.')).toBeInTheDocument();
+    const cta = screen.getByRole('link', { name: /Browse Tool Marketplace/i });
+    expect(cta).toHaveAttribute('href', '/tools/marketplace');
   });
 
   it('renders most used tools when data is available', () => {
@@ -131,7 +171,7 @@ describe('MostUsedTools Component', () => {
 
     render(<MostUsedTools />);
 
-    const link = screen.getByRole('link');
+    const link = screen.getByRole('link', { name: /Tasks/ });
     expect(link).toHaveAttribute('href', '/tools/tasks');
   });
 
@@ -169,11 +209,10 @@ describe('MostUsedTools Component', () => {
       { toolName: 'focus', clickCount: 20, lastAccessed: '2025-01-01T00:00:00.000Z' },
     ]);
 
-    const { container } = render(<MostUsedTools />);
+    render(<MostUsedTools />);
 
-    // Should have exactly 5 tool cards (links)
-    const links = container.querySelectorAll('a');
-    expect(links).toHaveLength(5);
+    const toolLinks = screen.getAllByRole('link').filter(link => link.getAttribute('href')?.startsWith('/tools/'));
+    expect(toolLinks).toHaveLength(5);
   });
 
   it('calls getMostUsedTools with limit of 5', () => {

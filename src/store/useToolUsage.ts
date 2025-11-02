@@ -17,7 +17,11 @@ export type ToolName =
   | 'cbt'
   | 'errands'
   | 'deepreflect'
-  | 'packing-list';
+  | 'packing-list'
+  | 'trips'
+  | 'investments'
+  | 'subscriptions'
+  | 'asset-horizon';
 
 type FirestoreToolName = ToolName | 'vacation-packing';
 

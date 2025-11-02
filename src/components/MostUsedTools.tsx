@@ -18,9 +18,14 @@ import {
   ShoppingCart,
   Sparkles,
   TrendingUp,
-  Compass
+  Compass,
+  MapPin,
+  LineChart,
+  CreditCard,
+  BarChart3
 } from "lucide-react";
 import Link from "next/link";
+import { useToolEnrollment } from "@/store/useToolEnrollment";
 
 const toolIcons: Record<ToolName, any> = {
   tasks: CheckSquare,
@@ -36,6 +41,10 @@ const toolIcons: Record<ToolName, any> = {
   errands: ShoppingCart,
   deepreflect: Sparkles,
   'packing-list': Compass,
+  trips: MapPin,
+  investments: LineChart,
+  subscriptions: CreditCard,
+  'asset-horizon': BarChart3,
 };
 
 const toolColors: Record<ToolName, string> = {
@@ -52,6 +61,10 @@ const toolColors: Record<ToolName, string> = {
   errands: "from-cyan-500 to-blue-500",
   deepreflect: "from-violet-500 to-purple-500",
   'packing-list': "from-blue-500 to-sky-500",
+  trips: "from-rose-500 to-pink-500",
+  investments: "from-emerald-500 to-teal-500",
+  subscriptions: "from-indigo-500 to-blue-500",
+  'asset-horizon': "from-purple-500 to-indigo-500",
 };
 
 const toolLabels: Record<ToolName, string> = {
@@ -68,12 +81,17 @@ const toolLabels: Record<ToolName, string> = {
   errands: "Errands",
   deepreflect: "Deep Reflect",
   'packing-list': "Packing Planner",
+  trips: "Trips",
+  investments: "Investments",
+  subscriptions: "Subscriptions",
+  'asset-horizon': "Asset Horizon",
 };
 
 export function MostUsedTools() {
   const { user } = useAuth();
   const subscribe = useToolUsage((s) => s.subscribe);
   const getMostUsedTools = useToolUsage((s) => s.getMostUsedTools);
+  const enrolledToolIds = useToolEnrollment((s) => s.enrolledToolIds);
 
   useEffect(() => {
     if (user?.uid) {
@@ -81,10 +99,27 @@ export function MostUsedTools() {
     }
   }, [user?.uid, subscribe]);
 
-  const mostUsed = getMostUsedTools(5);
+  const enrolledSet = new Set(enrolledToolIds);
+  const mostUsed = getMostUsedTools(5).filter((tool) => enrolledSet.has(tool.toolName));
 
   if (mostUsed.length === 0) {
-    return null;
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 text-center">
+        <div className="flex items-center justify-center gap-2 mb-3 text-purple-600 dark:text-purple-400">
+          <TrendingUp className="h-5 w-5" />
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Your Tools</h2>
+        </div>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Enroll in tools from the marketplace to start tracking your most-used workflows.
+        </p>
+        <Link
+          href="/tools/marketplace"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all"
+        >
+          Browse Tool Marketplace
+        </Link>
+      </div>
+    );
   }
 
   return (

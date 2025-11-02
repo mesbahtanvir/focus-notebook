@@ -1,5 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth, GoogleAuthProvider, EmailAuthProvider } from "firebase/auth";
+import { getFunctions } from "firebase/functions";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -21,6 +22,8 @@ export const db = initializeFirestore(app, {
     tabManager: persistentMultipleTabManager()
   })
 });
+
+export const functionsClient = getFunctions(app);
 
 export const googleProvider = new GoogleAuthProvider();
 export const emailProvider = new EmailAuthProvider();

@@ -8,7 +8,13 @@ import * as admin from 'firebase-admin';
 admin.initializeApp();
 
 // Import cloud functions
-import { processNewThought, manualProcessThought, reprocessThought, revertThoughtProcessing } from './processThought';
+import {
+  processNewThought,
+  manualProcessThought,
+  reprocessThought,
+  revertThoughtProcessing,
+  processThoughtQueueWorker,
+} from './processThought';
 import { refreshTrackedTickerPrices, updateTrackedTickers } from './marketData';
 import { cleanupExpiredAnonymousUsers } from './cleanupAnonymous';
 import { createDailyPortfolioSnapshots } from './portfolioSnapshots';
@@ -19,6 +25,7 @@ export {
   manualProcessThought,
   reprocessThought,
   revertThoughtProcessing,
+  processThoughtQueueWorker,
   updateTrackedTickers,
   refreshTrackedTickerPrices,
   cleanupExpiredAnonymousUsers,

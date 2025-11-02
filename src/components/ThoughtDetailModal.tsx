@@ -212,12 +212,13 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
 
     if (result.success) {
       setShowSuccessModal(true);
-      setSuccessMessage('Thought processed successfully! Actions have been executed automatically.');
+      setSuccessMessage(
+        result.queued
+          ? 'Thought queued for AI processing. We will update this thought when analysis completes.'
+          : 'This thought is already queued for AI processing.'
+      );
     } else {
-      const needsApiKey = result.error === 'OpenAI API key not configured';
-      setErrorMessage(needsApiKey
-        ? 'Please configure your OpenAI API key in Settings to enable AI-powered thought processing.'
-        : `Failed to process: ${result.error || 'Unknown error'}`);
+      setErrorMessage(result.error ? `Failed to process: ${result.error}` : 'Failed to process thought');
       setShowErrorModal(true);
     }
 

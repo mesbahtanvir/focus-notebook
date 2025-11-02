@@ -14,9 +14,277 @@ import { CONFIG } from './config';
 import { getProcessingContext } from './utils/contextGatherer';
 import { callOpenAI } from './utils/openaiClient';
 import { processActions, buildThoughtUpdate } from './utils/actionProcessor';
+import { resolveToolSpecIds } from '../../shared/toolSpecUtils';
+import { getToolSpecById, type ToolSpec } from '../../shared/toolSpecs';
 
 const ANONYMOUS_SESSION_COLLECTION = 'anonymousSessions';
 const ANONYMOUS_AI_OVERRIDE_KEY = process.env.ANONYMOUS_AI_OVERRIDE_KEY || functions.config()?.ci?.anonymous_key;
+const PROCESSING_QUEUE_SUBCOLLECTION = 'processingQueue';
+const PROCESSING_USAGE_DOC = 'processingUsage/meta';
+const MIN_PROCESSING_INTERVAL_MS = 10_000;
+
+type ProcessingTrigger = 'auto' | 'manual' | 'reprocess';
+
+interface ThoughtProcessingJob {
+  thoughtId: string;
+  trigger: ProcessingTrigger;
+  status: 'queued' | 'processing' | 'completed' | 'failed' | 'rate_limited';
+  requestedAt?: FirebaseFirestore.Timestamp;
+  requestedBy?: string;
+  toolSpecIds?: string[];
+  attempts?: number;
+  error?: string;
+}
+
+class RateLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RateLimitError';
+  }
+}
+
+type EnqueueStatus = 'queued' | 'alreadyQueued';
+
+async function enqueueProcessingJob(
+  userId: string,
+  thoughtId: string,
+  trigger: ProcessingTrigger,
+  options: {
+    toolSpecIds?: string[];
+    requestedBy?: string;
+    allowProcessed?: boolean;
+  } = {}
+): Promise<{ jobId: string; status: EnqueueStatus }> {
+  const thoughtRef = admin.firestore().doc(`users/${userId}/thoughts/${thoughtId}`);
+  const thoughtSnap = await thoughtRef.get();
+
+  if (!thoughtSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Thought not found');
+  }
+
+  const thought = thoughtSnap.data();
+
+  if (!options.allowProcessed && thought?.tags?.includes?.('processed')) {
+    throw new functions.https.HttpsError('failed-precondition', 'Thought already processed');
+  }
+
+  const queueRef = admin
+    .firestore()
+    .collection(`users/${userId}/${PROCESSING_QUEUE_SUBCOLLECTION}`);
+
+  if (thought?.aiProcessingStatus === 'pending' || thought?.aiProcessingStatus === 'processing') {
+    const existingJob = await queueRef
+      .where('thoughtId', '==', thoughtId)
+      .where('status', 'in', ['queued', 'processing'])
+      .limit(1)
+      .get();
+
+    if (!existingJob.empty) {
+      return { jobId: existingJob.docs[0].id, status: 'alreadyQueued' };
+    }
+
+    return { jobId: '', status: 'alreadyQueued' };
+  }
+
+  const existing = await queueRef
+    .where('thoughtId', '==', thoughtId)
+    .where('status', 'in', ['queued', 'processing'])
+    .limit(1)
+    .get();
+
+  if (!existing.empty) {
+    return { jobId: existing.docs[0].id, status: 'alreadyQueued' };
+  }
+
+  const enrolledToolIds = await getUserEnrolledToolIds(userId);
+
+  if (enrolledToolIds.length === 0) {
+    throw new functions.https.HttpsError('failed-precondition', 'No tool enrollments found for user.');
+  }
+
+  const specIds =
+    options.toolSpecIds && options.toolSpecIds.length > 0
+      ? options.toolSpecIds.filter((id) => enrolledToolIds.includes(id))
+      : resolveToolSpecIds(thought, { enrolledToolIds });
+
+  if (!specIds || specIds.length === 0) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'No enrolled tools available for this thought.'
+    );
+  }
+
+  const normalizedSpecIds = Array.from(new Set(specIds)).filter((id) => enrolledToolIds.includes(id));
+
+  if (normalizedSpecIds.length === 0) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'No enrolled tools available after filtering.'
+    );
+  }
+
+  const jobRef = queueRef.doc();
+  const jobData: Partial<ThoughtProcessingJob> = {
+    thoughtId,
+    trigger,
+    status: 'queued',
+    requestedAt: admin.firestore.FieldValue.serverTimestamp() as any,
+    requestedBy: options.requestedBy || userId,
+    toolSpecIds: normalizedSpecIds,
+    attempts: 0,
+  };
+
+  await Promise.all([
+    jobRef.set(jobData),
+    thoughtRef.update({
+      aiProcessingStatus: 'pending',
+      aiError: null,
+    }),
+  ]);
+
+  return { jobId: jobRef.id, status: 'queued' };
+}
+
+async function getUserEnrolledToolIds(userId: string): Promise<string[]> {
+  const snapshot = await admin
+    .firestore()
+    .collection(`users/${userId}/toolEnrollments`)
+    .get();
+
+  if (snapshot.empty) {
+    return [];
+  }
+
+  return snapshot.docs
+    .filter((doc) => {
+      const status = (doc.data().status || 'active') as string;
+      return status !== 'inactive';
+    })
+    .map((doc) => doc.id);
+}
+
+async function logLLMInteraction(params: {
+  userId: string;
+  thoughtId: string;
+  trigger: ProcessingTrigger;
+  prompt: string;
+  rawResponse: string;
+  actions: any[];
+  toolSpecIds: string[];
+  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+  error?: string;
+}) {
+  const { userId, thoughtId, trigger, prompt, rawResponse, actions, toolSpecIds, usage, error } = params;
+  const logRef = admin
+    .firestore()
+    .collection(`users/${userId}/llmLogs`)
+    .doc();
+
+  await logRef.set({
+    thoughtId,
+    trigger,
+    prompt,
+    rawResponse,
+    actions,
+    toolSpecIds,
+    usage: usage || null,
+    error: error || null,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+async function ensureIntervalLimit(userId: string): Promise<void> {
+  const usageRef = admin.firestore().doc(`users/${userId}/${PROCESSING_USAGE_DOC}`);
+  await admin.firestore().runTransaction(async (tx) => {
+    const now = admin.firestore.Timestamp.now();
+    const usageSnap = await tx.get(usageRef);
+    const data = usageSnap.data();
+    const lastProcessedAt = data?.lastProcessedAt as FirebaseFirestore.Timestamp | undefined;
+
+    if (lastProcessedAt && now.toMillis() - lastProcessedAt.toMillis() < MIN_PROCESSING_INTERVAL_MS) {
+      throw new RateLimitError('Please wait a few seconds before processing another thought.');
+    }
+
+    tx.set(
+      usageRef,
+      {
+        lastProcessedAt: now,
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+  });
+}
+
+async function ensureDailyLimit(userId: string): Promise<void> {
+  const today = new Date().toISOString().split('T')[0];
+  const countRef = admin
+    .firestore()
+    .collection(`users/${userId}/dailyProcessingCount`)
+    .doc(today);
+
+  const countSnap = await countRef.get();
+  const currentCount = countSnap.data()?.count || 0;
+
+  if (currentCount >= CONFIG.RATE_LIMITS.MAX_PROCESSING_PER_DAY_PER_USER) {
+    throw new RateLimitError(
+      `Daily processing limit reached (${CONFIG.RATE_LIMITS.MAX_PROCESSING_PER_DAY_PER_USER}).`
+    );
+  }
+}
+
+async function incrementDailyProcessing(userId: string): Promise<void> {
+  const today = new Date().toISOString().split('T')[0];
+  const countRef = admin
+    .firestore()
+    .collection(`users/${userId}/dailyProcessingCount`)
+    .doc(today);
+
+  await countRef.set(
+    {
+      count: admin.firestore.FieldValue.increment(1),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
+async function updateThoughtStatus(
+  userId: string,
+  thoughtId: string,
+  status: 'pending' | 'processing' | 'failed',
+  error?: string
+) {
+  const thoughtRef = admin.firestore().doc(`users/${userId}/thoughts/${thoughtId}`);
+  const payload: Record<string, any> = {
+    aiProcessingStatus: status,
+  };
+  if (error) {
+    payload.aiError = error;
+  } else {
+    payload.aiError = null;
+  }
+  await thoughtRef.update(payload);
+}
+
+function loadToolSpecs(thought: FirebaseFirestore.DocumentData | undefined, toolSpecIds?: string[]): ToolSpec[] {
+  const ids =
+    toolSpecIds && toolSpecIds.length > 0
+      ? toolSpecIds
+      : resolveToolSpecIds(thought as any);
+
+  return ids
+    .filter((id): id is string => Boolean(id))
+    .map((id) => {
+      try {
+        return getToolSpecById(id as any);
+      } catch {
+        return null;
+      }
+    })
+    .filter((spec): spec is ToolSpec => Boolean(spec))
+    .filter((spec, index, self) => self.findIndex((s) => s.id === spec.id) === index);
+}
 
 // ===== TRIGGER 1: Auto-process on new thought creation =====
 
@@ -32,30 +300,38 @@ export const processNewThought = functions.firestore
       return;
     }
 
-    // Check rate limit
-    const today = new Date().toISOString().split('T')[0];
-    const countRef = admin.firestore()
-      .collection(`users/${userId}/dailyProcessingCount`)
-      .doc(today);
-
-    const countSnap = await countRef.get();
-    const currentCount = countSnap.data()?.count || 0;
-
-    if (currentCount >= CONFIG.RATE_LIMITS.MAX_PROCESSING_PER_DAY_PER_USER) {
-      console.log(`Rate limit reached for user ${userId} (${currentCount}/${CONFIG.RATE_LIMITS.MAX_PROCESSING_PER_DAY_PER_USER})`);
-      return;
-    }
-
     if (!(await isAiAllowedForUser(userId))) {
       console.log(`Skipping auto-processing for anonymous user ${userId}`);
       return;
     }
 
-    // Process the thought
-    await processThoughtInternal(userId, thoughtId, 'auto');
+    try {
+      await ensureDailyLimit(userId);
+      await ensureIntervalLimit(userId);
+    } catch (error) {
+      if (error instanceof RateLimitError) {
+        console.log(`Auto-processing rate limited for user ${userId}: ${error.message}`);
+        return;
+      }
+      throw error;
+    }
 
-    // Increment counter
-    await countRef.set({ count: currentCount + 1 }, { merge: true });
+    try {
+      const { status } = await enqueueProcessingJob(userId, thoughtId, 'auto', {
+        toolSpecIds: resolveToolSpecIds(thought),
+        requestedBy: userId,
+      });
+      console.log(`Enqueued auto processing job for ${thoughtId}: ${status}`);
+    } catch (error) {
+      if (error instanceof functions.https.HttpsError) {
+        console.warn(
+          `Auto-processing enqueue skipped for thought ${thoughtId}:`,
+          error.message
+        );
+        return;
+      }
+      console.error('Failed to enqueue auto processing job:', error);
+    }
   });
 
 // ===== TRIGGER 2: Manual "Process Now" button =====
@@ -65,16 +341,40 @@ export const manualProcessThought = functions.https.onCall(async (data, context)
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { thoughtId } = data;
+  const { thoughtId, toolSpecIds } = data as {
+    thoughtId?: string;
+    toolSpecIds?: string[];
+  };
   const userId = context.auth.uid;
 
   if (!thoughtId) {
     throw new functions.https.HttpsError('invalid-argument', 'thoughtId is required');
   }
 
-  await processThoughtInternal(userId, thoughtId, 'manual');
+  try {
+    await ensureDailyLimit(userId);
+    await ensureIntervalLimit(userId);
+  } catch (error) {
+    if (error instanceof RateLimitError) {
+      throw new functions.https.HttpsError('resource-exhausted', error.message);
+    }
+    throw error;
+  }
 
-  return { success: true, message: 'Thought processed successfully' };
+  const { jobId, status } = await enqueueProcessingJob(userId, thoughtId, 'manual', {
+    toolSpecIds,
+    requestedBy: userId,
+  });
+
+  return {
+    success: true,
+    jobId,
+    queued: status === 'queued',
+    message:
+      status === 'queued'
+        ? 'Thought queued for processing'
+        : 'Thought already queued for processing',
+  };
 });
 
 // ===== TRIGGER 3: Reprocess button =====
@@ -84,7 +384,11 @@ export const reprocessThought = functions.https.onCall(async (data, context) => 
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { thoughtId, revertFirst } = data;
+  const { thoughtId, revertFirst, toolSpecIds } = data as {
+    thoughtId?: string;
+    revertFirst?: boolean;
+    toolSpecIds?: string[];
+  };
   const userId = context.auth.uid;
 
   if (!thoughtId) {
@@ -113,10 +417,31 @@ export const reprocessThought = functions.https.onCall(async (data, context) => 
     await revertThoughtInternal(userId, thoughtId);
   }
 
-  // Process the thought
-  await processThoughtInternal(userId, thoughtId, 'reprocess');
+  try {
+    await ensureDailyLimit(userId);
+    await ensureIntervalLimit(userId);
+  } catch (error) {
+    if (error instanceof RateLimitError) {
+      throw new functions.https.HttpsError('resource-exhausted', error.message);
+    }
+    throw error;
+  }
 
-  return { success: true, message: 'Thought reprocessed successfully' };
+  const { jobId, status } = await enqueueProcessingJob(userId, thoughtId, 'reprocess', {
+    toolSpecIds,
+    requestedBy: userId,
+    allowProcessed: true,
+  });
+
+  return {
+    success: true,
+    jobId,
+    queued: status === 'queued',
+    message:
+      status === 'queued'
+        ? 'Thought reprocess queued successfully'
+        : 'Thought already queued for reprocessing',
+  };
 });
 
 // ===== TRIGGER 4: Revert AI changes =====
@@ -138,12 +463,75 @@ export const revertThoughtProcessing = functions.https.onCall(async (data, conte
   return { success: true, message: 'AI changes reverted successfully' };
 });
 
+export const processThoughtQueueWorker = functions.firestore
+  .document(`users/{userId}/${PROCESSING_QUEUE_SUBCOLLECTION}/{jobId}`)
+  .onCreate(async (snap, context) => {
+    const { userId, jobId } = context.params as { userId: string; jobId: string };
+    const job = snap.data() as ThoughtProcessingJob;
+    const jobRef = snap.ref;
+
+    if (!job.thoughtId) {
+      console.warn(`Queue job ${jobId} missing thoughtId`);
+      await jobRef.update({
+        status: 'failed',
+        error: 'Missing thoughtId',
+        completedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    try {
+      await ensureDailyLimit(userId);
+    } catch (error) {
+      if (error instanceof RateLimitError) {
+        console.warn(`Job ${jobId} rate limited: ${error.message}`);
+        await Promise.all([
+          jobRef.update({
+            status: 'rate_limited',
+            error: error.message,
+            completedAt: admin.firestore.FieldValue.serverTimestamp(),
+          }),
+          updateThoughtStatus(userId, job.thoughtId, 'failed', error.message),
+        ]);
+        return;
+      }
+      throw error;
+    }
+
+    await jobRef.update({
+      status: 'processing',
+      startedAt: admin.firestore.FieldValue.serverTimestamp(),
+      attempts: admin.firestore.FieldValue.increment(1),
+    });
+
+    try {
+      await processThoughtInternal(userId, job.thoughtId, job.trigger, job.toolSpecIds);
+      await incrementDailyProcessing(userId);
+      await jobRef.update({
+        status: 'completed',
+        completedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`Processing job ${jobId} failed:`, error);
+      await Promise.all([
+        jobRef.update({
+          status: 'failed',
+          error: message,
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }),
+        updateThoughtStatus(userId, job.thoughtId, 'failed', message),
+      ]);
+    }
+  });
+
 // ===== CORE PROCESSING LOGIC =====
 
 async function processThoughtInternal(
   userId: string,
   thoughtId: string,
-  trigger: 'auto' | 'manual' | 'reprocess'
+  trigger: 'auto' | 'manual' | 'reprocess',
+  toolSpecIds?: string[]
 ) {
   const thoughtRef = admin.firestore().doc(`users/${userId}/thoughts/${thoughtId}`);
   const thoughtSnap = await thoughtRef.get();
@@ -177,10 +565,29 @@ async function processThoughtInternal(
     // Get user context
     console.log(`Gathering context for user ${userId}`);
     const context = await getProcessingContext(userId);
+    const toolSpecs = loadToolSpecs(thought, toolSpecIds);
+    console.log(
+      `Processing thought ${thoughtId} with tool specs: ${toolSpecs.map((spec) => spec.id).join(', ')}`
+    );
 
     // Call OpenAI
     console.log(`Processing thought ${thoughtId} with OpenAI`);
-    const result = await callOpenAI(thought.text, context);
+    const result = await callOpenAI(thought.text, context, toolSpecs);
+
+    try {
+      await logLLMInteraction({
+        userId,
+        thoughtId,
+        trigger,
+        prompt: result.prompt,
+        rawResponse: result.rawResponse,
+        actions: result.actions,
+        toolSpecIds: toolSpecs.map((spec) => spec.id),
+        usage: result.usage,
+      });
+    } catch (logError) {
+      console.warn('Failed to log LLM interaction:', logError);
+    }
 
     // Process actions
     const processedActions = processActions(result.actions, thought);

@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Key, ExternalLink, ShieldCheck, CreditCard, Code } from "lucide-react";
+import { Key, ExternalLink, ShieldCheck, CreditCard, Code, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 export default function ApiKeyGuidePage() {
@@ -208,6 +208,34 @@ export default function ApiKeyGuidePage() {
                 <li className="flex items-start gap-3">
                   <span className="text-red-600 mt-0.5">✗</span>
                   <span><strong>DON&apos;T:</strong> Commit your key to Git or post it publicly</span>
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          {/* Tool Enrollment Guidance */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-purple-600" />
+              <h2 className="text-xl font-bold text-gray-800">Activate the tools you need</h2>
+            </div>
+            <p className="text-gray-700 leading-relaxed">
+              After adding your API key, head to the <Link href="/tools/marketplace" className="text-purple-600 font-semibold hover:underline">Tool Marketplace</Link> to enroll in the experiences you want. Only enrolled tools appear in the <strong>Your Tools</strong> section of the dashboard and only those tools share guidance with the AI during thought processing.
+            </p>
+            <div className="bg-white rounded-xl border-2 border-purple-200 p-5 space-y-3">
+              <p className="text-sm text-gray-600 font-semibold uppercase tracking-wide">Why enrollment matters</p>
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 text-purple-600">•</span>
+                  <span><span className="font-semibold">Control:</span> Keep Your Tools focused on the workflows you actively use.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 text-purple-600">•</span>
+                  <span><span className="font-semibold">Better prompts:</span> Only enrolled tools send their instructions and examples to the AI, improving suggestion quality.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 text-purple-600">•</span>
+                  <span><span className="font-semibold">Try more:</span> You can enroll or unenroll anytime—experiment with CBT, Focus, Project co-pilots, and more.</span>
                 </li>
               </ul>
             </div>

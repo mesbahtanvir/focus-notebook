@@ -3,7 +3,9 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart } from "lucide-react";
+import { useToolEnrollment } from "@/store/useToolEnrollment";
+import { CORE_TOOL_IDS } from "../../../shared/toolSpecs";
 
 const TOOLS = [
   {
@@ -142,22 +144,11 @@ const TOOLS = [
     key: "investments",
     title: "Investment Tracker",
     description: "Track your investment portfolios, monitor growth, and manage contributions.",
-    icon: Target,
+    icon: LineChart,
     emoji: "💰",
     gradient: "from-amber-400 to-yellow-500",
     bgGradient: "from-amber-50 to-yellow-50",
     borderColor: "border-amber-300",
-    priority: "high" as const,
-  },
-  {
-    key: "subscriptions",
-    title: "Subscription Tracker",
-    description: "Manage all your recurring subscriptions and track monthly spending.",
-    icon: CheckSquare,
-    emoji: "📅",
-    gradient: "from-cyan-400 to-blue-500",
-    bgGradient: "from-cyan-50 to-blue-50",
-    borderColor: "border-cyan-300",
     priority: "high" as const,
   },
   {
@@ -188,13 +179,26 @@ type ToolPriority = 'high' | 'medium' | 'low';
 
 export default function ToolsPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const { enrolledToolIds, isLoading } = useToolEnrollment((state) => ({
+    enrolledToolIds: state.enrolledToolIds,
+    isLoading: state.isLoading,
+  }));
+
+  const enrolledSet = useMemo(() => new Set(enrolledToolIds), [enrolledToolIds]);
 
   const filteredTools = useMemo(() => {
-    return TOOLS.filter(tool =>
+    const visible = TOOLS.filter(tool => enrolledSet.has(tool.key));
+    return visible.filter(tool =>
       tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tool.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [searchQuery]);
+  }, [searchQuery, enrolledSet]);
+
+  const enrolledCount = enrolledSet.size;
+  const totalDisplayTools = CORE_TOOL_IDS.length;
+  const headingLabel = searchQuery
+    ? `Search Results (${filteredTools.length})`
+    : `Your Tools (${Math.min(enrolledCount, totalDisplayTools)}/${totalDisplayTools})`;
 
   return (
     <div className="container mx-auto py-4 md:py-6 lg:py-8 space-y-4 md:space-y-6 px-4 md:px-6 lg:px-8">
@@ -232,22 +236,40 @@ export default function ToolsPage() {
       {/* All Tools Grid */}
       <div className="space-y-3">
         <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-          All Tools ({filteredTools.length})
+          {headingLabel}
         </h2>
-        <div className="grid gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredTools.map((tool) => {
-            const Icon = tool.icon;
-            return (
-              <Link
-                key={tool.key}
-                href={`/tools/${tool.key}`}
-                className={`group relative overflow-hidden rounded-xl bg-gradient-to-br ${tool.bgGradient} border-2 ${tool.borderColor} p-4 transition-all duration-300 hover:shadow-xl hover:scale-105`}
-              >
-                {/* Icon Circle */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className={`p-2 bg-gradient-to-r ${tool.gradient} rounded-lg shadow-md group-hover:shadow-lg transition-all group-hover:scale-110`}>
-                    <Icon className="h-5 w-5 text-white" />
-                  </div>
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-t-purple-600"></div>
+          </div>
+        ) : filteredTools.length === 0 ? (
+          <div className="text-center py-16 border-2 border-dashed border-purple-200 dark:border-purple-800 rounded-2xl bg-white dark:bg-gray-900">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              You haven&apos;t enrolled in any tools yet. Visit the marketplace to activate the workflows you need.
+            </p>
+            <Link
+              href="/tools/marketplace"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+            >
+              Browse Tool Marketplace
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredTools.map((tool) => {
+              const Icon = tool.icon;
+              return (
+                <Link
+                  key={tool.key}
+                  href={`/tools/${tool.key}`}
+                  className={`group relative overflow-hidden rounded-xl bg-gradient-to-br ${tool.bgGradient} border-2 ${tool.borderColor} p-4 transition-all duration-300 hover:shadow-xl hover:scale-105`}
+                >
+                  {/* Icon Circle */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className={`p-2 bg-gradient-to-r ${tool.gradient} rounded-lg shadow-md group-hover:shadow-lg transition-all group-hover:scale-110`}>
+                      <Icon className="h-5 w-5 text-white" />
+                    </div>
                   <span className="text-2xl group-hover:scale-125 transition-transform">
                     {tool.emoji}
                   </span>
@@ -265,10 +287,11 @@ export default function ToolsPage() {
 
                 {/* Hover Glow Effect */}
                 <div className={`absolute inset-0 bg-gradient-to-r ${tool.gradient} opacity-0 group-hover:opacity-10 transition-opacity rounded-xl`} />
-              </Link>
+                </Link>
             );
           })}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* No Results */}
@@ -286,19 +309,34 @@ export default function ToolsPage() {
 
       {/* Info Card */}
       <Card className="border-4 border-purple-200 shadow-xl bg-gradient-to-br from-white to-purple-50">
-        <CardContent className="p-8">
-          <div className="flex items-center gap-4">
+        <CardContent className="p-6 md:p-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-4">
             <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full">
               <Sparkles className="h-6 w-6 text-white" />
             </div>
-            <div className="flex-1">
+            <div className="space-y-2">
               <h3 className="text-lg font-bold text-gray-800">
-                🚀 Pro Tip
+                Keep your AI transparent
               </h3>
-              <p className="text-gray-600 mt-1">
-                Each tool is designed to work together. Try combining Mood Tracker with CBT for deeper insights into your emotional patterns.
+              <p className="text-gray-600">
+                Review the exact prompts and responses sent to the LLM, and enroll in new tools whenever you need more capabilities.
               </p>
             </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link
+              href="/tools/llm-logs"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold shadow-lg hover:shadow-xl transition-all"
+            >
+              View Prompt History
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/tools/marketplace"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-purple-300 text-purple-700 text-sm font-semibold hover:bg-purple-50 transition-all"
+            >
+              Manage Tools
+            </Link>
           </div>
         </CardContent>
       </Card>

@@ -3,15 +3,18 @@ import { useTasks } from '@/store/useTasks';
 import { useProjects } from '@/store/useProjects';
 import { useGoals } from '@/store/useGoals';
 import { useMoods } from '@/store/useMoods';
-import { useRelationships } from '@/store/useRelationships';
-import { useLLMQueue } from '@/store/useLLMQueue';
-import { useSettings } from '@/store/useSettings';
 import { auth } from '@/lib/firebaseClient';
 import { useAnonymousSession } from '@/store/useAnonymousSession';
+import { httpsCallable } from 'firebase/functions';
+import { functionsClient } from '@/lib/firebaseClient';
+import { resolveToolSpecIds } from '../../shared/toolSpecUtils';
+import { useToolEnrollment } from '@/store/useToolEnrollment';
 
 export interface ThoughtProcessingResult {
   success: boolean;
   error?: string;
+  queued?: boolean;
+  jobId?: string;
   actions?: Array<{
     type: string;
     data: any;
@@ -26,11 +29,6 @@ export class ThoughtProcessingService {
       return { success: false, error: 'Thought not found' };
     }
 
-    const hasApiKey = useSettings.getState().hasApiKey();
-    if (!hasApiKey) {
-      return { success: false, error: 'OpenAI API key not configured' };
-    }
-
     const currentUser = auth.currentUser;
     if (currentUser?.isAnonymous) {
       const { allowAi } = useAnonymousSession.getState();
@@ -39,60 +37,66 @@ export class ThoughtProcessingService {
       }
     }
 
-    // Check if already processed
+    if (!currentUser) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
     if (thought.tags?.includes('processed')) {
       return { success: false, error: 'Thought already processed' };
     }
 
+    if (thought.aiProcessingStatus === 'pending' || thought.aiProcessingStatus === 'processing') {
+      return { success: false, error: 'Thought already queued for processing' };
+    }
+
+    const { enrolledToolIds } = useToolEnrollment.getState();
+
+    if (!enrolledToolIds || enrolledToolIds.length === 0) {
+      return { success: false, error: 'Enroll in a tool from the marketplace before processing thoughts.' };
+    }
+
+    const toolSpecIds = resolveToolSpecIds(thought, { enrolledToolIds });
+
+    if (toolSpecIds.length === 0) {
+      return { success: false, error: 'No enrolled tools are applicable to this thought yet.' };
+    }
+    const manualProcess = httpsCallable(functionsClient, 'manualProcessThought');
+
     try {
-      // Get comprehensive context (excluding thoughts as per requirements)
-      const context = {
-        goals: useGoals.getState().goals,
-        projects: useProjects.getState().projects,
-        tasks: useTasks.getState().tasks.filter(t => !t.done), // Active tasks only
-        moods: useMoods.getState().moods.slice(0, 10),
-        relationships: useRelationships.getState().people,
-        // Notes and errands would be added here if stores exist
+      const response = await manualProcess({
+        thoughtId,
+        toolSpecIds,
+      });
+
+      const data = response.data as {
+        success: boolean;
+        jobId?: string;
+        message?: string;
+        error?: string;
+        queued?: boolean;
       };
 
-      // Add to LLM queue
-      const requestId = useLLMQueue.getState().addRequest({
-        type: 'thought-processing',
-        input: {
-          thoughtId: thought.id,
-          text: thought.text,
-          context,
-        },
-      });
+      if (data?.success) {
+        await useThoughts
+          .getState()
+          .updateThought(thoughtId, { aiProcessingStatus: 'pending', aiError: undefined });
 
-      // Wait for processing to complete
-      return new Promise((resolve) => {
-        const checkStatus = () => {
-          const request = useLLMQueue.getState().getRequest(requestId);
-          if (!request) {
-            resolve({ success: false, error: 'Request not found' });
-            return;
-          }
-
-          if (request.status === 'completed') {
-            // Execute actions with confidence-based filtering
-            const actions = request.output?.result?.actions || [];
-            ThoughtProcessingService.executeActions(thoughtId, actions);
-            resolve({ success: true, actions });
-          } else if (request.status === 'failed') {
-            resolve({ success: false, error: request.error });
-          } else {
-            // Still processing, check again in 1 second
-            setTimeout(checkStatus, 1000);
-          }
+        return {
+          success: true,
+          queued: data.queued !== false,
+          jobId: data.jobId,
         };
-        checkStatus();
-      });
+      }
 
+      return {
+        success: false,
+        error: data?.error || data?.message || 'Failed to schedule processing job',
+      };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      console.error('Failed to call manualProcessThought function:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to schedule processing job',
       };
     }
   }
