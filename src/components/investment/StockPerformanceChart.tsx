@@ -44,6 +44,36 @@ export function StockPerformanceChart({ investment, currency, variant = 'standal
     ? convertToDisplay(investment.currentPricePerShare, investment.currency)
     : null;
 
+  const nativeCurrency = investment.nativeCurrency;
+  const nativeCurrentValue = investment.nativeCurrentValue;
+  const nativePanel =
+    nativeCurrency && typeof nativeCurrentValue === 'number' ? (
+      <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50/60 p-3 text-sm dark:border-sky-800 dark:bg-sky-900/20">
+        <div className="flex items-center gap-2 mb-2">
+          <CurrencyBadge code={nativeCurrency} tone="native" label="Native" />
+          <span className="font-medium text-sky-900 dark:text-sky-100">Native valuation</span>
+        </div>
+        <div className="flex justify-between text-sky-900 dark:text-sky-100">
+          <span>Current:</span>
+          <span className="font-semibold font-mono tabular-nums">
+            {formatCurrencyWithLocale(nativeCurrentValue, nativeCurrency, investment.locale || 'en-US')}
+          </span>
+        </div>
+        {typeof investment.nativeInitialAmount === 'number' && (
+          <div className="flex justify-between text-sky-900 dark:text-sky-100 mt-1">
+            <span>Initial:</span>
+            <span className="font-semibold font-mono tabular-nums">
+              {formatCurrencyWithLocale(
+                investment.nativeInitialAmount,
+                nativeCurrency,
+                investment.locale || 'en-US'
+              )}
+            </span>
+          </div>
+        )}
+      </div>
+    ) : null;
+
   const formatDisplayCurrency = (value: number) =>
     new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -100,35 +130,6 @@ export function StockPerformanceChart({ investment, currency, variant = 'standal
   const quantity = typeof investment.quantity === 'number' ? investment.quantity : 0;
   const totalValue = quantity > 0 ? currentPrice * quantity : null;
   const totalGain = quantity > 0 ? priceChange * quantity : null;
-  const nativeCurrency = investment.nativeCurrency;
-  const nativeCurrentValue = investment.nativeCurrentValue;
-  const nativePanel =
-    nativeCurrency && typeof nativeCurrentValue === 'number' ? (
-      <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50/60 p-3 text-sm dark:border-sky-800 dark:bg-sky-900/20">
-        <div className="flex items-center gap-2 mb-2">
-          <CurrencyBadge code={nativeCurrency} tone="native" label="Native" />
-          <span className="font-medium text-sky-900 dark:text-sky-100">Native valuation</span>
-        </div>
-        <div className="flex justify-between text-sky-900 dark:text-sky-100">
-          <span>Current:</span>
-          <span className="font-semibold font-mono tabular-nums">
-            {formatCurrencyWithLocale(nativeCurrentValue, nativeCurrency, investment.locale || 'en-US')}
-          </span>
-        </div>
-        {typeof investment.nativeInitialAmount === 'number' && (
-          <div className="flex justify-between text-sky-900 dark:text-sky-100 mt-1">
-            <span>Initial:</span>
-            <span className="font-semibold font-mono tabular-nums">
-              {formatCurrencyWithLocale(
-                investment.nativeInitialAmount,
-                nativeCurrency,
-                investment.locale || 'en-US'
-              )}
-            </span>
-          </div>
-        )}
-      </div>
-    ) : null;
 
   // Custom tooltip
   const CustomTooltip = ({ active, payload }: any) => {
