@@ -7,17 +7,15 @@ import { TrendingUp, TrendingDown, DollarSign, Target, Trash2 } from 'lucide-rea
 import { Portfolio, useInvestments } from '@/store/useInvestments';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { BASE_CURRENCY, convertCurrency, formatCurrency, SupportedCurrency } from '@/lib/utils/currency';
+import { BASE_CURRENCY, convertCurrency, SupportedCurrency } from '@/lib/utils/currency';
 
 interface PortfolioCardProps {
   portfolio: Portfolio;
   index: number;
   currency: SupportedCurrency;
-  onExploreHorizon?: (portfolioId: string) => void;
 }
 
-export function PortfolioCard({ portfolio, index, currency, onExploreHorizon }: PortfolioCardProps) {
+export function PortfolioCard({ portfolio, index, currency }: PortfolioCardProps) {
   const router = useRouter();
   const {
     getTotalPortfolioValue,
@@ -37,7 +35,14 @@ export function PortfolioCard({ portfolio, index, currency, onExploreHorizon }: 
     ? convertCurrency(portfolio.targetAmount, BASE_CURRENCY, currency)
     : undefined;
 
-  const formatValue = (amount: number) => formatCurrency(amount, currency);
+  const formatValue = (amount: number) =>
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      currencyDisplay: 'narrowSymbol',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
 
   const getStatusColor = (status: Portfolio['status']) => {
     switch (status) {
@@ -100,7 +105,7 @@ export function PortfolioCard({ portfolio, index, currency, onExploreHorizon }: 
           <div className="space-y-4">
             <div>
               <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Current Value</p>
-              <p className="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">
+              <p className="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400 font-mono tabular-nums whitespace-nowrap">
                 {currency} {formatValue(totalValue)}
               </p>
             </div>
@@ -108,7 +113,7 @@ export function PortfolioCard({ portfolio, index, currency, onExploreHorizon }: 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/50 px-3 py-2">
                 <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Total Invested</p>
-                <p className="mt-1 font-semibold text-gray-800 dark:text-gray-100">
+                <p className="mt-1 font-semibold text-gray-800 dark:text-gray-100 font-mono tabular-nums">
                   {currency} {formatValue(totalInvested)}
                 </p>
               </div>
@@ -123,10 +128,10 @@ export function PortfolioCard({ portfolio, index, currency, onExploreHorizon }: 
                     <TrendingDown className="w-4 h-4 text-red-500" />
                   )}
                 </div>
-                <p className={`mt-1 font-semibold ${isPositive ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300'}`}>
+                <p className={`mt-1 font-semibold font-mono tabular-nums ${isPositive ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300'}`}>
                   {currency} {formatValue(gain)}
                 </p>
-                <p className={`text-xs ${isPositive ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300'}`}>
+                <p className={`text-xs font-mono tabular-nums ${isPositive ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300'}`}>
                   {roi.toFixed(2)}%
                 </p>
               </div>
@@ -140,7 +145,7 @@ export function PortfolioCard({ portfolio, index, currency, onExploreHorizon }: 
               {portfolio.targetAmount && (
                 <div className="flex items-center gap-2">
                   <Target className="w-4 h-4 text-gray-400" />
-                  <span>{progressPercent.toFixed(0)}% to goal</span>
+                  <span className="font-mono tabular-nums">{progressPercent.toFixed(0)}% to goal</span>
                 </div>
               )}
             </div>
@@ -151,7 +156,9 @@ export function PortfolioCard({ portfolio, index, currency, onExploreHorizon }: 
               <div className="space-y-1">
                 <div className="flex justify-between text-xs text-gray-400">
                   <span>Progress</span>
-                  <span>{targetAmount !== undefined ? `${currency} ${formatValue(targetAmount)}` : ''}</span>
+                  <span className="font-mono tabular-nums">
+                    {targetAmount !== undefined ? `${currency} ${formatValue(targetAmount)}` : ''}
+                  </span>
                 </div>
                 <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-800">
                   <div
@@ -192,22 +199,6 @@ export function PortfolioCard({ portfolio, index, currency, onExploreHorizon }: 
               )}
             </div>
 
-            {onExploreHorizon && (
-              <div className="pt-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="w-full border-amber-300 text-amber-700 hover:bg-amber-100 hover:text-amber-800 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/30"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onExploreHorizon(portfolio.id);
-                  }}
-                >
-                  Explore Horizon
-                </Button>
-              </div>
-            )}
           </div>
         </div>
       </Card>

@@ -150,17 +150,6 @@ const TOOLS = [
     priority: "high" as const,
   },
   {
-    key: "asset-horizon",
-    title: "Asset Horizon",
-    description: "Play with recurring plans and projections to explore future value.",
-    icon: Sparkles,
-    emoji: "🌅",
-    gradient: "from-orange-400 to-pink-500",
-    bgGradient: "from-orange-50 to-pink-50",
-    borderColor: "border-orange-300",
-    priority: "high" as const,
-  },
-  {
     key: "subscriptions",
     title: "Subscription Tracker",
     description: "Manage all your recurring subscriptions and track monthly spending.",

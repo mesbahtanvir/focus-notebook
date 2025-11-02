@@ -1,7 +1,5 @@
-'use client';
-
-import { AssetHorizonPanel } from '@/components/investment/AssetHorizonPanel';
+import { redirect } from 'next/navigation';
 
 export default function AssetHorizonPage() {
-  return <AssetHorizonPanel showHeader />;
+  redirect('/tools/investments?view=dashboards');
 }

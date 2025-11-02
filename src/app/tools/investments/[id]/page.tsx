@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/store/useSettings';
 import { fetchStockHistory } from '@/lib/services/stockApi';
 import { useCurrency } from '@/store/useCurrency';
-import { BASE_CURRENCY, convertCurrency, formatCurrency as formatCurrencyValue, normalizeCurrencyCode } from '@/lib/utils/currency';
+import { BASE_CURRENCY, convertCurrency, normalizeCurrencyCode } from '@/lib/utils/currency';
 
 export default function PortfolioDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -134,7 +134,15 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
 
   const formatAmount = (amount: number, code?: string) => {
     const normalized = normalizeCurrencyCode(code ?? currency);
-    return `${normalized} ${formatCurrencyValue(amount, normalized)}`;
+    const safeAmount = Number.isFinite(amount) ? amount : 0;
+    const formatted = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: normalized,
+      currencyDisplay: 'narrowSymbol',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(safeAmount);
+    return `${normalized} ${formatted}`;
   };
 
   const formatConvertedAmount = (amount: number | undefined | null, sourceCurrency?: string) =>
@@ -477,14 +485,15 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                 const isInvestmentPositive = investmentGain >= 0;
 
                 return (
-                  <div key={investment.id} className="space-y-4">
-                    {/* Stock Performance Chart (if it's a stock) */}
+                  <Card
+                    key={investment.id}
+                    className="overflow-hidden border border-gray-100 bg-white/95 dark:border-gray-800/70 dark:bg-gray-900/70"
+                  >
                     {investment.assetType === 'stock' && investment.ticker && (
-                      <StockPerformanceChart investment={investment} currency={currency} />
+                      <StockPerformanceChart investment={investment} currency={currency} variant="embedded" />
                     )}
 
-                    {/* Investment Details Card */}
-                    <Card className="p-6">
+                    <div className="p-6">
                       <div className="flex justify-between items-start mb-4">
                         <div>
                           <h3 className="text-lg font-semibold">{investment.name}</h3>
@@ -531,124 +540,126 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                         </div>
                       </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                      <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Initial</p>
-                        <p className="font-semibold">{formatAmount(initialAmount)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Current</p>
-                        <p className="font-semibold text-amber-600">
-                          {formatAmount(currentAmount)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Gain/Loss</p>
-                        <p className={`font-semibold ${isInvestmentPositive ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatAmount(investmentGain)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">ROI</p>
-                        <p className={`font-semibold ${isInvestmentPositive ? 'text-green-600' : 'text-red-600'}`}>
-                          {investmentROI.toFixed(2)}%
-                        </p>
-                      </div>
-                    </div>
-
-                    {investment.nativeCurrency && (
-                      <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50/70 p-4 dark:border-sky-800 dark:bg-sky-900/20">
-                        <div className="flex items-center gap-2 mb-2">
-                          <CurrencyBadge code={investment.nativeCurrency} tone="native" label="Native" />
-                          <span className="text-sm font-semibold text-sky-900 dark:text-sky-100">Native totals</span>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-sky-900 dark:text-sky-100">
-                          {typeof investment.nativeInitialAmount === 'number' && (
-                            <div>
-                              <p className="uppercase tracking-wide text-[0.65rem] opacity-70">Initial</p>
-                              <p className="font-semibold">
-                                {formatAmount(
-                                  investment.nativeInitialAmount,
-                                  investment.nativeCurrency
-                                )}
-                              </p>
-                            </div>
-                          )}
-                          {typeof investment.nativeCurrentValue === 'number' && (
-                            <div>
-                              <p className="uppercase tracking-wide text-[0.65rem] opacity-70">Current</p>
-                              <p className="font-semibold">
-                                {formatAmount(
-                                  investment.nativeCurrentValue,
-                                  investment.nativeCurrency
-                                )}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                        {investment.conversionRate && (
-                          <p className="mt-2 text-xs text-sky-800/80 dark:text-sky-200">
-                            Conversion rate: 1 {investment.nativeCurrency} ≈ {formatExchangeRate(
-                              investment.conversionRate,
-                              investment.baseCurrency || baseCurrency
-                            )}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Initial</p>
+                          <p className="font-semibold font-mono tabular-nums">
+                            {formatAmount(initialAmount)}
                           </p>
-                        )}
-                      </div>
-                    )}
-
-                    {investment.contributions.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <h4 className="font-semibold mb-3">Contribution History</h4>
-                        <div className="space-y-2">
-                          {investment.contributions
-                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                            .slice(0, 5)
-                            .map((contribution) => (
-                              <div
-                                key={contribution.id}
-                                className="flex justify-between items-center text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <Badge
-                                    className={
-                                      contribution.type === 'deposit'
-                                        ? 'bg-green-500/10 text-green-700'
-                                        : contribution.type === 'withdrawal'
-                                        ? 'bg-red-500/10 text-red-700'
-                                        : 'bg-blue-500/10 text-blue-700'
-                                    }
-                                  >
-                                    {contribution.type}
-                                  </Badge>
-                                  <span>{formatDate(contribution.date)}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">
-                                    {formatConvertedAmount(contribution.amount, contribution.currency)}
-                                  </span>
-                                  <CurrencyBadge code={investment.baseCurrency || baseCurrency} tone="base" />
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDeleteContribution(investment.id, contribution.id)}
-                                  >
-                                    <Trash2 className="w-3 h-3 text-red-500" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Current</p>
+                          <p className="font-semibold text-amber-600 font-mono tabular-nums">
+                            {formatAmount(currentAmount)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Gain/Loss</p>
+                          <p className={`font-semibold font-mono tabular-nums ${isInvestmentPositive ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatAmount(investmentGain)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">ROI</p>
+                          <p className={`font-semibold font-mono tabular-nums ${isInvestmentPositive ? 'text-green-600' : 'text-red-600'}`}>
+                            {investmentROI.toFixed(2)}%
+                          </p>
                         </div>
                       </div>
-                    )}
 
-                    {investment.notes && (
-                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{investment.notes}</p>
-                      </div>
-                    )}
-                    </Card>
-                  </div>
+                      {investment.nativeCurrency && (
+                        <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50/70 p-4 dark:border-sky-800 dark:bg-sky-900/20">
+                          <div className="flex items-center gap-2 mb-2">
+                            <CurrencyBadge code={investment.nativeCurrency} tone="native" label="Native" />
+                            <span className="text-sm font-semibold text-sky-900 dark:text-sky-100">Native totals</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-sky-900 dark:text-sky-100">
+                            {typeof investment.nativeInitialAmount === 'number' && (
+                              <div>
+                                <p className="uppercase tracking-wide text-[0.65rem] opacity-70">Initial</p>
+                                <p className="font-semibold font-mono tabular-nums">
+                                  {formatAmount(
+                                    investment.nativeInitialAmount,
+                                    investment.nativeCurrency
+                                  )}
+                                </p>
+                              </div>
+                            )}
+                            {typeof investment.nativeCurrentValue === 'number' && (
+                              <div>
+                                <p className="uppercase tracking-wide text-[0.65rem] opacity-70">Current</p>
+                                <p className="font-semibold font-mono tabular-nums">
+                                  {formatAmount(
+                                    investment.nativeCurrentValue,
+                                    investment.nativeCurrency
+                                  )}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                          {investment.conversionRate && (
+                            <p className="mt-2 text-xs text-sky-800/80 dark:text-sky-200">
+                              Conversion rate: 1 {investment.nativeCurrency} ≈ {formatExchangeRate(
+                                investment.conversionRate,
+                                investment.baseCurrency || baseCurrency
+                              )}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {investment.contributions.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <h4 className="font-semibold mb-3">Contribution History</h4>
+                          <div className="space-y-2">
+                            {investment.contributions
+                              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                              .slice(0, 5)
+                              .map((contribution) => (
+                                <div
+                                  key={contribution.id}
+                                  className="flex justify-between items-center text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <Badge
+                                      className={
+                                        contribution.type === 'deposit'
+                                          ? 'bg-green-500/10 text-green-700'
+                                          : contribution.type === 'withdrawal'
+                                          ? 'bg-red-500/10 text-red-700'
+                                          : 'bg-blue-500/10 text-blue-700'
+                                      }
+                                    >
+                                      {contribution.type}
+                                    </Badge>
+                                    <span>{formatDate(contribution.date)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium font-mono tabular-nums">
+                                      {formatConvertedAmount(contribution.amount, contribution.currency)}
+                                    </span>
+                                    <CurrencyBadge code={investment.baseCurrency || baseCurrency} tone="base" />
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteContribution(investment.id, contribution.id)}
+                                    >
+                                      <Trash2 className="w-3 h-3 text-red-500" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {investment.notes && (
+                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{investment.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
                 );
               })}
             </div>

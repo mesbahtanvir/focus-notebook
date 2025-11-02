@@ -11,6 +11,7 @@ admin.initializeApp();
 import { processNewThought, manualProcessThought, reprocessThought, revertThoughtProcessing } from './processThought';
 import { refreshTrackedTickerPrices, updateTrackedTickers } from './marketData';
 import { cleanupExpiredAnonymousUsers } from './cleanupAnonymous';
+import { createDailyPortfolioSnapshots } from './portfolioSnapshots';
 
 // Export cloud functions
 export {
@@ -21,4 +22,5 @@ export {
   updateTrackedTickers,
   refreshTrackedTickerPrices,
   cleanupExpiredAnonymousUsers,
+  createDailyPortfolioSnapshots,
 };
