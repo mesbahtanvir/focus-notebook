@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInvestments } from '@/store/useInvestments';
@@ -19,6 +19,20 @@ import { useToast } from '@/hooks/use-toast';
 import { AssetHorizonPanel } from '@/components/investment/AssetHorizonPanel';
 
 export default function InvestmentsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[50vh] flex items-center justify-center text-sm text-amber-600">
+          Loading Investment Tracker...
+        </div>
+      }
+    >
+      <InvestmentsPageContent />
+    </Suspense>
+  );
+}
+
+function InvestmentsPageContent() {
   const { user } = useAuth();
   const {
     portfolios,
