@@ -7,6 +7,7 @@ import { useMoods } from '@/store/useMoods';
 import { useAnonymousSession } from '@/store/useAnonymousSession';
 import { Thought } from '@/store/useThoughts';
 import { useToolEnrollment } from '@/store/useToolEnrollment';
+import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
 import { httpsCallable } from 'firebase/functions';
 
 jest.mock('@/store/useThoughts');
@@ -24,6 +25,7 @@ jest.mock('@/lib/firebaseClient', () => ({
   functionsClient: {},
 }));
 jest.mock('@/store/useToolEnrollment');
+jest.mock('@/store/useSubscriptionStatus');
 
 describe('Thought processing queue integration', () => {
   const baseThought: Thought = {
@@ -67,6 +69,15 @@ describe('Thought processing queue integration', () => {
     (useToolEnrollment as any).getState = jest.fn(() => ({
       enrolledToolIds: ['thoughts', 'cbt'],
       isToolEnrolled: (id: string) => ['thoughts', 'cbt'].includes(id),
+    }));
+
+    (useSubscriptionStatus as any).getState = jest.fn(() => ({
+      subscription: { tier: 'pro', status: 'active' },
+      entitlement: { allowed: true, code: 'allowed' },
+      hasProAccess: true,
+      isLoading: false,
+      fromCache: false,
+      lastUpdatedAt: new Date().toISOString(),
     }));
   });
 

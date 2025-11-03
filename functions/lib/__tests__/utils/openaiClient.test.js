@@ -16,6 +16,7 @@ jest.mock('../../config', () => ({
     },
 }));
 const openaiClient_1 = require("../../utils/openaiClient");
+const toolSpecs_1 = require("../../../../shared/toolSpecs");
 // Mock fetch
 global.fetch = jest.fn();
 describe('OpenAI Client', () => {
@@ -29,6 +30,7 @@ describe('OpenAI Client', () => {
         tasks: [{ id: 't1', title: 'Test Task' }],
         moods: [{ value: 7, note: 'Good' }]
     };
+    const mockToolSpecs = [(0, toolSpecs_1.getToolSpecById)('thoughts')];
     it('should call OpenAI API with correct parameters', async () => {
         var _a;
         const mockResponse = {
@@ -56,7 +58,7 @@ describe('OpenAI Client', () => {
             ok: true,
             json: async () => mockResponse
         });
-        const result = await (0, openaiClient_1.callOpenAI)('test thought', mockContext);
+        const result = await (0, openaiClient_1.callOpenAI)('test thought', mockContext, mockToolSpecs);
         expect(global.fetch).toHaveBeenCalledWith('https://api.openai.com/v1/chat/completions', expect.objectContaining({
             method: 'POST',
             headers: expect.objectContaining({
@@ -67,6 +69,8 @@ describe('OpenAI Client', () => {
         expect(result.actions).toHaveLength(1);
         expect(result.actions[0].type).toBe('enhanceThought');
         expect((_a = result.usage) === null || _a === void 0 ? void 0 : _a.total_tokens).toBe(150);
+        expect(result.prompt).toContain('test thought');
+        expect(result.rawResponse).toContain('Enhanced text');
     });
     it('should handle markdown-wrapped JSON responses', async () => {
         const mockResponse = {
@@ -81,8 +85,9 @@ describe('OpenAI Client', () => {
             ok: true,
             json: async () => mockResponse
         });
-        const result = await (0, openaiClient_1.callOpenAI)('test', mockContext);
+        const result = await (0, openaiClient_1.callOpenAI)('test', mockContext, mockToolSpecs);
         expect(result.actions).toEqual([]);
+        expect(result.rawResponse).toContain('actions');
     });
     it('should handle non-markdown JSON responses', async () => {
         const mockResponse = {
@@ -97,9 +102,10 @@ describe('OpenAI Client', () => {
             ok: true,
             json: async () => mockResponse
         });
-        const result = await (0, openaiClient_1.callOpenAI)('test', mockContext);
+        const result = await (0, openaiClient_1.callOpenAI)('test', mockContext, mockToolSpecs);
         expect(result.actions).toHaveLength(1);
         expect(result.actions[0].type).toBe('addTag');
+        expect(result.prompt).toContain('test');
     });
     it('should throw error on API failure', async () => {
         global.fetch.mockResolvedValue({
@@ -108,7 +114,7 @@ describe('OpenAI Client', () => {
                 error: { message: 'API rate limit exceeded' }
             })
         });
-        await expect((0, openaiClient_1.callOpenAI)('test', mockContext)).rejects.toThrow('API rate limit exceeded');
+        await expect((0, openaiClient_1.callOpenAI)('test', mockContext, mockToolSpecs)).rejects.toThrow('API rate limit exceeded');
     });
     it('should throw error on invalid JSON response', async () => {
         const mockResponse = {
@@ -123,7 +129,7 @@ describe('OpenAI Client', () => {
             ok: true,
             json: async () => mockResponse
         });
-        await expect((0, openaiClient_1.callOpenAI)('test', mockContext)).rejects.toThrow('Invalid JSON response');
+        await expect((0, openaiClient_1.callOpenAI)('test', mockContext, mockToolSpecs)).rejects.toThrow('Invalid JSON response');
     });
     it('should throw error when no response content', async () => {
         const mockResponse = {
@@ -134,7 +140,7 @@ describe('OpenAI Client', () => {
             ok: true,
             json: async () => mockResponse
         });
-        await expect((0, openaiClient_1.callOpenAI)('test', mockContext)).rejects.toThrow('No response from OpenAI');
+        await expect((0, openaiClient_1.callOpenAI)('test', mockContext, mockToolSpecs)).rejects.toThrow('No response from OpenAI');
     });
     it('should include context in prompt', async () => {
         const mockResponse = {
@@ -149,7 +155,7 @@ describe('OpenAI Client', () => {
             ok: true,
             json: async () => mockResponse
         });
-        await (0, openaiClient_1.callOpenAI)('meeting with sarah', mockContext);
+        await (0, openaiClient_1.callOpenAI)('meeting with sarah', mockContext, mockToolSpecs);
         const callArgs = global.fetch.mock.calls[0][1];
         const requestBody = JSON.parse(callArgs.body);
         const prompt = requestBody.messages[1].content;

@@ -29,6 +29,37 @@ export interface OpenAIResponse {
 /**
  * Call OpenAI API to process a thought
  */
+function extractJsonBlock(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  // Explicit code fence capture (handles trailing commentary outside fences)
+  const codeFenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (codeFenceMatch && codeFenceMatch[1]) {
+    return codeFenceMatch[1].trim();
+  }
+
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    return trimmed;
+  }
+
+  const firstBrace = trimmed.indexOf('{');
+  const lastBrace = trimmed.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    return trimmed.slice(firstBrace, lastBrace + 1).trim();
+  }
+
+  const firstBracket = trimmed.indexOf('[');
+  const lastBracket = trimmed.lastIndexOf(']');
+  if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+    return trimmed.slice(firstBracket, lastBracket + 1).trim();
+  }
+
+  return null;
+}
+
 export async function callOpenAI(
   thoughtText: string,
   context: ProcessingContext,
@@ -78,8 +109,13 @@ export async function callOpenAI(
     .replace(/```\n?/g, '');
 
   let parsed;
+  let jsonCandidate = extractJsonBlock(cleanedResponse);
+
   try {
-    parsed = JSON.parse(cleanedResponse);
+    if (!jsonCandidate) {
+      throw new Error('No JSON block detected');
+    }
+    parsed = JSON.parse(jsonCandidate);
   } catch (error) {
     console.error('Failed to parse OpenAI response:', aiResponse);
     throw new Error('Invalid JSON response from OpenAI');

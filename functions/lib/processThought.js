@@ -41,19 +41,254 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.revertThoughtProcessing = exports.reprocessThought = exports.manualProcessThought = exports.processNewThought = void 0;
+exports.processThoughtQueueWorker = exports.revertThoughtProcessing = exports.reprocessThought = exports.manualProcessThought = exports.processNewThought = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const config_1 = require("./config");
 const contextGatherer_1 = require("./utils/contextGatherer");
 const openaiClient_1 = require("./utils/openaiClient");
 const actionProcessor_1 = require("./utils/actionProcessor");
+const toolSpecUtils_1 = require("../../shared/toolSpecUtils");
+const toolSpecs_1 = require("../../shared/toolSpecs");
+const subscription_1 = require("../../shared/subscription");
+const ANONYMOUS_SESSION_COLLECTION = 'anonymousSessions';
+const ANONYMOUS_AI_OVERRIDE_KEY = process.env.ANONYMOUS_AI_OVERRIDE_KEY || ((_b = (_a = functions.config()) === null || _a === void 0 ? void 0 : _a.ci) === null || _b === void 0 ? void 0 : _b.anonymous_key);
+const PROCESSING_QUEUE_SUBCOLLECTION = 'processingQueue';
+const PROCESSING_USAGE_DOC = 'processingUsage/meta';
+const MIN_PROCESSING_INTERVAL_MS = 10000;
+const SUBSCRIPTION_STATUS_DOC = 'subscriptionStatus';
+const SUBSCRIPTION_CACHE_TTL_MS = 60000;
+const subscriptionCache = new Map();
+class RateLimitError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'RateLimitError';
+    }
+}
+function getSubscriptionBlockMessage(code) {
+    switch (code) {
+        case 'inactive':
+            return 'Your Focus Notebook Pro subscription is inactive. Update billing to resume AI processing.';
+        case 'disabled':
+            return 'AI processing is disabled for your account. Contact support if this is unexpected.';
+        case 'exhausted':
+            return 'You have used all available AI processing credits. Add more credits or wait for the next cycle.';
+        case 'tier-mismatch':
+        case 'no-record':
+        default:
+            return 'Focus Notebook Pro is required to process thoughts with AI.';
+    }
+}
+function normalizeSubscriptionSnapshot(data, id) {
+    var _a, _b, _c, _d, _e;
+    return {
+        id,
+        tier: (_a = data.tier) !== null && _a !== void 0 ? _a : null,
+        status: (_b = data.status) !== null && _b !== void 0 ? _b : null,
+        entitlements: data.entitlements ? Object.assign({}, data.entitlements) : null,
+        currentPeriodEnd: (_c = data.currentPeriodEnd) !== null && _c !== void 0 ? _c : null,
+        cancelAtPeriodEnd: typeof data.cancelAtPeriodEnd === 'boolean' ? data.cancelAtPeriodEnd : null,
+        updatedAt: (_d = data.updatedAt) !== null && _d !== void 0 ? _d : null,
+        trialEndsAt: (_e = data.trialEndsAt) !== null && _e !== void 0 ? _e : null,
+    };
+}
+async function getSubscriptionSnapshot(userId) {
+    const cached = subscriptionCache.get(userId);
+    const now = Date.now();
+    if (cached && cached.expiresAt > now) {
+        return cached.snapshot;
+    }
+    const ref = admin.firestore().doc(`users/${userId}/${SUBSCRIPTION_STATUS_DOC}`);
+    const snap = await ref.get();
+    if (!snap.exists) {
+        subscriptionCache.set(userId, { snapshot: null, expiresAt: now + SUBSCRIPTION_CACHE_TTL_MS });
+        return null;
+    }
+    const snapshot = normalizeSubscriptionSnapshot(snap.data() || {}, snap.id);
+    subscriptionCache.set(userId, { snapshot, expiresAt: now + SUBSCRIPTION_CACHE_TTL_MS });
+    return snapshot;
+}
+async function enqueueProcessingJob(userId, thoughtId, trigger, options = {}) {
+    var _a, _b;
+    const access = await isAiAllowedForUser(userId);
+    if (!access.allowed) {
+        const message = access.message || 'Focus Notebook Pro is required to process thoughts with AI.';
+        throw new functions.https.HttpsError('permission-denied', message);
+    }
+    const thoughtRef = admin.firestore().doc(`users/${userId}/thoughts/${thoughtId}`);
+    const thoughtSnap = await thoughtRef.get();
+    if (!thoughtSnap.exists) {
+        throw new functions.https.HttpsError('not-found', 'Thought not found');
+    }
+    const thought = thoughtSnap.data();
+    if (!options.allowProcessed && ((_b = (_a = thought === null || thought === void 0 ? void 0 : thought.tags) === null || _a === void 0 ? void 0 : _a.includes) === null || _b === void 0 ? void 0 : _b.call(_a, 'processed'))) {
+        throw new functions.https.HttpsError('failed-precondition', 'Thought already processed');
+    }
+    const queueRef = admin
+        .firestore()
+        .collection(`users/${userId}/${PROCESSING_QUEUE_SUBCOLLECTION}`);
+    if ((thought === null || thought === void 0 ? void 0 : thought.aiProcessingStatus) === 'pending' || (thought === null || thought === void 0 ? void 0 : thought.aiProcessingStatus) === 'processing') {
+        const existingJob = await queueRef
+            .where('thoughtId', '==', thoughtId)
+            .where('status', 'in', ['queued', 'processing'])
+            .limit(1)
+            .get();
+        if (!existingJob.empty) {
+            return { jobId: existingJob.docs[0].id, status: 'alreadyQueued' };
+        }
+        return { jobId: '', status: 'alreadyQueued' };
+    }
+    const existing = await queueRef
+        .where('thoughtId', '==', thoughtId)
+        .where('status', 'in', ['queued', 'processing'])
+        .limit(1)
+        .get();
+    if (!existing.empty) {
+        return { jobId: existing.docs[0].id, status: 'alreadyQueued' };
+    }
+    const enrolledToolIds = await getUserEnrolledToolIds(userId);
+    if (enrolledToolIds.length === 0) {
+        throw new functions.https.HttpsError('failed-precondition', 'No tool enrollments found for user.');
+    }
+    const specIds = options.toolSpecIds && options.toolSpecIds.length > 0
+        ? options.toolSpecIds.filter((id) => enrolledToolIds.includes(id))
+        : (0, toolSpecUtils_1.resolveToolSpecIds)(thought, { enrolledToolIds });
+    if (!specIds || specIds.length === 0) {
+        throw new functions.https.HttpsError('failed-precondition', 'No enrolled tools available for this thought.');
+    }
+    const normalizedSpecIds = Array.from(new Set(specIds)).filter((id) => enrolledToolIds.includes(id));
+    if (normalizedSpecIds.length === 0) {
+        throw new functions.https.HttpsError('failed-precondition', 'No enrolled tools available after filtering.');
+    }
+    const jobRef = queueRef.doc();
+    const jobData = {
+        thoughtId,
+        trigger,
+        status: 'queued',
+        requestedAt: admin.firestore.FieldValue.serverTimestamp(),
+        requestedBy: options.requestedBy || userId,
+        toolSpecIds: normalizedSpecIds,
+        attempts: 0,
+    };
+    await Promise.all([
+        jobRef.set(jobData),
+        thoughtRef.update({
+            aiProcessingStatus: 'pending',
+            aiError: null,
+        }),
+    ]);
+    return { jobId: jobRef.id, status: 'queued' };
+}
+async function getUserEnrolledToolIds(userId) {
+    const snapshot = await admin
+        .firestore()
+        .collection(`users/${userId}/toolEnrollments`)
+        .get();
+    if (snapshot.empty) {
+        return [];
+    }
+    return snapshot.docs
+        .filter((doc) => {
+        const status = (doc.data().status || 'active');
+        return status !== 'inactive';
+    })
+        .map((doc) => doc.id);
+}
+async function logLLMInteraction(params) {
+    const { userId, thoughtId, trigger, prompt, rawResponse, actions, toolSpecIds, usage, error } = params;
+    const logRef = admin
+        .firestore()
+        .collection(`users/${userId}/llmLogs`)
+        .doc();
+    await logRef.set({
+        thoughtId,
+        trigger,
+        prompt,
+        rawResponse,
+        actions,
+        toolSpecIds,
+        usage: usage || null,
+        error: error || null,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+}
+async function ensureIntervalLimit(userId) {
+    const usageRef = admin.firestore().doc(`users/${userId}/${PROCESSING_USAGE_DOC}`);
+    await admin.firestore().runTransaction(async (tx) => {
+        const now = admin.firestore.Timestamp.now();
+        const usageSnap = await tx.get(usageRef);
+        const data = usageSnap.data();
+        const lastProcessedAt = data === null || data === void 0 ? void 0 : data.lastProcessedAt;
+        if (lastProcessedAt && now.toMillis() - lastProcessedAt.toMillis() < MIN_PROCESSING_INTERVAL_MS) {
+            throw new RateLimitError('Please wait a few seconds before processing another thought.');
+        }
+        tx.set(usageRef, {
+            lastProcessedAt: now,
+            updatedAt: now,
+        }, { merge: true });
+    });
+}
+async function ensureDailyLimit(userId) {
+    var _a;
+    const today = new Date().toISOString().split('T')[0];
+    const countRef = admin
+        .firestore()
+        .collection(`users/${userId}/dailyProcessingCount`)
+        .doc(today);
+    const countSnap = await countRef.get();
+    const currentCount = ((_a = countSnap.data()) === null || _a === void 0 ? void 0 : _a.count) || 0;
+    if (currentCount >= config_1.CONFIG.RATE_LIMITS.MAX_PROCESSING_PER_DAY_PER_USER) {
+        throw new RateLimitError(`Daily processing limit reached (${config_1.CONFIG.RATE_LIMITS.MAX_PROCESSING_PER_DAY_PER_USER}).`);
+    }
+}
+async function incrementDailyProcessing(userId) {
+    const today = new Date().toISOString().split('T')[0];
+    const countRef = admin
+        .firestore()
+        .collection(`users/${userId}/dailyProcessingCount`)
+        .doc(today);
+    await countRef.set({
+        count: admin.firestore.FieldValue.increment(1),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+}
+async function updateThoughtStatus(userId, thoughtId, status, error) {
+    const thoughtRef = admin.firestore().doc(`users/${userId}/thoughts/${thoughtId}`);
+    const payload = {
+        aiProcessingStatus: status,
+    };
+    if (error) {
+        payload.aiError = error;
+    }
+    else {
+        payload.aiError = null;
+    }
+    await thoughtRef.update(payload);
+}
+function loadToolSpecs(thought, toolSpecIds) {
+    const ids = toolSpecIds && toolSpecIds.length > 0
+        ? toolSpecIds
+        : (0, toolSpecUtils_1.resolveToolSpecIds)(thought);
+    return ids
+        .filter((id) => Boolean(id))
+        .map((id) => {
+        try {
+            return (0, toolSpecs_1.getToolSpecById)(id);
+        }
+        catch (_a) {
+            return null;
+        }
+    })
+        .filter((spec) => Boolean(spec))
+        .filter((spec, index, self) => self.findIndex((s) => s.id === spec.id) === index);
+}
 // ===== TRIGGER 1: Auto-process on new thought creation =====
 exports.processNewThought = functions.firestore
     .document('users/{userId}/thoughts/{thoughtId}')
     .onCreate(async (snap, context) => {
-    var _a, _b;
+    var _a;
     const thought = snap.data();
     const { userId, thoughtId } = context.params;
     // Skip if already processed or processing
@@ -61,41 +296,76 @@ exports.processNewThought = functions.firestore
         console.log(`Skipping ${thoughtId}: already processed`);
         return;
     }
-    // Check rate limit
-    const today = new Date().toISOString().split('T')[0];
-    const countRef = admin.firestore()
-        .collection(`users/${userId}/dailyProcessingCount`)
-        .doc(today);
-    const countSnap = await countRef.get();
-    const currentCount = ((_b = countSnap.data()) === null || _b === void 0 ? void 0 : _b.count) || 0;
-    if (currentCount >= config_1.CONFIG.RATE_LIMITS.MAX_PROCESSING_PER_DAY_PER_USER) {
-        console.log(`Rate limit reached for user ${userId} (${currentCount}/${config_1.CONFIG.RATE_LIMITS.MAX_PROCESSING_PER_DAY_PER_USER})`);
+    const aiAccess = await isAiAllowedForUser(userId);
+    if (!aiAccess.allowed) {
+        console.log(`Skipping auto-processing for user ${userId}: ${aiAccess.message || 'AI access blocked'}`);
         return;
     }
-    // Process the thought
-    await processThoughtInternal(userId, thoughtId, 'auto');
-    // Increment counter
-    await countRef.set({ count: currentCount + 1 }, { merge: true });
+    try {
+        await ensureDailyLimit(userId);
+        await ensureIntervalLimit(userId);
+    }
+    catch (error) {
+        if (error instanceof RateLimitError) {
+            console.log(`Auto-processing rate limited for user ${userId}: ${error.message}`);
+            return;
+        }
+        throw error;
+    }
+    try {
+        const { status } = await enqueueProcessingJob(userId, thoughtId, 'auto', {
+            toolSpecIds: (0, toolSpecUtils_1.resolveToolSpecIds)(thought),
+            requestedBy: userId,
+        });
+        console.log(`Enqueued auto processing job for ${thoughtId}: ${status}`);
+    }
+    catch (error) {
+        if (error instanceof functions.https.HttpsError) {
+            console.warn(`Auto-processing enqueue skipped for thought ${thoughtId}:`, error.message);
+            return;
+        }
+        console.error('Failed to enqueue auto processing job:', error);
+    }
 });
 // ===== TRIGGER 2: Manual "Process Now" button =====
 exports.manualProcessThought = functions.https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
     }
-    const { thoughtId } = data;
+    const { thoughtId, toolSpecIds } = data;
     const userId = context.auth.uid;
     if (!thoughtId) {
         throw new functions.https.HttpsError('invalid-argument', 'thoughtId is required');
     }
-    await processThoughtInternal(userId, thoughtId, 'manual');
-    return { success: true, message: 'Thought processed successfully' };
+    try {
+        await ensureDailyLimit(userId);
+        await ensureIntervalLimit(userId);
+    }
+    catch (error) {
+        if (error instanceof RateLimitError) {
+            throw new functions.https.HttpsError('resource-exhausted', error.message);
+        }
+        throw error;
+    }
+    const { jobId, status } = await enqueueProcessingJob(userId, thoughtId, 'manual', {
+        toolSpecIds,
+        requestedBy: userId,
+    });
+    return {
+        success: true,
+        jobId,
+        queued: status === 'queued',
+        message: status === 'queued'
+            ? 'Thought queued for processing'
+            : 'Thought already queued for processing',
+    };
 });
 // ===== TRIGGER 3: Reprocess button =====
 exports.reprocessThought = functions.https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
     }
-    const { thoughtId, revertFirst } = data;
+    const { thoughtId, revertFirst, toolSpecIds } = data;
     const userId = context.auth.uid;
     if (!thoughtId) {
         throw new functions.https.HttpsError('invalid-argument', 'thoughtId is required');
@@ -114,9 +384,29 @@ exports.reprocessThought = functions.https.onCall(async (data, context) => {
     if (revertFirst && (thought === null || thought === void 0 ? void 0 : thought.aiAppliedChanges)) {
         await revertThoughtInternal(userId, thoughtId);
     }
-    // Process the thought
-    await processThoughtInternal(userId, thoughtId, 'reprocess');
-    return { success: true, message: 'Thought reprocessed successfully' };
+    try {
+        await ensureDailyLimit(userId);
+        await ensureIntervalLimit(userId);
+    }
+    catch (error) {
+        if (error instanceof RateLimitError) {
+            throw new functions.https.HttpsError('resource-exhausted', error.message);
+        }
+        throw error;
+    }
+    const { jobId, status } = await enqueueProcessingJob(userId, thoughtId, 'reprocess', {
+        toolSpecIds,
+        requestedBy: userId,
+        allowProcessed: true,
+    });
+    return {
+        success: true,
+        jobId,
+        queued: status === 'queued',
+        message: status === 'queued'
+            ? 'Thought reprocess queued successfully'
+            : 'Thought already queued for reprocessing',
+    };
 });
 // ===== TRIGGER 4: Revert AI changes =====
 exports.revertThoughtProcessing = functions.https.onCall(async (data, context) => {
@@ -131,8 +421,81 @@ exports.revertThoughtProcessing = functions.https.onCall(async (data, context) =
     await revertThoughtInternal(userId, thoughtId);
     return { success: true, message: 'AI changes reverted successfully' };
 });
+exports.processThoughtQueueWorker = functions.firestore
+    .document(`users/{userId}/${PROCESSING_QUEUE_SUBCOLLECTION}/{jobId}`)
+    .onCreate(async (snap, context) => {
+    const { userId, jobId } = context.params;
+    const job = snap.data();
+    const jobRef = snap.ref;
+    if (!job.thoughtId) {
+        console.warn(`Queue job ${jobId} missing thoughtId`);
+        await jobRef.update({
+            status: 'failed',
+            error: 'Missing thoughtId',
+            completedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return;
+    }
+    try {
+        await ensureDailyLimit(userId);
+    }
+    catch (error) {
+        if (error instanceof RateLimitError) {
+            console.warn(`Job ${jobId} rate limited: ${error.message}`);
+            await Promise.all([
+                jobRef.update({
+                    status: 'rate_limited',
+                    error: error.message,
+                    completedAt: admin.firestore.FieldValue.serverTimestamp(),
+                }),
+                updateThoughtStatus(userId, job.thoughtId, 'failed', error.message),
+            ]);
+            return;
+        }
+        throw error;
+    }
+    const aiAccess = await isAiAllowedForUser(userId);
+    if (!aiAccess.allowed) {
+        const message = aiAccess.message || 'AI processing is not available for this account.';
+        await Promise.all([
+            jobRef.update({
+                status: 'failed',
+                error: message,
+                completedAt: admin.firestore.FieldValue.serverTimestamp(),
+            }),
+            updateThoughtStatus(userId, job.thoughtId, 'blocked', message),
+        ]);
+        console.warn(`Job ${jobId} blocked for user ${userId}: ${message}`);
+        return;
+    }
+    await jobRef.update({
+        status: 'processing',
+        startedAt: admin.firestore.FieldValue.serverTimestamp(),
+        attempts: admin.firestore.FieldValue.increment(1),
+    });
+    try {
+        await processThoughtInternal(userId, job.thoughtId, job.trigger, job.toolSpecIds);
+        await incrementDailyProcessing(userId);
+        await jobRef.update({
+            status: 'completed',
+            completedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`Processing job ${jobId} failed:`, error);
+        await Promise.all([
+            jobRef.update({
+                status: 'failed',
+                error: message,
+                completedAt: admin.firestore.FieldValue.serverTimestamp(),
+            }),
+            updateThoughtStatus(userId, job.thoughtId, 'failed', message),
+        ]);
+    }
+});
 // ===== CORE PROCESSING LOGIC =====
-async function processThoughtInternal(userId, thoughtId, trigger) {
+async function processThoughtInternal(userId, thoughtId, trigger, toolSpecIds) {
     var _a;
     const thoughtRef = admin.firestore().doc(`users/${userId}/thoughts/${thoughtId}`);
     const thoughtSnap = await thoughtRef.get();
@@ -143,6 +506,16 @@ async function processThoughtInternal(userId, thoughtId, trigger) {
     if (!thought) {
         throw new Error('Thought data is null');
     }
+    const aiAccess = await isAiAllowedForUser(userId);
+    if (!aiAccess.allowed) {
+        const errorMessage = aiAccess.message || 'AI processing is not available for this account.';
+        await thoughtRef.update({
+            aiProcessingStatus: 'blocked',
+            aiError: errorMessage,
+        });
+        console.log(`AI processing blocked for user ${userId}: ${errorMessage}`);
+        return;
+    }
     // Mark as processing
     await thoughtRef.update({
         aiProcessingStatus: 'processing',
@@ -151,9 +524,26 @@ async function processThoughtInternal(userId, thoughtId, trigger) {
         // Get user context
         console.log(`Gathering context for user ${userId}`);
         const context = await (0, contextGatherer_1.getProcessingContext)(userId);
+        const toolSpecs = loadToolSpecs(thought, toolSpecIds);
+        console.log(`Processing thought ${thoughtId} with tool specs: ${toolSpecs.map((spec) => spec.id).join(', ')}`);
         // Call OpenAI
         console.log(`Processing thought ${thoughtId} with OpenAI`);
-        const result = await (0, openaiClient_1.callOpenAI)(thought.text, context);
+        const result = await (0, openaiClient_1.callOpenAI)(thought.text, context, toolSpecs);
+        try {
+            await logLLMInteraction({
+                userId,
+                thoughtId,
+                trigger,
+                prompt: result.prompt,
+                rawResponse: result.rawResponse,
+                actions: result.actions,
+                toolSpecIds: toolSpecs.map((spec) => spec.id),
+                usage: result.usage,
+            });
+        }
+        catch (logError) {
+            console.warn('Failed to log LLM interaction:', logError);
+        }
         // Process actions
         const processedActions = (0, actionProcessor_1.processActions)(result.actions, thought);
         // Build update object
@@ -179,6 +569,57 @@ async function processThoughtInternal(userId, thoughtId, trigger) {
         });
         throw error;
     }
+}
+async function isAiAllowedForUser(userId) {
+    var _a, _b;
+    const userRecord = await admin.auth().getUser(userId);
+    const isAnonymous = userRecord.providerData.length === 0;
+    if (!isAnonymous) {
+        const subscriptionSnapshot = await getSubscriptionSnapshot(userId);
+        const entitlement = (0, subscription_1.evaluateAiEntitlement)(subscriptionSnapshot);
+        if (!entitlement.allowed) {
+            return {
+                allowed: false,
+                reason: 'subscription_blocked',
+                message: getSubscriptionBlockMessage(entitlement.code),
+                entitlement,
+            };
+        }
+        return { allowed: true, reason: 'ok', entitlement };
+    }
+    const sessionRef = admin.firestore().collection(ANONYMOUS_SESSION_COLLECTION).doc(userId);
+    const sessionSnap = await sessionRef.get();
+    const sessionData = sessionSnap.data();
+    const expiresAtMillis = (_b = (_a = sessionData === null || sessionData === void 0 ? void 0 : sessionData.expiresAt) === null || _a === void 0 ? void 0 : _a.toMillis) === null || _b === void 0 ? void 0 : _b.call(_a);
+    const cleanupPending = (sessionData === null || sessionData === void 0 ? void 0 : sessionData.cleanupPending) === true;
+    const overrideKeyMatch = ANONYMOUS_AI_OVERRIDE_KEY && (sessionData === null || sessionData === void 0 ? void 0 : sessionData.ciOverrideKey) === ANONYMOUS_AI_OVERRIDE_KEY;
+    const allowAi = (sessionData === null || sessionData === void 0 ? void 0 : sessionData.allowAi) === true || overrideKeyMatch;
+    if (!sessionSnap.exists || !allowAi || cleanupPending) {
+        await sessionRef.set({
+            cleanupPending: true,
+            status: 'blocked',
+            updatedAt: admin.firestore.Timestamp.now(),
+        }, { merge: true });
+        return {
+            allowed: false,
+            reason: 'anonymous_blocked',
+            message: 'Anonymous sessions cannot run AI processing',
+        };
+    }
+    if (typeof expiresAtMillis === 'number' && expiresAtMillis <= Date.now()) {
+        await sessionRef.set({
+            cleanupPending: true,
+            status: 'expired',
+            expiredAt: admin.firestore.Timestamp.now(),
+            updatedAt: admin.firestore.Timestamp.now(),
+        }, { merge: true });
+        return {
+            allowed: false,
+            reason: 'anonymous_blocked',
+            message: 'Anonymous sessions cannot run AI processing',
+        };
+    }
+    return { allowed: true, reason: 'ok' };
 }
 // ===== REVERT LOGIC =====
 async function revertThoughtInternal(userId, thoughtId) {

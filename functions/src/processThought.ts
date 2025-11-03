@@ -16,12 +16,25 @@ import { callOpenAI } from './utils/openaiClient';
 import { processActions, buildThoughtUpdate } from './utils/actionProcessor';
 import { resolveToolSpecIds } from '../../shared/toolSpecUtils';
 import { getToolSpecById, type ToolSpec } from '../../shared/toolSpecs';
+import {
+  evaluateAiEntitlement,
+  type SubscriptionSnapshot,
+  type AiEntitlement,
+  type AiEntitlementCode,
+} from '../../shared/subscription';
 
 const ANONYMOUS_SESSION_COLLECTION = 'anonymousSessions';
 const ANONYMOUS_AI_OVERRIDE_KEY = process.env.ANONYMOUS_AI_OVERRIDE_KEY || functions.config()?.ci?.anonymous_key;
 const PROCESSING_QUEUE_SUBCOLLECTION = 'processingQueue';
 const PROCESSING_USAGE_DOC = 'processingUsage/meta';
 const MIN_PROCESSING_INTERVAL_MS = 10_000;
+const SUBSCRIPTION_STATUS_DOC = 'subscriptionStatus';
+const SUBSCRIPTION_CACHE_TTL_MS = 60_000;
+
+const subscriptionCache = new Map<
+  string,
+  { expiresAt: number; snapshot: SubscriptionSnapshot | null }
+>();
 
 type ProcessingTrigger = 'auto' | 'manual' | 'reprocess';
 
@@ -45,6 +58,67 @@ class RateLimitError extends Error {
 
 type EnqueueStatus = 'queued' | 'alreadyQueued';
 
+type AiAccessReason = 'ok' | 'anonymous_blocked' | 'subscription_blocked';
+
+interface AiAccessResult {
+  allowed: boolean;
+  reason: AiAccessReason;
+  message?: string;
+  entitlement?: AiEntitlement;
+}
+
+function getSubscriptionBlockMessage(code: AiEntitlementCode): string {
+  switch (code) {
+    case 'inactive':
+      return 'Your Focus Notebook Pro subscription is inactive. Update billing to resume AI processing.';
+    case 'disabled':
+      return 'AI processing is disabled for your account. Contact support if this is unexpected.';
+    case 'exhausted':
+      return 'You have used all available AI processing credits. Add more credits or wait for the next cycle.';
+    case 'tier-mismatch':
+    case 'no-record':
+    default:
+      return 'Focus Notebook Pro is required to process thoughts with AI.';
+  }
+}
+
+function normalizeSubscriptionSnapshot(
+  data: FirebaseFirestore.DocumentData,
+  id: string
+): SubscriptionSnapshot {
+  return {
+    id,
+    tier: (data.tier as SubscriptionSnapshot['tier']) ?? null,
+    status: (data.status as SubscriptionSnapshot['status']) ?? null,
+    entitlements: data.entitlements ? { ...data.entitlements } : null,
+    currentPeriodEnd: data.currentPeriodEnd ?? null,
+    cancelAtPeriodEnd:
+      typeof data.cancelAtPeriodEnd === 'boolean' ? data.cancelAtPeriodEnd : null,
+    updatedAt: data.updatedAt ?? null,
+    trialEndsAt: data.trialEndsAt ?? null,
+  };
+}
+
+async function getSubscriptionSnapshot(userId: string): Promise<SubscriptionSnapshot | null> {
+  const cached = subscriptionCache.get(userId);
+  const now = Date.now();
+  if (cached && cached.expiresAt > now) {
+    return cached.snapshot;
+  }
+
+  const ref = admin.firestore().doc(`users/${userId}/${SUBSCRIPTION_STATUS_DOC}`);
+  const snap = await ref.get();
+
+  if (!snap.exists) {
+    subscriptionCache.set(userId, { snapshot: null, expiresAt: now + SUBSCRIPTION_CACHE_TTL_MS });
+    return null;
+  }
+
+  const snapshot = normalizeSubscriptionSnapshot(snap.data() || {}, snap.id);
+  subscriptionCache.set(userId, { snapshot, expiresAt: now + SUBSCRIPTION_CACHE_TTL_MS });
+  return snapshot;
+}
+
 async function enqueueProcessingJob(
   userId: string,
   thoughtId: string,
@@ -55,6 +129,13 @@ async function enqueueProcessingJob(
     allowProcessed?: boolean;
   } = {}
 ): Promise<{ jobId: string; status: EnqueueStatus }> {
+  const access = await isAiAllowedForUser(userId);
+  if (!access.allowed) {
+    const message =
+      access.message || 'Focus Notebook Pro is required to process thoughts with AI.';
+    throw new functions.https.HttpsError('permission-denied', message);
+  }
+
   const thoughtRef = admin.firestore().doc(`users/${userId}/thoughts/${thoughtId}`);
   const thoughtSnap = await thoughtRef.get();
 
@@ -252,7 +333,7 @@ async function incrementDailyProcessing(userId: string): Promise<void> {
 async function updateThoughtStatus(
   userId: string,
   thoughtId: string,
-  status: 'pending' | 'processing' | 'failed',
+  status: 'pending' | 'processing' | 'failed' | 'blocked',
   error?: string
 ) {
   const thoughtRef = admin.firestore().doc(`users/${userId}/thoughts/${thoughtId}`);
@@ -300,8 +381,11 @@ export const processNewThought = functions.firestore
       return;
     }
 
-    if (!(await isAiAllowedForUser(userId))) {
-      console.log(`Skipping auto-processing for anonymous user ${userId}`);
+    const aiAccess = await isAiAllowedForUser(userId);
+    if (!aiAccess.allowed) {
+      console.log(
+        `Skipping auto-processing for user ${userId}: ${aiAccess.message || 'AI access blocked'}`
+      );
       return;
     }
 
@@ -498,6 +582,22 @@ export const processThoughtQueueWorker = functions.firestore
       throw error;
     }
 
+    const aiAccess = await isAiAllowedForUser(userId);
+    if (!aiAccess.allowed) {
+      const message =
+        aiAccess.message || 'AI processing is not available for this account.';
+      await Promise.all([
+        jobRef.update({
+          status: 'failed',
+          error: message,
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }),
+        updateThoughtStatus(userId, job.thoughtId, 'blocked', message),
+      ]);
+      console.warn(`Job ${jobId} blocked for user ${userId}: ${message}`);
+      return;
+    }
+
     await jobRef.update({
       status: 'processing',
       startedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -546,13 +646,15 @@ async function processThoughtInternal(
     throw new Error('Thought data is null');
   }
 
-  const aiAllowed = await isAiAllowedForUser(userId);
-  if (!aiAllowed) {
+  const aiAccess = await isAiAllowedForUser(userId);
+  if (!aiAccess.allowed) {
+    const errorMessage =
+      aiAccess.message || 'AI processing is not available for this account.';
     await thoughtRef.update({
       aiProcessingStatus: 'blocked',
-      aiError: 'Anonymous sessions cannot run AI processing',
+      aiError: errorMessage,
     });
-    console.log(`AI processing blocked for anonymous user ${userId}`);
+    console.log(`AI processing blocked for user ${userId}: ${errorMessage}`);
     return;
   }
 
@@ -628,12 +730,24 @@ async function processThoughtInternal(
   }
 }
 
-async function isAiAllowedForUser(userId: string): Promise<boolean> {
+async function isAiAllowedForUser(userId: string): Promise<AiAccessResult> {
   const userRecord = await admin.auth().getUser(userId);
   const isAnonymous = userRecord.providerData.length === 0;
 
   if (!isAnonymous) {
-    return true;
+    const subscriptionSnapshot = await getSubscriptionSnapshot(userId);
+    const entitlement = evaluateAiEntitlement(subscriptionSnapshot);
+
+    if (!entitlement.allowed) {
+      return {
+        allowed: false,
+        reason: 'subscription_blocked',
+        message: getSubscriptionBlockMessage(entitlement.code),
+        entitlement,
+      };
+    }
+
+    return { allowed: true, reason: 'ok', entitlement };
   }
 
   const sessionRef = admin.firestore().collection(ANONYMOUS_SESSION_COLLECTION).doc(userId);
@@ -654,7 +768,11 @@ async function isAiAllowedForUser(userId: string): Promise<boolean> {
       },
       { merge: true }
     );
-    return false;
+    return {
+      allowed: false,
+      reason: 'anonymous_blocked',
+      message: 'Anonymous sessions cannot run AI processing',
+    };
   }
 
   if (typeof expiresAtMillis === 'number' && expiresAtMillis <= Date.now()) {
@@ -667,10 +785,14 @@ async function isAiAllowedForUser(userId: string): Promise<boolean> {
       },
       { merge: true }
     );
-    return false;
+    return {
+      allowed: false,
+      reason: 'anonymous_blocked',
+      message: 'Anonymous sessions cannot run AI processing',
+    };
   }
 
-  return true;
+  return { allowed: true, reason: 'ok' };
 }
 
 // ===== REVERT LOGIC =====

@@ -6,6 +6,7 @@ import { useGoals } from '@/store/useGoals';
 import { useMoods } from '@/store/useMoods';
 import { useAnonymousSession } from '@/store/useAnonymousSession';
 import { useToolEnrollment } from '@/store/useToolEnrollment';
+import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
 import { Thought, AISuggestion } from '@/store/useThoughts';
 import { httpsCallable } from 'firebase/functions';
 
@@ -17,6 +18,7 @@ jest.mock('@/store/useGoals');
 jest.mock('@/store/useMoods');
 jest.mock('@/store/useAnonymousSession');
 jest.mock('@/store/useToolEnrollment');
+jest.mock('@/store/useSubscriptionStatus');
 jest.mock('firebase/functions', () => ({
   httpsCallable: jest.fn(),
 }));
@@ -69,6 +71,15 @@ describe('ThoughtProcessingService', () => {
     (useToolEnrollment as any).getState = jest.fn(() => ({
       enrolledToolIds: ['thoughts', 'cbt'],
       isToolEnrolled: (id: string) => ['thoughts', 'cbt'].includes(id),
+    }));
+
+    (useSubscriptionStatus as any).getState = jest.fn(() => ({
+      subscription: { tier: 'pro', status: 'active' },
+      entitlement: { allowed: true, code: 'allowed' },
+      hasProAccess: true,
+      isLoading: false,
+      fromCache: false,
+      lastUpdatedAt: new Date().toISOString(),
     }));
   });
 
@@ -435,6 +446,36 @@ describe('ThoughtProcessingService', () => {
       const result = await ThoughtProcessingService.processThought('thought-1');
       expect(result.success).toBe(false);
       expect(result.error).toBe('call failed');
+    });
+
+    it('should block processing when subscription is inactive', async () => {
+      const updateThought = jest.fn();
+      (useThoughts as any).getState = jest.fn(() => ({
+        thoughts: [mockThought],
+        updateThought,
+      }));
+
+      (useSubscriptionStatus as any).getState = jest.fn(() => ({
+        subscription: { tier: 'pro', status: 'past_due' },
+        entitlement: { allowed: false, code: 'inactive' },
+        hasProAccess: false,
+        isLoading: false,
+        fromCache: false,
+        lastUpdatedAt: null,
+      }));
+
+      const result = await ThoughtProcessingService.processThought('thought-1');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('inactive');
+      expect(httpsCallable).not.toHaveBeenCalled();
+      expect(updateThought).toHaveBeenCalledWith(
+        'thought-1',
+        expect.objectContaining({
+          aiProcessingStatus: 'blocked',
+          aiError: expect.stringContaining('inactive'),
+        })
+      );
     });
   });
 

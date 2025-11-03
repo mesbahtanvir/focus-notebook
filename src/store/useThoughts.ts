@@ -75,7 +75,7 @@ export interface Thought {
   // ===== AI PROCESSING FIELDS =====
 
   // Processing State
-  aiProcessingStatus?: 'pending' | 'processing' | 'completed' | 'failed'
+  aiProcessingStatus?: 'pending' | 'processing' | 'completed' | 'failed' | 'blocked'
   aiError?: string
 
   // Original Data (for revert)

@@ -11,6 +11,9 @@ const customJestConfig = {
   testEnvironment: 'jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^\\.\\./\\.\\./shared/(.*)\\.js$': '<rootDir>/shared/$1.ts',
+    '^\\.\\./shared/(.*)\\.js$': '<rootDir>/shared/$1.ts',
+    '^shared/(.*)\\.js$': '<rootDir>/shared/$1.ts',
   },
   transform: {
     '^.+\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],

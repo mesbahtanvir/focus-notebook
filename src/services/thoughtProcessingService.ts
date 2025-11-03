@@ -9,6 +9,8 @@ import { httpsCallable } from 'firebase/functions';
 import { functionsClient } from '@/lib/firebaseClient';
 import { resolveToolSpecIds } from '../../shared/toolSpecUtils';
 import { useToolEnrollment } from '@/store/useToolEnrollment';
+import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
+import { type AiEntitlementCode } from '../../shared/subscription';
 
 export interface ThoughtProcessingResult {
   success: boolean;
@@ -20,6 +22,21 @@ export interface ThoughtProcessingResult {
     data: any;
     reasoning: string;
   }>;
+}
+
+function getEntitlementBlockMessage(code: AiEntitlementCode): string {
+  switch (code) {
+    case 'inactive':
+      return 'Your Focus Notebook Pro subscription is inactive. Update billing to resume AI processing.';
+    case 'disabled':
+      return 'AI processing is disabled for your account. Contact support if this is unexpected.';
+    case 'exhausted':
+      return 'You have used all available AI processing credits. Add more credits or wait for the next cycle.';
+    case 'tier-mismatch':
+    case 'no-record':
+    default:
+      return 'Focus Notebook Pro is required to process thoughts with AI.';
+  }
 }
 
 export class ThoughtProcessingService {
@@ -39,6 +56,22 @@ export class ThoughtProcessingService {
 
     if (!currentUser) {
       return { success: false, error: 'User not authenticated' };
+    }
+
+    const subscriptionState = useSubscriptionStatus.getState();
+    if (!subscriptionState.isLoading && !subscriptionState.hasProAccess) {
+      const message = getEntitlementBlockMessage(subscriptionState.entitlement.code);
+      try {
+        await useThoughts
+          .getState()
+          .updateThought(thoughtId, { aiProcessingStatus: 'blocked', aiError: message });
+      } catch (error) {
+        console.warn('Failed to mark thought as blocked locally:', error);
+      }
+      return {
+        success: false,
+        error: message,
+      };
     }
 
     if (thought.tags?.includes('processed')) {
@@ -94,9 +127,22 @@ export class ThoughtProcessingService {
       };
     } catch (error) {
       console.error('Failed to call manualProcessThought function:', error);
+      const message = error instanceof Error ? error.message : 'Failed to schedule processing job';
+      const errorCode = (error as { code?: string })?.code;
+
+      if (errorCode === 'functions/permission-denied' || errorCode === 'permission-denied') {
+        try {
+          await useThoughts
+            .getState()
+            .updateThought(thoughtId, { aiProcessingStatus: 'blocked', aiError: message });
+        } catch (updateError) {
+          console.warn('Failed to mark thought as blocked after callable error:', updateError);
+        }
+      }
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to schedule processing job',
+        error: message,
       };
     }
   }

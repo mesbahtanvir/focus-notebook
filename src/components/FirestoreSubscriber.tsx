@@ -7,6 +7,7 @@ import { useThoughts } from '@/store/useThoughts';
 import { useMoods } from '@/store/useMoods';
 import { useFocus } from '@/store/useFocus';
 import { useToolEnrollment } from '@/store/useToolEnrollment';
+import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
 
 /**
  * Component that initializes Firestore subscriptions when user is authenticated
@@ -20,6 +21,8 @@ export function FirestoreSubscriber() {
   const subscribeFocus = useFocus((state) => state.subscribe);
   const subscribeToolEnrollment = useToolEnrollment((state) => state.subscribe);
   const loadActiveSession = useFocus((state) => state.loadActiveSession);
+  const subscribeSubscriptionStatus = useSubscriptionStatus((state) => state.subscribe);
+  const clearSubscriptionStatus = useSubscriptionStatus((state) => state.clear);
 
   useEffect(() => {
     if (userId) {
@@ -29,11 +32,25 @@ export function FirestoreSubscriber() {
       subscribeMoods(userId);
       subscribeFocus(userId);
       subscribeToolEnrollment(userId);
+      subscribeSubscriptionStatus(userId);
       
       // Load any active focus session
       loadActiveSession();
     }
-  }, [userId, subscribeTasks, subscribeThoughts, subscribeMoods, subscribeFocus, subscribeToolEnrollment, loadActiveSession]);
+    return () => {
+      clearSubscriptionStatus();
+    };
+  }, [
+    userId,
+    subscribeTasks,
+    subscribeThoughts,
+    subscribeMoods,
+    subscribeFocus,
+    subscribeToolEnrollment,
+    subscribeSubscriptionStatus,
+    loadActiveSession,
+    clearSubscriptionStatus,
+  ]);
 
   return null; // This component doesn't render anything
 }

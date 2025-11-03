@@ -8,12 +8,38 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.callOpenAI = callOpenAI;
 const config_1 = require("../config");
 const contextGatherer_1 = require("./contextGatherer");
+const toolSpecs_1 = require("../../../shared/toolSpecs");
 /**
  * Call OpenAI API to process a thought
  */
-async function callOpenAI(thoughtText, context) {
+function extractJsonBlock(raw) {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+        return null;
+    }
+    // Explicit code fence capture (handles trailing commentary outside fences)
+    const codeFenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (codeFenceMatch && codeFenceMatch[1]) {
+        return codeFenceMatch[1].trim();
+    }
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        return trimmed;
+    }
+    const firstBrace = trimmed.indexOf('{');
+    const lastBrace = trimmed.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        return trimmed.slice(firstBrace, lastBrace + 1).trim();
+    }
+    const firstBracket = trimmed.indexOf('[');
+    const lastBracket = trimmed.lastIndexOf(']');
+    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+        return trimmed.slice(firstBracket, lastBracket + 1).trim();
+    }
+    return null;
+}
+async function callOpenAI(thoughtText, context, toolSpecs) {
     var _a, _b, _c;
-    const prompt = buildPrompt(thoughtText, context);
+    const prompt = buildPrompt(thoughtText, context, toolSpecs);
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -51,8 +77,12 @@ async function callOpenAI(thoughtText, context) {
         .replace(/```json\n?/g, '')
         .replace(/```\n?/g, '');
     let parsed;
+    let jsonCandidate = extractJsonBlock(cleanedResponse);
     try {
-        parsed = JSON.parse(cleanedResponse);
+        if (!jsonCandidate) {
+            throw new Error('No JSON block detected');
+        }
+        parsed = JSON.parse(jsonCandidate);
     }
     catch (error) {
         console.error('Failed to parse OpenAI response:', aiResponse);
@@ -61,14 +91,21 @@ async function callOpenAI(thoughtText, context) {
     return {
         actions: parsed.actions || [],
         usage: data.usage,
+        prompt,
+        rawResponse: aiResponse,
     };
 }
 /**
  * Build the AI prompt with context
  */
-function buildPrompt(thoughtText, context) {
+function buildPrompt(thoughtText, context, toolSpecs) {
     const contextFormatted = (0, contextGatherer_1.formatContextForPrompt)(context);
+    const toolReference = toolSpecs.length > 0 ? (0, toolSpecs_1.renderToolSpecsForPrompt)(toolSpecs) : 'No additional tool guidance provided.';
     return `You are processing a user's thought in a productivity app.
+
+Use the tool reference below to understand how each tool should behave. Follow the guidance carefully and avoid inventing new details.
+
+${toolReference}
 
 **STEP 1: ENHANCE THE TEXT**
 - Fix grammar, spelling, capitalization
