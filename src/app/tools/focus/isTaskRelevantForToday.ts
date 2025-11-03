@@ -3,7 +3,7 @@ import { getDateString } from '@/lib/utils/date';
 
 function normalizeDate(date: Date): Date {
   const normalized = new Date(date);
-  normalized.setHours(0, 0, 0, 0);
+  normalized.setUTCHours(0, 0, 0, 0);
   return normalized;
 }
 
@@ -12,7 +12,9 @@ function parseDate(value?: string): Date | null {
     return null;
   }
 
-  const parsed = new Date(value);
+  // Parse date strings as UTC to avoid timezone issues
+  const dateStr = value.includes('T') ? value : `${value}T00:00:00.000Z`;
+  const parsed = new Date(dateStr);
   if (Number.isNaN(parsed.getTime())) {
     return null;
   }
@@ -63,14 +65,14 @@ function hasCompletionOnDate(task: Task, date: string): boolean {
 
 function isSameWeek(target: Date, reference: Date): boolean {
   const referenceStart = normalizeDate(reference);
-  const day = referenceStart.getDay();
+  const day = referenceStart.getUTCDay();
   const daysFromMonday = (day + 6) % 7;
 
   const startOfWeek = new Date(referenceStart);
-  startOfWeek.setDate(referenceStart.getDate() - daysFromMonday);
+  startOfWeek.setUTCDate(referenceStart.getUTCDate() - daysFromMonday);
 
   const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setUTCDate(startOfWeek.getUTCDate() + 6);
 
   return target >= startOfWeek && target <= endOfWeek;
 }
