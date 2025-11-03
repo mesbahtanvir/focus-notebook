@@ -154,7 +154,14 @@ describe('OpenAI Client', () => {
       json: async () => mockResponse
     });
 
-    await expect(callOpenAI('test', mockContext, mockToolSpecs)).rejects.toThrow('Invalid JSON response');
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      await expect(callOpenAI('test', mockContext, mockToolSpecs)).rejects.toThrow('Invalid JSON response');
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to parse OpenAI response:', 'This is not JSON');
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 
   it('should throw error when no response content', async () => {
