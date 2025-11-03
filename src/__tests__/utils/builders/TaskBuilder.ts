@@ -3,7 +3,14 @@
  * Makes tests more readable and maintainable
  */
 
-import type { Task, TaskStatus, TaskPriority, TaskCategory, RecurrenceType } from '@/store/useTasks';
+import type {
+  Task,
+  TaskStatus,
+  TaskPriority,
+  TaskCategory,
+  RecurrenceType,
+  TaskCompletion,
+} from '@/store/useTasks';
 
 export class TaskBuilder {
   private task: Partial<Task> = {
@@ -52,6 +59,35 @@ export class TaskBuilder {
   asDone(): this {
     this.task.done = true;
     this.task.completedAt = new Date().toISOString();
+    return this;
+  }
+
+  /**
+   * Set completion status explicitly
+   */
+  withDone(done: boolean): this {
+    this.task.done = done;
+    return this;
+  }
+
+  /**
+   * Set completed at timestamp
+   */
+  withCompletedAt(date?: string | Date): this {
+    if (!date) {
+      this.task.completedAt = undefined;
+      return this;
+    }
+
+    this.task.completedAt = typeof date === 'string' ? date : date.toISOString();
+    return this;
+  }
+
+  /**
+   * Set completion history entries
+   */
+  withCompletionHistory(history: TaskCompletion[]): this {
+    this.task.completionHistory = history;
     return this;
   }
 

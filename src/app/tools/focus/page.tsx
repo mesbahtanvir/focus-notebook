@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { isWorkday, getDateString, isTaskCompletedToday } from "@/lib/utils/date";
+import { isTaskRelevantForToday as checkTaskRelevantForToday } from "./isTaskRelevantForToday";
 
 function FocusPageContent() {
   useTrackToolUsage('focus');
@@ -74,18 +75,7 @@ function FocusPageContent() {
   const autoSuggestedTasks = selectBalancedTasks(tasks, duration);
 
   const isTaskRelevantForToday = useCallback((task: Task) => {
-    if (!task.dueDate) {
-      return true;
-    }
-
-    const dueDate = new Date(task.dueDate);
-
-    if (Number.isNaN(dueDate.getTime())) {
-      return true;
-    }
-
-    const normalizedDueDate = getDateString(dueDate);
-    return normalizedDueDate <= today;
+    return checkTaskRelevantForToday(task, today);
   }, [today]);
 
   // Initialize selected tasks with auto-suggested tasks
