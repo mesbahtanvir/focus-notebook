@@ -1,7 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.SUBSCRIPTION_STATUS_DOC_PATH = exports.SUBSCRIPTION_STATUS_DOC_ID = exports.SUBSCRIPTION_STATUS_COLLECTION = void 0;
 exports.evaluateAiEntitlement = evaluateAiEntitlement;
 exports.hasActivePro = hasActivePro;
+exports.SUBSCRIPTION_STATUS_COLLECTION = 'subscriptionStatus';
+exports.SUBSCRIPTION_STATUS_DOC_ID = 'status';
+exports.SUBSCRIPTION_STATUS_DOC_PATH = `${exports.SUBSCRIPTION_STATUS_COLLECTION}/${exports.SUBSCRIPTION_STATUS_DOC_ID}`;
 const ACTIVE_STATUSES = new Set([
     'active',
     'trialing',

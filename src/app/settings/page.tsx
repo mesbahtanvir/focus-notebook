@@ -1,42 +1,64 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useToast } from "@/hooks/use-toast"
-import { useSettings, AIModel } from '@/store/useSettings'
-import { Key, Eye, EyeOff, Check, X, ExternalLink, Brain } from 'lucide-react'
-import Link from 'next/link'
-import { useTasks } from '@/store/useTasks'
-import { useGoals } from '@/store/useGoals'
-import { useProjects } from '@/store/useProjects'
-import { useThoughts } from '@/store/useThoughts'
-import { useMoods } from '@/store/useMoods'
-import { useFocus } from '@/store/useFocus'
-import { useAuth } from '@/contexts/AuthContext'
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTasks } from '@/store/useTasks';
+import { useGoals } from '@/store/useGoals';
+import { useProjects } from '@/store/useProjects';
+import { useThoughts } from '@/store/useThoughts';
+import { useMoods } from '@/store/useMoods';
+import { useFocus } from '@/store/useFocus';
+import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
 import { EnhancedDataManagement } from '@/components/EnhancedDataManagement';
+import { ArrowUpRight, Crown, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
 
-type SettingsFormValues = {
-  allowBackgroundProcessing: boolean;
-  openaiApiKey: string;
+const DEFAULT_PRO_UPGRADE_URL = 'https://focus.yourthoughts.ca/pricing';
+const DEFAULT_PRO_PORTAL_URL = 'https://focus.yourthoughts.ca/account';
+
+const PRO_UPGRADE_URL = process.env.NEXT_PUBLIC_PRO_UPGRADE_URL ?? DEFAULT_PRO_UPGRADE_URL;
+const PRO_PORTAL_URL = process.env.NEXT_PUBLIC_PRO_PORTAL_URL ?? DEFAULT_PRO_PORTAL_URL;
+
+const PRO_BENEFITS = [
+  {
+    icon: Sparkles,
+    title: 'Unlimited AI automations',
+    description: 'Process every thought with intelligent action plans, summaries, and smart tagging.',
+  },
+  {
+    icon: Rocket,
+    title: 'Background processing',
+    description: 'Let Focus Notebook run in the background and surface confident suggestions automatically.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Priority support & previews',
+    description: 'Get hands-on help from the team and early access to upcoming features.',
+  },
+] as const;
+
+const ENTITLEMENT_MESSAGES: Record<string, string> = {
+  allowed: 'Focus Notebook Pro is active on your account.',
+  'no-record': 'No active subscription detected. Upgrade to Pro to unlock advanced automations.',
+  'tier-mismatch': 'Your current plan does not include Pro features.',
+  inactive: 'Your subscription is inactive. Renew to continue using Pro features.',
+  disabled: 'AI processing is currently disabled for your account.',
+  exhausted: 'You have used all available AI credits. Top up or wait for the next billing cycle.',
 };
 
 export default function SettingsPage() {
-  const { toast } = useToast();
   const { user } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
-  const { setValue, watch } = useForm<SettingsFormValues>({
-    defaultValues: {
-      allowBackgroundProcessing: false,
-      openaiApiKey: '',
-    },
-  });
+  const { toast } = useToast();
 
-  // Store subscriptions for re-fetching data
+  const [isSettingsLoading, setIsSettingsLoading] = useState(true);
+  const [allowBackgroundProcessing, setAllowBackgroundProcessing] = useState(false);
+
   const tasksSubscribe = useTasks((s) => s.subscribe);
   const goalsSubscribe = useGoals((s) => s.subscribe);
   const projectsSubscribe = useProjects((s) => s.subscribe);
@@ -44,298 +66,239 @@ export default function SettingsPage() {
   const moodsSubscribe = useMoods((s) => s.subscribe);
   const focusSubscribe = useFocus((s) => s.subscribe);
 
-  // Helper to refresh all stores without page reload
+  const { subscription, hasProAccess, entitlement, isLoading: subscriptionLoading, lastUpdatedAt } =
+    useSubscriptionStatus((state) => ({
+      subscription: state.subscription,
+      hasProAccess: state.hasProAccess,
+      entitlement: state.entitlement,
+      isLoading: state.isLoading,
+      lastUpdatedAt: state.lastUpdatedAt,
+    }));
+
+  const entitlementMessage = useMemo(() => {
+    return ENTITLEMENT_MESSAGES[entitlement.code] ?? ENTITLEMENT_MESSAGES['no-record'];
+  }, [entitlement.code]);
+
   const refreshAllStores = () => {
-    if (user?.uid) {
-      tasksSubscribe(user.uid);
-      goalsSubscribe(user.uid);
-      projectsSubscribe(user.uid);
-      thoughtsSubscribe(user.uid);
-      moodsSubscribe(user.uid);
-      focusSubscribe(user.uid);
+    if (!user?.uid) {
+      return;
     }
+    tasksSubscribe(user.uid);
+    goalsSubscribe(user.uid);
+    projectsSubscribe(user.uid);
+    thoughtsSubscribe(user.uid);
+    moodsSubscribe(user.uid);
+    focusSubscribe(user.uid);
   };
 
-  // API Key management
-  const { settings, updateSettings, clearApiKey } = useSettings();
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [isApiKeyValid, setIsApiKeyValid] = useState<boolean | null>(null);
-  
-  // Load saved settings from localStorage on component mount
   useEffect(() => {
     try {
-      const savedSettings = localStorage.getItem('appSettings');
-      if (savedSettings) {
-        const parsedSettings = JSON.parse(savedSettings);
-        Object.entries(parsedSettings).forEach(([key, value]) => {
-          setValue(key as keyof SettingsFormValues, value as any);
-        });
-      }
-      
-      // Load API key from settings store
-      if (settings.openaiApiKey) {
-        setApiKeyInput(settings.openaiApiKey);
-        setIsApiKeyValid(true);
+      const saved = localStorage.getItem('appSettings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.allowBackgroundProcessing === 'boolean') {
+          setAllowBackgroundProcessing(parsed.allowBackgroundProcessing);
+        }
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
-      setIsLoading(false);
+      setIsSettingsLoading(false);
     }
-  }, [setValue, settings.openaiApiKey]);
-  
-  // Validate API key format
-  const validateApiKey = (key: string): boolean => {
-    if (!key || key.trim().length === 0) return false;
-    return key.trim().startsWith('sk-');
-  };
-  
-  // Save API key
-  const handleSaveApiKey = () => {
-    const isValid = validateApiKey(apiKeyInput);
-    setIsApiKeyValid(isValid);
-    
-    if (isValid) {
-      updateSettings({ openaiApiKey: apiKeyInput.trim() });
-      toast({
-        title: 'API Key Saved',
-        description: 'Your OpenAI API key has been saved successfully.',
-      });
-    } else {
-      toast({
-        title: 'Invalid API Key',
-        description: 'OpenAI API keys should start with "sk-". Please check and try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  // Clear API key
-  const handleClearApiKey = () => {
-    clearApiKey();
-    setApiKeyInput('');
-    setIsApiKeyValid(null);
-    toast({
-      title: 'API Key Removed',
-      description: 'Your API key has been cleared from settings.',
-    });
-  };
-  
-  const allowBackgroundProcessing = watch('allowBackgroundProcessing');
+  }, []);
 
   useEffect(() => {
-    const subscription = watch((value) => {
-      try {
-        localStorage.setItem('appSettings', JSON.stringify(value as SettingsFormValues));
-      } catch (e) {
-        console.error('Failed to auto-save settings:', e);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [watch]);
+    if (isSettingsLoading) {
+      return;
+    }
 
-  if (isLoading) {
+    try {
+      const saved = localStorage.getItem('appSettings');
+      const parsed = saved ? JSON.parse(saved) : {};
+      const next = {
+        ...parsed,
+        allowBackgroundProcessing: hasProAccess ? allowBackgroundProcessing : false,
+      };
+      localStorage.setItem('appSettings', JSON.stringify(next));
+    } catch (error) {
+      console.error('Failed to persist settings:', error);
+    }
+  }, [allowBackgroundProcessing, hasProAccess, isSettingsLoading]);
+
+  useEffect(() => {
+    if (!hasProAccess && allowBackgroundProcessing) {
+      setAllowBackgroundProcessing(false);
+    }
+  }, [hasProAccess, allowBackgroundProcessing]);
+
+  const handleBackgroundToggle = (checked: boolean) => {
+    if (!hasProAccess) {
+      toast({
+        title: 'Focus Notebook Pro required',
+        description: 'Upgrade to Pro to unlock automatic background processing.',
+      });
+      return;
+    }
+
+    setAllowBackgroundProcessing(checked);
+    window.dispatchEvent(new Event('settingsChanged'));
+  };
+
+  const formatDate = (value: unknown) => {
+    if (!value) return null;
+    const date =
+      value instanceof Date
+        ? value
+        : typeof value === 'string' || typeof value === 'number'
+          ? new Date(value)
+          : null;
+    if (!date || Number.isNaN(date.getTime())) {
+      return null;
+    }
+    return date.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  if (isSettingsLoading || (subscriptionLoading && !subscription)) {
     return <div className="flex items-center justify-center h-64">Loading settings...</div>;
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 space-y-6">
       <Card className="border-4 border-purple-200 shadow-xl bg-gradient-to-br from-white to-purple-50">
         <CardHeader className="bg-gradient-to-r from-purple-100 to-pink-100 border-b-4 border-purple-200">
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             ⚙️ Settings
           </CardTitle>
           <CardDescription className="text-gray-600 font-medium">
-            Manage your application preferences • Settings auto-save
+            Manage your Focus Notebook preferences and membership
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-8 space-y-8">
-            {/* General Settings Section */}
-            <div className="space-y-6">
-              {/* Background Processing */}
-              <div className="flex items-center justify-between py-4">
-                <div className="space-y-1 flex-1">
-                  <Label htmlFor="allowBackgroundProcessing" className="text-base font-semibold text-gray-800">Background Processing</Label>
-                  <p className="text-sm text-gray-600">
-                    When enabled, the app will automatically analyze your thoughts using AI and suggest actions in the background. Requires an OpenAI API key.
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    <strong>Off by default.</strong> Toggle this on to enable automatic LLM-powered thought analysis every 2 minutes.
-                  </p>
-                </div>
-                <Switch
-                  id="allowBackgroundProcessing"
-                  checked={allowBackgroundProcessing}
-                  onCheckedChange={(checked) => {
-                    setValue('allowBackgroundProcessing', checked);
-                    // Dispatch custom event so daemon can react immediately
-                    window.dispatchEvent(new Event('settingsChanged'));
-                  }}
-                />
-              </div>
 
-            </div>
-
-            {/* AI Model Selection */}
-            <div className="pt-8 space-y-4 border-t-4 border-blue-200">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 bg-gradient-to-r from-blue-400 to-cyan-500 rounded-full">
-                  <Brain className="h-5 w-5 text-white" />
-                </div>
-                <h3 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                  AI Model Selection
-                </h3>
-              </div>
-
-              <div className="rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 p-6 border-2 border-blue-200 dark:border-blue-800">
-                <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
-                  Choose which OpenAI model to use for AI-powered features. Better models provide higher quality but cost more.
-                </p>
-                
-                <div className="space-y-3">
-                  <Label htmlFor="aiModel" className="text-sm font-semibold">
-                    Selected Model
-                  </Label>
-                  <select
-                    id="aiModel"
-                    value={settings.aiModel || 'gpt-4o'}
-                    onChange={(e) => updateSettings({ aiModel: e.target.value as AIModel })}
-                    className="w-full px-4 py-3 rounded-lg border-2 border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                  >
-                    <option value="gpt-4o">GPT-4o - Best Overall (Default) 🧠</option>
-                    <option value="gpt-4o-mini">GPT-4o Mini - Balanced ⚖️</option>
-                    <option value="gpt-4-turbo-preview">GPT-4 Turbo - Premium 💎</option>
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo - Budget 💰</option>
-                  </select>
-                  
-                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-300 dark:border-blue-700 mt-4">
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      <strong>💡 Pricing Guide:</strong><br/>
-                      • <strong>GPT-4o</strong>: ~$0.05 per request<br/>
-                      • <strong>GPT-4o Mini</strong>: ~$0.015 per request<br/>
-                      • <strong>GPT-4 Turbo</strong>: ~$0.10 per request<br/>
-                      • <strong>GPT-3.5 Turbo</strong>: ~$0.002 per request (1000 tokens)
-                    </p>
+        <CardContent className="p-8 space-y-10">
+          <section className="rounded-2xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 via-white to-pink-50 p-6 shadow-inner">
+            <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-4">
+                <Badge
+                  variant={hasProAccess ? 'default' : 'secondary'}
+                  className={hasProAccess ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' : ''}
+                >
+                  {hasProAccess ? 'Focus Notebook Pro' : 'Free plan'}
+                </Badge>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg">
+                    <Crown className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Unlock advanced automation</h2>
+                    <p className="text-sm text-gray-600 max-w-xl">{entitlementMessage}</p>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* OpenAI API Key Section */}
-            <div className="pt-8 space-y-4 border-t-4 border-yellow-200">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full">
-                  <Key className="h-5 w-5 text-white" />
-                </div>
-                <h3 className="text-lg font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
-                  OpenAI API Key
-                </h3>
-              </div>
-
-              <div className="rounded-xl bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 p-6 border-2 border-yellow-200 dark:border-yellow-800">
-                <div className="flex items-start justify-between mb-4">
-                  <p className="text-sm text-gray-700 dark:text-gray-300 flex-1">
-                    Configure your OpenAI API key to enable AI-powered features. 
-                    Your key is stored locally and never sent to our servers.
-                  </p>
-                  <Link
-                    href="/learn/api-key"
-                    className="ml-4 px-3 py-1.5 bg-white dark:bg-gray-800 border border-yellow-400 rounded-lg text-xs font-medium text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 shrink-0"
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                    Learn How
-                  </Link>
-                </div>
-                
-                <div className="space-y-4">
-                  {/* API Key Input */}
-                  <div className="space-y-2">
-                    <Label htmlFor="apiKeyInput" className="text-sm font-semibold">
-                      API Key {settings.openaiApiKey && <span className="text-green-600 dark:text-green-400">(Configured ✓)</span>}
-                    </Label>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1 max-w-md">
-                        <Input
-                          id="apiKeyInput"
-                          type={showApiKey ? "text" : "password"}
-                          value={apiKeyInput}
-                          onChange={(e) => {
-                            setApiKeyInput(e.target.value);
-                            setIsApiKeyValid(null);
-                          }}
-                          placeholder="sk-..."
-                          className={`pr-10 ${
-                            isApiKeyValid === true 
-                              ? 'border-green-500' 
-                              : isApiKeyValid === false 
-                              ? 'border-red-500' 
-                              : ''
-                          }`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowApiKey(!showApiKey)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                        >
-                          {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                      <Button
-                        type="button"
-                        onClick={handleSaveApiKey}
-                        disabled={!apiKeyInput.trim()}
-                        className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
-                      >
-                        <Check className="h-4 w-4 mr-2" />
-                        Save
-                      </Button>
-                      {settings.openaiApiKey && (
-                        <Button
-                          type="button"
-                          onClick={handleClearApiKey}
-                          variant="outline"
-                          className="border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                        >
-                          <X className="h-4 w-4 mr-2" />
-                          Clear
-                        </Button>
-                      )}
+                {hasProAccess && (
+                  <div className="flex flex-wrap gap-4 text-sm text-gray-700 bg-white/70 border border-purple-200 rounded-xl p-4">
+                    <div>
+                      <span className="font-semibold text-gray-900">Status:</span>{' '}
+                      {subscription?.status ? subscription.status : 'active'}
                     </div>
-                    {isApiKeyValid === false && (
-                      <p className="text-sm text-red-600 dark:text-red-400">
-                        Invalid API key format. OpenAI keys should start with &quot;sk-&quot;
-                      </p>
+                    <div>
+                      <span className="font-semibold text-gray-900">Tier:</span>{' '}
+                      {subscription?.tier ?? 'pro'}
+                    </div>
+                    {formatDate(subscription?.currentPeriodEnd) && (
+                      <div>
+                        <span className="font-semibold text-gray-900">Renews on:</span>{' '}
+                        {formatDate(subscription?.currentPeriodEnd)}
+                      </div>
                     )}
-                    {isApiKeyValid === true && (
-                      <p className="text-sm text-green-600 dark:text-green-400">
-                        ✓ API key saved successfully!
-                      </p>
+                    {formatDate(lastUpdatedAt) && (
+                      <div>
+                        <span className="font-semibold text-gray-900">Last updated:</span>{' '}
+                        {formatDate(lastUpdatedAt)}
+                      </div>
                     )}
                   </div>
+                )}
 
-                  {/* Quick Help */}
-                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-yellow-300 dark:border-yellow-700">
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
-                      <strong>Need help?</strong> Visit the{" "}
-                      <Link 
-                        href="/learn/api-key" 
-                        className="text-purple-600 dark:text-purple-400 hover:underline font-medium inline-flex items-center gap-1"
+                {!hasProAccess && (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {PRO_BENEFITS.map((benefit) => (
+                      <div
+                        key={benefit.title}
+                        className="flex gap-3 rounded-xl border border-purple-200 bg-white/60 p-4"
                       >
-                        API Key Guide
-                        <ExternalLink className="h-3 w-3" />
-                      </Link>
-                      {" "}for detailed instructions on getting your OpenAI API key, pricing info, and troubleshooting tips.
-                    </p>
+                        <div className="mt-1 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 p-2 text-white shadow">
+                          <benefit.icon className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900">{benefit.title}</h4>
+                          <p className="text-sm text-gray-600">{benefit.description}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                )}
+              </div>
+
+              <div className="w-full md:w-auto flex flex-col gap-3">
+                <Button
+                  size="lg"
+                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                  onClick={() => {
+                    const targetUrl = hasProAccess ? PRO_PORTAL_URL : PRO_UPGRADE_URL;
+                    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                  }}
+                >
+                  {hasProAccess ? 'Manage subscription' : 'Upgrade to Pro'}
+                  <ArrowUpRight className="h-4 w-4" />
+                </Button>
+                {!hasProAccess && (
+                  <Button variant="outline" asChild>
+                    <Link href="mailto:hello@focusnotebook.ai?subject=Focus%20Notebook%20Pro">
+                      Talk to the team
+                    </Link>
+                  </Button>
+                )}
               </div>
             </div>
+          </section>
 
-          </CardContent>
+          <section className="rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-6">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="allowBackgroundProcessing" className="text-base font-semibold text-gray-800">
+                    Background processing
+                  </Label>
+                  {!hasProAccess && (
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200">
+                      Pro feature
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600 max-w-2xl">
+                  Let Focus Notebook automatically analyze new thoughts and queue AI suggestions in the background.
+                  You&apos;ll receive confident actions without lifting a finger.
+                </p>
+                <p className="text-xs text-gray-500">
+                  We only run background jobs while your account is active. You can toggle this anytime.
+                </p>
+              </div>
+
+              <Switch
+                id="allowBackgroundProcessing"
+                checked={allowBackgroundProcessing && hasProAccess}
+                disabled={!hasProAccess}
+                onCheckedChange={handleBackgroundToggle}
+              />
+            </div>
+          </section>
+        </CardContent>
       </Card>
 
-      {/* Enhanced Data Management */}
       <EnhancedDataManagement onDataChanged={refreshAllStores} />
     </div>
   );

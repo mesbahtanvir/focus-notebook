@@ -21,6 +21,8 @@ import {
   type SubscriptionSnapshot,
   type AiEntitlement,
   type AiEntitlementCode,
+  SUBSCRIPTION_STATUS_COLLECTION,
+  SUBSCRIPTION_STATUS_DOC_ID,
 } from '../../shared/subscription';
 
 const ANONYMOUS_SESSION_COLLECTION = 'anonymousSessions';
@@ -28,7 +30,6 @@ const ANONYMOUS_AI_OVERRIDE_KEY = process.env.ANONYMOUS_AI_OVERRIDE_KEY || funct
 const PROCESSING_QUEUE_SUBCOLLECTION = 'processingQueue';
 const PROCESSING_USAGE_DOC = 'processingUsage/meta';
 const MIN_PROCESSING_INTERVAL_MS = 10_000;
-const SUBSCRIPTION_STATUS_DOC = 'subscriptionStatus';
 const SUBSCRIPTION_CACHE_TTL_MS = 60_000;
 
 const subscriptionCache = new Map<
@@ -106,7 +107,9 @@ async function getSubscriptionSnapshot(userId: string): Promise<SubscriptionSnap
     return cached.snapshot;
   }
 
-  const ref = admin.firestore().doc(`users/${userId}/${SUBSCRIPTION_STATUS_DOC}`);
+  const ref = admin
+    .firestore()
+    .doc(`users/${userId}/${SUBSCRIPTION_STATUS_COLLECTION}/${SUBSCRIPTION_STATUS_DOC_ID}`);
   const snap = await ref.get();
 
   if (!snap.exists) {

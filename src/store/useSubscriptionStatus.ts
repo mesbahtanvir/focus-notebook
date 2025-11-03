@@ -7,6 +7,8 @@ import {
   hasActivePro,
   type AiEntitlement,
   type SubscriptionSnapshot,
+  SUBSCRIPTION_STATUS_COLLECTION,
+  SUBSCRIPTION_STATUS_DOC_ID,
 } from '../../shared/subscription';
 
 type State = {
@@ -102,7 +104,7 @@ export const useSubscriptionStatus = create<State>((set, get) => ({
       lastUpdatedAt: null,
     });
 
-    const ref = doc(db, `users/${userId}/subscriptionStatus`);
+    const ref = doc(db, 'users', userId, SUBSCRIPTION_STATUS_COLLECTION, SUBSCRIPTION_STATUS_DOC_ID);
     const unsubscribe = subscribeDoc<SubscriptionSnapshot>(ref, (docData, meta) => {
       set(handleSnapshot(docData, meta));
     });

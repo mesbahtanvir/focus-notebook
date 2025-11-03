@@ -58,7 +58,6 @@ const ANONYMOUS_AI_OVERRIDE_KEY = process.env.ANONYMOUS_AI_OVERRIDE_KEY || ((_b 
 const PROCESSING_QUEUE_SUBCOLLECTION = 'processingQueue';
 const PROCESSING_USAGE_DOC = 'processingUsage/meta';
 const MIN_PROCESSING_INTERVAL_MS = 10000;
-const SUBSCRIPTION_STATUS_DOC = 'subscriptionStatus';
 const SUBSCRIPTION_CACHE_TTL_MS = 60000;
 const subscriptionCache = new Map();
 class RateLimitError extends Error {
@@ -100,7 +99,9 @@ async function getSubscriptionSnapshot(userId) {
     if (cached && cached.expiresAt > now) {
         return cached.snapshot;
     }
-    const ref = admin.firestore().doc(`users/${userId}/${SUBSCRIPTION_STATUS_DOC}`);
+    const ref = admin
+        .firestore()
+        .doc(`users/${userId}/${subscription_1.SUBSCRIPTION_STATUS_COLLECTION}/${subscription_1.SUBSCRIPTION_STATUS_DOC_ID}`);
     const snap = await ref.get();
     if (!snap.exists) {
         subscriptionCache.set(userId, { snapshot: null, expiresAt: now + SUBSCRIPTION_CACHE_TTL_MS });

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Check, Repeat, Target } from 'lucide-react';
+import { Plus, Check, Repeat, Target, SlidersHorizontal } from 'lucide-react';
 import { useTasks, TaskPriority, RecurrenceType } from '@/store/useTasks';
 import { useProjects } from '@/store/useProjects';
 
@@ -27,6 +27,7 @@ export function TaskInput({ onClose, onTaskCreated, defaultProjectId }: TaskInpu
   const [focusEligible, setFocusEligible] = useState(true);
   const [projectId, setProjectId] = useState(defaultProjectId || '');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const addTask = useTasks((state) => state.add);
   const projects = useProjects((state) => state.projects);
@@ -78,6 +79,7 @@ export function TaskInput({ onClose, onTaskCreated, defaultProjectId }: TaskInpu
     setRecurrenceFrequency('');
     setFocusEligible(true);
     setProjectId('');
+    setShowDetails(false);
     
     // Reset form
     setTimeout(() => {
@@ -137,206 +139,248 @@ export function TaskInput({ onClose, onTaskCreated, defaultProjectId }: TaskInpu
           </div>
         </div>
 
-        {/* Notes */}
-        <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700">
-          <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">📝 Notes</label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Add notes or description (optional)"
-            className="input w-full min-h-[80px] text-sm bg-white dark:bg-gray-800"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Priority */}
-          <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 p-4 rounded-xl border-2 border-orange-200 dark:border-orange-800">
-            <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">🔥 Priority</label>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as TaskPriority)}
-              className="input w-full text-sm font-medium border-2 focus:border-orange-500"
-            >
-              <option value="low">🟢 Low</option>
-              <option value="medium">🟡 Medium</option>
-              <option value="high">🟠 High</option>
-              <option value="urgent">🔴 Urgent</option>
-            </select>
-          </div>
-
-          {/* Project Link */}
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-4 rounded-xl border-2 border-green-200 dark:border-green-800">
-            <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300 flex items-center gap-2">
-              <Target className="h-4 w-4 text-green-500" />
-              🎯 Project
-            </label>
-            <select
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              className="input w-full text-sm font-medium border-2 focus:border-green-500"
-            >
-              <option value="">No project (standalone)</option>
-              {projects.filter(p => p.status === 'active').map(project => (
-                <option key={project.id} value={project.id}>{project.title}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Destination */}
-          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20 p-4 rounded-xl border-2 border-purple-200 dark:border-purple-800">
-            <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">📅 Add to</label>
-            <div className="inline-flex rounded-lg shadow-sm w-full" role="group">
-              <button
-                type="button"
-                onClick={() => setDestination('today')}
-                className={`flex-1 px-4 py-3 text-sm font-bold rounded-l-lg border-2 transition-all ${
-                  destination === 'today'
-                    ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-purple-500 shadow-lg scale-105'
-                    : 'bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-purple-950/50 border-gray-300 dark:border-gray-600'
-                }`}
-              >
-                ☀️ Today
-              </button>
-              <button
-                type="button"
-                onClick={() => setDestination('backlog')}
-                className={`flex-1 px-4 py-3 text-sm font-bold rounded-r-lg border-2 transition-all ${
-                  destination === 'backlog'
-                    ? 'bg-gradient-to-r from-indigo-500 to-blue-500 text-white border-indigo-500 shadow-lg scale-105'
-                    : 'bg-white dark:bg-gray-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 border-gray-300 dark:border-gray-600'
-                }`}
-              >
-                📋 Backlog
-              </button>
-            </div>
-          </div>
-
-          {/* Due Date */}
-          <div className="bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-950/20 dark:to-blue-950/20 p-4 rounded-xl border-2 border-cyan-200 dark:border-cyan-800">
-            <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">⏰ Due Date</label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="input w-full border-2 focus:border-cyan-500"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Estimated Time */}
-          <div className="bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-950/20 dark:to-emerald-950/20 p-4 rounded-xl border-2 border-teal-200 dark:border-teal-800">
-            <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">⏱️ Estimated Time</label>
-            <input
-              type="number"
-              value={estimatedMinutes}
-              onChange={(e) => setEstimatedMinutes(e.target.value)}
-              placeholder="e.g., 30"
-              className="input w-full border-2 focus:border-teal-500"
-              min="0"
-            />
-            <p className="text-xs text-gray-500 mt-1">In minutes</p>
-          </div>
-
-          {/* Tags */}
-          <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 p-4 rounded-xl border-2 border-amber-200 dark:border-amber-800">
-            <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">🏷️ Tags</label>
-            <input
-              type="text"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="e.g., urgent, work"
-              className="input w-full border-2 focus:border-amber-500"
-            />
-            <p className="text-xs text-gray-500 mt-1">Comma-separated</p>
-          </div>
-        </div>
-
-        {/* Recurrence */}
-        <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20 p-4 rounded-xl border-2 border-violet-200 dark:border-violet-800">
-          <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300 flex items-center gap-2">
-            <Repeat className="h-5 w-5 text-violet-500" />
-            🔁 Recurrence
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <select
-              value={recurrenceType}
-              onChange={(e) => setRecurrenceType(e.target.value as RecurrenceType)}
-              className="input w-full border-2 focus:border-violet-500 font-medium"
-            >
-              <option value="none">⚡ One-time task</option>
-              <option value="daily">📆 Daily</option>
-              <option value="workweek">💼 Work Week</option>
-              <option value="weekly">📅 Weekly</option>
-              <option value="biweekly">📆 Bi-weekly</option>
-              <option value="monthly">🗓️ Monthly</option>
-              <option value="bimonthly">🗓️ Bi-monthly</option>
-              <option value="halfyearly">📅 Half-yearly</option>
-              <option value="yearly">📆 Yearly</option>
-            </select>
-            {recurrenceType !== 'none' && (
-              <div>
-                <input
-                  type="number"
-                  value={recurrenceFrequency}
-                  onChange={(e) => setRecurrenceFrequency(e.target.value)}
-                  placeholder={`Times per ${
-                    recurrenceType === 'weekly' ? 'week' :
-                    recurrenceType === 'biweekly' ? 'two weeks' :
-                    recurrenceType === 'monthly' ? 'month' :
-                    recurrenceType === 'bimonthly' ? 'two months' :
-                    recurrenceType === 'halfyearly' ? 'six months' :
-                    recurrenceType === 'yearly' ? 'year' :
-                    recurrenceType === 'workweek' ? 'work week' : 'day'
-                  }`}
-                  className="input w-full border-2 focus:border-violet-500"
-                  min="1"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  {recurrenceType === 'daily' && '💡 Leave blank for every day'}
-                  {recurrenceType === 'workweek' && '💡 e.g., 5 for every workday (Mon-Fri)'}
-                  {recurrenceType === 'weekly' && '💡 e.g., 4 for 4 times per week'}
-                  {recurrenceType === 'biweekly' && '💡 Leave blank for every two weeks'}
-                  {recurrenceType === 'monthly' && '💡 e.g., 3 for 3 times per month'}
-                  {recurrenceType === 'bimonthly' && '💡 Leave blank for every two months'}
-                  {recurrenceType === 'halfyearly' && '💡 Leave blank for every six months'}
-                  {recurrenceType === 'yearly' && '💡 Leave blank for once per year'}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Focus Eligible Toggle */}
-        <div className="bg-gradient-to-br from-green-50 to-teal-50 dark:from-green-950/20 dark:to-teal-950/20 p-4 rounded-xl border-2 border-green-200 dark:border-green-800">
-          <label className="flex items-center justify-between cursor-pointer">
-            <div>
-              <div className="text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">💻 Focus Session Eligible</div>
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                Can this task be done on your laptop/notebook while sitting at a desk or cafe? 
-                Turn off for errands, shopping, or tasks requiring you to leave your workspace.
-              </p>
+        {!showDetails && (
+          <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-900/40 px-4 py-3 border border-dashed border-gray-300 dark:border-gray-700">
+            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+              Defaults: Today · Medium Priority · Focus Enabled
             </div>
             <button
               type="button"
-              onClick={() => setFocusEligible(!focusEligible)}
-              className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
-                focusEligible ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
-              }`}
-              role="switch"
-              aria-checked={focusEligible}
+              onClick={() => setShowDetails(true)}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-purple-600 dark:text-purple-300 hover:text-purple-700 dark:hover:text-purple-200 transition-colors"
             >
-              <span
-                aria-hidden="true"
-                className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  focusEligible ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              />
+              <SlidersHorizontal className="h-4 w-4" />
+              Add details
             </button>
-          </label>
-        </div>
+          </div>
+        )}
+
+        <AnimatePresence initial={false}>
+          {showDetails && (
+            <motion.div
+              key="task-details"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              className="space-y-6 overflow-hidden"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
+                  Task Details
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowDetails(false)}
+                  className="text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                >
+                  Hide details
+                </button>
+              </div>
+
+              {/* Notes */}
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700">
+                <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">📝 Notes</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add notes or description (optional)"
+                  className="input w-full min-h-[80px] text-sm bg-white dark:bg-gray-800"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Priority */}
+                <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 p-4 rounded-xl border-2 border-orange-200 dark:border-orange-800">
+                  <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">🔥 Priority</label>
+                  <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value as TaskPriority)}
+                    className="input w-full text-sm font-medium border-2 focus:border-orange-500"
+                  >
+                    <option value="low">🟢 Low</option>
+                    <option value="medium">🟡 Medium</option>
+                    <option value="high">🟠 High</option>
+                    <option value="urgent">🔴 Urgent</option>
+                  </select>
+                </div>
+
+                {/* Project Link */}
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-4 rounded-xl border-2 border-green-200 dark:border-green-800">
+                  <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    <Target className="h-4 w-4 text-green-500" />
+                    🎯 Project
+                  </label>
+                  <select
+                    value={projectId}
+                    onChange={(e) => setProjectId(e.target.value)}
+                    className="input w-full text-sm font-medium border-2 focus:border-green-500"
+                  >
+                    <option value="">No project (standalone)</option>
+                    {projects.filter(p => p.status === 'active').map(project => (
+                      <option key={project.id} value={project.id}>{project.title}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Destination */}
+                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20 p-4 rounded-xl border-2 border-purple-200 dark:border-purple-800">
+                  <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">📅 Add to</label>
+                  <div className="inline-flex rounded-lg shadow-sm w-full" role="group">
+                    <button
+                      type="button"
+                      onClick={() => setDestination('today')}
+                      className={`flex-1 px-4 py-3 text-sm font-bold rounded-l-lg border-2 transition-all ${
+                        destination === 'today'
+                          ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-purple-500 shadow-lg scale-105'
+                          : 'bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-purple-950/50 border-gray-300 dark:border-gray-600'
+                      }`}
+                    >
+                      ☀️ Today
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDestination('backlog')}
+                      className={`flex-1 px-4 py-3 text-sm font-bold rounded-r-lg border-2 transition-all ${
+                        destination === 'backlog'
+                          ? 'bg-gradient-to-r from-indigo-500 to-blue-500 text-white border-indigo-500 shadow-lg scale-105'
+                          : 'bg-white dark:bg-gray-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 border-gray-300 dark:border-gray-600'
+                      }`}
+                    >
+                      📋 Backlog
+                    </button>
+                  </div>
+                </div>
+
+                {/* Due Date */}
+                <div className="bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-950/20 dark:to-blue-950/20 p-4 rounded-xl border-2 border-cyan-200 dark:border-cyan-800">
+                  <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">⏰ Due Date</label>
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className="input w-full border-2 focus:border-cyan-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Estimated Time */}
+                <div className="bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-950/20 dark:to-emerald-950/20 p-4 rounded-xl border-2 border-teal-200 dark:border-teal-800">
+                  <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">⏱️ Estimated Time</label>
+                  <input
+                    type="number"
+                    value={estimatedMinutes}
+                    onChange={(e) => setEstimatedMinutes(e.target.value)}
+                    placeholder="e.g., 30"
+                    className="input w-full border-2 focus:border-teal-500"
+                    min="0"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">In minutes</p>
+                </div>
+
+                {/* Tags */}
+                <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 p-4 rounded-xl border-2 border-amber-200 dark:border-amber-800">
+                  <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">🏷️ Tags</label>
+                  <input
+                    type="text"
+                    value={tags}
+                    onChange={(e) => setTags(e.target.value)}
+                    placeholder="e.g., urgent, work"
+                    className="input w-full border-2 focus:border-amber-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Comma-separated</p>
+                </div>
+              </div>
+
+              {/* Recurrence */}
+              <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20 p-4 rounded-xl border-2 border-violet-200 dark:border-violet-800">
+                <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                  <Repeat className="h-5 w-5 text-violet-500" />
+                  🔁 Recurrence
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <select
+                    value={recurrenceType}
+                    onChange={(e) => setRecurrenceType(e.target.value as RecurrenceType)}
+                    className="input w-full border-2 focus:border-violet-500 font-medium"
+                  >
+                    <option value="none">⚡ One-time task</option>
+                    <option value="daily">📆 Daily</option>
+                    <option value="workweek">💼 Work Week</option>
+                    <option value="weekly">📅 Weekly</option>
+                    <option value="biweekly">📆 Bi-weekly</option>
+                    <option value="monthly">🗓️ Monthly</option>
+                    <option value="bimonthly">🗓️ Bi-monthly</option>
+                    <option value="halfyearly">📅 Half-yearly</option>
+                    <option value="yearly">📆 Yearly</option>
+                  </select>
+                  {recurrenceType !== 'none' && (
+                    <div>
+                      <input
+                        type="number"
+                        value={recurrenceFrequency}
+                        onChange={(e) => setRecurrenceFrequency(e.target.value)}
+                        placeholder={`Times per ${
+                          recurrenceType === 'weekly' ? 'week' :
+                          recurrenceType === 'biweekly' ? 'two weeks' :
+                          recurrenceType === 'monthly' ? 'month' :
+                          recurrenceType === 'bimonthly' ? 'two months' :
+                          recurrenceType === 'halfyearly' ? 'six months' :
+                          recurrenceType === 'yearly' ? 'year' :
+                          recurrenceType === 'workweek' ? 'work week' : 'day'
+                        }`}
+                        className="input w-full border-2 focus:border-violet-500"
+                        min="1"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {recurrenceType === 'daily' && '💡 Leave blank for every day'}
+                        {recurrenceType === 'workweek' && '💡 e.g., 5 for every workday (Mon-Fri)'}
+                        {recurrenceType === 'weekly' && '💡 e.g., 4 for 4 times per week'}
+                        {recurrenceType === 'biweekly' && '💡 Leave blank for every two weeks'}
+                        {recurrenceType === 'monthly' && '💡 e.g., 3 for 3 times per month'}
+                        {recurrenceType === 'bimonthly' && '💡 Leave blank for every two months'}
+                        {recurrenceType === 'halfyearly' && '💡 Leave blank for every six months'}
+                        {recurrenceType === 'yearly' && '💡 Leave blank for once per year'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Focus Eligible Toggle */}
+              <div className="bg-gradient-to-br from-green-50 to-teal-50 dark:from-green-950/20 dark:to-teal-950/20 p-4 rounded-xl border-2 border-green-200 dark:border-green-800">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <div className="text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">💻 Focus Session Eligible</div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      Can this task be done on your laptop/notebook while sitting at a desk or cafe? 
+                      Turn off for errands, shopping, or tasks requiring you to leave your workspace.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFocusEligible(!focusEligible)}
+                    className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+                      focusEligible ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                    role="switch"
+                    aria-checked={focusEligible}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        focusEligible ? 'translate-x-6' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </label>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </form>
 
       {/* Success message */}

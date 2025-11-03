@@ -12,9 +12,7 @@ import {
   Calendar,
   CheckCircle2,
   Circle,
-  Clock,
   AlertCircle,
-  Tag,
   Repeat,
   Trash2,
   ChevronDown,
@@ -459,6 +457,21 @@ function TaskGroup({
     'yearly': 'from-yellow-500 to-orange-600'
   };
 
+  const toTitleCase = (value: string): string =>
+    value.replace(/\b\w/g, char => char.toUpperCase());
+
+  const formatDate = (value: string): string => {
+    try {
+      return new Date(value).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: new Date(value).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
+      });
+    } catch {
+      return value;
+    }
+  };
+
   return (
     <div className="space-y-3">
       <button
@@ -493,128 +506,104 @@ function TaskGroup({
                 }`}
                 onClick={() => onTaskClick(task)}
               >
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-3">
-                    <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 shadow-md ${
-                      task.done
-                        ? 'bg-gradient-to-br from-green-400 to-emerald-500 border-green-600 dark:from-green-600 dark:to-emerald-700 dark:border-green-500'
-                        : 'bg-white dark:bg-gray-800 border-gray-400 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
-                    }`}>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 shadow-md ${
+                        task.done
+                          ? 'bg-gradient-to-br from-green-400 to-emerald-500 border-green-600 dark:from-green-600 dark:to-emerald-700 dark:border-green-500'
+                          : 'bg-white dark:bg-gray-800 border-gray-400 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
+                      }`}
+                    >
                       {task.done && <CheckCircle2 className="h-4 w-4 text-white" />}
                     </div>
 
-                    <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                      <h3 className={`font-medium shrink-0 ${task.done && !task.recurrence ? 'line-through text-muted-foreground' : ''}`}>
-                        {task.title}
-                      </h3>
-
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 shrink-0 ${getPriorityColor(task.priority)}`}>
-                      {getPriorityIcon(task.priority)}
-                      {task.priority}
-                    </span>
-
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold shadow-sm shrink-0 ${
-                      task.category === "mastery"
-                        ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0"
-                        : "bg-gradient-to-r from-pink-500 to-rose-600 text-white border-0"
-                    }`}>
-                      {task.category === "mastery" ? "🧠 " : "💝 "}{task.category}
-                    </span>
-
-                    {task.focusEligible !== false && (
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm shrink-0">
-                        🎯 Focus
-                      </span>
-                    )}
-
-                    {task.done && task.recurrence && task.recurrence.type !== 'none' && (
-                      <span className="text-xs px-2.5 py-1 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold shadow-sm shrink-0">
-                        ✓ Done today
-                      </span>
-                    )}
-
-                    {task.recurrence && task.recurrence.type !== 'none' && (
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-purple-500 to-violet-600 text-white shadow-sm flex items-center gap-1 shrink-0">
-                        <Repeat className="h-3 w-3" />
-                        {task.recurrence.type}
-                        {task.recurrence.frequency && ` (${task.completionCount || 0}/${task.recurrence.frequency})`}
-                      </span>
-                    )}
-
-                    {task.dueDate && (
-                      <span className="text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 shadow-sm">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(task.dueDate).toLocaleDateString()}
-                      </span>
-                    )}
-
-                    {task.estimatedMinutes && (
-                      <span className="text-xs font-semibold bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 shadow-sm">
-                        <Clock className="h-3 w-3" />
-                        {task.estimatedMinutes}m
-                      </span>
-                    )}
-
-                    {task.tags && Array.isArray(task.tags) && task.tags.length > 0 && (
-                      <span className="text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 shadow-sm">
-                        <Tag className="h-3 w-3" />
-                        {task.tags.join(', ')}
-                      </span>
-                    )}
-
-                    {(() => {
-                      // Check for thoughtId in field or in metadata (for backward compatibility)
-                      let thoughtId = task.thoughtId;
-                      if (!thoughtId && task.notes) {
-                        try {
-                          const metadata = JSON.parse(task.notes);
-                          if (metadata.sourceThoughtId) {
-                            thoughtId = metadata.sourceThoughtId;
-                          }
-                        } catch {
-                          // Not JSON, ignore
-                        }
-                      }
-
-                      if (!thoughtId) return null;
-
-                      const thought = thoughts.find(t => t.id === thoughtId);
-                      if (!thought) return null;
-                      return (
-                        <Link
-                          href={`/tools/thoughts?id=${thoughtId}`}
-                          className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm flex items-center gap-1 shrink-0 hover:from-indigo-600 hover:to-purple-700 transition-colors"
-                          onClick={(e) => e.stopPropagation()}
+                    <div className="flex-1 min-w-0 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <h3
+                          className={`text-base font-semibold leading-snug ${task.done && !task.recurrence ? 'line-through text-muted-foreground' : 'text-gray-900 dark:text-white'}`}
                         >
-                          <MessageCircle className="h-3 w-3" />
-                          From Thought
-                        </Link>
-                      );
-                    })()}
+                          {toTitleCase(task.title)}
+                        </h3>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm inline-flex items-center gap-1 shrink-0 ${getPriorityColor(task.priority)}`}>
+                          {getPriorityIcon(task.priority)}
+                          <span className="capitalize">
+                            {toTitleCase(task.priority)}
+                          </span>
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-gray-600 dark:text-gray-300">
+                        {task.dueDate && (
+                          <span className="inline-flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {formatDate(task.dueDate)}
+                          </span>
+                        )}
+
+                        {task.recurrence && task.recurrence.type !== 'none' && (
+                          <span className="inline-flex items-center gap-1 capitalize">
+                            <Repeat className="h-3 w-3" />
+                            {toTitleCase(task.recurrence.type)}
+                            {task.recurrence.frequency && ` (${task.completionCount || 0}/${task.recurrence.frequency})`}
+                          </span>
+                        )}
+
+                        {task.done && task.recurrence && task.recurrence.type !== 'none' && (
+                          <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Done Today
+                          </span>
+                        )}
+
+                        {(() => {
+                          let thoughtId = task.thoughtId;
+                          if (!thoughtId && task.notes) {
+                            try {
+                              const metadata = JSON.parse(task.notes);
+                              if (metadata.sourceThoughtId) {
+                                thoughtId = metadata.sourceThoughtId;
+                              }
+                            } catch {
+                              // ignore
+                            }
+                          }
+                          if (!thoughtId) return null;
+                          const thought = thoughts.find(t => t.id === thoughtId);
+                          if (!thought) return null;
+                          return (
+                            <Link
+                              href={`/tools/thoughts?id=${thoughtId}`}
+                              className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-300 hover:underline transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MessageCircle className="h-3 w-3" />
+                              From Thought
+                            </Link>
+                          );
+                        })()}
+                      </div>
+
+                      {(() => {
+                        const notes = getUserNotes(task.notes);
+                        if (!notes) return null;
+                        const preview = notes.length > 100 ? notes.substring(0, 100) + '…' : notes;
+                        return (
+                          <button
+                            type="button"
+                            className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTask(task);
+                            }}
+                          >
+                            <FileText className="h-3 w-3 shrink-0" />
+                            <span className="line-clamp-2 text-left capitalize">{toTitleCase(preview)}</span>
+                          </button>
+                        );
+                      })()}
                     </div>
                   </div>
-                  
-                  {/* Display notes if available */}
-                  {(() => {
-                    const notes = getUserNotes(task.notes);
-                    if (!notes) return null;
-                    
-                    // Truncate notes to first 100 characters
-                    const preview = notes.length > 100 ? notes.substring(0, 100) + '...' : notes;
-                    
-                    return (
-                      <div 
-                        className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-800 dark:hover:text-gray-200 transition-colors ml-9"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedTask(task);
-                        }}
-                      >
-                        <FileText className="h-3 w-3 shrink-0" />
-                        <span className="line-clamp-1">{preview}</span>
-                      </div>
-                    );
-                  })()}
                 </div>
               </motion.div>
             ))}

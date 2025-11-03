@@ -1,3 +1,7 @@
+export const SUBSCRIPTION_STATUS_COLLECTION = 'subscriptionStatus';
+export const SUBSCRIPTION_STATUS_DOC_ID = 'status';
+export const SUBSCRIPTION_STATUS_DOC_PATH = `${SUBSCRIPTION_STATUS_COLLECTION}/${SUBSCRIPTION_STATUS_DOC_ID}`;
+
 export type SubscriptionTier = 'free' | 'pro' | 'teams';
 
 export type SubscriptionLifecycleStatus =
