@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useTasks } from "@/store/useTasks";
+import type { Task } from "@/store/useTasks";
 import { useFocus, selectBalancedTasks } from "@/store/useFocus";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Zap, Clock, Target, History, Star, TrendingUp, Brain, Rocket, Heart, Briefcase, X, Trash2, ArrowLeft, Eye, EyeOff } from "lucide-react";
@@ -15,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { isWorkday, getDateString, isTaskCompletedToday } from "@/lib/utils/date";
+import { isTaskRelevantForToday as determineTaskRelevanceForToday } from "./isTaskRelevantForToday";
 
 function FocusPageContent() {
   useTrackToolUsage('focus');
@@ -72,6 +74,24 @@ function FocusPageContent() {
 
   const autoSuggestedTasks = selectBalancedTasks(tasks, duration);
 
+  const checkTaskRelevanceForToday = useCallback((task: Task) => {
+    return determineTaskRelevanceForToday(task, today);
+  }, [today]);
+
+  const shouldShowActiveTask = useCallback((task: Task) => {
+    const isSelected = selectedTaskIds.includes(task.id);
+
+    if (isSelected) {
+      return true;
+    }
+
+    if (!showAlreadySelected && !checkTaskRelevanceForToday(task)) {
+      return false;
+    }
+
+    return true;
+  }, [checkTaskRelevanceForToday, selectedTaskIds, showAlreadySelected]);
+
   // Initialize selected tasks with auto-suggested tasks
   useEffect(() => {
     if (autoSuggestedTasks.length > 0 && selectedTaskIds.length === 0) {
@@ -116,6 +136,8 @@ function FocusPageContent() {
   };
 
   const selectedTasks = tasks.filter(t => selectedTaskIds.includes(t.id));
+
+  const visibleActiveTasks = activeTasks.filter(shouldShowActiveTask);
 
   const handleStartSession = async () => {
     if (selectedTasks.length === 0) return;
@@ -390,10 +412,10 @@ function FocusPageContent() {
                     <button
                       onClick={() => setShowAlreadySelected(!showAlreadySelected)}
                       className="text-xs text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 font-medium flex items-center gap-1"
-                      title={showAlreadySelected ? "Hide selected tasks" : "Show selected tasks"}
+                      title={showAlreadySelected ? "Hide tasks not due today" : "Show tasks not due today"}
                     >
                       {showAlreadySelected ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                      {showAlreadySelected ? 'Hide' : 'Show'} selected
+                      {showAlreadySelected ? 'Hide' : 'Show'} later tasks
                     </button>
                     {selectedTasks.length > 0 && (
                       <button
@@ -414,10 +436,17 @@ function FocusPageContent() {
                     </p>
                     <p className="text-xs text-gray-500">Create some tasks first!</p>
                   </div>
+                ) : visibleActiveTasks.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
+                    <div className="text-4xl mb-2">🫥</div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      All later tasks are hidden
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Use the toggle above to show tasks not needed today.</p>
+                  </div>
                 ) : (
                   <div className="max-h-[500px] lg:max-h-[600px] overflow-y-auto space-y-1.5 pr-1">
-                    {activeTasks
-                      .filter(task => showAlreadySelected || !selectedTaskIds.includes(task.id))
+                    {visibleActiveTasks
                       .map((task) => {
                       const isSelected = selectedTaskIds.includes(task.id);
                       return (
