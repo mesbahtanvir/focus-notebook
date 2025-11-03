@@ -191,6 +191,33 @@ describe('stripeBilling cloud functions', () => {
       );
     });
 
+    it('falls back to configured base URL when origin missing', async () => {
+      statusDoc.get.mockResolvedValueOnce({ data: () => ({}) });
+      configValues.app.base_url = 'https://config.example.com';
+
+      await invokeCheckout({}, authContext);
+
+      expect(checkoutSessionsCreateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customer: undefined,
+          customer_email: 'user@example.com',
+          success_url: 'https://config.example.com/settings?upgrade=success&session_id={CHECKOUT_SESSION_ID}',
+        })
+      );
+    });
+
+    it('falls back to localhost when no base URL configured', async () => {
+      statusDoc.get.mockResolvedValueOnce({ data: () => ({}) });
+      configValues.app = {};
+
+      await invokeCheckout(undefined, authContext);
+
+      const callArgs = checkoutSessionsCreateMock.mock.calls.pop()?.[0];
+      expect(callArgs).toBeDefined();
+      expect(callArgs.success_url).toBe('http://localhost:3000/settings?upgrade=success&session_id={CHECKOUT_SESSION_ID}');
+      expect(callArgs.customer_email).toBe('user@example.com');
+    });
+
     it('throws when price id is missing', async () => {
       configValues.stripe.price_id = undefined;
       await expect(invokeCheckout({}, authContext)).rejects.toHaveProperty(
@@ -207,6 +234,13 @@ describe('stripeBilling cloud functions', () => {
         'code',
         'failed-precondition'
       );
+    });
+
+    it('rejects anonymous users', async () => {
+      statusDoc.get.mockResolvedValueOnce({ data: () => ({ stripeCustomerId: 'cus_portal' }) });
+      await expect(
+        invokePortal({}, { auth: { uid: 'anon', token: { firebase: { sign_in_provider: 'anonymous' } } } } as any)
+      ).rejects.toHaveProperty('code', 'failed-precondition');
     });
 
     it('returns a portal session url', async () => {
@@ -227,6 +261,20 @@ describe('stripeBilling cloud functions', () => {
         }),
         { merge: true }
       );
+    });
+
+    it('uses configured base URL when origin missing', async () => {
+      statusDoc.get.mockResolvedValueOnce({
+        data: () => ({ stripeCustomerId: 'cus_portal' }),
+      });
+      configValues.app.base_url = 'https://config.example.com';
+
+      await invokePortal({}, authContext);
+
+      expect(billingPortalSessionsCreateMock).toHaveBeenCalledWith({
+        customer: 'cus_portal',
+        return_url: 'https://config.example.com/settings',
+      });
     });
   });
 
@@ -259,6 +307,20 @@ describe('stripeBilling cloud functions', () => {
       expect(res.setHeader).toHaveBeenCalledWith('Allow', 'POST');
       expect(res.status).toHaveBeenCalledWith(405);
       expect(res.send).toHaveBeenCalledWith('Method Not Allowed');
+    });
+
+    it('returns 400 when signature header missing', async () => {
+      const res = createResponse();
+      await invokeWebhook(
+        {
+          method: 'POST',
+          headers: {},
+          rawBody: Buffer.from('body'),
+        } as any,
+        res
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.send).toHaveBeenCalledWith('Missing Stripe signature header.');
     });
 
     it('processes checkout.session.completed events', async () => {
@@ -341,6 +403,62 @@ describe('stripeBilling cloud functions', () => {
         ([data]: [any]) => data && data.status === 'canceled'
       );
       expect(cancelCall).toBeDefined();
+      expect(res.json).toHaveBeenCalledWith({ received: true });
+    });
+
+    it('handles subscription updated events with metadata UID', async () => {
+      const event = {
+        type: 'customer.subscription.updated',
+        data: {
+          object: {
+            id: 'sub_updated',
+            status: 'active',
+            customer: 'cus_meta',
+            items: { data: [{ price: { id: 'price_456' } }] },
+            current_period_end: 1_700_500_000,
+            current_period_start: 1_690_500_000,
+            cancel_at_period_end: false,
+            cancel_at: null,
+            trial_end: null,
+            metadata: { uid: 'meta-user' },
+          },
+        },
+      };
+
+      constructEventMock.mockReturnValue(event as any);
+
+      const res = createResponse();
+      await invokeWebhook(
+        {
+          method: 'POST',
+          headers: { 'stripe-signature': 'sig_header' },
+          rawBody: Buffer.from('body'),
+        } as any,
+        res
+      );
+
+      expect(customerDoc.set).toHaveBeenCalledWith(
+        expect.objectContaining({ uid: 'meta-user' }),
+        { merge: true }
+      );
+      expect(res.json).toHaveBeenCalledWith({ received: true });
+    });
+
+    it('ignores unhandled events but acknowledges receipt', async () => {
+      const event = { type: 'some.random.event', data: { object: {} } };
+      constructEventMock.mockReturnValue(event as any);
+
+      const res = createResponse();
+      await invokeWebhook(
+        {
+          method: 'POST',
+          headers: { 'stripe-signature': 'sig_header' },
+          rawBody: Buffer.from('body'),
+        } as any,
+        res
+      );
+
+      expect(statusDoc.set).not.toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({ received: true });
     });
   });
