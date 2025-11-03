@@ -34,7 +34,7 @@ const ENTITLEMENT_MESSAGES: Record<string, string> = {
   exhausted: "You have used all available AI credits. Top up or wait for the next billing cycle.",
 };
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const { user, loading: authLoading, isAnonymous } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
@@ -505,5 +505,20 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto" />
+          <p className="mt-4 text-gray-600 font-medium">Loading profile...</p>
+        </div>
+      </div>
+    }>
+      <ProfilePageContent />
+    </Suspense>
   );
 }
