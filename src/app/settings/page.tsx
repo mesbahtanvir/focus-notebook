@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { FirebaseError } from 'firebase/app';
+import { httpsCallable } from 'firebase/functions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -17,13 +19,8 @@ import { useMoods } from '@/store/useMoods';
 import { useFocus } from '@/store/useFocus';
 import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
 import { EnhancedDataManagement } from '@/components/EnhancedDataManagement';
-import { ArrowUpRight, Crown, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
-
-const DEFAULT_PRO_UPGRADE_URL = 'https://focus.yourthoughts.ca/pricing';
-const DEFAULT_PRO_PORTAL_URL = 'https://focus.yourthoughts.ca/account';
-
-const PRO_UPGRADE_URL = process.env.NEXT_PUBLIC_PRO_UPGRADE_URL ?? DEFAULT_PRO_UPGRADE_URL;
-const PRO_PORTAL_URL = process.env.NEXT_PUBLIC_PRO_PORTAL_URL ?? DEFAULT_PRO_PORTAL_URL;
+import { functionsClient } from '@/lib/firebaseClient';
+import { ArrowUpRight, Crown, Loader2, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
 
 const PRO_BENEFITS = [
   {
@@ -53,11 +50,12 @@ const ENTITLEMENT_MESSAGES: Record<string, string> = {
 };
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, isAnonymous } = useAuth();
   const { toast } = useToast();
 
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [allowBackgroundProcessing, setAllowBackgroundProcessing] = useState(false);
+  const [billingAction, setBillingAction] = useState<'upgrade' | 'portal' | null>(null);
 
   const tasksSubscribe = useTasks((s) => s.subscribe);
   const goalsSubscribe = useGoals((s) => s.subscribe);
@@ -78,6 +76,17 @@ export default function SettingsPage() {
   const entitlementMessage = useMemo(() => {
     return ENTITLEMENT_MESSAGES[entitlement.code] ?? ENTITLEMENT_MESSAGES['no-record'];
   }, [entitlement.code]);
+
+  const isUpgradeLoading = billingAction === 'upgrade';
+  const isPortalLoading = billingAction === 'portal';
+  const billingButtonLabel = hasProAccess
+    ? isPortalLoading
+      ? 'Opening portal…'
+      : 'Manage subscription'
+    : isUpgradeLoading
+      ? 'Redirecting…'
+      : 'Upgrade to Pro';
+  const billingButtonDisabled = hasProAccess ? isPortalLoading : isUpgradeLoading;
 
   const refreshAllStores = () => {
     if (!user?.uid) {
@@ -142,6 +151,78 @@ export default function SettingsPage() {
 
     setAllowBackgroundProcessing(checked);
     window.dispatchEvent(new Event('settingsChanged'));
+  };
+
+  const handleBillingRedirect = async (action: 'upgrade' | 'portal') => {
+    if (!user) {
+      toast({
+        title: 'Sign in required',
+        description: 'Please sign in to manage your membership.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (action === 'upgrade') {
+      if (isAnonymous) {
+        toast({
+          title: 'Create a permanent account',
+          description:
+            'Upgrade requires a permanent account. Link your email or continue with Google before upgrading.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!user.email) {
+        toast({
+          title: 'Email required',
+          description: 'Please add an email address to your profile before upgrading.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
+    try {
+      setBillingAction(action);
+      const callableName =
+        action === 'upgrade' ? 'createStripeCheckoutSession' : 'createStripePortalSession';
+      const callable = httpsCallable(functionsClient, callableName);
+      const result = await callable({
+        origin: window.location.origin,
+      });
+      const data = result.data as { url?: string; error?: string };
+      if (!data?.url) {
+        const fallbackMessage =
+          data?.error ||
+          (action === 'upgrade'
+            ? 'Unable to start checkout. Please try again shortly.'
+            : 'Unable to open the billing portal right now.');
+        toast({
+          title: 'Billing unavailable',
+          description: fallbackMessage,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      window.location.assign(data.url);
+    } catch (error) {
+      console.error('Billing redirect failed', error);
+      let message =
+        'Something went wrong while contacting Stripe. Please try again shortly.';
+      if (error instanceof FirebaseError && typeof error.message === 'string') {
+        message = error.message.replace(/^FunctionsError:\s*/, '');
+      }
+      toast({
+        title: 'Billing unavailable',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setBillingAction(null);
+    }
   };
 
   const formatDate = (value: unknown) => {
@@ -245,15 +326,20 @@ export default function SettingsPage() {
 
               <div className="w-full md:w-auto flex flex-col gap-3">
                 <Button
+                  type="button"
                   size="lg"
-                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                  disabled={billingButtonDisabled}
+                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-purple-400 disabled:to-pink-400 disabled:cursor-not-allowed"
                   onClick={() => {
-                    const targetUrl = hasProAccess ? PRO_PORTAL_URL : PRO_UPGRADE_URL;
-                    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                    void handleBillingRedirect(hasProAccess ? 'portal' : 'upgrade');
                   }}
                 >
-                  {hasProAccess ? 'Manage subscription' : 'Upgrade to Pro'}
-                  <ArrowUpRight className="h-4 w-4" />
+                  {billingButtonLabel}
+                  {billingButtonDisabled ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowUpRight className="h-4 w-4" />
+                  )}
                 </Button>
                 {!hasProAccess && (
                   <Button variant="outline" asChild>

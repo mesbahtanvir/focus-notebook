@@ -18,6 +18,11 @@ import {
 import { refreshTrackedTickerPrices, updateTrackedTickers } from './marketData';
 import { cleanupExpiredAnonymousUsers } from './cleanupAnonymous';
 import { createDailyPortfolioSnapshots } from './portfolioSnapshots';
+import {
+  createStripeCheckoutSession,
+  createStripePortalSession,
+  stripeWebhook,
+} from './stripeBilling';
 
 // Export cloud functions
 export {
@@ -30,4 +35,7 @@ export {
   refreshTrackedTickerPrices,
   cleanupExpiredAnonymousUsers,
   createDailyPortfolioSnapshots,
+  createStripeCheckoutSession,
+  createStripePortalSession,
+  stripeWebhook,
 };
