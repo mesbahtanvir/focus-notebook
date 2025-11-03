@@ -103,7 +103,7 @@ jobs:
       - name: Run unit tests
         run: |
           cd functions
-          npm test -- --coverage
+          npm test --  --detectOpenHandles --coverage
 
       - name: Upload coverage
         uses: codecov/codecov-action@v3

@@ -126,9 +126,20 @@ export class ThoughtProcessingService {
         error: data?.error || data?.message || 'Failed to schedule processing job',
       };
     } catch (error) {
-      console.error('Failed to call manualProcessThought function:', error);
-      const message = error instanceof Error ? error.message : 'Failed to schedule processing job';
-      const errorCode = (error as { code?: string })?.code;
+      const errorLike = error as { code?: string; message?: string };
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof errorLike?.message === 'string'
+            ? errorLike.message
+            : 'Failed to schedule processing job';
+      const errorCode = errorLike?.code;
+
+      const summary = errorCode ? `${message} (code: ${errorCode})` : message;
+
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Failed to call manualProcessThought function:', summary);
+      }
 
       if (errorCode === 'functions/permission-denied' || errorCode === 'permission-denied') {
         try {
