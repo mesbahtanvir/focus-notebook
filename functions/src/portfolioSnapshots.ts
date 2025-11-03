@@ -201,3 +201,13 @@ export const createDailyPortfolioSnapshots = functions.pubsub
       usersProcessed: usersSnapshot.size,
     });
   });
+
+export const __private__ = {
+  normalizeCurrency,
+  convertToBaseCurrency,
+  fetchFxRates,
+  createSnapshotForPortfolio,
+  SUPPORTED_CURRENCIES,
+  BASE_CURRENCY,
+  FALLBACK_RATES,
+};
