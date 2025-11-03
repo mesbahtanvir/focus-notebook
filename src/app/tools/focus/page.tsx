@@ -45,11 +45,12 @@ function FocusPageContent() {
   const [focusMode, setFocusMode] = useState<'regular' | 'philosopher' | 'beast' | 'selfcare'>('regular');
   const [showAlreadySelected, setShowAlreadySelected] = useState(false);
 
-  // Filter active tasks with workweek validation and date completion tracking
+  // Filter active tasks - ALL active tasks are candidates for focus selection
   const today = getDateString(new Date());
   const activeTasks = tasks.filter(t => {
-    // Basic filter: active status, focus eligible
-    if (t.status !== 'active' || (t.focusEligible !== true && t.focusEligible !== undefined)) {
+    // Basic filter: active status only
+    // Note: focusEligible is checked but undefined is treated as eligible (opt-out, not opt-in)
+    if (t.status !== 'active' || t.focusEligible === false) {
       return false;
     }
 
@@ -60,12 +61,6 @@ function FocusPageContent() {
 
     // Workweek tasks: only show on Mon-Fri
     if (t.recurrence?.type === 'workweek' && !isWorkday()) {
-      return false;
-    }
-
-    // Check if task is already completed for today (recurring tasks)
-    if (t.recurrence && t.dueDate && t.dueDate < today) {
-      // Don't show recurring tasks that are past due and haven't been regenerated yet
       return false;
     }
 
@@ -80,17 +75,22 @@ function FocusPageContent() {
 
   const shouldShowActiveTask = useCallback((task: Task) => {
     const isSelected = selectedTaskIds.includes(task.id);
+    const isAutoSuggested = autoSuggestedTasks.some(t => t.id === task.id);
+    const isRelevantToday = checkTaskRelevanceForToday(task);
 
-    if (isSelected) {
+    // Always show if task is selected or auto-suggested (handles initial render)
+    if (isSelected || isAutoSuggested) {
       return true;
     }
 
-    if (!showAlreadySelected && !checkTaskRelevanceForToday(task)) {
+    // If toggle is OFF (default): only show tasks relevant for today
+    // If toggle is ON: show all tasks
+    if (!showAlreadySelected && !isRelevantToday) {
       return false;
     }
 
     return true;
-  }, [checkTaskRelevanceForToday, selectedTaskIds, showAlreadySelected]);
+  }, [checkTaskRelevanceForToday, selectedTaskIds, showAlreadySelected, autoSuggestedTasks]);
 
   // Initialize selected tasks with auto-suggested tasks
   useEffect(() => {
