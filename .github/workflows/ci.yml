@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+
 jobs:
   validate_web:
     name: Validate Web App
