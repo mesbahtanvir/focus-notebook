@@ -15,6 +15,13 @@ export const metadata: Metadata = {
   title: 'Focus Notebook',
   description: 'Privacy-first productivity dashboard for personal growth',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icon.svg', sizes: 'any' },
+    ],
+    apple: '/icon.svg',
+  },
 }
 
 export const viewport: Viewport = {
