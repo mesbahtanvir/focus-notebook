@@ -72,8 +72,11 @@ describe('stripeBilling cloud functions', () => {
   let customerDoc: any;
   let firestoreInstance: any;
 
+  let consoleErrorSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     configValues = {
       stripe: {
@@ -132,6 +135,10 @@ describe('stripeBilling cloud functions', () => {
     });
 
     constructEventMock.mockReset();
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
   });
 
   const authContext = {
