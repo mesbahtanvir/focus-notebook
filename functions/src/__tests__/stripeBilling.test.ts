@@ -5,16 +5,8 @@ const billingPortalSessionsCreateMock = jest.fn();
 const subscriptionsRetrieveMock = jest.fn();
 const constructEventMock = jest.fn();
 
-let configValues: any = {
-  stripe: {
-    secret: 'sk_test_123',
-    price_id: 'price_123',
-    webhook_secret: 'whsec_123',
-  },
-  app: {
-    base_url: 'https://focus.example.com',
-  },
-};
+const ORIGINAL_ENV = { ...process.env };
+const ENV_KEYS = ['STRIPE_SECRET', 'STRIPE_PRICE_ID', 'STRIPE_WEBHOOK_SECRET', 'APP_BASE_URL'];
 
 class MockHttpsError extends Error {
   constructor(public code: string, message: string) {
@@ -24,7 +16,6 @@ class MockHttpsError extends Error {
 
 const onCallMock = jest.fn((handler: any) => handler);
 const onRequestMock = jest.fn((handler: any) => handler);
-const configMock = jest.fn(() => configValues);
 
 jest.mock('firebase-functions', () => ({
   https: {
@@ -32,7 +23,11 @@ jest.mock('firebase-functions', () => ({
     onRequest: onRequestMock,
     HttpsError: MockHttpsError,
   },
-  config: configMock,
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  },
 }));
 
 const firestoreMock = jest.fn();
@@ -77,17 +72,10 @@ describe('stripeBilling cloud functions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
-    configValues = {
-      stripe: {
-        secret: 'sk_test_123',
-        price_id: 'price_123',
-        webhook_secret: 'whsec_123',
-      },
-      app: {
-        base_url: 'https://focus.example.com',
-      },
-    };
+    process.env.STRIPE_SECRET = 'sk_test_123';
+    process.env.STRIPE_PRICE_ID = 'price_123';
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_123';
+    process.env.APP_BASE_URL = 'https://focus.example.com';
 
     statusDoc = {
       get: jest.fn().mockResolvedValue({ data: () => ({}) }),
@@ -139,6 +127,13 @@ describe('stripeBilling cloud functions', () => {
 
   afterEach(() => {
     consoleErrorSpy.mockRestore();
+    for (const key of ENV_KEYS) {
+      if (ORIGINAL_ENV[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = ORIGINAL_ENV[key];
+      }
+    }
   });
 
   const authContext = {
@@ -193,7 +188,7 @@ describe('stripeBilling cloud functions', () => {
 
     it('falls back to configured base URL when origin missing', async () => {
       statusDoc.get.mockResolvedValueOnce({ data: () => ({}) });
-      configValues.app.base_url = 'https://config.example.com';
+      process.env.APP_BASE_URL = 'https://config.example.com';
 
       await invokeCheckout({}, authContext);
 
@@ -208,7 +203,7 @@ describe('stripeBilling cloud functions', () => {
 
     it('falls back to localhost when no base URL configured', async () => {
       statusDoc.get.mockResolvedValueOnce({ data: () => ({}) });
-      configValues.app = {};
+      delete process.env.APP_BASE_URL;
 
       await invokeCheckout(undefined, authContext);
 
@@ -219,7 +214,7 @@ describe('stripeBilling cloud functions', () => {
     });
 
     it('throws when price id is missing', async () => {
-      configValues.stripe.price_id = undefined;
+      delete process.env.STRIPE_PRICE_ID;
       await expect(invokeCheckout({}, authContext)).rejects.toHaveProperty(
         'code',
         'internal'
@@ -267,7 +262,7 @@ describe('stripeBilling cloud functions', () => {
       statusDoc.get.mockResolvedValueOnce({
         data: () => ({ stripeCustomerId: 'cus_portal' }),
       });
-      configValues.app.base_url = 'https://config.example.com';
+      process.env.APP_BASE_URL = 'https://config.example.com';
 
       await invokePortal({}, authContext);
 

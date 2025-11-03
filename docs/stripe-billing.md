@@ -1,6 +1,6 @@
 # Stripe Billing Integration Notes
 
-This project relies on Firebase Cloud Functions to talk to Stripe. Secrets never live in the frontend bundle or the repo—they come from GitHub Actions and land in Firebase's runtime config.
+This project relies on Firebase Cloud Functions to talk to Stripe. Secrets never live in the frontend bundle or the repo—they live in GitHub Secrets and are written to a `.env` file right before tests or deploy.
 
 ## Secrets flow overview
 
@@ -10,37 +10,31 @@ This project relies on Firebase Cloud Functions to talk to Stripe. Secrets never
    - `STRIPE_WEBHOOK_SECRET`
    - optionally `APP_BASE_URL` (e.g., `https://focus.yourthoughts.ca`)
 
-2. **GitHub Actions deploy step** – export those secrets into Firebase Functions config before deployment:
+2. **GitHub Actions deploy step** – the workflow creates `functions/.env` with those values (using the secrets) and deploys. Firebase CLI uploads the `.env` file alongside the function so `process.env.*` works at runtime.
 
-   ```bash
-   firebase functions:config:set \
-     stripe.secret="$STRIPE_SECRET" \
-     stripe.price_id="$STRIPE_PRICE_ID" \
-     stripe.webhook_secret="$STRIPE_WEBHOOK_SECRET" \
-     app.base_url="${APP_BASE_URL:-https://focus.yourthoughts.ca}"
-   firebase deploy --only functions
-   ```
-
-   > Tip: `firebase functions:config:get` shows the current values, `firebase functions:config:unset stripe` removes them.
-
-3. **Cloud Functions runtime** – server code reads config values with `functions.config().stripe.secret`, etc. (see `functions/src/stripeBilling.ts`).
+3. **Cloud Functions runtime** – server code reads environment variables (`process.env.STRIPE_SECRET`, `process.env.STRIPE_PRICE_ID`, etc. – see `functions/src/stripeBilling.ts`).
 
 4. **Stripe webhook** – deploy `stripeWebhook` and configure Stripe's dashboard to send relevant events (checkout session + subscription changes) to the Cloud Function URL.
 
 ## Local development
 
-Export config for the emulator once, then run the Functions emulator:
+Create `functions/.env` locally with the same keys before running the emulator:
 
 ```bash
-firebase functions:config:get > functions/.runtimeconfig.json
+cat > functions/.env <<'EOF'
+OPENAI_API_KEY=sk-test-mock-key-12345678901234567890
+STRIPE_SECRET=sk_test_...
+STRIPE_PRICE_ID=price_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+APP_BASE_URL=http://localhost:3000
+EOF
+
 firebase emulators:start --only functions
 ```
-
-.runtimeconfig.json is gitignored; it mirrors production config locally.
 
 ## Frontend behaviour
 
 - The settings page calls `createStripeCheckoutSession` or `createStripePortalSession` via Firebase callable functions. Responses include the Stripe-hosted session URL; the browser redirects there.
 - Anonymous users or accounts without email are blocked before hitting Stripe.
 
-Keep secrets flowing through CI→Firebase config so nothing sensitive lands in the repo. If you add more Stripe values later, extend the config + docs here.
+Keep secrets flowing through CI→`.env` so nothing sensitive lands in the repo. If you add more Stripe values later, extend the secrets + env template here.

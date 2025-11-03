@@ -208,26 +208,25 @@ jobs:
           npm run build
 
       - name: Setup test environment
-        run: |
-          cd functions
-          echo "OPENAI_API_KEY=sk-test-mock-key-12345678901234567890" > .env
-          cat <<EOF > .runtimeconfig.json
-          {
-            "stripe": {
-              "secret": "${STRIPE_SECRET}",
-              "price_id": "${STRIPE_PRICE_ID}",
-              "webhook_secret": "${STRIPE_WEBHOOK_SECRET}"
-            },
-            "app": {
-              "base_url": "${APP_BASE_URL}"
-            }
-          }
-          EOF
         env:
+          OPENAI_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-test-mock-key-12345678901234567890' }}
           STRIPE_SECRET: ${{ secrets.STRIPE_SECRET || 'sk_test_placeholder' }}
           STRIPE_PRICE_ID: ${{ secrets.STRIPE_PRICE_ID || 'price_test_placeholder' }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET || 'whsec_test_placeholder' }}
           APP_BASE_URL: ${{ secrets.APP_BASE_URL || 'http://localhost:3000' }}
+        run: |
+          python - <<'PY'
+          import os, pathlib
+
+          env_path = pathlib.Path('functions/.env')
+          env_path.write_text('\n'.join([
+              f"OPENAI_API_KEY={os.environ['OPENAI_KEY']}",
+              f"STRIPE_SECRET={os.environ['STRIPE_SECRET']}",
+              f"STRIPE_PRICE_ID={os.environ['STRIPE_PRICE_ID']}",
+              f"STRIPE_WEBHOOK_SECRET={os.environ['STRIPE_WEBHOOK_SECRET']}",
+              f"APP_BASE_URL={os.environ['APP_BASE_URL']}",
+          ]) + '\n')
+          PY
 
       - name: Start Firebase Emulator
         run: |
@@ -264,23 +263,31 @@ jobs:
           cd functions
           npm ci
 
+      - name: Generate environment file
+        env:
+          OPENAI_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-test-mock-key-12345678901234567890' }}
+          STRIPE_SECRET: ${{ secrets.STRIPE_SECRET || 'sk_test_placeholder' }}
+          STRIPE_PRICE_ID: ${{ secrets.STRIPE_PRICE_ID || 'price_test_placeholder' }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET || 'whsec_test_placeholder' }}
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL || 'https://focus.yourthoughts.ca' }}
+        run: |
+          python - <<'PY'
+          import os, pathlib
+
+          env_path = pathlib.Path('functions/.env')
+          env_path.write_text('\n'.join([
+              f"OPENAI_API_KEY={os.environ['OPENAI_KEY']}",
+              f"STRIPE_SECRET={os.environ['STRIPE_SECRET']}",
+              f"STRIPE_PRICE_ID={os.environ['STRIPE_PRICE_ID']}",
+              f"STRIPE_WEBHOOK_SECRET={os.environ['STRIPE_WEBHOOK_SECRET']}",
+              f"APP_BASE_URL={os.environ['APP_BASE_URL']}",
+          ]) + '\n')
+          PY
+
       - name: Build functions
         run: |
           cd functions
           npm run build
-
-      - name: Configure Firebase Functions config
-        uses: w9jds/firebase-action@master
-        with:
-          args: >
-            functions:config:set
-            stripe.secret="${{ secrets.STRIPE_SECRET }}"
-            stripe.price_id="${{ secrets.STRIPE_PRICE_ID }}"
-            stripe.webhook_secret="${{ secrets.STRIPE_WEBHOOK_SECRET }}"
-            app.base_url="${{ secrets.APP_BASE_URL || 'https://focus.yourthoughts.ca' }}"
-        env:
-          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
 
       - name: Deploy to Firebase
         uses: w9jds/firebase-action@master

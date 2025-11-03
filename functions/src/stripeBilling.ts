@@ -10,7 +10,7 @@ import {
 const STRIPE_API_VERSION: Stripe.LatestApiVersion = '2023-10-16';
 
 function getStripeClient(): Stripe {
-  const secretKey = functions.config().stripe?.secret;
+  const secretKey = process.env.STRIPE_SECRET;
   if (!secretKey) {
     throw new functions.https.HttpsError(
       'internal',
@@ -25,7 +25,7 @@ function resolveBaseUrl(origin?: unknown): string {
   if (typeof origin === 'string' && origin.startsWith('http')) {
     return origin.replace(/\/$/, '');
   }
-  const fallback = functions.config().app?.base_url;
+  const fallback = process.env.APP_BASE_URL;
   if (typeof fallback === 'string' && fallback.startsWith('http')) {
     return fallback.replace(/\/$/, '');
   }
@@ -131,7 +131,7 @@ export const createStripeCheckoutSession = functions.https.onCall(async (data, c
     );
   }
 
-  const priceId = functions.config().stripe?.price_id;
+  const priceId = process.env.STRIPE_PRICE_ID;
   if (!priceId) {
     console.error('Stripe price id is not configured.');
     throw new functions.https.HttpsError(
@@ -255,7 +255,7 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
     return;
   }
 
-  const webhookSecret = functions.config().stripe?.webhook_secret;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
     console.error('Stripe webhook secret is not configured.');
     res.status(500).send('Webhook misconfigured.');

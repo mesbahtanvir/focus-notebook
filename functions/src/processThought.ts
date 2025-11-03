@@ -26,7 +26,7 @@ import {
 } from '../../shared/subscription';
 
 const ANONYMOUS_SESSION_COLLECTION = 'anonymousSessions';
-const ANONYMOUS_AI_OVERRIDE_KEY = process.env.ANONYMOUS_AI_OVERRIDE_KEY || functions.config()?.ci?.anonymous_key;
+const ANONYMOUS_AI_OVERRIDE_KEY = process.env.ANONYMOUS_AI_OVERRIDE_KEY || '';
 const PROCESSING_QUEUE_SUBCOLLECTION = 'processingQueue';
 const PROCESSING_USAGE_DOC = 'processingUsage/meta';
 const MIN_PROCESSING_INTERVAL_MS = 10_000;

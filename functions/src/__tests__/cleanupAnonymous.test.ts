@@ -45,7 +45,6 @@ jest.mock('firebase-functions', () => ({
       onRun: jest.fn(),
     })),
   },
-  config: jest.fn(() => ({ ci: {} })),
 }));
 
 import { cleanupExpiredAnonymousUsersHandler, __private__ } from '../cleanupAnonymous';

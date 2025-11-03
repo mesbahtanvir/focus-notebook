@@ -7,8 +7,7 @@ const ANONYMOUS_SESSION_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 type FirestoreWithRecursiveDelete = admin.firestore.Firestore & {
   recursiveDelete?: (ref: admin.firestore.DocumentReference) => Promise<void>;
 };
-const ANONYMOUS_AI_OVERRIDE_KEY =
-  process.env.ANONYMOUS_AI_OVERRIDE_KEY || functions.config()?.ci?.anonymous_key;
+const ANONYMOUS_AI_OVERRIDE_KEY = process.env.ANONYMOUS_AI_OVERRIDE_KEY || '';
 
 export async function cleanupExpiredAnonymousUsersHandler() {
     console.log('Starting cleanup of expired anonymous users');
