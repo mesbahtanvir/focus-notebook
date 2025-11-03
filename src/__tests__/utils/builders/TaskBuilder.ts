@@ -66,6 +66,10 @@ export class TaskBuilder {
    * Set completion status explicitly
    */
   withDone(done: boolean): this {
+    if (typeof done !== 'boolean') {
+      throw new TypeError('withDone expects a boolean value');
+    }
+
     this.task.done = done;
     return this;
   }

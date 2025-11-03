@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { isWorkday, getDateString, isTaskCompletedToday } from "@/lib/utils/date";
-import { isTaskRelevantForToday as checkTaskRelevantForToday } from "./isTaskRelevantForToday";
+import { isTaskRelevantForToday as determineTaskRelevanceForToday } from "./isTaskRelevantForToday";
 
 function FocusPageContent() {
   useTrackToolUsage('focus');
@@ -74,9 +74,23 @@ function FocusPageContent() {
 
   const autoSuggestedTasks = selectBalancedTasks(tasks, duration);
 
-  const isTaskRelevantForToday = useCallback((task: Task) => {
-    return checkTaskRelevantForToday(task, today);
+  const checkTaskRelevanceForToday = useCallback((task: Task) => {
+    return determineTaskRelevanceForToday(task, today);
   }, [today]);
+
+  const shouldShowActiveTask = useCallback((task: Task) => {
+    const isSelected = selectedTaskIds.includes(task.id);
+
+    if (isSelected) {
+      return true;
+    }
+
+    if (!showAlreadySelected && !checkTaskRelevanceForToday(task)) {
+      return false;
+    }
+
+    return true;
+  }, [checkTaskRelevanceForToday, selectedTaskIds, showAlreadySelected]);
 
   // Initialize selected tasks with auto-suggested tasks
   useEffect(() => {
@@ -123,19 +137,7 @@ function FocusPageContent() {
 
   const selectedTasks = tasks.filter(t => selectedTaskIds.includes(t.id));
 
-  const visibleActiveTasks = activeTasks.filter((task) => {
-    const isSelected = selectedTaskIds.includes(task.id);
-
-    if (isSelected) {
-      return true;
-    }
-
-    if (!showAlreadySelected && !isTaskRelevantForToday(task)) {
-      return false;
-    }
-
-    return true;
-  });
+  const visibleActiveTasks = activeTasks.filter(shouldShowActiveTask);
 
   const handleStartSession = async () => {
     if (selectedTasks.length === 0) return;

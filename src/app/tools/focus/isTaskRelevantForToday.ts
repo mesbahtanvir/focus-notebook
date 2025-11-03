@@ -79,6 +79,19 @@ export function isTaskRelevantForToday(task: Task, today: string): boolean {
   const recurrenceType = task.recurrence?.type;
   const todayDate = parseDate(today) ?? normalizeDate(new Date(today));
 
+  if (!recurrenceType) {
+    if (!task.dueDate) {
+      return true;
+    }
+
+    const dueDate = parseDate(task.dueDate);
+    if (!dueDate) {
+      return true;
+    }
+
+    return dueDate <= todayDate;
+  }
+
   if (recurrenceType === 'daily' || recurrenceType === 'workweek') {
     return !hasCompletionOnDate(task, today);
   }

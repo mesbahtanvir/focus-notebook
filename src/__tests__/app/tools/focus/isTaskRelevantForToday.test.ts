@@ -10,13 +10,13 @@ describe('isTaskRelevantForToday', () => {
     completedAt: `${date}T12:00:00.000Z`,
   });
 
-  it('keeps an on-time task due next Wednesday visible today', () => {
+  it('hides an on-time task due next Wednesday when focusing on today', () => {
     const task = new TaskBuilder()
       .withTitle('Prepare status report')
       .withDueDate('2025-01-22')
       .build();
 
-    expect(isTaskRelevantForToday(task, today)).toBe(true);
+    expect(isTaskRelevantForToday(task, today)).toBe(false);
   });
 
   it('keeps a daily recurring task completed yesterday visible today', () => {
@@ -53,5 +53,44 @@ describe('isTaskRelevantForToday', () => {
       .build();
 
     expect(isTaskRelevantForToday(task, today)).toBe(false);
+  });
+
+  it('keeps a task without a due date visible by default', () => {
+    const task = new TaskBuilder()
+      .withTitle('Someday maybe idea')
+      .build();
+
+    expect(isTaskRelevantForToday(task, today)).toBe(true);
+  });
+
+  it('keeps a daily recurring task without completion history visible', () => {
+    const task = new TaskBuilder()
+      .withTitle('Daily journaling')
+      .withRecurrence('daily')
+      .withDone(false)
+      .build();
+
+    expect(isTaskRelevantForToday(task, today)).toBe(true);
+  });
+
+  it('keeps a weekly recurring task without any completions visible', () => {
+    const task = new TaskBuilder()
+      .withTitle('Weekly planning draft')
+      .withRecurrence('weekly')
+      .withDone(false)
+      .withCompletionHistory([])
+      .withCompletedAt(undefined)
+      .build();
+
+    expect(isTaskRelevantForToday(task, today)).toBe(true);
+  });
+
+  it('keeps a non-recurring task due today visible', () => {
+    const task = new TaskBuilder()
+      .withTitle('Pay utilities')
+      .withDueDate(today)
+      .build();
+
+    expect(isTaskRelevantForToday(task, today)).toBe(true);
   });
 });
