@@ -22,6 +22,7 @@ import {
   createStripeCheckoutSession,
   createStripePortalSession,
   stripeWebhook,
+  syncStripeSubscription,
 } from './stripeBilling';
 
 // Export cloud functions
@@ -38,4 +39,5 @@ export {
   createStripeCheckoutSession,
   createStripePortalSession,
   stripeWebhook,
+  syncStripeSubscription,
 };

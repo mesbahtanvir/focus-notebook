@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { FirebaseError } from 'firebase/app';
-import { httpsCallable } from 'firebase/functions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -19,8 +17,7 @@ import { useMoods } from '@/store/useMoods';
 import { useFocus } from '@/store/useFocus';
 import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
 import { EnhancedDataManagement } from '@/components/EnhancedDataManagement';
-import { functionsClient } from '@/lib/firebaseClient';
-import { ArrowUpRight, Crown, Loader2, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
+import { Crown, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
 
 const PRO_BENEFITS = [
   {
@@ -50,12 +47,11 @@ const ENTITLEMENT_MESSAGES: Record<string, string> = {
 };
 
 export default function SettingsPage() {
-  const { user, isAnonymous } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [allowBackgroundProcessing, setAllowBackgroundProcessing] = useState(false);
-  const [billingAction, setBillingAction] = useState<'upgrade' | 'portal' | null>(null);
 
   const tasksSubscribe = useTasks((s) => s.subscribe);
   const goalsSubscribe = useGoals((s) => s.subscribe);
@@ -76,17 +72,6 @@ export default function SettingsPage() {
   const entitlementMessage = useMemo(() => {
     return ENTITLEMENT_MESSAGES[entitlement.code] ?? ENTITLEMENT_MESSAGES['no-record'];
   }, [entitlement.code]);
-
-  const isUpgradeLoading = billingAction === 'upgrade';
-  const isPortalLoading = billingAction === 'portal';
-  const billingButtonLabel = hasProAccess
-    ? isPortalLoading
-      ? 'Opening portal…'
-      : 'Manage subscription'
-    : isUpgradeLoading
-      ? 'Redirecting…'
-      : 'Upgrade to Pro';
-  const billingButtonDisabled = hasProAccess ? isPortalLoading : isUpgradeLoading;
 
   const refreshAllStores = () => {
     if (!user?.uid) {
@@ -151,78 +136,6 @@ export default function SettingsPage() {
 
     setAllowBackgroundProcessing(checked);
     window.dispatchEvent(new Event('settingsChanged'));
-  };
-
-  const handleBillingRedirect = async (action: 'upgrade' | 'portal') => {
-    if (!user) {
-      toast({
-        title: 'Sign in required',
-        description: 'Please sign in to manage your membership.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (action === 'upgrade') {
-      if (isAnonymous) {
-        toast({
-          title: 'Create a permanent account',
-          description:
-            'Upgrade requires a permanent account. Link your email or continue with Google before upgrading.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (!user.email) {
-        toast({
-          title: 'Email required',
-          description: 'Please add an email address to your profile before upgrading.',
-          variant: 'destructive',
-        });
-        return;
-      }
-    }
-
-    try {
-      setBillingAction(action);
-      const callableName =
-        action === 'upgrade' ? 'createStripeCheckoutSession' : 'createStripePortalSession';
-      const callable = httpsCallable(functionsClient, callableName);
-      const result = await callable({
-        origin: window.location.origin,
-      });
-      const data = result.data as { url?: string; error?: string };
-      if (!data?.url) {
-        const fallbackMessage =
-          data?.error ||
-          (action === 'upgrade'
-            ? 'Unable to start checkout. Please try again shortly.'
-            : 'Unable to open the billing portal right now.');
-        toast({
-          title: 'Billing unavailable',
-          description: fallbackMessage,
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      window.location.assign(data.url);
-    } catch (error) {
-      console.error('Billing redirect failed', error);
-      let message =
-        'Something went wrong while contacting Stripe. Please try again shortly.';
-      if (error instanceof FirebaseError && typeof error.message === 'string') {
-        message = error.message.replace(/^FunctionsError:\s*/, '');
-      }
-      toast({
-        title: 'Billing unavailable',
-        description: message,
-        variant: 'destructive',
-      });
-    } finally {
-      setBillingAction(null);
-    }
   };
 
   const formatDate = (value: unknown) => {
@@ -325,29 +238,21 @@ export default function SettingsPage() {
               </div>
 
               <div className="w-full md:w-auto flex flex-col gap-3">
+                <p className="text-sm text-gray-600">
+                  Manage your subscription from your{' '}
+                  <Link href="/profile" className="font-semibold text-purple-600 underline-offset-4 hover:underline">
+                    profile page
+                  </Link>.
+                </p>
                 <Button
-                  type="button"
                   size="lg"
-                  disabled={billingButtonDisabled}
-                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-purple-400 disabled:to-pink-400 disabled:cursor-not-allowed"
-                  onClick={() => {
-                    void handleBillingRedirect(hasProAccess ? 'portal' : 'upgrade');
-                  }}
+                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                  asChild
                 >
-                  {billingButtonLabel}
-                  {billingButtonDisabled ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ArrowUpRight className="h-4 w-4" />
-                  )}
+                  <Link href="/profile">
+                    Go to profile
+                  </Link>
                 </Button>
-                {!hasProAccess && (
-                  <Button variant="outline" asChild>
-                    <Link href="mailto:hello@focusnotebook.ai?subject=Focus%20Notebook%20Pro">
-                      Talk to the team
-                    </Link>
-                  </Button>
-                )}
               </div>
             </div>
           </section>

@@ -109,6 +109,62 @@ async function updateSubscriptionStatus(uid: string, payload: Record<string, unk
     );
 }
 
+function normalizeCheckoutCustomer(customer: unknown): string | null {
+  if (!customer) {
+    return null;
+  }
+
+  if (typeof customer === 'string') {
+    return customer;
+  }
+
+  if (typeof customer === 'object' && customer !== null && 'id' in customer) {
+    const maybeId = (customer as { id?: unknown }).id;
+    return typeof maybeId === 'string' ? maybeId : null;
+  }
+
+  return null;
+}
+
+function assertSessionOwnership(session: Stripe.Checkout.Session, uid: string): void {
+  const sessionUid = typeof session.metadata?.uid === 'string' ? session.metadata.uid : null;
+  if (sessionUid && sessionUid !== uid) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Checkout session does not belong to the authenticated user.'
+    );
+  }
+}
+
+async function resolveSessionOwner(session: Stripe.Checkout.Session): Promise<string | null> {
+  const sessionUid = typeof session.metadata?.uid === 'string' ? session.metadata.uid : null;
+  if (sessionUid) {
+    return sessionUid;
+  }
+
+  const customerId = normalizeCheckoutCustomer(session.customer);
+  if (!customerId) {
+    return null;
+  }
+
+  return await findUidByCustomer(customerId);
+}
+
+async function loadSubscriptionFromSession(session: Stripe.Checkout.Session, stripe: Stripe) {
+  const subscriptionFromSession = session.subscription;
+  if (!subscriptionFromSession) {
+    return null;
+  }
+
+  if (typeof subscriptionFromSession !== 'string') {
+    return subscriptionFromSession as Stripe.Subscription;
+  }
+
+  return await stripe.subscriptions.retrieve(subscriptionFromSession, {
+    expand: ['latest_invoice.payment_intent'],
+  });
+}
+
 export const createStripeCheckoutSession = functions.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign in required.');
@@ -141,8 +197,8 @@ export const createStripeCheckoutSession = functions.https.onCall(async (data, c
   }
 
   const baseUrl = resolveBaseUrl(data?.origin);
-  const successUrl = `${baseUrl}/settings?upgrade=success&session_id={CHECKOUT_SESSION_ID}`;
-  const cancelUrl = `${baseUrl}/settings?upgrade=cancelled`;
+  const successUrl = `${baseUrl}/profile?upgrade=success&session_id={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = `${baseUrl}/profile?upgrade=cancelled`;
 
   const firestore = getFirestore();
   const statusRef = firestore.doc(
@@ -227,7 +283,7 @@ export const createStripePortalSession = functions.https.onCall(async (data, con
   const stripe = getStripeClient();
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
-    return_url: `${resolveBaseUrl(data?.origin)}/settings`,
+    return_url: `${resolveBaseUrl(data?.origin)}/profile`,
   });
 
   if (!session.url) {
@@ -379,4 +435,70 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
   }
 
   res.json({ received: true });
+});
+
+export const syncStripeSubscription = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in required.');
+  }
+
+  const uid = context.auth.uid;
+  const rawSessionId = typeof data?.sessionId === 'string' ? data.sessionId.trim() : '';
+
+  if (!rawSessionId) {
+    throw new functions.https.HttpsError('invalid-argument', 'A valid Stripe session id is required.');
+  }
+
+  const stripe = getStripeClient();
+
+  let session: Stripe.Checkout.Session;
+  try {
+    session = await stripe.checkout.sessions.retrieve(rawSessionId, {
+      expand: ['subscription'],
+    });
+  } catch (error) {
+    console.error('Failed to retrieve Stripe checkout session for manual sync:', error);
+    throw new functions.https.HttpsError(
+      'internal',
+      'Unable to verify Stripe checkout session. Please try again or contact support.'
+    );
+  }
+
+  assertSessionOwnership(session, uid);
+
+  const resolvedUid = (await resolveSessionOwner(session)) ?? uid;
+  if (resolvedUid !== uid) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Checkout session is associated with a different account.'
+    );
+  }
+
+  const subscription = await loadSubscriptionFromSession(session, stripe);
+  if (!subscription) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'No subscription is associated with the provided checkout session.'
+    );
+  }
+
+  const customerId = getStripeCustomerId(subscription) ?? normalizeCheckoutCustomer(session.customer);
+  if (customerId) {
+    await recordCustomerMapping(customerId, uid);
+  }
+
+  const snapshot = mapSubscriptionToSnapshot(subscription);
+
+  await updateSubscriptionStatus(uid, {
+    ...snapshot,
+    lastManualSyncSessionId: session.id,
+    lastManualSyncAt: new Date().toISOString(),
+  });
+
+  return {
+    success: true,
+    subscriptionId: subscription.id,
+    status: snapshot.status,
+    tier: snapshot.tier,
+  };
 });

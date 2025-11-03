@@ -4,6 +4,7 @@ const checkoutSessionsCreateMock = jest.fn();
 const billingPortalSessionsCreateMock = jest.fn();
 const subscriptionsRetrieveMock = jest.fn();
 const constructEventMock = jest.fn();
+const checkoutSessionsRetrieveMock = jest.fn();
 
 const ORIGINAL_ENV = { ...process.env };
 const ENV_KEYS = ['STRIPE_SECRET', 'STRIPE_PRICE_ID', 'STRIPE_WEBHOOK_SECRET', 'APP_BASE_URL'];
@@ -38,7 +39,7 @@ jest.mock('firebase-admin', () => ({
 
 jest.mock('stripe', () =>
   jest.fn().mockImplementation(() => ({
-    checkout: { sessions: { create: checkoutSessionsCreateMock } },
+    checkout: { sessions: { create: checkoutSessionsCreateMock, retrieve: checkoutSessionsRetrieveMock } },
     billingPortal: { sessions: { create: billingPortalSessionsCreateMock } },
     subscriptions: { retrieve: subscriptionsRetrieveMock },
     webhooks: { constructEvent: constructEventMock },
@@ -50,6 +51,7 @@ import {
   createStripeCheckoutSession,
   createStripePortalSession,
   stripeWebhook,
+  syncStripeSubscription,
 } from '../stripeBilling';
 
 const invokeCheckout = createStripeCheckoutSession as unknown as (
@@ -61,6 +63,7 @@ const invokePortal = createStripePortalSession as unknown as (
   context: any
 ) => Promise<any>;
 const invokeWebhook = stripeWebhook as unknown as (req: any, res: any) => Promise<any>;
+const invokeSync = syncStripeSubscription as unknown as (data: any, context: any) => Promise<any>;
 
 describe('stripeBilling cloud functions', () => {
   let statusDoc: any;
@@ -122,6 +125,24 @@ describe('stripeBilling cloud functions', () => {
       metadata: {},
     });
 
+    checkoutSessionsRetrieveMock.mockResolvedValue({
+      id: 'cs_123',
+      customer: 'cus_123',
+      subscription: {
+        id: 'sub_123',
+        status: 'active',
+        customer: 'cus_123',
+        items: { data: [{ price: { id: 'price_123' } }] },
+        current_period_end: 1_700_000_000,
+        current_period_start: 1_690_000_000,
+        cancel_at_period_end: false,
+        cancel_at: null,
+        trial_end: null,
+        metadata: {},
+      },
+      metadata: { uid: 'user_123' },
+    });
+
     constructEventMock.mockReset();
   });
 
@@ -173,8 +194,8 @@ describe('stripeBilling cloud functions', () => {
         expect.objectContaining({
           customer: 'cus_existing',
           customer_email: undefined,
-          success_url: 'https://custom.app/settings?upgrade=success&session_id={CHECKOUT_SESSION_ID}',
-          cancel_url: 'https://custom.app/settings?upgrade=cancelled',
+          success_url: 'https://custom.app/profile?upgrade=success&session_id={CHECKOUT_SESSION_ID}',
+          cancel_url: 'https://custom.app/profile?upgrade=cancelled',
         })
       );
       expect(statusDoc.set).toHaveBeenCalledWith(
@@ -196,7 +217,7 @@ describe('stripeBilling cloud functions', () => {
         expect.objectContaining({
           customer: undefined,
           customer_email: 'user@example.com',
-          success_url: 'https://config.example.com/settings?upgrade=success&session_id={CHECKOUT_SESSION_ID}',
+          success_url: 'https://config.example.com/profile?upgrade=success&session_id={CHECKOUT_SESSION_ID}',
         })
       );
     });
@@ -209,7 +230,7 @@ describe('stripeBilling cloud functions', () => {
 
       const callArgs = checkoutSessionsCreateMock.mock.calls.pop()?.[0];
       expect(callArgs).toBeDefined();
-      expect(callArgs.success_url).toBe('http://localhost:3000/settings?upgrade=success&session_id={CHECKOUT_SESSION_ID}');
+      expect(callArgs.success_url).toBe('http://localhost:3000/profile?upgrade=success&session_id={CHECKOUT_SESSION_ID}');
       expect(callArgs.customer_email).toBe('user@example.com');
     });
 
@@ -248,7 +269,7 @@ describe('stripeBilling cloud functions', () => {
       expect(result).toEqual({ url: 'https://stripe.test/portal' });
       expect(billingPortalSessionsCreateMock).toHaveBeenCalledWith({
         customer: 'cus_portal',
-        return_url: 'https://custom.app/settings',
+        return_url: 'https://custom.app/profile',
       });
       expect(statusDoc.set).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -268,8 +289,55 @@ describe('stripeBilling cloud functions', () => {
 
       expect(billingPortalSessionsCreateMock).toHaveBeenCalledWith({
         customer: 'cus_portal',
-        return_url: 'https://config.example.com/settings',
+        return_url: 'https://config.example.com/profile',
       });
+    });
+  });
+
+  describe('syncStripeSubscription', () => {
+    it('rejects unauthenticated calls', async () => {
+      await expect(invokeSync({ sessionId: 'cs_123' }, {} as any)).rejects.toHaveProperty(
+        'code',
+        'unauthenticated'
+      );
+    });
+
+    it('updates subscription status when session matches user', async () => {
+      await invokeSync({ sessionId: 'cs_123' }, authContext);
+
+      expect(checkoutSessionsRetrieveMock).toHaveBeenCalledWith('cs_123', {
+        expand: ['subscription'],
+      });
+      expect(customerDoc.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          uid: 'user_123',
+        }),
+        { merge: true }
+      );
+      expect(statusDoc.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tier: 'pro',
+          status: 'active',
+          stripeSubscriptionId: 'sub_123',
+          entitlements: expect.objectContaining({ aiProcessing: true }),
+          lastManualSyncSessionId: 'cs_123',
+        }),
+        { merge: true }
+      );
+    });
+
+    it('rejects when session metadata belongs to different user', async () => {
+      checkoutSessionsRetrieveMock.mockResolvedValueOnce({
+        id: 'cs_mismatch',
+        customer: 'cus_999',
+        subscription: 'sub_123',
+        metadata: { uid: 'other_user' },
+      });
+
+      await expect(invokeSync({ sessionId: 'cs_mismatch' }, authContext)).rejects.toHaveProperty(
+        'code',
+        'permission-denied'
+      );
     });
   });
 
