@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useTasks, Task } from "@/store/useTasks";
 import { useThoughts } from "@/store/useThoughts";
-import { isTodayISO } from "@/lib/utils/date";
+import { isTodayISO, isTaskCompletedToday } from "@/lib/utils/date";
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 import { TimeDisplay } from "./TimeDisplay";
@@ -21,13 +21,17 @@ export default function TaskList() {
       // Show tasks for today
       const isToday = isTodayISO(t.dueDate) || isTodayISO(t.createdAt);
       if (!isToday) return false;
-      
+
       // If showCompleted is true, show all tasks
       if (showCompleted) return true;
-      
-      // Hide completed one-time tasks, but show completed recurring tasks
-      if (t.done && (!t.recurrence || t.recurrence.type === 'none')) return false;
-      
+
+      // Hide completed tasks (checks completion for today for recurring tasks)
+      const completedToday = isTaskCompletedToday(t);
+      if (completedToday && (!t.recurrence || t.recurrence.type === 'none')) {
+        // Hide completed one-time tasks
+        return false;
+      }
+
       return true;
     });
     // Sort by createdAt desc
@@ -40,7 +44,7 @@ export default function TaskList() {
 
   // Get card styling based on category and priority
   const getCardStyle = (task: Task) => {
-    if (task.done) {
+    if (isTaskCompletedToday(task)) {
       return "bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-300 dark:from-gray-900 dark:to-gray-800 dark:border-gray-700";
     }
 
@@ -85,22 +89,22 @@ export default function TaskList() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className={`group relative overflow-hidden rounded-lg p-3 transition-all duration-300 border ${t.done ? "opacity-50 bg-gray-50 dark:bg-gray-800/30 border-gray-300 dark:border-gray-700" : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"}`}
+                className={`group relative overflow-hidden rounded-lg p-3 transition-all duration-300 border ${isTaskCompletedToday(t) ? "opacity-50 bg-gray-50 dark:bg-gray-800/30 border-gray-300 dark:border-gray-700" : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"}`}
               >
                 <div className="flex items-start gap-2">
                   <input
                     type="checkbox"
-                    checked={t.done}
+                    checked={isTaskCompletedToday(t)}
                     onChange={() => toggle(t.id)}
                     className="w-4 h-4 mt-0.5 rounded border-2 border-gray-400 dark:border-gray-600 checked:bg-purple-600 checked:border-transparent cursor-pointer transition-all"
-                    aria-label={`Mark ${t.title} as ${t.done ? 'incomplete' : 'complete'}`}
+                    aria-label={`Mark ${t.title} as ${isTaskCompletedToday(t) ? 'incomplete' : 'complete'}`}
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <div className={`text-sm font-medium ${t.done && !t.recurrence ? "line-through text-gray-400 dark:text-gray-500" : "text-gray-900 dark:text-gray-100"}`}>
+                      <div className={`text-sm font-medium ${isTaskCompletedToday(t) && !t.recurrence ? "line-through text-gray-400 dark:text-gray-500" : "text-gray-900 dark:text-gray-100"}`}>
                         {t.title}
                       </div>
-                      {t.done && t.recurrence && t.recurrence.type !== 'none' && (
+                      {isTaskCompletedToday(t) && t.recurrence && t.recurrence.type !== 'none' && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400">
                           ✓ Done for today
                         </span>

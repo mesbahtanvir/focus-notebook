@@ -14,7 +14,7 @@ import { formatDateTime } from "@/lib/formatDateTime";
 import { useAuth } from "@/contexts/AuthContext";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
-import { isWorkday, getDateString } from "@/lib/utils/date";
+import { isWorkday, getDateString, isTaskCompletedToday } from "@/lib/utils/date";
 
 function FocusPageContent() {
   useTrackToolUsage('focus');
@@ -46,8 +46,13 @@ function FocusPageContent() {
   // Filter active tasks with workweek validation and date completion tracking
   const today = getDateString(new Date());
   const activeTasks = tasks.filter(t => {
-    // Basic filter: not done, active, focus eligible
-    if (t.done || t.status !== 'active' || (t.focusEligible !== true && t.focusEligible !== undefined)) {
+    // Basic filter: active status, focus eligible
+    if (t.status !== 'active' || (t.focusEligible !== true && t.focusEligible !== undefined)) {
+      return false;
+    }
+
+    // Check if task is completed today (works for both recurring and non-recurring)
+    if (isTaskCompletedToday(t)) {
       return false;
     }
 

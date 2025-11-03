@@ -204,10 +204,10 @@ export function isPast(date: Date): boolean {
 
 /**
  * Check if a date is in the future
- * 
+ *
  * @param date - Date to check
  * @returns True if the date is after now
- * 
+ *
  * @example
  * ```typescript
  * const tomorrow = new Date('2025-01-25')
@@ -216,4 +216,39 @@ export function isPast(date: Date): boolean {
  */
 export function isFuture(date: Date): boolean {
   return date > new Date()
+}
+
+/**
+ * Check if a task with completion history is completed today
+ * For recurring tasks, checks if there's a completion entry for today
+ * For non-recurring tasks, uses the done field
+ *
+ * @param task - Task object with optional completionHistory and done field
+ * @returns True if task is completed today
+ *
+ * @example
+ * ```typescript
+ * const recurringTask = {
+ *   done: true,
+ *   recurrence: { type: 'daily' },
+ *   completionHistory: [
+ *     { date: '2025-01-24', completedAt: '2025-01-24T10:00:00Z' }
+ *   ]
+ * }
+ * isTaskCompletedToday(recurringTask) // true if today is Jan 24, 2025
+ * ```
+ */
+export function isTaskCompletedToday(task: {
+  done: boolean
+  recurrence?: { type: string }
+  completionHistory?: Array<{ date: string; completedAt: string }>
+}): boolean {
+  // For non-recurring tasks, just use the done field
+  if (!task.recurrence || task.recurrence.type === 'none') {
+    return task.done
+  }
+
+  // For recurring tasks, check if there's a completion for today
+  const today = getDateString(new Date())
+  return task.completionHistory?.some(c => c.date === today) ?? false
 }

@@ -31,6 +31,7 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import Link from "next/link";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { toolThemes, ToolHeader, SearchAndFilters, ToolPageLayout } from "@/components/tools";
+import { isTaskCompletedToday } from "@/lib/utils/date";
 
 type SortOption = 'priority' | 'dueDate' | 'createdAt' | 'title';
 type ViewMode = 'list' | 'kanban';
@@ -87,7 +88,8 @@ function TasksPageContent() {
       // If showCompleted is true, show all tasks
       if (!showCompleted) {
         // Hide completed one-time tasks, but show completed recurring tasks (they're "done for today")
-        if (task.done && (!task.recurrence || task.recurrence.type === 'none')) return false;
+        const completedToday = isTaskCompletedToday(task);
+        if (completedToday && (!task.recurrence || task.recurrence.type === 'none')) return false;
       }
       if (filterStatus !== 'all' && task.status !== filterStatus) return false;
       if (filterCategory !== 'all' && task.category !== filterCategory) return false;
@@ -171,11 +173,11 @@ function TasksPageContent() {
 
   const taskStats = useMemo(() => {
     const total = tasks.length;
-    const completed = tasks.filter(t => t.done).length;
-    const active = tasks.filter(t => t.status === 'active' && !t.done).length;
+    const completed = tasks.filter(t => isTaskCompletedToday(t)).length;
+    const active = tasks.filter(t => t.status === 'active' && !isTaskCompletedToday(t)).length;
     const backlog = tasks.filter(t => t.status === 'backlog').length;
     const overdue = tasks.filter(t => {
-      if (!t.dueDate || t.done) return false;
+      if (!t.dueDate || isTaskCompletedToday(t)) return false;
       return new Date(t.dueDate) < new Date();
     }).length;
 
@@ -498,7 +500,7 @@ function TaskGroup({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 className={`p-4 rounded-xl cursor-pointer transition-all transform hover:scale-[1.02] hover:shadow-xl border-2 ${
-                  task.done
+                  isTaskCompletedToday(task)
                     ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-300 dark:border-green-800'
                     : task.category === 'mastery'
                     ? 'bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/20 dark:via-indigo-950/20 dark:to-purple-950/20 border-blue-300 dark:border-blue-800'
@@ -510,18 +512,18 @@ function TaskGroup({
                   <div className="flex items-start gap-3">
                     <div
                       className={`h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 shadow-md ${
-                        task.done
+                        isTaskCompletedToday(task)
                           ? 'bg-gradient-to-br from-green-400 to-emerald-500 border-green-600 dark:from-green-600 dark:to-emerald-700 dark:border-green-500'
                           : 'bg-white dark:bg-gray-800 border-gray-400 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
                       }`}
                     >
-                      {task.done && <CheckCircle2 className="h-4 w-4 text-white" />}
+                      {isTaskCompletedToday(task) && <CheckCircle2 className="h-4 w-4 text-white" />}
                     </div>
 
                     <div className="flex-1 min-w-0 space-y-3">
                       <div className="flex items-start justify-between gap-3">
                         <h3
-                          className={`text-base font-semibold leading-snug ${task.done && !task.recurrence ? 'line-through text-muted-foreground' : 'text-gray-900 dark:text-white'}`}
+                          className={`text-base font-semibold leading-snug ${isTaskCompletedToday(task) && !task.recurrence ? 'line-through text-muted-foreground' : 'text-gray-900 dark:text-white'}`}
                         >
                           {toTitleCase(task.title)}
                         </h3>
@@ -549,7 +551,7 @@ function TaskGroup({
                           </span>
                         )}
 
-                        {task.done && task.recurrence && task.recurrence.type !== 'none' && (
+                        {isTaskCompletedToday(task) && task.recurrence && task.recurrence.type !== 'none' && (
                           <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
                             <CheckCircle2 className="h-3 w-3" />
                             Done Today
