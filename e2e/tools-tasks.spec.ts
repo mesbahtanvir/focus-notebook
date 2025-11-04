@@ -186,10 +186,14 @@ test.describe('Tasks Tool', () => {
   });
 
   test('tasks page - recurring tasks', async ({ page }) => {
-    const tasks = generateMockTasks(6).map((task, i) => ({
-      ...task,
-      recurrenceType: i % 2 === 0 ? 'daily' : i % 3 === 0 ? 'weekly' : 'none',
-    }));
+    const tasks = generateMockTasks(6).map((task, i) => {
+      const recurrenceType: 'none' | 'daily' | 'weekly' | 'monthly' =
+        i % 2 === 0 ? 'daily' : i % 3 === 0 ? 'weekly' : 'none';
+      return {
+        ...task,
+        recurrenceType,
+      };
+    });
     await seedMockData(page, { tasks });
 
     await page.goto('/tools/tasks');

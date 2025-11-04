@@ -50,7 +50,7 @@ describe('Compact Project List (#30)', () => {
     });
 
     it('should use stacked layout for detailed view', () => {
-      const viewMode: 'compact' | 'detailed' = 'detailed';
+      const viewMode: 'compact' | 'detailed' = 'detailed' as 'compact' | 'detailed';
       const layoutClass = viewMode === 'compact'
         ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
         : 'space-y-4';
