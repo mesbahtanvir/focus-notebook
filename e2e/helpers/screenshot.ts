@@ -220,6 +220,7 @@ export async function mockDateTime(page: Page, date: Date = new Date('2024-01-15
         if (args.length === 0) {
           super(timestamp);
         } else {
+          // @ts-ignore - TypeScript doesn't like spreading args to Date constructor
           super(...args);
         }
       }
