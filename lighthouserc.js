@@ -27,7 +27,6 @@ const paths = [
   '/tools/notes',
   '/tools/errands',
   '/tools/deepreflect',
-  '/tools/deepthought',
 ];
 
 module.exports = {

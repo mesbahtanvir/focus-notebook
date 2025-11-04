@@ -109,6 +109,7 @@ type State = {
   isLoading: boolean
   fromCache: boolean
   hasPendingWrites: boolean
+  syncError: Error | null
   unsubscribe: (() => void) | null
   subscribe: (userId: string) => void
   add: (data: Omit<Thought, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>) => Promise<void>
@@ -121,6 +122,7 @@ export const useThoughts = create<State>((set, get) => ({
   isLoading: true,
   fromCache: false,
   hasPendingWrites: false,
+  syncError: null,
   unsubscribe: null,
 
   subscribe: (userId: string) => {
@@ -142,7 +144,13 @@ export const useThoughts = create<State>((set, get) => ({
         isLoading: false,
         fromCache: meta.fromCache,
         hasPendingWrites: meta.hasPendingWrites,
+        syncError: meta.error || null,
       })
+
+      // Log sync errors to help with debugging
+      if (meta.error) {
+        console.error('Thoughts sync error:', meta.error);
+      }
     })
 
     set({ unsubscribe: unsub })

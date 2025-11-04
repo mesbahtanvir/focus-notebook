@@ -40,7 +40,23 @@ export default function Page() {
   // Global loading state - show if either is loading from network (not cache)
   const thoughtsFromCache = useThoughts((s) => s.fromCache);
   const tasksFromCache = useTasks((s) => s.fromCache);
+  const thoughtsSyncError = useThoughts((s) => s.syncError);
+  const tasksSyncError = useTasks((s) => s.syncError);
   const isInitialLoading = (thoughtsLoading && !thoughtsFromCache) || (tasksLoading && !tasksFromCache);
+  const hasSyncError = thoughtsSyncError || tasksSyncError;
+
+  // Add timeout to prevent infinite loading state (max 8 seconds)
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  useEffect(() => {
+    if (isInitialLoading) {
+      const timer = setTimeout(() => {
+        setLoadingTimeout(true);
+      }, 8000);
+      return () => clearTimeout(timer);
+    } else {
+      setLoadingTimeout(false);
+    }
+  }, [isInitialLoading]);
   
   // Get errands count (non-focus-eligible tasks)
   const activeErrands = useMemo(() => 
@@ -90,8 +106,8 @@ export default function Page() {
     });
 
 
-  // Show loading indicator if initial load is in progress
-  if (isInitialLoading) {
+  // Show loading indicator if initial load is in progress (with timeout protection)
+  if (isInitialLoading && !loadingTimeout) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
@@ -103,8 +119,42 @@ export default function Page() {
     );
   }
 
+  // If loading timed out or has error, show the page anyway with a warning
+  const showSyncWarning = (isInitialLoading && loadingTimeout) || hasSyncError;
+
   return (
     <div className="space-y-4">
+      {/* Sync Warning - Show if loading timed out or has error */}
+      {showSyncWarning && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20 border-2 border-red-200 dark:border-red-800"
+        >
+          <div className="flex items-center gap-2 flex-1">
+            <span className="text-xl">⚠️</span>
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {hasSyncError ? 'Sync Error' : 'Sync taking longer than expected'}
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                {hasSyncError
+                  ? 'Unable to connect to Firebase. Check your internet connection and try refreshing the page.'
+                  : 'Check your internet connection. Data may be loading from cache.'}
+              </p>
+            </div>
+          </div>
+          {hasSyncError && (
+            <button
+              onClick={() => window.location.reload()}
+              className="text-xs font-medium px-3 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors shadow-md"
+            >
+              Retry
+            </button>
+          )}
+        </motion.div>
+      )}
+
       {/* Authentication Status */}
       {!user && (
         <motion.div

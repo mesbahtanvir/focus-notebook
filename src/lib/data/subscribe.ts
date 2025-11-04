@@ -3,6 +3,7 @@ import { onSnapshot, query, CollectionReference, DocumentReference, Query } from
 export interface SnapshotMeta {
   fromCache: boolean;
   hasPendingWrites: boolean;
+  error?: Error;
 }
 
 /**
@@ -26,6 +27,12 @@ export function subscribeDoc<T>(
     },
     (error) => {
       console.error('Document subscription error:', error);
+      // Notify callback about error
+      cb(null, {
+        fromCache: false,
+        hasPendingWrites: false,
+        error: error as Error,
+      });
     }
   );
 }
@@ -51,6 +58,12 @@ export function subscribeCol<T>(
     },
     (error) => {
       console.error('Collection subscription error:', error);
+      // Notify callback about error
+      cb([], {
+        fromCache: false,
+        hasPendingWrites: false,
+        error: error as Error,
+      });
     }
   );
 }

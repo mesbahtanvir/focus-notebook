@@ -144,6 +144,7 @@ type State = {
   isLoading: boolean
   fromCache: boolean
   hasPendingWrites: boolean
+  syncError: Error | null
   unsubscribe: (() => void) | null
   subscribe: (userId: string) => void
   add: (task: Omit<Task, 'id' | 'done' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>) => Promise<string>
@@ -160,6 +161,7 @@ export const useTasks = create<State>((set, get) => ({
   isLoading: true,
   fromCache: false,
   hasPendingWrites: false,
+  syncError: null,
   unsubscribe: null,
   
   subscribe: (userId: string) => {
@@ -176,13 +178,19 @@ export const useTasks = create<State>((set, get) => ({
     )
     
     const unsub = subscribeCol<Task>(tasksQuery, async (tasks, meta) => {
-      set({ 
-        tasks, 
+      set({
+        tasks,
         isLoading: false,
         fromCache: meta.fromCache,
         hasPendingWrites: meta.hasPendingWrites,
+        syncError: meta.error || null,
       })
-      
+
+      // Log sync errors to help with debugging
+      if (meta.error) {
+        console.error('Tasks sync error:', meta.error);
+      }
+
       // DISABLED: Recurring tasks now track completions by date instead of creating instances
       // Generate missing recurring tasks (only on first load, not from cache)
       // if (!meta.fromCache && tasks.length > 0) {
