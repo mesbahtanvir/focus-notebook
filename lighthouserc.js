@@ -13,7 +13,6 @@ const paths = [
   '/profile',
   '/settings',
   '/admin',
-  '/learn',
   '/tools',
   '/tools/focus',
   '/tools/tasks',
