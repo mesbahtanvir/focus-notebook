@@ -148,7 +148,8 @@ describe('Quick Focus - Auto-select without modal (#32)', () => {
     it('should display floating action button for starting session', () => {
       const selectedTasks = [{ id: '1' }];
       const hasSelectedTasks = selectedTasks.length > 0;
-      const showFloatingButton = !null; // Not in active session
+      const currentSession = null;
+      const showFloatingButton = currentSession === null; // Not in active session
 
       expect(hasSelectedTasks).toBe(true);
       expect(showFloatingButton).toBe(true);

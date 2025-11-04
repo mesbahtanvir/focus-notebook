@@ -438,19 +438,23 @@ describe('Export/Import Registry System (#39)', () => {
     });
 
     it('should import data using createStoreExportSource', async () => {
-      const addedItems: any[] = [];
+      interface TestItem {
+        id: string;
+        name: string;
+      }
+      const addedItems: TestItem[] = [];
 
       const source = createStoreExportSource({
         id: 'test-store-import-helper',
         name: 'Test Store',
         getItems: async () => [],
-        addItem: async (userId, item) => {
+        addItem: async (userId, item: TestItem) => {
           addedItems.push(item);
           return item.id;
         },
       });
 
-      const importData = [
+      const importData: TestItem[] = [
         { id: '1', name: 'Item 1' },
         { id: '2', name: 'Item 2' },
       ];
@@ -462,11 +466,16 @@ describe('Export/Import Registry System (#39)', () => {
     });
 
     it('should handle errors in createStoreExportSource import', async () => {
+      interface TestItem {
+        id: string;
+        name: string;
+      }
+
       const source = createStoreExportSource({
         id: 'test-store-error-helper',
         name: 'Test Store',
         getItems: async () => [],
-        addItem: async (userId, item) => {
+        addItem: async (userId, item: TestItem) => {
           if (item.id === '2') {
             throw new Error('Failed to add item');
           }
@@ -474,7 +483,7 @@ describe('Export/Import Registry System (#39)', () => {
         },
       });
 
-      const importData = [
+      const importData: TestItem[] = [
         { id: '1', name: 'Item 1' },
         { id: '2', name: 'Item 2' }, // This will fail
         { id: '3', name: 'Item 3' },

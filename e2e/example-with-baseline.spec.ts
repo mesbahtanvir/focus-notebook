@@ -1,4 +1,5 @@
-import { test, expect, gotoPage } from './fixtures/global-setup';
+import { test } from './fixtures/global-setup';
+import { expect } from '@playwright/test';
 import { takeScreenshot } from './helpers/screenshot';
 
 /**
@@ -15,7 +16,7 @@ import { takeScreenshot } from './helpers/screenshot';
 test.describe('Dashboard with Baseline Data', () => {
   test('home page - shows realistic user data', async ({ page }) => {
     // The baseline data is already loaded via the fixture
-    await gotoPage(page, '/');
+    await page.goto('/');
 
     // Page should show the user's tasks and thoughts
     await takeScreenshot(page, {
@@ -26,7 +27,7 @@ test.describe('Dashboard with Baseline Data', () => {
   });
 
   test('dashboard - shows statistics and charts', async ({ page }) => {
-    await gotoPage(page, '/dashboard');
+    await page.goto('/dashboard');
 
     // Dashboard should display stats from the baseline focus sessions
     await takeScreenshot(page, {
@@ -37,7 +38,7 @@ test.describe('Dashboard with Baseline Data', () => {
   });
 
   test('tasks page - shows organized task list', async ({ page }) => {
-    await gotoPage(page, '/tools/tasks');
+    await page.goto('/tools/tasks');
 
     // Should show mix of today's tasks, upcoming, and backlog
     await takeScreenshot(page, {
@@ -48,7 +49,7 @@ test.describe('Dashboard with Baseline Data', () => {
   });
 
   test('focus page - shows recent sessions', async ({ page }) => {
-    await gotoPage(page, '/tools/focus');
+    await page.goto('/tools/focus');
 
     // Should show recent focus sessions from baseline data
     await takeScreenshot(page, {
@@ -59,7 +60,7 @@ test.describe('Dashboard with Baseline Data', () => {
   });
 
   test('goals page - shows active and completed goals', async ({ page }) => {
-    await gotoPage(page, '/tools/goals');
+    await page.goto('/tools/goals');
 
     // Should show goals with progress indicators
     await takeScreenshot(page, {
@@ -70,7 +71,7 @@ test.describe('Dashboard with Baseline Data', () => {
   });
 
   test('thoughts page - shows journal entries', async ({ page }) => {
-    await gotoPage(page, '/tools/thoughts');
+    await page.goto('/tools/thoughts');
 
     // Should show recent thoughts and reflections
     await takeScreenshot(page, {
@@ -81,7 +82,7 @@ test.describe('Dashboard with Baseline Data', () => {
   });
 
   test('projects page - shows active projects', async ({ page }) => {
-    await gotoPage(page, '/tools/projects');
+    await page.goto('/tools/projects');
 
     // Should show both active and completed projects
     await takeScreenshot(page, {
