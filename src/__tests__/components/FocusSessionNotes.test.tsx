@@ -38,8 +38,8 @@ jest.mock('@/services/TimeTrackingService', () => ({
 describe('Focus Session Notes - Race Condition Fix', () => {
   const mockTask1: Task = {
     id: 'task-1',
-    userId: 'test-user-123',
     title: 'Task 1',
+    done: false,
     status: 'active',
     priority: 'medium',
     category: 'mastery',
@@ -49,8 +49,8 @@ describe('Focus Session Notes - Race Condition Fix', () => {
 
   const mockTask2: Task = {
     id: 'task-2',
-    userId: 'test-user-123',
     title: 'Task 2',
+    done: false,
     status: 'active',
     priority: 'high',
     category: 'pleasure',
@@ -60,8 +60,8 @@ describe('Focus Session Notes - Race Condition Fix', () => {
 
   const mockTask3: Task = {
     id: 'task-3',
-    userId: 'test-user-123',
     title: 'Task 3',
+    done: false,
     status: 'active',
     priority: 'low',
     category: 'mastery',
