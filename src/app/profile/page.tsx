@@ -12,11 +12,10 @@ import { httpsCallable } from "firebase/functions";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
-import { functionsClient } from "@/lib/firebaseClient";
+import { functionsClient, auth } from "@/lib/firebaseClient";
 import { useSubscriptionStatus } from "@/store/useSubscriptionStatus";
 import { UserIcon, LogOut, Mail, User, Edit, Shield, AlertTriangle, Crown, Loader2, ArrowUpRight } from "lucide-react";
 import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
 import { motion } from "framer-motion";
 
 type ProfileForm = {

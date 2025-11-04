@@ -11,12 +11,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { fetchStockPrice, validateTicker } from '@/lib/services/stockApi';
-import { SUPPORTED_CURRENCIES, DEFAULT_DISPLAY_CURRENCY } from '@/lib/utils/currency';
+import { SUPPORTED_CURRENCIES, DEFAULT_DISPLAY_CURRENCY, formatCurrency, normalizeCurrencyCode } from '@/lib/utils/currency';
 import {
   convertCurrency,
   formatCurrency as formatCurrencyValue,
 } from '@/lib/services/currency';
-import { formatCurrency } from '@/lib/currency';
 import { CurrencyBadge } from '@/components/investment/CurrencyBadge';
 
 interface InvestmentFormData {
@@ -254,7 +253,7 @@ export function InvestmentFormModal({
                       <p className="font-semibold">
                         {formatCurrency(
                           investment.nativeInitialAmount,
-                          investment.nativeCurrency,
+                          normalizeCurrencyCode(investment.nativeCurrency),
                           investment.locale || 'en-US'
                         )}
                       </p>
@@ -266,7 +265,7 @@ export function InvestmentFormModal({
                       <p className="font-semibold">
                         {formatCurrency(
                           investment.nativeCurrentValue,
-                          investment.nativeCurrency,
+                          normalizeCurrencyCode(investment.nativeCurrency),
                           investment.locale || 'en-US'
                         )}
                       </p>
@@ -275,7 +274,7 @@ export function InvestmentFormModal({
                 </div>
                 {investment.conversionRate && (
                   <p className="mt-2 text-[0.65rem] text-sky-800/80 dark:text-sky-200">
-                    1 {investment.nativeCurrency} ≈ {formatCurrency(investment.conversionRate, effectiveBaseCurrency, locale, {
+                    1 {investment.nativeCurrency} ≈ {formatCurrency(investment.conversionRate, normalizeCurrencyCode(effectiveBaseCurrency), locale, {
                       minimumFractionDigits: 4,
                       maximumFractionDigits: 4,
                     })}

@@ -10,9 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { BASE_CURRENCY, DEFAULT_DISPLAY_CURRENCY, SUPPORTED_CURRENCIES } from '@/lib/utils/currency';
+import { BASE_CURRENCY, DEFAULT_DISPLAY_CURRENCY, SUPPORTED_CURRENCIES, formatCurrency, normalizeCurrencyCode } from '@/lib/utils/currency';
 import { CurrencyBadge } from '@/components/investment/CurrencyBadge';
-import { formatCurrency } from '@/lib/currency';
 
 interface ContributionFormData {
   type: ContributionType;
@@ -130,7 +129,7 @@ export function ContributionFormModal({
                   <span>
                     {formatCurrency(
                       investment.nativeCurrentValue,
-                      investment.nativeCurrency,
+                      normalizeCurrencyCode(investment.nativeCurrency),
                       investment.locale || 'en-US'
                     )}
                   </span>
@@ -138,7 +137,7 @@ export function ContributionFormModal({
                     {typeof investment.nativeInitialAmount === 'number'
                       ? formatCurrency(
                           investment.nativeInitialAmount,
-                          investment.nativeCurrency,
+                          normalizeCurrencyCode(investment.nativeCurrency),
                           investment.locale || 'en-US'
                         )
                       : '—'}

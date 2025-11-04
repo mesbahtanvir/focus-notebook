@@ -10,7 +10,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Cloud, CloudOff, WifiOff, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/lib/firebaseClient';
 
 type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error' | 'notAuthenticated';
 

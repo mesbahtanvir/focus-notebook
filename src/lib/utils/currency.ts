@@ -20,13 +20,44 @@ export function convertCurrency(
   return convertCurrencySync(amount, from, to);
 }
 
-export function formatCurrency(amount: number, currency: SupportedCurrency): string {
-  const locale = currencyLocales[currency] || 'en-US';
+export function formatCurrency(
+  amount: number,
+  currency: SupportedCurrency,
+  locale?: string,
+  options?: Intl.NumberFormatOptions
+): string {
+  const effectiveLocale = locale || currencyLocales[currency] || 'en-US';
 
-  return new Intl.NumberFormat(locale, {
+  const formatterOptions: Intl.NumberFormatOptions = {
     style: 'currency',
     currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount);
+    ...options,
+  };
+
+  try {
+    return new Intl.NumberFormat(effectiveLocale, formatterOptions).format(amount);
+  } catch (error) {
+    // Fallback for unsupported currency codes/locales
+    return `${currency} ${amount.toFixed(2)}`;
+  }
+}
+
+export function formatCurrencyCompact(
+  amount: number,
+  currency: SupportedCurrency = 'USD'
+): string {
+  const locale = currencyLocales[currency] || 'en-US';
+
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+      notation: 'compact',
+      maximumFractionDigits: 1,
+    }).format(amount);
+  } catch (error) {
+    return `${currency} ${amount.toFixed(1)}`;
+  }
 }

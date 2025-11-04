@@ -5,8 +5,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { Investment } from '@/store/useInvestments';
 import { getChangeColorClass } from '@/lib/services/stockApi';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { convertCurrency, normalizeCurrencyCode, SupportedCurrency } from '@/lib/utils/currency';
-import { formatCurrency as formatCurrencyWithLocale } from '@/lib/currency';
+import { convertCurrency, normalizeCurrencyCode, formatCurrency, SupportedCurrency } from '@/lib/utils/currency';
 import { CurrencyBadge } from '@/components/investment/CurrencyBadge';
 
 interface StockPerformanceChartProps {
@@ -56,16 +55,16 @@ export function StockPerformanceChart({ investment, currency, variant = 'standal
         <div className="flex justify-between text-sky-900 dark:text-sky-100">
           <span>Current:</span>
           <span className="font-semibold font-mono tabular-nums">
-            {formatCurrencyWithLocale(nativeCurrentValue, nativeCurrency, investment.locale || 'en-US')}
+            {formatCurrency(nativeCurrentValue, normalizeCurrencyCode(nativeCurrency), investment.locale || 'en-US')}
           </span>
         </div>
         {typeof investment.nativeInitialAmount === 'number' && (
           <div className="flex justify-between text-sky-900 dark:text-sky-100 mt-1">
             <span>Initial:</span>
             <span className="font-semibold font-mono tabular-nums">
-              {formatCurrencyWithLocale(
+              {formatCurrency(
                 investment.nativeInitialAmount,
-                nativeCurrency,
+                normalizeCurrencyCode(nativeCurrency),
                 investment.locale || 'en-US'
               )}
             </span>

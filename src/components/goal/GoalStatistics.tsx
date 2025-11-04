@@ -1,7 +1,7 @@
 "use client";
 
 import { Flag, Brain, Target, Calendar } from "lucide-react";
-import { formatTimeUntil } from "@/lib/utils/dateUtils";
+import { formatTimeUntil } from "@/lib/utils/date";
 import type { Goal } from "@/store/useGoals";
 
 interface GoalStatisticsProps {

@@ -2,8 +2,8 @@
  * Stock API Service
  * Handles stock price fetching and historical data retrieval
  */
-import { formatCurrency } from '@/lib/currency';
-import { db } from '@/lib/firebase';
+import { formatCurrency, normalizeCurrencyCode } from '@/lib/utils/currency';
+import { db } from '@/lib/firebaseClient';
 import { Timestamp, doc, getDoc } from 'firebase/firestore';
 
 export interface StockQuote {
@@ -200,7 +200,7 @@ export function validateTicker(ticker: string): boolean {
  * Format price for display
  */
 export function formatPrice(price: number, currency: string = 'USD'): string {
-  return formatCurrency(price, currency);
+  return formatCurrency(price, normalizeCurrencyCode(currency));
 }
 
 /**
