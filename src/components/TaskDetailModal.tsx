@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTasks, Task, TaskCategory, TaskPriority, TaskStatus, RecurrenceType, TaskStep } from "@/store/useTasks";
 import { useThoughts } from "@/store/useThoughts";
 import { useProjects } from "@/store/useProjects";
+import { useFocus } from "@/store/useFocus";
 import { FormattedNotes } from "@/lib/formatNotes";
 import { TaskSteps } from "@/components/TaskSteps";
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -115,13 +116,30 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
   const linkedThought = thoughts.find(t => t.id === currentThoughtId);
   const linkedProject = projects.find(p => p.id === (isEditing ? selectedProjectId : task.projectId));
 
-  // Subscribe to projects and thoughts when modal opens
+  const focusSessions = useFocus((s) => s.sessions);
+  const subscribeFocus = useFocus((s) => s.subscribe);
+
+  // Get focus sessions that contain notes for this task
+  const taskFocusNotes = focusSessions
+    .filter(session => {
+      return session.tasks?.some(ft => ft.task.id === task.id && ft.notes);
+    })
+    .map(session => ({
+      sessionDate: new Date(session.startTime),
+      notes: session.tasks?.find(ft => ft.task.id === task.id)?.notes || '',
+      sessionId: session.id,
+    }))
+    .filter(item => item.notes.trim().length > 0)
+    .sort((a, b) => b.sessionDate.getTime() - a.sessionDate.getTime()); // Most recent first
+
+  // Subscribe to projects, thoughts, and focus sessions when modal opens
   useEffect(() => {
     if (user?.uid) {
       subscribeProjects(user.uid);
       subscribeThoughts(user.uid);
+      subscribeFocus(user.uid);
     }
-  }, [user?.uid, subscribeProjects, subscribeThoughts]);
+  }, [user?.uid, subscribeProjects, subscribeThoughts, subscribeFocus]);
 
   const handleSave = async () => {
     const tags = tagsInput
@@ -694,6 +712,41 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
               <p className="text-sm text-muted-foreground">No notes</p>
             )}
           </div>
+
+          {/* Focus Session Notes History */}
+          {!isEditing && taskFocusNotes.length > 0 && (
+            <div className="p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-900">
+              <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-3 flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                Focus Session Notes ({taskFocusNotes.length})
+              </h4>
+              <div className="space-y-3">
+                {taskFocusNotes.map((item, index) => (
+                  <div key={item.sessionId} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-purple-100 dark:border-purple-900">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
+                        Session on {item.sessionDate.toLocaleDateString(undefined, {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {item.sessionDate.toLocaleTimeString(undefined, {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                      {item.notes}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* AI Generated Task Info */}
           {!isEditing && getMetadataFromNotes(task.notes) && (() => {

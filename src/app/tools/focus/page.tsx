@@ -417,7 +417,8 @@ function FocusPageContent() {
                     >
                       <Heart className="h-4 w-4 text-pink-600 dark:text-pink-400 mb-1" />
                       <div className="text-xs font-bold text-gray-900 dark:text-white">Self Care</div>
-                      <div className="text-[9px] text-gray-500 dark:text-gray-400">Wellness</div>
+                      <div className="
+                       text-gray-500 dark:text-gray-400">Wellness</div>
                     </button>
                   </div>
                 </div>
@@ -517,7 +518,7 @@ function FocusPageContent() {
                                   : 'bg-pink-100 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300'
                               }`}
                             >
-                              {task.category === 'pleasure' ?  '💝': '🧠'} <span className="hidden sm:inline">{task.category || 'mastery'}</span>
+                              {task.category === 'mastery' ?  '🧠': '💝'} <span className="hidden sm:inline">{task.category || 'pleasure'}</span>
                             </span>
                             {task.estimatedMinutes && (
                               <span className={`text-[10px] font-medium ${isSelected ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>

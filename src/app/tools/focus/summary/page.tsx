@@ -166,26 +166,38 @@ function FocusSessionSummaryContent() {
             {tasks.map((focusTask, index) => (
               <div
                 key={index}
-                className={`flex items-center justify-between p-4 rounded-xl border-2 ${
+                className={`p-4 rounded-xl border-2 ${
                   focusTask.completed
                     ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'
                     : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700'
                 }`}
               >
-                <div className="flex items-center gap-3 flex-1">
-                  {focusTask.completed ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
-                  ) : (
-                    <div className="h-5 w-5 border-2 border-gray-300 rounded-full shrink-0" />
-                  )}
-                  <span className={focusTask.completed ? 'line-through text-gray-500' : ''}>
-                    {focusTask.task.title}
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    {focusTask.completed ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+                    ) : (
+                      <div className="h-5 w-5 border-2 border-gray-300 rounded-full shrink-0" />
+                    )}
+                    <span className={focusTask.completed ? 'line-through text-gray-500' : ''}>
+                      {focusTask.task.title}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-500 flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    {Math.floor((focusTask.timeSpent || 0) / 60)}m
+                  </div>
                 </div>
-                <div className="text-sm text-gray-500 flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  {Math.floor((focusTask.timeSpent || 0) / 60)}m
-                </div>
+                {focusTask.notes && focusTask.notes.trim().length > 0 && (
+                  <div className="mt-3 pl-8 pr-4 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                    <div className="font-medium text-xs text-purple-600 dark:text-purple-400 mb-1">
+                      Session notes:
+                    </div>
+                    <div className="whitespace-pre-wrap italic">
+                      {focusTask.notes}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

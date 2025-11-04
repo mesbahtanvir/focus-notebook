@@ -173,89 +173,6 @@ export default function SettingsPage() {
         </CardHeader>
 
         <CardContent className="p-8 space-y-10">
-          <section className="rounded-2xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 via-white to-pink-50 p-6 shadow-inner">
-            <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-              <div className="space-y-4">
-                <Badge
-                  variant={hasProAccess ? 'default' : 'secondary'}
-                  className={hasProAccess ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' : ''}
-                >
-                  {hasProAccess ? 'Focus Notebook Pro' : 'Free plan'}
-                </Badge>
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg">
-                    <Crown className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">Unlock advanced automation</h2>
-                    <p className="text-sm text-gray-600 max-w-xl">{entitlementMessage}</p>
-                  </div>
-                </div>
-
-                {hasProAccess && (
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-700 bg-white/70 border border-purple-200 rounded-xl p-4">
-                    <div>
-                      <span className="font-semibold text-gray-900">Status:</span>{' '}
-                      {subscription?.status ? subscription.status : 'active'}
-                    </div>
-                    <div>
-                      <span className="font-semibold text-gray-900">Tier:</span>{' '}
-                      {subscription?.tier ?? 'pro'}
-                    </div>
-                    {formatDate(subscription?.currentPeriodEnd) && (
-                      <div>
-                        <span className="font-semibold text-gray-900">Renews on:</span>{' '}
-                        {formatDate(subscription?.currentPeriodEnd)}
-                      </div>
-                    )}
-                    {formatDate(lastUpdatedAt) && (
-                      <div>
-                        <span className="font-semibold text-gray-900">Last updated:</span>{' '}
-                        {formatDate(lastUpdatedAt)}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {!hasProAccess && (
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {PRO_BENEFITS.map((benefit) => (
-                      <div
-                        key={benefit.title}
-                        className="flex gap-3 rounded-xl border border-purple-200 bg-white/60 p-4"
-                      >
-                        <div className="mt-1 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 p-2 text-white shadow">
-                          <benefit.icon className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900">{benefit.title}</h4>
-                          <p className="text-sm text-gray-600">{benefit.description}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="w-full md:w-auto flex flex-col gap-3">
-                <p className="text-sm text-gray-600">
-                  Manage your subscription from your{' '}
-                  <Link href="/profile" className="font-semibold text-purple-600 underline-offset-4 hover:underline">
-                    profile page
-                  </Link>.
-                </p>
-                <Button
-                  size="lg"
-                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                  asChild
-                >
-                  <Link href="/profile">
-                    Go to profile
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </section>
 
           <section className="rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-6">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -265,9 +182,9 @@ export default function SettingsPage() {
                     Background processing
                   </Label>
                   {!hasProAccess && (
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200">
+                    <Link href="/profile" className="text-sm font-semibold text-purple-600 underline-offset-4 hover:underline">
                       Pro feature
-                    </Badge>
+                    </Link>
                   )}
                 </div>
                 <p className="text-sm text-gray-600 max-w-2xl">

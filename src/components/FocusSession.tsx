@@ -411,7 +411,9 @@ export function FocusSession() {
               {/* Notes */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Notes for: <span className="text-purple-600 dark:text-purple-400">{currentFocusTask.task.title}</span>
+                  </label>
                   {autoSaving && (
                     <span className="text-xs text-amber-600 dark:text-amber-400">Saving...</span>
                   )}
@@ -419,7 +421,7 @@ export function FocusSession() {
                 <textarea
                   value={localNotes}
                   onChange={(e) => setLocalNotes(e.target.value)}
-                  placeholder="Take notes while you work..."
+                  placeholder={`Notes for "${currentFocusTask.task.title}"... (auto-saved per task)`}
                   className="w-full h-48 px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 dark:focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900/50 resize-none bg-white dark:bg-gray-800 text-sm transition-colors outline-none"
                 />
               </div>

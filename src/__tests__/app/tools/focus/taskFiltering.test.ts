@@ -303,19 +303,19 @@ describe('Focus Page Task Filtering', () => {
       expect(displayText).toBe('pleasure');
     });
 
-    it('defaults to mastery for tasks without category', () => {
+    it('defaults to pleasure for tasks without category', () => {
       const task = new TaskBuilder()
         .withTitle('No category')
         .build();
 
       expect(task.category).toBeUndefined();
 
-      // Verify the display logic defaults to mastery
-      const emoji = task.category === 'pleasure' ? '💝' : '🧠';
-      const displayText = task.category || 'mastery';
+      // Verify the display logic defaults to pleasure
+      const emoji = task.category === 'mastery' ? '🧠' : '💝';
+      const displayText = task.category || 'pleasure';
 
-      expect(emoji).toBe('🧠');
-      expect(displayText).toBe('mastery');
+      expect(emoji).toBe('💝');
+      expect(displayText).toBe('pleasure');
     });
 
     it('displays estimated minutes when present', () => {
