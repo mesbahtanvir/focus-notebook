@@ -17,5 +17,21 @@
       "**/.*",
       "**/node_modules/**"
     ]
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099,
+      "host": "localhost"
+    },
+    "firestore": {
+      "port": 8080,
+      "host": "localhost"
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000,
+      "host": "localhost"
+    },
+    "singleProjectMode": true
   }
 }
