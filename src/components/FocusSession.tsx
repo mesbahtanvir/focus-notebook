@@ -40,6 +40,7 @@ export function FocusSession() {
   const [followUpTitle, setFollowUpTitle] = useState("");
   const [localNotes, setLocalNotes] = useState("");
   const [autoSaving, setAutoSaving] = useState(false);
+  const [isEndingSession, setIsEndingSession] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
@@ -85,12 +86,16 @@ export function FocusSession() {
   // Auto-end session when all tasks completed
   useEffect(() => {
     if (currentSession && currentSession.tasks.filter(t => t.completed).length === currentSession.tasks.length && currentSession.tasks.length > 0) {
+      setIsEndingSession(true);
       const timer = setTimeout(async () => {
         await endSession();
         // Redirect to summary page
         router.push(`/tools/focus/summary?sessionId=${currentSession.id}`);
       }, 1500);
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        setIsEndingSession(false);
+      };
     }
   }, [currentSession, endSession, router]);
 
@@ -223,6 +228,35 @@ export function FocusSession() {
   const totalTasks = currentSession.tasks.length;
   const completedTasks = currentSession.tasks.filter(t => t.completed).length;
 
+  // Show completion screen while ending session
+  if (isEndingSession) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950 dark:to-indigo-950 z-50 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center space-y-6"
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-20 h-20 mx-auto"
+          >
+            <div className="w-full h-full rounded-full border-4 border-purple-200 dark:border-purple-800 border-t-purple-600 dark:border-t-purple-400" />
+          </motion.div>
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 bg-clip-text text-transparent">
+              Session Complete!
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Preparing your summary...
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   const handlePause = async () => {
     if (currentSession.isActive) {
       await pauseSession();
@@ -297,7 +331,7 @@ export function FocusSession() {
     <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col">
       {/* Enhanced Header */}
       <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+        <div className="w-full px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Left: Pause/Resume + Progress indicator for mobile */}
             <div className="flex items-center gap-4">
@@ -368,7 +402,7 @@ export function FocusSession() {
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden">
-        <div className="h-full max-w-7xl mx-auto">
+        <div className="h-full w-full">
           <div className="h-full flex">
             {/* Desktop: Task Navigation Sidebar */}
             <div className="hidden lg:block w-64 border-r border-gray-200 dark:border-gray-800 overflow-y-auto bg-gray-50 dark:bg-gray-900/50">
@@ -560,6 +594,15 @@ export function FocusSession() {
 
                       {/* Primary Actions */}
                       <div className="space-y-3">
+                        {/* Follow-up Task Button */}
+                        <button
+                          onClick={() => setShowFollowUpModal(true)}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-indigo-300 dark:border-indigo-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors text-indigo-600 dark:text-indigo-400 font-medium text-sm"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Create Follow-up Task
+                        </button>
+
                         <div className="flex gap-3">
                           {!currentFocusTask.completed ? (
                             <button
@@ -579,21 +622,12 @@ export function FocusSession() {
                           {currentTaskIndex < totalTasks - 1 && (
                             <button
                               onClick={handleNext}
-                              className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium text-gray-700 dark:text-gray-300"
+                              className="lg:hidden px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium text-gray-700 dark:text-gray-300"
                             >
                               Next →
                             </button>
                           )}
                         </div>
-
-                        {/* Follow-up Task Button */}
-                        <button
-                          onClick={() => setShowFollowUpModal(true)}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-indigo-300 dark:border-indigo-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors text-indigo-600 dark:text-indigo-400 font-medium text-sm"
-                        >
-                          <Plus className="h-4 w-4" />
-                          Create Follow-up Task
-                        </button>
                       </div>
                     </div>
 
