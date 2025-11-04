@@ -96,7 +96,7 @@ test.describe('Dashboard with Baseline Data', () => {
 test.describe('Mobile Views with Baseline Data', () => {
   test('home page - mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await gotoPage(page, '/');
+    await page.goto('/');
 
     await takeScreenshot(page, {
       name: 'home-mobile-with-baseline-data',
@@ -107,7 +107,7 @@ test.describe('Mobile Views with Baseline Data', () => {
 
   test('tasks page - mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await gotoPage(page, '/tools/tasks');
+    await page.goto('/tools/tasks');
 
     await takeScreenshot(page, {
       name: 'tasks-mobile-with-baseline-data',
@@ -118,7 +118,7 @@ test.describe('Mobile Views with Baseline Data', () => {
 
   test('dashboard - mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await gotoPage(page, '/dashboard');
+    await page.goto('/dashboard');
 
     await takeScreenshot(page, {
       name: 'dashboard-mobile-with-baseline-data',
@@ -130,7 +130,7 @@ test.describe('Mobile Views with Baseline Data', () => {
 
 test.describe('Focus Session Detail with Baseline', () => {
   test('focus summary page - shows session history', async ({ page }) => {
-    await gotoPage(page, '/tools/focus/summary');
+    await page.goto('/tools/focus/summary');
 
     // Should show charts and stats from recent focus sessions
     await takeScreenshot(page, {
@@ -142,7 +142,7 @@ test.describe('Focus Session Detail with Baseline', () => {
 
   test('focus summary - mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await gotoPage(page, '/tools/focus/summary');
+    await page.goto('/tools/focus/summary');
 
     await takeScreenshot(page, {
       name: 'focus-summary-mobile-with-baseline-data',
@@ -154,7 +154,7 @@ test.describe('Focus Session Detail with Baseline', () => {
 
 test.describe('Progress Tracking with Baseline', () => {
   test('dashboard progress page - shows trends', async ({ page }) => {
-    await gotoPage(page, '/dashboard/progress');
+    await page.goto('/dashboard/progress');
 
     // Should show progress over time based on baseline data
     await takeScreenshot(page, {
