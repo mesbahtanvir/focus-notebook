@@ -1,19 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { useFocus } from "@/store/useFocus";
 import { motion } from "framer-motion";
-import { Star, TrendingUp, Clock, CheckCircle2, BarChart3 } from "lucide-react";
+import { TrendingUp, Clock, CheckCircle2, BarChart3 } from "lucide-react";
 
 export function FocusStatistics() {
   const completedSession = useFocus((s) => s.completedSession);
-  const saveSessionFeedback = useFocus((s) => s.saveSessionFeedback);
   const clearCompletedSession = useFocus((s) => s.clearCompletedSession);
-  
-  const [feedback, setFeedback] = useState("");
-  const [rating, setRating] = useState(0);
-  const [hoveredRating, setHoveredRating] = useState(0);
-  const [submitted, setSubmitted] = useState(false);
 
   if (!completedSession) return null;
 
@@ -38,26 +31,11 @@ export function FocusStatistics() {
     const mins = Math.floor(seconds / 60);
     const hours = Math.floor(mins / 60);
     const remainingMins = mins % 60;
-    
+
     if (hours > 0) {
       return `${hours}h ${remainingMins}m`;
     }
     return `${mins}m`;
-  };
-
-  const handleSubmit = async () => {
-    if (rating === 0) {
-      alert('Please provide a rating');
-      return;
-    }
-    
-    await saveSessionFeedback(feedback, rating);
-    setSubmitted(true);
-    
-    // Close after a delay
-    setTimeout(() => {
-      clearCompletedSession();
-    }, 2000);
   };
 
   return (
@@ -215,82 +193,20 @@ export function FocusStatistics() {
             </div>
           </motion.div>
 
-          {/* Feedback Form */}
-          {!submitted ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="card p-8 space-y-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
+          {/* Done Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="flex justify-center"
+          >
+            <button
+              onClick={() => clearCompletedSession()}
+              className="px-8 py-4 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold text-lg shadow-lg transition-all transform hover:scale-105"
             >
-              <h2 className="text-2xl font-bold text-foreground">How was your session?</h2>
-              
-              {/* Star Rating */}
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-foreground">Rate your focus session</label>
-                <div className="flex items-center gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      onClick={() => setRating(star)}
-                      onMouseEnter={() => setHoveredRating(star)}
-                      onMouseLeave={() => setHoveredRating(0)}
-                      className="transition-transform hover:scale-110"
-                    >
-                      <Star
-                        className={`h-10 w-10 ${
-                          star <= (hoveredRating || rating)
-                            ? 'fill-gray-800 text-gray-800 dark:fill-gray-200 dark:text-gray-200'
-                            : 'text-gray-300 dark:text-gray-600'
-                        }`}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Feedback Text */}
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-foreground">
-                  Share your thoughts (optional)
-                </label>
-                <textarea
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
-                  placeholder="What worked well? What could be improved?"
-                  className="input w-full min-h-[120px] bg-white dark:bg-gray-700 text-foreground"
-                />
-              </div>
-
-              {/* Submit Button */}
-              <div className="flex items-center gap-4">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleSubmit}
-                  className="flex-1 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:from-purple-700 hover:to-pink-700 shadow-lg"
-                >
-                  Submit Feedback
-                </motion.button>
-                <button
-                  onClick={() => clearCompletedSession()}
-                  className="px-6 py-3 rounded-lg border border-border hover:bg-accent text-foreground"
-                >
-                  Skip
-                </button>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="card p-8 text-center space-y-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
-            >
-              <CheckCircle2 className="h-16 w-16 text-green-500 dark:text-green-400 mx-auto" />
-              <h3 className="text-2xl font-bold text-foreground">Thank you!</h3>
-              <p className="text-muted-foreground">Your feedback has been saved.</p>
-            </motion.div>
-          )}
+              Done
+            </button>
+          </motion.div>
         </motion.div>
       </div>
     </div>
