@@ -47,7 +47,7 @@ export function FocusSession() {
   const hasPendingChangesRef = useRef<boolean>(false);
   const pendingNotesTaskIndexRef = useRef<number>(0);
 
-  // Timer effect - uses elapsed time instead of interval ticks to work reliably in background
+  // Timer effect - calculates time from task switch timestamp to work reliably when browser is out of focus
   useEffect(() => {
     if (!currentSession || !currentSession.isActive) {
       if (timerRef.current) {
@@ -57,23 +57,24 @@ export function FocusSession() {
       return;
     }
 
-    // Initialize last update time
+    const currentTaskIndex = currentSession.currentTaskIndex;
+    const baseTimeSpent = currentSession.tasks[currentTaskIndex].timeSpent;
+
+    // Initialize the timestamp when this task became active
     lastUpdateRef.current = Date.now();
 
-    // Start timer for current task
+    // Start timer that calculates elapsed time from when task became active
     timerRef.current = setInterval(() => {
       const now = Date.now();
-      const elapsed = Math.floor((now - lastUpdateRef.current) / 1000);
-      
-      if (elapsed >= 1) {
-        const currentTaskIndex = currentSession.currentTaskIndex;
-        const currentTaskTime = currentSession.tasks[currentTaskIndex].timeSpent;
-        const newTime = currentTaskTime + elapsed;
-        
-        updateTaskTime(currentTaskIndex, newTime);
-        setCurrentTime(newTime);
-        lastUpdateRef.current = now;
-      }
+      // Calculate elapsed time from when task became active (in seconds)
+      const elapsedSinceTaskStart = Math.floor((now - lastUpdateRef.current) / 1000);
+
+      // The new time is the base time spent when task started + elapsed time
+      const newTime = baseTimeSpent + elapsedSinceTaskStart;
+
+      // Update the time in store and local state
+      updateTaskTime(currentTaskIndex, newTime);
+      setCurrentTime(newTime);
     }, 1000);
 
     return () => {
@@ -81,7 +82,9 @@ export function FocusSession() {
         clearInterval(timerRef.current);
       }
     };
-  }, [currentSession, updateTaskTime]);
+    // Only re-run when task index or active status changes, not on every session update
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSession?.currentTaskIndex, currentSession?.isActive]);
 
   // Auto-end session when all tasks completed
   useEffect(() => {

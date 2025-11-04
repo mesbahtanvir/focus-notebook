@@ -109,6 +109,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
   const updateTask = useTasks((s) => s.updateTask);
   const deleteTask = useTasks((s) => s.deleteTask);
   const toggleTask = useTasks((s) => s.toggle);
+  const addTask = useTasks((s) => s.add);
 
   const thoughts = useThoughts((s) => s.thoughts);
   const projects = useProjects((s) => s.projects);

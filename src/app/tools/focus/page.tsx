@@ -435,10 +435,10 @@ function FocusPageContent() {
                     <button
                       onClick={() => setShowAlreadySelected(!showAlreadySelected)}
                       className="text-xs text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 font-medium flex items-center gap-1"
-                      title={showAlreadySelected ? "Hide tasks not due today" : "Show tasks not due today"}
+                      title={showAlreadySelected ? "Hide completed/not-needed tasks" : "Show completed/not-needed tasks"}
                     >
                       {showAlreadySelected ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                      {showAlreadySelected ? 'Hide' : 'Show'} later tasks
+                      {showAlreadySelected ? 'Hide' : 'Show'} not needed today
                     </button>
                     {selectedTasks.length > 0 && (
                       <button
@@ -461,11 +461,11 @@ function FocusPageContent() {
                   </div>
                 ) : visibleActiveTasks.length === 0 ? (
                   <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
-                    <div className="text-4xl mb-2">🫥</div>
+                    <div className="text-4xl mb-2">✅</div>
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      All later tasks are hidden
+                      All tasks for today are completed or not needed!
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Use the toggle above to show tasks not needed today.</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Use the toggle above to show other tasks.</p>
                   </div>
                 ) : (
                   <div className="max-h-[500px] lg:max-h-[600px] overflow-y-auto space-y-1.5 pr-1">
