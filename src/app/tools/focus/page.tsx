@@ -99,15 +99,9 @@ function FocusPageContent() {
     }
   }, [autoSuggestedTasks, selectedTaskIds.length]);
 
-  // Show confirmation modal if coming from Quick Focus (has duration param)
-  useEffect(() => {
-    const shouldShowConfirm = urlDuration && autoSuggestedTasks.length > 0 && !currentSession && !hasActiveSession;
-    
-    if (shouldShowConfirm && selectedTaskIds.length > 0 && !showConfirmModal) {
-      setShowConfirmModal(true);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlDuration, autoSuggestedTasks.length, currentSession, hasActiveSession, selectedTaskIds.length]);
+  // Quick Focus: Just auto-select tasks, don't auto-show confirmation modal
+  // Users can manually click "Start Focus" when they're ready
+  // This prevents the jarring immediate popup experience
 
   const checkForActiveSession = useCallback(async () => {
     // Check Firestore for active sessions (handled by useFocus store)

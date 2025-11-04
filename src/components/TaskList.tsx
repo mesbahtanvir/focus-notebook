@@ -6,7 +6,7 @@ import { useTasks, Task } from "@/store/useTasks";
 import { useThoughts } from "@/store/useThoughts";
 import { isTodayISO, isTaskCompletedToday } from "@/lib/utils/date";
 import Link from "next/link";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, ExternalLink } from "lucide-react";
 import { TimeDisplay } from "./TimeDisplay";
 
 export default function TaskList() {
@@ -152,6 +152,35 @@ export default function TaskList() {
                             <MessageCircle className="h-3 w-3" />
                             From Thought
                           </Link>
+                        );
+                      })()}
+                      {t.ctaButton && (() => {
+                        const buttonIcons: Record<string, string> = {
+                          leetcode: '💻',
+                          chess: '♟️',
+                          headspace: '🧘',
+                          focus: '⚡',
+                          brainstorming: '💡',
+                          notes: '📝',
+                          custom: '🔗',
+                        };
+                        const icon = buttonIcons[t.ctaButton.type] || '🔗';
+                        const url = t.ctaButton.toolPath || t.ctaButton.url || '#';
+                        const isExternal = url.startsWith('http');
+
+                        return (
+                          <a
+                            href={url}
+                            target={isExternal ? '_blank' : '_self'}
+                            rel={isExternal ? 'noopener noreferrer' : undefined}
+                            className="text-xs px-2 py-0.5 rounded bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 dark:from-purple-950/40 dark:to-indigo-950/40 dark:text-purple-300 hover:from-purple-200 hover:to-indigo-200 dark:hover:from-purple-900/60 dark:hover:to-indigo-900/60 transition-colors flex items-center gap-1"
+                            onClick={(e) => e.stopPropagation()}
+                            title={t.ctaButton.label || 'Quick action'}
+                          >
+                            <span>{icon}</span>
+                            {t.ctaButton.label && <span className="max-w-[80px] truncate">{t.ctaButton.label}</span>}
+                            {isExternal && <ExternalLink className="h-2.5 w-2.5" />}
+                          </a>
                         );
                       })()}
                     </div>

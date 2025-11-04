@@ -41,6 +41,8 @@ export function FocusSession() {
   const [localNotes, setLocalNotes] = useState("");
   const [autoSaving, setAutoSaving] = useState(false);
   const [isEndingSession, setIsEndingSession] = useState(false);
+  const [followUpCreated, setFollowUpCreated] = useState(false);
+  const [createdTaskTitle, setCreatedTaskTitle] = useState("");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
@@ -320,9 +322,18 @@ export function FocusSession() {
         await addFollowUpTask(currentTaskIndex, newTask);
       }
 
+      // Show success feedback
+      setCreatedTaskTitle(followUpTitle.trim());
+      setFollowUpCreated(true);
+
       // Reset and close modal
       setFollowUpTitle("");
       setShowFollowUpModal(false);
+
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        setFollowUpCreated(false);
+      }, 3000);
     } catch (error) {
       console.error('Failed to create follow-up task:', error);
     }
@@ -605,6 +616,23 @@ export function FocusSession() {
                           <Plus className="h-4 w-4" />
                           Create Follow-up Task
                         </button>
+
+                        {/* Success Feedback */}
+                        <AnimatePresence>
+                          {followUpCreated && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              className="w-full flex items-center gap-2 px-4 py-3 bg-green-50 dark:bg-green-950/30 border border-green-300 dark:border-green-800 rounded-lg text-green-700 dark:text-green-300 text-sm font-medium"
+                            >
+                              <Check className="h-4 w-4 flex-shrink-0" />
+                              <span className="flex-1">
+                                Follow-up task &quot;{createdTaskTitle}&quot; created successfully!
+                              </span>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
 
                         <div className="flex gap-3">
                           {!currentFocusTask.completed ? (

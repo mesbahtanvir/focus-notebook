@@ -30,6 +30,15 @@ export interface TaskCompletion {
   note?: string // Optional note for this specific completion
 }
 
+export type CTAButtonType = 'leetcode' | 'chess' | 'headspace' | 'focus' | 'brainstorming' | 'notes' | 'custom'
+
+export interface CTAButton {
+  type: CTAButtonType
+  label?: string // Custom label for the button
+  url?: string // Custom URL for 'custom' type
+  toolPath?: string // Internal tool path (e.g., '/tools/brainstorming')
+}
+
 export interface Task {
   id: string
   title: string
@@ -55,6 +64,7 @@ export interface Task {
   projectId?: string // Link to project
   thoughtId?: string // Link to thought that created this task
   focusEligible?: boolean // Can be done during a focus session (laptop/notebook work)
+  ctaButton?: CTAButton // Call-to-action button for quick access to related tools/sites
 
   // AI Action Tracking (Bug 1)
   createdBy?: 'ai' | 'user' // Who created this task

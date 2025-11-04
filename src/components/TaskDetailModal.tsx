@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTasks, Task, TaskCategory, TaskPriority, TaskStatus, RecurrenceType, TaskStep } from "@/store/useTasks";
+import { useTasks, Task, TaskCategory, TaskPriority, TaskStatus, RecurrenceType, TaskStep, CTAButtonType, CTAButton } from "@/store/useTasks";
 import { useThoughts } from "@/store/useThoughts";
 import { useProjects } from "@/store/useProjects";
 import { useFocus } from "@/store/useFocus";
@@ -103,6 +103,10 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
   const [selectedThoughtId, setSelectedThoughtId] = useState<string>(getThoughtIdFromTask(task));
   const [selectedProjectId, setSelectedProjectId] = useState<string>(task.projectId || '');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [ctaButtonType, setCtaButtonType] = useState<CTAButtonType | 'none'>(task.ctaButton?.type || 'none');
+  const [ctaButtonLabel, setCtaButtonLabel] = useState(task.ctaButton?.label || '');
+  const [ctaButtonUrl, setCtaButtonUrl] = useState(task.ctaButton?.url || '');
+  const [ctaButtonToolPath, setCtaButtonToolPath] = useState(task.ctaButton?.toolPath || '');
 
   const { user } = useAuth();
 
@@ -172,6 +176,14 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
       notesToSave = notes || undefined;
     }
 
+    // Build CTA button config
+    const ctaButtonConfig: CTAButton | undefined = ctaButtonType !== 'none' ? {
+      type: ctaButtonType as CTAButtonType,
+      label: ctaButtonLabel || undefined,
+      url: ctaButtonUrl || undefined,
+      toolPath: ctaButtonToolPath || undefined,
+    } : undefined;
+
     await updateTask(task.id, {
       title,
       notes: notesToSave,
@@ -185,6 +197,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
       steps: steps.length > 0 ? steps : undefined,
       thoughtId: selectedThoughtId || undefined,
       projectId: selectedProjectId || undefined,
+      ctaButton: ctaButtonConfig,
     });
     setIsEditing(false);
   };
@@ -752,6 +765,65 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                 <span className="text-sm text-gray-400 dark:text-gray-500">No tags</span>
               )}
             </div>
+
+            {/* CTA Button */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">🎯 Quick Action Button</label>
+              {isEditing ? (
+                <div className="space-y-3">
+                  <select
+                    value={ctaButtonType}
+                    onChange={(e) => setCtaButtonType(e.target.value as CTAButtonType | 'none')}
+                    className="input w-full"
+                  >
+                    <option value="none">No button</option>
+                    <option value="leetcode">LeetCode</option>
+                    <option value="chess">Chess.com</option>
+                    <option value="headspace">Headspace</option>
+                    <option value="focus">Focus Session</option>
+                    <option value="brainstorming">Brainstorming</option>
+                    <option value="notes">Notes</option>
+                    <option value="custom">Custom URL</option>
+                  </select>
+
+                  {ctaButtonType !== 'none' && (
+                    <>
+                      <input
+                        type="text"
+                        value={ctaButtonLabel}
+                        onChange={(e) => setCtaButtonLabel(e.target.value)}
+                        placeholder="Button label (optional)"
+                        className="input w-full"
+                      />
+
+                      {ctaButtonType === 'custom' && (
+                        <input
+                          type="url"
+                          value={ctaButtonUrl}
+                          onChange={(e) => setCtaButtonUrl(e.target.value)}
+                          placeholder="https://example.com"
+                          className="input w-full"
+                        />
+                      )}
+
+                      {(ctaButtonType === 'focus' || ctaButtonType === 'brainstorming' || ctaButtonType === 'notes') && (
+                        <input
+                          type="text"
+                          value={ctaButtonToolPath}
+                          onChange={(e) => setCtaButtonToolPath(e.target.value)}
+                          placeholder="/tools/brainstorming (optional)"
+                          className="input w-full"
+                        />
+                      )}
+                    </>
+                  )}
+                </div>
+              ) : task.ctaButton ? (
+                <CTAButtonDisplay task={task} />
+              ) : (
+                <span className="text-sm text-gray-400 dark:text-gray-500">No quick action</span>
+              )}
+            </div>
           </section>
 
           {/* AI Generated Task Info */}
@@ -816,5 +888,47 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
         />
       </div>
     </div>
+  );
+}
+
+// CTA Button Display Component
+function CTAButtonDisplay({ task }: { task: Task }) {
+  if (!task.ctaButton) return null;
+
+  const getButtonConfig = (button: CTAButton) => {
+    const defaultConfigs = {
+      leetcode: { url: 'https://leetcode.com', label: 'Solve on LeetCode', icon: '💻', color: 'from-orange-400 to-yellow-400 text-orange-900' },
+      chess: { url: 'https://chess.com', label: 'Play Chess', icon: '♟️', color: 'from-gray-700 to-gray-900 text-white' },
+      headspace: { url: 'https://headspace.com', label: 'Meditate', icon: '🧘', color: 'from-orange-300 to-red-400 text-orange-900' },
+      focus: { url: '/tools/focus', label: 'Start Focus', icon: '⚡', color: 'from-purple-400 to-indigo-400 text-purple-900' },
+      brainstorming: { url: '/tools/brainstorming', label: 'Brainstorm', icon: '💡', color: 'from-yellow-300 to-amber-400 text-yellow-900' },
+      notes: { url: '/tools/notes', label: 'Take Notes', icon: '📝', color: 'from-blue-300 to-cyan-400 text-blue-900' },
+      custom: { url: button.url || '#', label: button.label || 'Open Link', icon: '🔗', color: 'from-gray-300 to-gray-400 text-gray-900' },
+    };
+
+    const config = defaultConfigs[button.type] || defaultConfigs.custom;
+
+    return {
+      url: button.toolPath || button.url || config.url,
+      label: button.label || config.label,
+      icon: config.icon,
+      color: config.color,
+    };
+  };
+
+  const config = getButtonConfig(task.ctaButton);
+  const isExternal = config.url.startsWith('http');
+
+  return (
+    <a
+      href={config.url}
+      target={isExternal ? '_blank' : '_self'}
+      rel={isExternal ? 'noopener noreferrer' : undefined}
+      className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r ${config.color} font-bold text-sm shadow-md hover:shadow-lg transform hover:scale-105 transition-all`}
+    >
+      <span>{config.icon}</span>
+      <span>{config.label}</span>
+      {isExternal && <ExternalLink className="h-4 w-4" />}
+    </a>
   );
 }
