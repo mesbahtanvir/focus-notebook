@@ -42,6 +42,7 @@ export function FocusSession() {
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
   const hasPendingChangesRef = useRef<boolean>(false);
+  const pendingNotesTaskIndexRef = useRef<number>(0);
 
   // Timer effect - uses elapsed time instead of interval ticks to work reliably in background
   useEffect(() => {
@@ -107,23 +108,19 @@ export function FocusSession() {
       clearTimeout(autoSaveTimeoutRef.current);
     }
 
-    if (localNotes !== (currentSession?.tasks[currentSession.currentTaskIndex].notes || "")) {
+    if (currentSession && localNotes !== (currentSession.tasks[currentSession.currentTaskIndex].notes || "")) {
+      // Capture the task index when notes change to prevent race condition
+      const taskIndexForTheseNotes = currentSession.currentTaskIndex;
+      pendingNotesTaskIndexRef.current = taskIndexForTheseNotes;
+
       hasPendingChangesRef.current = true;
       setAutoSaving(true);
       autoSaveTimeoutRef.current = setTimeout(async () => {
         if (currentSession) {
           try {
-            await updateTaskNotes(currentSession.currentTaskIndex, localNotes);
-            // Also save to actual task
-            const currentFocusTask = currentSession.tasks[currentSession.currentTaskIndex];
-            const taskId = currentFocusTask.task.id;
-            const sessionNotes = localNotes.trim();
+            // Use the captured task index, not the current index
+            await updateTaskNotes(pendingNotesTaskIndexRef.current, localNotes);
 
-            if (sessionNotes) {
-              const timestamp = new Date().toLocaleString();
-              const updatedNotes = `**Focus Session Notes (${timestamp})**\n${sessionNotes}`;
-              await useTasks.getState().updateTask(taskId, { notes: updatedNotes });
-            }
             hasPendingChangesRef.current = false;
             setAutoSaving(false);
           } catch (error) {
