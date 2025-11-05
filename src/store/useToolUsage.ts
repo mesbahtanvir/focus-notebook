@@ -19,6 +19,7 @@ export type ToolName =
   | 'deepreflect'
   | 'packing-list'
   | 'trips'
+  | 'spending'
   | 'investments'
   | 'subscriptions'
   | 'asset-horizon';

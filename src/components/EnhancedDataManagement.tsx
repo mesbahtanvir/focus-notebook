@@ -31,6 +31,7 @@ export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagement
     exportData,
     exportAll,
     getAvailableCounts,
+    getDataSummaries,
     isExporting,
   } = useImportExport();
 
@@ -43,6 +44,7 @@ export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagement
 
   const availableCounts = getAvailableCounts();
   const totalItems = Object.values(availableCounts).reduce((sum, count) => sum + count, 0);
+  const dataSummaries = getDataSummaries();
 
   const statsEntries = useMemo(
     () => [
@@ -54,6 +56,7 @@ export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagement
       { label: 'Focus Sessions', value: availableCounts.focusSessions, accent: 'text-cyan-600 dark:text-cyan-400', border: 'border-cyan-200 dark:border-cyan-800', bg: 'bg-cyan-50 dark:bg-cyan-950/20' },
       { label: 'People', value: availableCounts.people, accent: 'text-teal-600 dark:text-teal-400', border: 'border-teal-200 dark:border-teal-800', bg: 'bg-teal-50 dark:bg-teal-950/20' },
       { label: 'Portfolios', value: availableCounts.portfolios, accent: 'text-amber-600 dark:text-amber-400', border: 'border-amber-200 dark:border-amber-800', bg: 'bg-amber-50 dark:bg-amber-950/20' },
+      { label: 'Transactions', value: availableCounts.spending, accent: 'text-green-600 dark:text-green-400', border: 'border-green-200 dark:border-green-800', bg: 'bg-green-50 dark:bg-green-950/20' },
       { label: 'Total Items', value: totalItems, accent: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-300 dark:border-emerald-800', bg: 'bg-emerald-50 dark:bg-emerald-950/20', highlight: true },
     ],
     [availableCounts, totalItems]
@@ -208,23 +211,25 @@ export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagement
   }, [importResult, showImportProgress, resetImport]);
 
   return (
-    <div className="pt-8 space-y-4 border-t-4 border-green-200">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="p-2 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full">
-          <Database className="h-5 w-5 text-white" />
+    <div className="pt-10 space-y-6 border-t-4 border-green-200 dark:border-green-700">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="p-2.5 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full shadow-lg">
+          <Database className="h-6 w-6 text-white" />
         </div>
-        <h3 className="text-lg font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+        <h3 className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
           Enhanced Data Management
         </h3>
       </div>
 
-      <div className="rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-6 border-2 border-green-200 dark:border-green-800">
-        <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
+      <div className="rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-8 border-2 border-green-200 dark:border-green-800 shadow-sm">
+        <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">
           Advanced import/export with preview, conflict resolution, and progress tracking.
         </p>
 
         {/* Data Statistics */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="mb-8">
+          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Overview</h4>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           {statsEntries.map((entry) => (
             <div
               key={entry.label}
@@ -238,11 +243,197 @@ export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagement
               </div>
             </div>
           ))}
+          </div>
         </div>
 
         {totalItems === 0 && (
-          <div className="mb-6 rounded-lg border border-dashed border-green-300 dark:border-green-800 bg-white/70 dark:bg-gray-900/40 p-3 text-xs text-gray-600 dark:text-gray-400">
+          <div className="mb-8 rounded-lg border border-dashed border-green-300 dark:border-green-800 bg-white/70 dark:bg-gray-900/40 p-4 text-sm text-gray-600 dark:text-gray-400 text-center">
             No data yet. Import a backup file or keep using the app and your insights will appear here.
+          </div>
+        )}
+
+        {/* Individual Tool Summaries */}
+        {totalItems > 0 && (
+          <div className="mb-8 space-y-4">
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Detailed Insights</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Tasks Summary */}
+              {dataSummaries.tasks.total > 0 && (
+                <div className="p-4 rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/10 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-3">Tasks</div>
+                  <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Active:</span>
+                      <span className="font-medium text-purple-600 dark:text-purple-400">{dataSummaries.tasks.active}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Completed:</span>
+                      <span className="font-medium text-purple-600 dark:text-purple-400">{dataSummaries.tasks.completed}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>High Priority:</span>
+                      <span className="font-medium text-purple-600 dark:text-purple-400">{dataSummaries.tasks.highPriority}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Projects Summary */}
+              {dataSummaries.projects.total > 0 && (
+                <div className="p-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/10 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-3">Projects</div>
+                  <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Active:</span>
+                      <span className="font-medium text-blue-600 dark:text-blue-400">{dataSummaries.projects.active}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Completed:</span>
+                      <span className="font-medium text-blue-600 dark:text-blue-400">{dataSummaries.projects.completed}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>On Hold:</span>
+                      <span className="font-medium text-blue-600 dark:text-blue-400">{dataSummaries.projects.onHold}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Goals Summary */}
+              {dataSummaries.goals.total > 0 && (
+                <div className="p-4 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/10 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-sm font-semibold text-emerald-700 dark:text-emerald-300 mb-3">Goals</div>
+                  <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Short-term:</span>
+                      <span className="font-medium text-emerald-600 dark:text-emerald-400">{dataSummaries.goals.shortTerm}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Long-term:</span>
+                      <span className="font-medium text-emerald-600 dark:text-emerald-400">{dataSummaries.goals.longTerm}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Active:</span>
+                      <span className="font-medium text-emerald-600 dark:text-emerald-400">{dataSummaries.goals.active}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Thoughts Summary */}
+              {dataSummaries.thoughts.total > 0 && (
+                <div className="p-4 rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-950/10 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-sm font-semibold text-yellow-700 dark:text-yellow-300 mb-3">Thoughts</div>
+                  <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Deep Thoughts:</span>
+                      <span className="font-medium text-yellow-600 dark:text-yellow-400">{dataSummaries.thoughts.deepThoughts}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>With AI Suggestions:</span>
+                      <span className="font-medium text-yellow-600 dark:text-yellow-400">{dataSummaries.thoughts.withSuggestions}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Moods Summary */}
+              {dataSummaries.moods.total > 0 && (
+                <div className="p-4 rounded-lg border border-pink-200 dark:border-pink-800 bg-pink-50/50 dark:bg-pink-950/10 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-sm font-semibold text-pink-700 dark:text-pink-300 mb-3">Moods</div>
+                  <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Average Mood:</span>
+                      <span className="font-medium text-pink-600 dark:text-pink-400">{dataSummaries.moods.averageMood}/10</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>This Month:</span>
+                      <span className="font-medium text-pink-600 dark:text-pink-400">{dataSummaries.moods.thisMonth}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Focus Sessions Summary */}
+              {dataSummaries.focusSessions.total > 0 && (
+                <div className="p-4 rounded-lg border border-cyan-200 dark:border-cyan-800 bg-cyan-50/50 dark:bg-cyan-950/10 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-sm font-semibold text-cyan-700 dark:text-cyan-300 mb-3">Focus Sessions</div>
+                  <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Total Time:</span>
+                      <span className="font-medium text-cyan-600 dark:text-cyan-400">{dataSummaries.focusSessions.totalMinutes} min</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Avg Rating:</span>
+                      <span className="font-medium text-cyan-600 dark:text-cyan-400">{dataSummaries.focusSessions.averageRating}/5</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>This Week:</span>
+                      <span className="font-medium text-cyan-600 dark:text-cyan-400">{dataSummaries.focusSessions.thisWeek}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* People Summary */}
+              {dataSummaries.people.total > 0 && (
+                <div className="p-4 rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/10 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-sm font-semibold text-teal-700 dark:text-teal-300 mb-3">People</div>
+                  <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Family:</span>
+                      <span className="font-medium text-teal-600 dark:text-teal-400">{dataSummaries.people.family}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Friends:</span>
+                      <span className="font-medium text-teal-600 dark:text-teal-400">{dataSummaries.people.friends}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Colleagues:</span>
+                      <span className="font-medium text-teal-600 dark:text-teal-400">{dataSummaries.people.colleagues}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Portfolios Summary */}
+              {dataSummaries.portfolios.total > 0 && (
+                <div className="p-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/10 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-sm font-semibold text-amber-700 dark:text-amber-300 mb-3">Portfolios</div>
+                  <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Active:</span>
+                      <span className="font-medium text-amber-600 dark:text-amber-400">{dataSummaries.portfolios.active}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Total Investments:</span>
+                      <span className="font-medium text-amber-600 dark:text-amber-400">{dataSummaries.portfolios.totalInvestments}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Spending Summary */}
+              {dataSummaries.spending.total > 0 && (
+                <div className="p-4 rounded-lg border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/10 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-sm font-semibold text-green-700 dark:text-green-300 mb-3">Transactions</div>
+                  <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Total Amount:</span>
+                      <span className="font-medium text-green-600 dark:text-green-400">${dataSummaries.spending.totalAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>This Month:</span>
+                      <span className="font-medium text-green-600 dark:text-green-400">{dataSummaries.spending.thisMonth}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Avg Transaction:</span>
+                      <span className="font-medium text-green-600 dark:text-green-400">${dataSummaries.spending.averageTransaction}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -303,7 +494,7 @@ export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagement
                       Delete All Data
                     </div>
                     <p className="text-xs text-red-600 dark:text-red-300">
-                      Permanently remove all tasks, goals, projects, thoughts, moods, focus sessions, and people from your account.
+                      Permanently remove all tasks, goals, projects, thoughts, moods, focus sessions, people, and transactions from your account.
                     </p>
                   </div>
                 </div>
@@ -336,6 +527,7 @@ export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagement
                       <li>{availableCounts.moods} moods</li>
                       <li>{availableCounts.focusSessions} focus sessions</li>
                       <li>{availableCounts.people} people</li>
+                      <li>{availableCounts.spending} transactions</li>
                     </ul>
                   </div>
                 </div>

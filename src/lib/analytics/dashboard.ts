@@ -178,9 +178,11 @@ function sumSessionTime(session: FocusSession): number {
 function countTasksByCategory(tasks: Task[]): { mastery: number; pleasure: number } {
   return tasks.reduce(
     (totals, task) => {
-      if (task.category === "mastery") {
+      // Default to 'mastery' if category is undefined
+      const category = task.category || "mastery";
+      if (category === "mastery") {
         totals.mastery += 1;
-      } else if (task.category === "pleasure") {
+      } else if (category === "pleasure") {
         totals.pleasure += 1;
       }
       return totals;

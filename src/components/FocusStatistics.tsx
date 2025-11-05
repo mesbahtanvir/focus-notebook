@@ -17,13 +17,14 @@ export function FocusStatistics() {
   const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   // Calculate mastery vs pleasure ratio
+  // Default to 'mastery' if category is undefined
   const masteryTime = tasks
-    .filter(t => t.task.category === 'mastery')
+    .filter(t => (t.task.category || 'mastery') === 'mastery')
     .reduce((sum, t) => sum + t.timeSpent, 0);
   const pleasureTime = tasks
     .filter(t => t.task.category === 'pleasure')
     .reduce((sum, t) => sum + t.timeSpent, 0);
-  
+
   const masteryPercentage = totalTimeSpent > 0 ? (masteryTime / totalTimeSpent) * 100 : 50;
   const pleasurePercentage = totalTimeSpent > 0 ? (pleasureTime / totalTimeSpent) * 100 : 50;
 

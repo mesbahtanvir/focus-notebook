@@ -49,6 +49,7 @@ function ThoughtsPageContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'processed' | 'unprocessed'>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   // Date formatting function
   const formatDate = (date: any): string => {
@@ -85,6 +86,31 @@ function ThoughtsPageContent() {
 
   // Approval system removed - actions are executed instantly
 
+  // Calculate popular tags
+  const popularTags = useMemo(() => {
+    const tagCounts = new Map<string, number>();
+    thoughts.forEach(thought => {
+      thought.tags?.forEach(tag => {
+        // Exclude processed tag and person tags from popular tags
+        if (tag !== 'processed' && !tag.startsWith('person-')) {
+          tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+        }
+      });
+    });
+    return Array.from(tagCounts.entries())
+      .sort((a, b) => b[1] - a[1]) // Sort by count descending
+      .slice(0, 8) // Top 8 tags
+      .map(([tag, count]) => ({ tag, count }));
+  }, [thoughts]);
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag)
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
   const filteredThoughts = useMemo(() => {
     if (!thoughts || !Array.isArray(thoughts)) return [];
 
@@ -109,6 +135,13 @@ function ThoughtsPageContent() {
       });
     }
 
+    // Apply tag filter (AND logic: thought must have ALL selected tags)
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(thought =>
+        selectedTags.every(tag => thought.tags?.includes(tag))
+      );
+    }
+
     // Sort by created date, newest first
     const sorted = [...filtered].sort((a, b) => {
       const dateA = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -117,7 +150,7 @@ function ThoughtsPageContent() {
     });
 
     return sorted;
-  }, [thoughts, searchTerm, filterType]);
+  }, [thoughts, searchTerm, filterType, selectedTags]);
 
   // Use infinite scroll
   const { displayedItems, hasMore, observerTarget } = useInfiniteScroll(filteredThoughts, {
@@ -225,6 +258,39 @@ function ThoughtsPageContent() {
         }
         theme={theme}
       />
+
+      {/* Popular Tags Filter */}
+      {popularTags.length > 0 && (
+        <div className="mb-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1">
+              <Tag className="h-3.5 w-3.5" />
+              Popular Tags:
+            </span>
+            {popularTags.map(({ tag, count }) => (
+              <button
+                key={tag}
+                onClick={() => toggleTag(tag)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all transform hover:scale-105 ${
+                  selectedTags.includes(tag)
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                #{tag} ({count})
+              </button>
+            ))}
+            {selectedTags.length > 0 && (
+              <button
+                onClick={() => setSelectedTags([])}
+                className="px-3 py-1.5 text-xs text-red-600 dark:text-red-400 hover:underline font-medium"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <ToolContent>
         {filteredThoughts.length === 0 ? (

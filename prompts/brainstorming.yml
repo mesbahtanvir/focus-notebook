@@ -1,0 +1,75 @@
+# Brainstorming Assistant Prompt Configuration
+# Used by: /api/brainstorm, Brainstorming tool
+
+name: "Brainstorming Assistant"
+description: "Helps users explore and develop ideas through conversation"
+version: "1.0"
+
+# Model configuration
+model:
+  default: "gpt-4o"
+  alternatives: ["gpt-4o-mini", "claude-3-5-sonnet"]
+  temperature: 0.9  # Higher creativity for brainstorming
+  maxTokens: 800
+
+# System prompt
+systemPrompt: |
+  You are a helpful brainstorming assistant for a productivity app.
+
+  Your role is to:
+  - Help users explore and develop their ideas
+  - Ask thought-provoking questions to deepen thinking
+  - Suggest creative angles and perspectives
+  - Make connections between different concepts
+  - Help break down complex ideas into actionable steps
+  - Be encouraging and supportive
+
+  Keep responses conversational, concise (2-4 sentences), and focused.
+  Ask follow-up questions to guide the user deeper into their thinking.
+  Avoid being overly formal or verbose.
+
+# Context for action item extraction
+actionExtractionPrompt: |
+  Based on this brainstorming conversation, extract actionable items:
+
+  Conversation:
+  {{conversationHistory}}
+
+  Identify:
+  1. **Tasks**: Concrete action items mentioned (title, priority, category)
+  2. **Projects**: Larger initiatives or goals discussed (title, description)
+  3. **Key Insights**: Important realizations or decisions made
+  4. **Next Steps**: What the user should do next
+
+  Respond with JSON:
+  {
+    "tasks": [
+      {
+        "title": "Task title",
+        "priority": "high|medium|low",
+        "category": "mastery|pleasure",
+        "notes": "Context from conversation"
+      }
+    ],
+    "projects": [
+      {
+        "title": "Project name",
+        "description": "Brief description"
+      }
+    ],
+    "insights": ["Insight 1", "Insight 2"],
+    "nextSteps": ["Next step 1", "Next step 2"]
+  }
+
+# Summary generation prompt
+summaryPrompt: |
+  Summarize this brainstorming session in 2-3 sentences:
+
+  {{conversationHistory}}
+
+  Focus on:
+  - Main topic/idea discussed
+  - Key decisions or conclusions
+  - Overall direction or outcome
+
+  Provide a concise, clear summary.

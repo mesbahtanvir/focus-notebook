@@ -5,6 +5,7 @@
 
 // Import all export sources to ensure they're registered
 import './tasksExportSource';
+import './spendingExportSource';
 
 // Add more export sources as they're created:
 // import './projectsExportSource';
@@ -13,6 +14,5 @@ import './tasksExportSource';
 // import './moodsExportSource';
 // import './focusSessionsExportSource';
 // import './relationshipsExportSource';
-// import './transactionsExportSource';
 
 export { exportRegistry, registerExportSource } from '../exportRegistry';

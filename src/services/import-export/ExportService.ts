@@ -373,6 +373,7 @@ export class ExportService {
       focusSessions: data.focusSessions?.length || 0,
       people: data.people?.length || 0,
       portfolios: data.portfolios?.length || 0,
+      spending: data.spending?.length || 0,
     };
 
     const totalItems = Object.values(entityCounts).reduce((sum, count) => sum + count, 0);

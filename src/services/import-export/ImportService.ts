@@ -527,6 +527,7 @@ export class ImportService {
       focusSessions: entities.focusSessions?.length || 0,
       people: entities.people?.length || 0,
       portfolios: entities.portfolios?.length || 0,
+      spending: entities.spending?.length || 0,
     };
 
     const totalItems = Object.values(itemsByType).reduce((sum, count) => sum + count, 0);
@@ -550,6 +551,7 @@ export class ImportService {
       focusSessions: ImportPhase.IMPORTING_FOCUS_SESSIONS,
       people: ImportPhase.IMPORTING_PEOPLE,
       portfolios: ImportPhase.IMPORTING_PORTFOLIOS,
+      spending: ImportPhase.IMPORTING_SPENDING,
     };
     return phaseMap[entityType];
   }
@@ -608,6 +610,7 @@ export class ImportService {
       focusSessions: { processed: 0, total: 0, progress: 0 },
       people: { processed: 0, total: 0, progress: 0 },
       portfolios: { processed: 0, total: 0, progress: 0 },
+      spending: { processed: 0, total: 0, progress: 0 },
     };
   }
 
@@ -621,6 +624,7 @@ export class ImportService {
       focusSessions: 0,
       people: 0,
       portfolios: 0,
+      spending: 0,
     };
   }
 
@@ -634,6 +638,7 @@ export class ImportService {
       focusSessions: { processed: 0, total: stats.itemsByType.focusSessions, progress: 0 },
       people: { processed: 0, total: stats.itemsByType.people, progress: 0 },
       portfolios: { processed: 0, total: stats.itemsByType.portfolios, progress: 0 },
+      spending: { processed: 0, total: stats.itemsByType.spending, progress: 0 },
     };
   }
 

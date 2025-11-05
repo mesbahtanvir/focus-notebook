@@ -18,6 +18,7 @@ import { useMoods } from '@/store/useMoods';
 import { useFocus } from '@/store/useFocus';
 import { useRelationships } from '@/store/useRelationships';
 import { useInvestments } from '@/store/useInvestments';
+import { useSpending } from '@/store/useSpending';
 import { auth, db } from '@/lib/firebaseClient';
 import { doc, setDoc, Timestamp } from 'firebase/firestore';
 
@@ -278,6 +279,7 @@ export function useImportExport() {
   const focus = useFocus();
   const relationships = useRelationships();
   const investments = useInvestments();
+  const spending = useSpending();
 
   const importedTasksRef = useRef<Map<string, any>>(new Map());
 
@@ -544,8 +546,89 @@ export function useImportExport() {
       focusSessions: focus.sessions.length,
       people: relationships.people.length,
       portfolios: investments.portfolios.length,
+      spending: spending.transactions.length,
     };
-  }, [tasks, projects, goals, thoughts, moods, focus, relationships, investments]);
+  }, [tasks, projects, goals, thoughts, moods, focus, relationships, investments, spending]);
+
+  /**
+   * Get detailed data summaries for each entity type
+   */
+  const getDataSummaries = useCallback(() => {
+    return {
+      tasks: {
+        total: tasks.tasks.length,
+        active: tasks.tasks.filter(t => !t.done).length,
+        completed: tasks.tasks.filter(t => t.done).length,
+        highPriority: tasks.tasks.filter(t => t.priority === 'high').length,
+      },
+      projects: {
+        total: projects.projects.length,
+        active: projects.projects.filter(p => p.status === 'active').length,
+        completed: projects.projects.filter(p => p.status === 'completed').length,
+        onHold: projects.projects.filter(p => p.status === 'on-hold').length,
+      },
+      goals: {
+        total: goals.goals.length,
+        shortTerm: goals.goals.filter(g => g.timeframe === 'short-term').length,
+        longTerm: goals.goals.filter(g => g.timeframe === 'long-term').length,
+        active: goals.goals.filter(g => g.status === 'active').length,
+      },
+      thoughts: {
+        total: thoughts.thoughts.length,
+        deepThoughts: thoughts.thoughts.filter(t => t.isDeepThought).length,
+        withSuggestions: thoughts.thoughts.filter(t => t.aiSuggestions && t.aiSuggestions.length > 0).length,
+      },
+      moods: {
+        total: moods.moods.length,
+        averageMood: moods.moods.length > 0
+          ? (moods.moods.reduce((sum, m) => sum + m.value, 0) / moods.moods.length).toFixed(1)
+          : '0',
+        thisMonth: moods.moods.filter(m => {
+          const moodDate = new Date(m.createdAt);
+          const now = new Date();
+          return moodDate.getMonth() === now.getMonth() && moodDate.getFullYear() === now.getFullYear();
+        }).length,
+      },
+      focusSessions: {
+        total: focus.sessions.length,
+        totalMinutes: focus.sessions.reduce((sum, s) => sum + (s.duration || 0), 0),
+        averageRating: focus.sessions.length > 0 && focus.sessions.some(s => s.rating)
+          ? (focus.sessions.filter(s => s.rating).reduce((sum, s) => sum + (s.rating || 0), 0) / focus.sessions.filter(s => s.rating).length).toFixed(1)
+          : '0',
+        thisWeek: focus.sessions.filter(s => {
+          const sessionDate = new Date(s.startTime);
+          const now = new Date();
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          return sessionDate >= weekAgo;
+        }).length,
+      },
+      people: {
+        total: relationships.people.length,
+        family: relationships.people.filter(p => p.relationshipType === 'family').length,
+        friends: relationships.people.filter(p => p.relationshipType === 'friend').length,
+        colleagues: relationships.people.filter(p => p.relationshipType === 'colleague').length,
+      },
+      portfolios: {
+        total: investments.portfolios.length,
+        totalInvestments: investments.portfolios.reduce((sum, p) =>
+          sum + (Array.isArray(p.investments) ? p.investments.length : 0), 0
+        ),
+        active: investments.portfolios.filter(p => p.status === 'active').length,
+      },
+      spending: {
+        total: spending.transactions.length,
+        totalAmount: spending.transactions.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0),
+        thisMonth: spending.transactions.filter(t => {
+          const txDate = new Date(t.date);
+          const now = new Date();
+          return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
+        }).length,
+        averageTransaction: spending.transactions.length > 0
+          ? (spending.transactions.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0) / spending.transactions.length).toFixed(2)
+          : '0',
+      },
+    };
+  }, [tasks, projects, goals, thoughts, moods, focus, relationships, investments, spending]);
 
   /**
    * Reset import state
@@ -571,6 +654,7 @@ export function useImportExport() {
     exportData,
     exportAll,
     getAvailableCounts,
+    getDataSummaries,
     isExporting,
   };
 }

@@ -362,6 +362,67 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
             </section>
           ) : null}
 
+          {/* CTA Button - Right after Notes/Description */}
+          <section className="border-t-2 border-dashed border-purple-200 dark:border-purple-800 pt-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">🎯 Quick Action Button</label>
+              {isEditing ? (
+                <div className="space-y-3">
+                  <select
+                    value={ctaButtonType}
+                    onChange={(e) => setCtaButtonType(e.target.value as CTAButtonType | 'none')}
+                    className="input w-full"
+                  >
+                    <option value="none">No button</option>
+                    <option value="leetcode">LeetCode</option>
+                    <option value="chess">Chess.com</option>
+                    <option value="headspace">Headspace</option>
+                    <option value="focus">Focus Session</option>
+                    <option value="brainstorming">Brainstorming</option>
+                    <option value="notes">Notes</option>
+                    <option value="custom">Custom URL</option>
+                  </select>
+
+                  {ctaButtonType !== 'none' && (
+                    <>
+                      <input
+                        type="text"
+                        value={ctaButtonLabel}
+                        onChange={(e) => setCtaButtonLabel(e.target.value)}
+                        placeholder="Button label (optional)"
+                        className="input w-full"
+                      />
+
+                      {ctaButtonType === 'custom' && (
+                        <input
+                          type="url"
+                          value={ctaButtonUrl}
+                          onChange={(e) => setCtaButtonUrl(e.target.value)}
+                          placeholder="https://example.com"
+                          className="input w-full"
+                        />
+                      )}
+
+                      {(ctaButtonType === 'focus' || ctaButtonType === 'brainstorming' || ctaButtonType === 'notes') && (
+                        <input
+                          type="text"
+                          value={ctaButtonToolPath}
+                          onChange={(e) => setCtaButtonToolPath(e.target.value)}
+                          placeholder="/tools/brainstorming (optional)"
+                          className="input w-full"
+                        />
+                      )}
+                    </>
+                  )}
+                </div>
+              ) : task.ctaButton ? (
+                <CTAButtonDisplay task={task} />
+              ) : (
+                <span className="text-sm text-gray-400 dark:text-gray-500">No quick action</span>
+              )}
+            </div>
+          </section>
+
           {/* Create Subtask Button */}
           {!isEditing && (
             <section className="border-t-2 border-dashed border-purple-200 dark:border-purple-800 pt-4">
@@ -763,65 +824,6 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                 </div>
               ) : (
                 <span className="text-sm text-gray-400 dark:text-gray-500">No tags</span>
-              )}
-            </div>
-
-            {/* CTA Button */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">🎯 Quick Action Button</label>
-              {isEditing ? (
-                <div className="space-y-3">
-                  <select
-                    value={ctaButtonType}
-                    onChange={(e) => setCtaButtonType(e.target.value as CTAButtonType | 'none')}
-                    className="input w-full"
-                  >
-                    <option value="none">No button</option>
-                    <option value="leetcode">LeetCode</option>
-                    <option value="chess">Chess.com</option>
-                    <option value="headspace">Headspace</option>
-                    <option value="focus">Focus Session</option>
-                    <option value="brainstorming">Brainstorming</option>
-                    <option value="notes">Notes</option>
-                    <option value="custom">Custom URL</option>
-                  </select>
-
-                  {ctaButtonType !== 'none' && (
-                    <>
-                      <input
-                        type="text"
-                        value={ctaButtonLabel}
-                        onChange={(e) => setCtaButtonLabel(e.target.value)}
-                        placeholder="Button label (optional)"
-                        className="input w-full"
-                      />
-
-                      {ctaButtonType === 'custom' && (
-                        <input
-                          type="url"
-                          value={ctaButtonUrl}
-                          onChange={(e) => setCtaButtonUrl(e.target.value)}
-                          placeholder="https://example.com"
-                          className="input w-full"
-                        />
-                      )}
-
-                      {(ctaButtonType === 'focus' || ctaButtonType === 'brainstorming' || ctaButtonType === 'notes') && (
-                        <input
-                          type="text"
-                          value={ctaButtonToolPath}
-                          onChange={(e) => setCtaButtonToolPath(e.target.value)}
-                          placeholder="/tools/brainstorming (optional)"
-                          className="input w-full"
-                        />
-                      )}
-                    </>
-                  )}
-                </div>
-              ) : task.ctaButton ? (
-                <CTAButtonDisplay task={task} />
-              ) : (
-                <span className="text-sm text-gray-400 dark:text-gray-500">No quick action</span>
               )}
             </div>
           </section>

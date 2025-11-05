@@ -22,7 +22,8 @@ import {
   MapPin,
   LineChart,
   CreditCard,
-  BarChart3
+  BarChart3,
+  DollarSign
 } from "lucide-react";
 import Link from "next/link";
 import { useToolEnrollment } from "@/store/useToolEnrollment";
@@ -42,6 +43,7 @@ const toolIcons: Record<ToolName, any> = {
   deepreflect: Sparkles,
   'packing-list': Compass,
   trips: MapPin,
+  spending: DollarSign,
   investments: LineChart,
   subscriptions: CreditCard,
   'asset-horizon': BarChart3,
@@ -62,6 +64,7 @@ const toolColors: Record<ToolName, string> = {
   deepreflect: "from-violet-500 to-purple-500",
   'packing-list': "from-blue-500 to-sky-500",
   trips: "from-rose-500 to-pink-500",
+  spending: "from-green-500 to-emerald-500",
   investments: "from-emerald-500 to-teal-500",
   subscriptions: "from-indigo-500 to-blue-500",
   'asset-horizon': "from-purple-500 to-indigo-500",
@@ -82,6 +85,7 @@ const toolLabels: Record<ToolName, string> = {
   deepreflect: "Deep Reflect",
   'packing-list': "Packing Planner",
   trips: "Trips",
+  spending: "Spending",
   investments: "Investments",
   subscriptions: "Subscriptions",
   'asset-horizon': "Asset Horizon",

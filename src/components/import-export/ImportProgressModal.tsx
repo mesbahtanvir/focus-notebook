@@ -20,6 +20,7 @@ import {
   Briefcase,
   ChevronDown,
   ChevronUp,
+  DollarSign,
 } from 'lucide-react';
 import { ImportProgress, ImportPhase, EntityType } from '@/types/import-export';
 
@@ -40,6 +41,7 @@ const entityIcons: Record<EntityType, React.ComponentType<any>> = {
   focusSessions: Timer,
   people: Users,
   portfolios: Briefcase,
+  spending: DollarSign,
 };
 
 const entityLabels: Record<EntityType, string> = {
@@ -51,6 +53,7 @@ const entityLabels: Record<EntityType, string> = {
   focusSessions: 'Focus Sessions',
   people: 'People',
   portfolios: 'Portfolios',
+  spending: 'Transactions',
 };
 
 const phaseLabels: Record<ImportPhase, string> = {
@@ -66,6 +69,7 @@ const phaseLabels: Record<ImportPhase, string> = {
   [ImportPhase.IMPORTING_FOCUS_SESSIONS]: 'Importing focus sessions...',
   [ImportPhase.IMPORTING_PEOPLE]: 'Importing people...',
   [ImportPhase.IMPORTING_PORTFOLIOS]: 'Importing portfolios...',
+  [ImportPhase.IMPORTING_SPENDING]: 'Importing transactions...',
   [ImportPhase.UPDATING_REFERENCES]: 'Updating references...',
   [ImportPhase.COMPLETING]: 'Completing import...',
   [ImportPhase.COMPLETED]: 'Import completed!',

@@ -16,6 +16,7 @@ import {
   Timer,
   Users,
   Briefcase,
+  DollarSign,
 } from 'lucide-react';
 import {
   Conflict,
@@ -39,6 +40,7 @@ const entityIcons: Record<EntityType, React.ComponentType<any>> = {
   focusSessions: Timer,
   people: Users,
   portfolios: Briefcase,
+  spending: DollarSign,
 };
 
 const conflictTypeLabels: Record<ConflictType, string> = {

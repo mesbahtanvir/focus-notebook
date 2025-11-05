@@ -28,6 +28,7 @@ function FocusSessionSummaryContent() {
 
   const sessions = useFocus((s) => s.sessions);
   const saveSessionFeedback = useFocus((s) => s.saveSessionFeedback);
+  const clearCompletedSession = useFocus((s) => s.clearCompletedSession);
 
   useEffect(() => {
     if (sessionId) {
@@ -263,10 +264,13 @@ function FocusSessionSummaryContent() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4"
+          className="grid grid-cols-1 md:grid-cols-2 gap-4"
         >
           <button
-            onClick={() => router.push('/tools/focus')}
+            onClick={() => {
+              clearCompletedSession();
+              router.push('/tools/focus');
+            }}
             className="flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-bold shadow-lg transition-all transform hover:scale-105"
           >
             <RefreshCw className="h-5 w-5" />
@@ -279,14 +283,6 @@ function FocusSessionSummaryContent() {
           >
             <Zap className="h-5 w-5" />
             View All Sessions
-          </button>
-
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold shadow-lg transition-all transform hover:scale-105"
-          >
-            <Home className="h-5 w-5" />
-            Back to Dashboard
           </button>
         </motion.div>
       </div>

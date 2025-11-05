@@ -308,6 +308,7 @@ export class ConflictDetectionService {
       focusSessions: new Set((importedEntities.focusSessions || []).map((f: any) => f.id)),
       people: new Set((importedEntities.people || []).map((p: any) => p.id)),
       portfolios: new Set((importedEntities.portfolios || []).map((p: any) => p.id)),
+      spending: new Set((importedEntities.spending || []).map((s: any) => s.id)),
     };
   }
 

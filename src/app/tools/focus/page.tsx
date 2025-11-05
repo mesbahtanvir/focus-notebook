@@ -133,6 +133,16 @@ function FocusPageContent() {
 
   const visibleActiveTasks = activeTasks.filter(shouldShowActiveTask);
 
+  // Calculate hidden task count (tasks not relevant for today and not selected)
+  const hiddenTaskCount = useMemo(() => {
+    if (showAlreadySelected) return 0;
+    return activeTasks.filter(task =>
+      !shouldShowActiveTask(task) &&
+      !selectedTaskIds.includes(task.id) &&
+      !autoSuggestedTasks.some(t => t.id === task.id)
+    ).length;
+  }, [activeTasks, showAlreadySelected, shouldShowActiveTask, selectedTaskIds, autoSuggestedTasks]);
+
   // Sort tasks: selected first, then by priority (urgent → high → medium → low), then alphabetically
   const sortedVisibleTasks = useMemo(() => {
     const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
@@ -429,10 +439,18 @@ function FocusPageContent() {
                     <button
                       onClick={() => setShowAlreadySelected(!showAlreadySelected)}
                       className="text-xs text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 font-medium flex items-center gap-1"
-                      title={showAlreadySelected ? "Hide completed/not-needed tasks" : "Show completed/not-needed tasks"}
+                      title={showAlreadySelected
+                        ? "Hide tasks not needed today"
+                        : `Show ${hiddenTaskCount} tasks not needed today (future due dates, already completed)`
+                      }
                     >
                       {showAlreadySelected ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                      {showAlreadySelected ? 'Hide' : 'Show'} not needed today
+                      {showAlreadySelected ? 'Hide' : 'Show'} later tasks
+                      {!showAlreadySelected && hiddenTaskCount > 0 && (
+                        <span className="hidden md:inline ml-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-full text-xs font-semibold">
+                          {hiddenTaskCount}
+                        </span>
+                      )}
                     </button>
                     {selectedTasks.length > 0 && (
                       <button

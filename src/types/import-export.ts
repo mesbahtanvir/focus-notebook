@@ -6,6 +6,7 @@ import { MoodEntry } from "@/store/useMoods";
 import { FocusSession } from "@/store/useFocus";
 import { Person } from "@/store/useRelationships";
 import { Portfolio } from "@/store/useInvestments";
+import { Transaction } from "@/store/useSpending";
 
 // ============================================================================
 // ENTITY TYPES
@@ -19,7 +20,8 @@ export type EntityType =
   | 'moods'
   | 'focusSessions'
   | 'people'
-  | 'portfolios';
+  | 'portfolios'
+  | 'spending';
 
 export interface EntityCollection {
   tasks: Task[];
@@ -30,6 +32,7 @@ export interface EntityCollection {
   focusSessions: FocusSession[];
   people: Person[];
   portfolios: Portfolio[];
+  spending: Transaction[];
 }
 
 // ============================================================================
@@ -203,6 +206,7 @@ export enum ImportPhase {
   IMPORTING_FOCUS_SESSIONS = 'importing_focus_sessions',
   IMPORTING_PEOPLE = 'importing_people',
   IMPORTING_PORTFOLIOS = 'importing_portfolios',
+  IMPORTING_SPENDING = 'importing_spending',
   UPDATING_REFERENCES = 'updating_references',
   COMPLETING = 'completing',
   COMPLETED = 'completed',

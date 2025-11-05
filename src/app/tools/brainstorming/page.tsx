@@ -127,8 +127,8 @@ export default function BrainstormingPage() {
       // Update status to in-progress
       updateRequestStatus(requestId, 'in-progress');
 
-      // Call OpenAI API with user's API key
-      const response = await fetch('/api/chat', {
+      // Call brainstorming API with user's API key
+      const response = await fetch('/api/brainstorm', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -137,10 +137,6 @@ export default function BrainstormingPage() {
           apiKey: settings.openaiApiKey,
           model: settings.aiModel || 'gpt-4o',
           messages: [
-            {
-              role: 'system',
-              content: `You are a helpful brainstorming assistant. The user is brainstorming about: "${currentThought.text}". Help them explore ideas, ask thought-provoking questions, and provide creative suggestions. Keep responses concise and engaging.`
-            },
             ...messages.map(m => ({
               role: m.role,
               content: m.content
@@ -158,7 +154,7 @@ export default function BrainstormingPage() {
       }
 
       const data = await response.json();
-      
+
       // Check if setup is needed
       if (data.needsSetup) {
         setShowApiKeyWarning(true);
@@ -168,13 +164,13 @@ export default function BrainstormingPage() {
         });
         const warningMessage: Message = {
           role: 'assistant',
-          content: data.message,
+          content: data.error || 'Please configure your OpenAI API key in settings.',
           timestamp: new Date()
         };
         setMessages(prev => [...prev, warningMessage]);
         return;
       }
-      
+
       // Check if there's an error
       if (data.error) {
         console.error('API Error:', data);

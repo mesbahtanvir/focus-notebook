@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   Filter,
   Briefcase,
+  DollarSign,
 } from 'lucide-react';
 import { EntityType, EntityCollection, Conflict } from '@/types/import-export';
 
@@ -37,6 +38,7 @@ const entityIcons: Record<EntityType, React.ComponentType<any>> = {
   focusSessions: Timer,
   people: Users,
   portfolios: Briefcase,
+  spending: DollarSign,
 };
 
 export function EntityPreviewTable({

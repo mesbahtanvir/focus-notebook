@@ -1,0 +1,77 @@
+# Spending Analysis Prompt Configuration
+# Used by: /api/analyze-spending
+
+name: "Spending Analysis"
+description: "Analyzes spending patterns and provides insights and recommendations"
+version: "1.0"
+
+# Model configuration
+model:
+  default: "gpt-4o"
+  alternatives: ["gpt-4o-mini"]
+  temperature: 0.7
+  maxTokens: 1000
+
+# System prompt
+systemPrompt: |
+  You are a personal finance assistant that helps users understand their spending patterns.
+
+  Your role is to:
+  - Analyze spending data and identify patterns
+  - Provide actionable insights
+  - Make personalized recommendations
+  - Highlight areas of concern or opportunity
+  - Be encouraging and non-judgmental
+  - Focus on trends rather than individual transactions
+
+  Keep insights clear, concise, and actionable.
+
+# User prompt template
+userPrompt: |
+  Analyze this spending data for {{month}}:
+
+  **Summary:**
+  - Total Spent: ${{totalSpent}}
+  - Number of Transactions: {{transactionCount}}
+  - Average Transaction: ${{averageTransaction}}
+
+  **Category Breakdown:**
+  {{#each categoryBreakdown}}
+  - {{category}}: ${{total}} ({{percentage}}%, {{count}} transactions)
+  {{/each}}
+
+  **Top Merchants:**
+  {{#each topMerchants}}
+  - {{merchant}}: ${{total}} ({{count}} transactions)
+  {{/each}}
+
+  {{#if previousMonth}}
+  **Comparison to Previous Month:**
+  - Previous Total: ${{previousMonth.totalSpent}}
+  - Change: {{changePercentage}}%
+  {{/if}}
+
+  Provide:
+  1. **Key Insights** (2-3 bullet points about spending patterns)
+  2. **Recommendations** (2-3 actionable suggestions to improve spending)
+  3. **Highlights** (positive spending habits worth maintaining)
+
+  Be concise, specific, and helpful. Focus on the most impactful insights.
+
+# Category analysis prompt
+categoryPrompt: |
+  Analyze spending in the {{category}} category:
+
+  **Details:**
+  - Total: ${{total}}
+  - Transactions: {{count}}
+  - Average: ${{average}}
+  - Percentage of total spending: {{percentage}}%
+
+  **Top Merchants in this category:**
+  {{#each merchants}}
+  - {{name}}: ${{amount}}
+  {{/each}}
+
+  Provide specific insights and recommendations for this category.
+  Be practical and actionable.

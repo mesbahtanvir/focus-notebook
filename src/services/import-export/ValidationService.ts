@@ -437,6 +437,7 @@ export class ValidationService {
         focusSessions: 0,
         people: 0,
         portfolios: 0,
+        spending: 0,
       }
     };
   }

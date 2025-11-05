@@ -180,29 +180,67 @@ export default function GoalsPage() {
       />
 
       {/* Short Term Goals */}
-      <div className="space-y-4">
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <PlayCircle className="h-6 w-6 text-orange-600" />
+      <div className="space-y-3">
+        <h2 className="text-lg font-bold flex items-center gap-2 text-gray-900 dark:text-gray-100">
+          <PlayCircle className="h-5 w-5 text-orange-600" />
           Short Term Goals ({shortTermGoals.length})
         </h2>
-        <AnimatePresence>
-          {shortTermGoals.map((goal) => {
-            const goalTime = TimeTrackingService.calculateGoalTime(goal, projects, tasks);
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <AnimatePresence>
+            {shortTermGoals.map((goal) => {
+              const goalTime = TimeTrackingService.calculateGoalTime(goal, projects, tasks);
 
-            return (
-              <motion.div
-                key={goal.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="card p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => router.push(`/tools/goals/${goal.id}`)}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-xl font-bold">{goal.title}</h3>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+              return (
+                <motion.div
+                  key={goal.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="card p-4 hover:shadow-lg transition-all cursor-pointer group relative overflow-hidden"
+                  onClick={() => router.push(`/tools/goals/${goal.id}`)}
+                >
+                  {/* Gradient background accent */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-950/10 dark:to-yellow-950/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                  <div className="relative">
+                    {/* Header with title and actions */}
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="text-lg font-bold flex-1 pr-2 line-clamp-2">{goal.title}</h3>
+                      <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => toggleStatus(goal.id)}
+                          className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-950/40 text-green-600 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Complete"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleEdit(goal)}
+                          className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-950/40 text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Edit"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => updateGoal(goal.id, { status: 'paused' })}
+                          className="p-1 rounded hover:bg-yellow-100 dark:hover:bg-yellow-950/40 text-yellow-600 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Pause"
+                        >
+                          <PauseCircle className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteGoal(goal.id)}
+                          className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-950/40 text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Badges inline */}
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                         goal.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' :
                         goal.priority === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400' :
                         goal.priority === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-400' :
@@ -210,88 +248,91 @@ export default function GoalsPage() {
                       }`}>
                         {goal.priority}
                       </span>
-                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                        {goal.timeframe === 'immediate' && '⚡ Immediate'}
-                        {goal.timeframe === 'short-term' && '⚡ Short Term'}
-                        {goal.timeframe === 'long-term' && '🎯 Long Term'}
-                        {!goal.timeframe && '⚡ Short Term'}
-                      </span>
                       {goalTime.totalMinutes > 0 && (
-                        <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
-                          ⏱️ {TimeTrackingService.formatTime(goalTime.totalMinutes)} invested
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                          ⏱️ {TimeTrackingService.formatTime(goalTime.totalMinutes)}
                         </span>
                       )}
                     </div>
-                    <p className="text-muted-foreground">{goal.objective}</p>
-                  </div>
 
-                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => toggleStatus(goal.id)}
-                      className="p-2 rounded-lg hover:bg-green-100 dark:hover:bg-green-950/40 text-green-600 transition-colors"
-                      title="Mark as completed"
-                    >
-                      <CheckCircle2 className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleEdit(goal)}
-                      className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-950/40 text-blue-600 transition-colors"
-                      title="Edit"
-                    >
-                      <Edit2 className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => updateGoal(goal.id, { status: 'paused' })}
-                      className="p-2 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-950/40 text-yellow-600 transition-colors"
-                      title="Pause"
-                    >
-                      <PauseCircle className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => deleteGoal(goal.id)}
-                      className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/40 text-red-600 transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
+                    {/* Objective text */}
+                    <p className="text-sm text-muted-foreground line-clamp-2">{goal.objective}</p>
                   </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
         {shortTermGoals.length === 0 && (
-          <div className="card p-8 text-center text-muted-foreground">
-            <Target className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>No short term goals yet. Create one to get started!</p>
+          <div className="card p-6 text-center text-muted-foreground">
+            <Target className="h-10 w-10 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No short term goals yet. Create one to get started!</p>
           </div>
         )}
       </div>
 
       {/* Long Term Goals */}
-      <div className="space-y-4">
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <PlayCircle className="h-6 w-6 text-purple-600" />
+      <div className="space-y-3">
+        <h2 className="text-lg font-bold flex items-center gap-2 text-gray-900 dark:text-gray-100">
+          <PlayCircle className="h-5 w-5 text-purple-600" />
           Long Term Goals ({longTermGoals.length})
         </h2>
-        <AnimatePresence>
-          {longTermGoals.map((goal) => {
-            const goalTime = TimeTrackingService.calculateGoalTime(goal, projects, tasks);
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <AnimatePresence>
+            {longTermGoals.map((goal) => {
+              const goalTime = TimeTrackingService.calculateGoalTime(goal, projects, tasks);
 
-            return (
-              <motion.div
-                key={goal.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="card p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => router.push(`/tools/goals/${goal.id}`)}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-xl font-bold">{goal.title}</h3>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+              return (
+                <motion.div
+                  key={goal.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="card p-4 hover:shadow-lg transition-all cursor-pointer group relative overflow-hidden"
+                  onClick={() => router.push(`/tools/goals/${goal.id}`)}
+                >
+                  {/* Gradient background accent */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/10 dark:to-indigo-950/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                  <div className="relative">
+                    {/* Header with title and actions */}
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="text-lg font-bold flex-1 pr-2 line-clamp-2">{goal.title}</h3>
+                      <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => toggleStatus(goal.id)}
+                          className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-950/40 text-green-600 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Complete"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleEdit(goal)}
+                          className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-950/40 text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Edit"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => updateGoal(goal.id, { status: 'paused' })}
+                          className="p-1 rounded hover:bg-yellow-100 dark:hover:bg-yellow-950/40 text-yellow-600 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Pause"
+                        >
+                          <PauseCircle className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteGoal(goal.id)}
+                          className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-950/40 text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Badges inline */}
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                         goal.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' :
                         goal.priority === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400' :
                         goal.priority === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-400' :
@@ -299,57 +340,25 @@ export default function GoalsPage() {
                       }`}>
                         {goal.priority}
                       </span>
-                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                        🎯 Long Term
-                      </span>
                       {goalTime.totalMinutes > 0 && (
-                        <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
-                          ⏱️ {TimeTrackingService.formatTime(goalTime.totalMinutes)} invested
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                          ⏱️ {TimeTrackingService.formatTime(goalTime.totalMinutes)}
                         </span>
                       )}
                     </div>
-                    <p className="text-muted-foreground">{goal.objective}</p>
-                  </div>
 
-                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => toggleStatus(goal.id)}
-                      className="p-2 rounded-lg hover:bg-green-100 dark:hover:bg-green-950/40 text-green-600 transition-colors"
-                      title="Mark as completed"
-                    >
-                      <CheckCircle2 className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleEdit(goal)}
-                      className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-950/40 text-blue-600 transition-colors"
-                      title="Edit"
-                    >
-                      <Edit2 className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => updateGoal(goal.id, { status: 'paused' })}
-                      className="p-2 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-950/40 text-yellow-600 transition-colors"
-                      title="Pause"
-                    >
-                      <PauseCircle className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => deleteGoal(goal.id)}
-                      className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/40 text-red-600 transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
+                    {/* Objective text */}
+                    <p className="text-sm text-muted-foreground line-clamp-2">{goal.objective}</p>
                   </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
         {longTermGoals.length === 0 && (
-          <div className="card p-8 text-center text-muted-foreground">
-            <Target className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>No long term goals yet. Create one to get started!</p>
+          <div className="card p-6 text-center text-muted-foreground">
+            <Target className="h-10 w-10 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No long term goals yet. Create one to get started!</p>
           </div>
         )}
       </div>

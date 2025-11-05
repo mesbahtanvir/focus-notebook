@@ -17,6 +17,7 @@ import {
   CheckSquare,
   Square,
   Briefcase,
+  DollarSign,
 } from 'lucide-react';
 import { ExportFilterOptions, EntityType } from '@/types/import-export';
 
@@ -36,6 +37,7 @@ const entityIcons: Record<EntityType, React.ComponentType<any>> = {
   focusSessions: Timer,
   people: Users,
   portfolios: Briefcase,
+  spending: DollarSign,
 };
 
 const entityLabels: Record<EntityType, string> = {
@@ -47,6 +49,7 @@ const entityLabels: Record<EntityType, string> = {
   focusSessions: 'Focus Sessions',
   people: 'People',
   portfolios: 'Portfolios',
+  spending: 'Transactions',
 };
 
 export function ExportOptionsModal({
