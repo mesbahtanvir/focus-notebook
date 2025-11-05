@@ -9,6 +9,33 @@ export {
   type ResilientSubscriptionOptions,
 } from '../firebase/subscription-health';
 
+// Re-export retry and gateway utilities
+export {
+  withRetry,
+  retry,
+  retryable,
+  withTimeout,
+  isRetryableError,
+  ErrorClassification,
+  type RetryOptions,
+  type RetryResult,
+} from '../firebase/retry';
+
+export {
+  resilientGetDoc,
+  resilientGetDocs,
+  resilientSetDoc,
+  resilientUpdateDoc,
+  resilientDeleteDoc,
+  resilientAddDoc,
+  resilientBatch,
+  resilientOperation,
+  safeOperation,
+  configureGateway,
+  getGatewayConfig,
+  type GatewayConfig,
+} from '../firebase/gateway';
+
 export interface SnapshotMeta {
   fromCache: boolean;
   hasPendingWrites: boolean;

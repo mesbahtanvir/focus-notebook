@@ -11,6 +11,7 @@
 import { Query } from 'firebase/firestore';
 import { subscribeCol, SnapshotMeta } from '@/lib/data/subscribe';
 import { visibilityManager } from './visibility-manager';
+import { withRetry, RetryOptions } from './retry';
 
 interface SubscriptionHealth {
   id: string;
@@ -133,9 +134,9 @@ export function createResilientSubscription<T>(
   };
 
   /**
-   * Reconnect to Firestore
+   * Reconnect to Firestore with exponential backoff retry
    */
-  const reconnect = (reason: string) => {
+  const reconnect = async (reason: string) => {
     if (health.reconnectAttempts >= opts.maxReconnectAttempts) {
       log(`Max reconnection attempts (${opts.maxReconnectAttempts}) exceeded. Giving up.`);
       health.isHealthy = false;
@@ -145,13 +146,31 @@ export function createResilientSubscription<T>(
     health.reconnectAttempts++;
     log(`Reconnecting (attempt ${health.reconnectAttempts}/${opts.maxReconnectAttempts}): ${reason}`);
 
-    try {
-      disconnect();
-      connect();
-    } catch (error) {
-      log('Reconnection failed:', error);
+    // Use retry utility for reconnection with exponential backoff
+    const retryOptions: RetryOptions = {
+      maxAttempts: 3,
+      initialDelay: 1000,
+      maxDelay: 10000,
+      enableJitter: true,
+      enableLogging: opts.enableLogging,
+      onRetry: (error, attempt, delay) => {
+        log(`Retry attempt ${attempt} after ${delay}ms due to error:`, error.message);
+      },
+    };
+
+    const result = await withRetry(
+      async () => {
+        disconnect();
+        connect();
+        return true;
+      },
+      retryOptions
+    );
+
+    if (!result.success) {
+      log('Reconnection failed after retries:', result.error);
       health.isHealthy = false;
-      opts.onReconnectFailed?.(health, error as Error);
+      opts.onReconnectFailed?.(health, result.error || new Error('Reconnection failed'));
     }
   };
 
