@@ -36,6 +36,49 @@ export {
   type GatewayConfig,
 } from '../firebase/gateway';
 
+// Re-export offline queue utilities
+export {
+  getOfflineQueue,
+  resetOfflineQueue,
+  type QueuedOperation,
+  type OperationType,
+  type OperationPriority,
+  type OperationStatus,
+  type OfflineQueueConfig,
+  type QueueStats,
+} from '../firebase/offline-queue';
+
+// Re-export circuit breaker utilities
+export {
+  CircuitBreaker,
+  CircuitBreakerError,
+  getCircuitBreaker,
+  circuitBreakerRegistry,
+  type CircuitState,
+  type CircuitBreakerConfig,
+  type CircuitBreakerMetrics,
+} from '../firebase/circuit-breaker';
+
+// Re-export metrics utilities
+export {
+  MetricsCollector,
+  getMetricsCollector,
+  resetMetricsCollector,
+  type OperationMetric,
+  type ConnectionMetric,
+  type MetricsSnapshot,
+  type MetricsConfig,
+} from '../firebase/metrics';
+
+// Re-export connection monitor utilities
+export {
+  ConnectionMonitor,
+  getConnectionMonitor,
+  resetConnectionMonitor,
+  type ConnectionHealth,
+  type ConnectionMonitorConfig,
+} from '../firebase/connection-monitor';
+
 export interface SnapshotMeta {
   fromCache: boolean;
   hasPendingWrites: boolean;
