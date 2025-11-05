@@ -1,5 +1,14 @@
 import { onSnapshot, query, CollectionReference, DocumentReference, Query } from "firebase/firestore";
 
+// Re-export resilient subscription utilities
+export {
+  createResilientSubscription,
+  subscribeWithAutoReconnect,
+  subscriptionManager,
+  type SubscriptionHealth,
+  type ResilientSubscriptionOptions,
+} from '../firebase/subscription-health';
+
 export interface SnapshotMeta {
   fromCache: boolean;
   hasPendingWrites: boolean;

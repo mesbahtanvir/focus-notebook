@@ -24,10 +24,15 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebaseClient';
 import { useAnonymousSession } from '@/store/useAnonymousSession';
+import { visibilityManager } from '@/lib/firebase/visibility-manager';
 
 const ANONYMOUS_SESSION_COLLECTION = 'anonymousSessions';
 const ANONYMOUS_SESSION_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 const CLIENT_ANONYMOUS_AI_OVERRIDE_KEY = process.env.NEXT_PUBLIC_ANONYMOUS_AI_OVERRIDE_KEY;
+
+// Token refresh configuration
+const TOKEN_REFRESH_INTERVAL = 45 * 60 * 1000; // 45 minutes (tokens expire after 1 hour)
+const TOKEN_AGE_THRESHOLD = 50 * 60 * 1000; // 50 minutes - refresh on visibility change if older
 
 interface AuthContextType {
   user: User | null;
@@ -75,6 +80,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [anonymousSessionExpiresAt, setAnonymousSessionExpiresAt] = useState<Date | null>(null);
   const [anonymousSessionExpired, setAnonymousSessionExpired] = useState(false);
   const expirationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const tokenRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTokenRefreshRef = useRef<number>(Date.now());
   const setAnonymousSession = useAnonymousSession((state) => state.setSession);
   const clearAnonymousSession = useAnonymousSession((state) => state.clearSession);
   const markAnonymousSessionExpired = useAnonymousSession((state) => state.markExpired);
@@ -84,6 +91,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (expirationTimeoutRef.current) {
       clearTimeout(expirationTimeoutRef.current);
       expirationTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearTokenRefreshTimer = useCallback(() => {
+    if (tokenRefreshIntervalRef.current) {
+      clearInterval(tokenRefreshIntervalRef.current);
+      tokenRefreshIntervalRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Proactively refresh auth token
+   * This prevents auth errors when returning to background tabs
+   */
+  const refreshAuthToken = useCallback(async (forceRefresh: boolean = false): Promise<void> => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      return;
+    }
+
+    try {
+      console.log('[AuthContext] Refreshing auth token...');
+      await currentUser.getIdToken(forceRefresh);
+      lastTokenRefreshRef.current = Date.now();
+      console.log('[AuthContext] Token refreshed successfully');
+    } catch (error) {
+      console.error('[AuthContext] Token refresh failed:', error);
+      // Don't throw - let the app continue and handle auth errors in operations
     }
   }, []);
 
@@ -199,6 +234,57 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [scheduleAnonymousSignOut, setAnonymousSession]
   );
 
+  // Set up proactive token refresh when user changes
+  useEffect(() => {
+    if (!user) {
+      clearTokenRefreshTimer();
+      return;
+    }
+
+    console.log('[AuthContext] Setting up proactive token refresh');
+
+    // Initial refresh
+    refreshAuthToken(false);
+
+    // Periodic refresh every 45 minutes
+    tokenRefreshIntervalRef.current = setInterval(() => {
+      refreshAuthToken(true); // Force refresh
+    }, TOKEN_REFRESH_INTERVAL);
+
+    return () => {
+      clearTokenRefreshTimer();
+    };
+  }, [user, refreshAuthToken, clearTokenRefreshTimer]);
+
+  // Handle visibility changes - refresh token if tab was in background for a while
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const unsubscribeVisibility = visibilityManager.onVisibilityChange(
+      async (isBackground, backgroundDuration) => {
+        if (isBackground || backgroundDuration === undefined) {
+          return;
+        }
+
+        // Tab returned to foreground
+        const tokenAge = Date.now() - lastTokenRefreshRef.current;
+
+        // If token is older than threshold OR tab was background for a while, refresh
+        if (tokenAge > TOKEN_AGE_THRESHOLD || backgroundDuration > TOKEN_AGE_THRESHOLD) {
+          console.log(
+            `[AuthContext] Tab returned to foreground. Token age: ${Math.round(tokenAge / 1000)}s, ` +
+            `Background duration: ${Math.round(backgroundDuration / 1000)}s. Refreshing token...`
+          );
+          await refreshAuthToken(true); // Force refresh
+        }
+      }
+    );
+
+    return unsubscribeVisibility;
+  }, [user, refreshAuthToken]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       setUser(authUser);
@@ -222,9 +308,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     return () => {
       clearExpirationTimer();
+      clearTokenRefreshTimer();
       unsubscribe();
     };
-  }, [clearAnonymousSession, clearExpirationTimer, synchronizeAnonymousSession]);
+  }, [clearAnonymousSession, clearExpirationTimer, clearTokenRefreshTimer, synchronizeAnonymousSession]);
 
   const signInWithGoogle = async () => {
     try {
