@@ -44,15 +44,15 @@ describe('useImportExport - getDataSummaries', () => {
         { id: '4', title: 'Task 4', done: false, priority: 'low' },
       ];
 
-      (useTasks as jest.Mock).mockReturnValue({ tasks: mockTasks });
-      (useProjects as jest.Mock).mockReturnValue({ projects: [] });
-      (useGoals as jest.Mock).mockReturnValue({ goals: [] });
-      (useThoughts as jest.Mock).mockReturnValue({ thoughts: [] });
-      (useMoods as jest.Mock).mockReturnValue({ moods: [] });
-      (useFocus as jest.Mock).mockReturnValue({ sessions: [] });
-      (useRelationships as jest.Mock).mockReturnValue({ people: [] });
-      (useInvestments as jest.Mock).mockReturnValue({ portfolios: [] });
-      (useSpending as jest.Mock).mockReturnValue({ transactions: [] });
+      (useTasks as unknown as jest.Mock).mockReturnValue({ tasks: mockTasks });
+      (useProjects as unknown as jest.Mock).mockReturnValue({ projects: [] });
+      (useGoals as unknown as jest.Mock).mockReturnValue({ goals: [] });
+      (useThoughts as unknown as jest.Mock).mockReturnValue({ thoughts: [] });
+      (useMoods as unknown as jest.Mock).mockReturnValue({ moods: [] });
+      (useFocus as unknown as jest.Mock).mockReturnValue({ sessions: [] });
+      (useRelationships as unknown as jest.Mock).mockReturnValue({ people: [] });
+      (useInvestments as unknown as jest.Mock).mockReturnValue({ portfolios: [] });
+      (useSpending as unknown as jest.Mock).mockReturnValue({ transactions: [] });
 
       const { result } = renderHook(() => useImportExport());
       const summaries = result.current.getDataSummaries();
