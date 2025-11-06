@@ -271,24 +271,26 @@ export const useEntityRelationships = create<State>((set, get) => ({
       throw new Error(`Invalid strength: ${updates.strength}`);
     }
 
+    const { toolProcessingData, metadata, ...otherUpdates } = updates;
+
     const updatedFields: Partial<Relationship> = {
-      ...updates,
+      ...otherUpdates,
       updatedAt: now(),
     };
 
     // Handle toolProcessingData updates (merge with existing)
-    if (updates.toolProcessingData) {
+    if (toolProcessingData) {
       updatedFields.toolProcessingData = {
         ...existing.toolProcessingData,
-        ...updates.toolProcessingData,
+        ...toolProcessingData,
       } as ToolProcessingData;
     }
 
     // Handle metadata updates (merge with existing)
-    if (updates.metadata) {
+    if (metadata) {
       updatedFields.metadata = {
         ...existing.metadata,
-        ...updates.metadata,
+        ...metadata,
       };
     }
 

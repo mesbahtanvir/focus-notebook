@@ -9,7 +9,7 @@
  * providing rich metadata, bidirectional queries, and clear semantics.
  */
 
-import type { ToolSpecId } from '../../../shared/toolSpecs';
+import type { ToolSpecId } from '../../shared/toolSpecs';
 
 // ============================================================================
 // Entity Types
