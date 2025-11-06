@@ -39,6 +39,7 @@ export interface ToolGroup {
   category: string;
   toolIds: string[];
   primaryToolId: string; // The main tool that shows in the UI
+  hubPath: string; // The path to the group's hub/dashboard page
   benefits?: string[];
 }
 
@@ -816,6 +817,7 @@ export const toolGroups: Record<string, ToolGroup> = {
     category: 'Productivity',
     toolIds: ['tasks', 'projects', 'goals', 'focus', 'brainstorming', 'notes', 'errands'],
     primaryToolId: 'tasks',
+    hubPath: '/tools/work-goals',
     benefits: [
       'Organize tasks, projects, and goals in one place',
       'Run focused work sessions with timers',
@@ -831,6 +833,7 @@ export const toolGroups: Record<string, ToolGroup> = {
     category: 'Wellbeing',
     toolIds: ['thoughts', 'moodtracker', 'relationships', 'cbt', 'deepreflect'],
     primaryToolId: 'thoughts',
+    hubPath: '/tools/inner-life',
     benefits: [
       'Process and enhance daily thoughts',
       'Track mood patterns over time',
@@ -847,6 +850,7 @@ export const toolGroups: Record<string, ToolGroup> = {
     category: 'Logistics',
     toolIds: ['trips', 'packing-list'],
     primaryToolId: 'trips',
+    hubPath: '/tools/trips',
     benefits: [
       'Track travel budgets and spending',
       'Manage itineraries and reservations',
@@ -862,6 +866,7 @@ export const toolGroups: Record<string, ToolGroup> = {
     category: 'Finance',
     toolIds: ['investments', 'spending', 'subscriptions', 'asset-horizon'],
     primaryToolId: 'spending',
+    hubPath: '/tools/finances',
     benefits: [
       'Monitor investment portfolios and performance',
       'Analyze spending with AI-powered insights',

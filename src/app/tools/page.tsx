@@ -309,11 +309,12 @@ export default function ToolsPage() {
               const isGroupPrimary = toolGroup && tool.key === toolGroup.primaryToolId;
               const displayTitle = isGroupPrimary ? toolGroup.title : tool.title;
               const displayDescription = isGroupPrimary ? toolGroup.tagline : tool.description;
+              const href = isGroupPrimary ? toolGroup.hubPath : `/tools/${tool.key}`;
 
               return (
                 <Link
                   key={tool.key}
-                  href={`/tools/${tool.key}`}
+                  href={href}
                   className={`group relative overflow-hidden rounded-xl bg-gradient-to-br ${tool.bgGradient} border-2 ${tool.borderColor} p-4 transition-all duration-300 hover:shadow-xl hover:scale-105`}
                 >
                   {/* Icon Circle */}
