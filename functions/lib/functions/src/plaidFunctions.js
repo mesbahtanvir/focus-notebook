@@ -275,7 +275,7 @@ async function triggerTransactionSync(itemId, accessToken, uid, cursor) {
     let totalRemoved = 0;
     let hasMore = true;
     let currentCursor = cursor;
-    const batch = db.batch();
+    let batch = db.batch();
     let batchCount = 0;
     const MAX_BATCH_SIZE = 500;
     while (hasMore) {
@@ -312,6 +312,7 @@ async function triggerTransactionSync(itemId, accessToken, uid, cursor) {
             // Commit batch if full
             if (batchCount >= MAX_BATCH_SIZE) {
                 await batch.commit();
+                batch = db.batch(); // Create new batch after commit
                 batchCount = 0;
             }
         }
@@ -327,6 +328,7 @@ async function triggerTransactionSync(itemId, accessToken, uid, cursor) {
             totalModified++;
             if (batchCount >= MAX_BATCH_SIZE) {
                 await batch.commit();
+                batch = db.batch(); // Create new batch after commit
                 batchCount = 0;
             }
         }
@@ -338,6 +340,7 @@ async function triggerTransactionSync(itemId, accessToken, uid, cursor) {
             totalRemoved++;
             if (batchCount >= MAX_BATCH_SIZE) {
                 await batch.commit();
+                batch = db.batch(); // Create new batch after commit
                 batchCount = 0;
             }
         }

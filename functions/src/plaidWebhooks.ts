@@ -191,7 +191,7 @@ async function syncTransactionsForItem(
   let hasMore = true;
   let currentCursor = cursor;
 
-  const batch = db.batch();
+  let batch = db.batch();
   let batchCount = 0;
   const MAX_BATCH_SIZE = 500;
 
@@ -230,6 +230,7 @@ async function syncTransactionsForItem(
 
       if (batchCount >= MAX_BATCH_SIZE) {
         await batch.commit();
+        batch = db.batch(); // Create new batch after commit
         batchCount = 0;
       }
     }
@@ -247,6 +248,7 @@ async function syncTransactionsForItem(
 
       if (batchCount >= MAX_BATCH_SIZE) {
         await batch.commit();
+        batch = db.batch(); // Create new batch after commit
         batchCount = 0;
       }
     }
@@ -259,6 +261,7 @@ async function syncTransactionsForItem(
 
       if (batchCount >= MAX_BATCH_SIZE) {
         await batch.commit();
+        batch = db.batch(); // Create new batch after commit
         batchCount = 0;
       }
     }

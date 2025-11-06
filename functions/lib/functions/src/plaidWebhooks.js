@@ -177,7 +177,7 @@ const plaidService_2 = require("./services/plaidService");
 async function syncTransactionsForItem(itemId, accessToken, uid, cursor) {
     let hasMore = true;
     let currentCursor = cursor;
-    const batch = db.batch();
+    let batch = db.batch();
     let batchCount = 0;
     const MAX_BATCH_SIZE = 500;
     while (hasMore) {
@@ -212,6 +212,7 @@ async function syncTransactionsForItem(itemId, accessToken, uid, cursor) {
             batchCount++;
             if (batchCount >= MAX_BATCH_SIZE) {
                 await batch.commit();
+                batch = db.batch(); // Create new batch after commit
                 batchCount = 0;
             }
         }
@@ -226,6 +227,7 @@ async function syncTransactionsForItem(itemId, accessToken, uid, cursor) {
             batchCount++;
             if (batchCount >= MAX_BATCH_SIZE) {
                 await batch.commit();
+                batch = db.batch(); // Create new batch after commit
                 batchCount = 0;
             }
         }
@@ -236,6 +238,7 @@ async function syncTransactionsForItem(itemId, accessToken, uid, cursor) {
             batchCount++;
             if (batchCount >= MAX_BATCH_SIZE) {
                 await batch.commit();
+                batch = db.batch(); // Create new batch after commit
                 batchCount = 0;
             }
         }
