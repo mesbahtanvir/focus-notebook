@@ -235,6 +235,7 @@ jobs:
           STRIPE_PRICE_ID: ${{ secrets.STRIPE_PRICE_ID || 'price_test_placeholder' }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET || 'whsec_test_placeholder' }}
           APP_BASE_URL: ${{ secrets.APP_BASE_URL || 'http://localhost:3000' }}
+          ALPHA_VANTAGE_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY || 'demo' }}
         run: |
           python - <<'PY'
           import os, pathlib
@@ -246,6 +247,7 @@ jobs:
               f"STRIPE_PRICE_ID={os.environ['STRIPE_PRICE_ID']}",
               f"STRIPE_WEBHOOK_SECRET={os.environ['STRIPE_WEBHOOK_SECRET']}",
               f"APP_BASE_URL={os.environ['APP_BASE_URL']}",
+              f"ALPHA_VANTAGE_API_KEY={os.environ['ALPHA_VANTAGE_KEY']}",
           ]) + '\n')
           PY
 
@@ -291,6 +293,7 @@ jobs:
           STRIPE_PRICE_ID: ${{ secrets.STRIPE_PRICE_ID || 'price_test_placeholder' }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET || 'whsec_test_placeholder' }}
           APP_BASE_URL: ${{ secrets.APP_BASE_URL || 'https://focus.yourthoughts.ca' }}
+          ALPHA_VANTAGE_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY || 'demo' }}
         run: |
           python - <<'PY'
           import os, pathlib
@@ -302,6 +305,7 @@ jobs:
               f"STRIPE_PRICE_ID={os.environ['STRIPE_PRICE_ID']}",
               f"STRIPE_WEBHOOK_SECRET={os.environ['STRIPE_WEBHOOK_SECRET']}",
               f"APP_BASE_URL={os.environ['APP_BASE_URL']}",
+              f"ALPHA_VANTAGE_API_KEY={os.environ['ALPHA_VANTAGE_KEY']}",
           ]) + '\n')
           PY
 
