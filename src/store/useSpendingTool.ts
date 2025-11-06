@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/lib/firebase/config';
+import { functionsClient as functions } from '@/lib/firebaseClient';
 import {
   Account,
   PlaidItem,
@@ -26,7 +26,7 @@ import {
   limit as firestoreLimit,
   Timestamp,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { db } from '@/lib/firebaseClient';
 
 // ============================================================================
 // State Interface

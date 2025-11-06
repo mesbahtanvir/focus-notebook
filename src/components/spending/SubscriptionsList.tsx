@@ -62,7 +62,7 @@ export default function SubscriptionsList() {
           No subscriptions detected yet
         </h3>
         <p className="text-gray-500 dark:text-gray-500 max-w-md mx-auto">
-          As you add more transactions, we'll automatically detect recurring payments and subscriptions.
+          As you add more transactions, we&apos;ll automatically detect recurring payments and subscriptions.
         </p>
       </div>
     );

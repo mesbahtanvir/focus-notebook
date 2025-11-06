@@ -57,7 +57,8 @@ export default function PlaidLinkButton({
     if (!linkToken && !isCreatingToken) {
       initLinkToken();
     }
-  }, [mode, itemId]); // Removed other dependencies to prevent loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, itemId]); // Intentionally excluding functions to prevent infinite loop
 
   const onPlaidSuccess = useCallback(
     async (public_token: string, metadata: any) => {

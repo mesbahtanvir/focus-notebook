@@ -76,6 +76,7 @@ export interface AccountBalances {
 }
 
 export interface Account {
+  id?: string;              // Document ID (optional, added by Firestore)
   uid: string;              // User ID
   itemId: string;           // Reference to PlaidItem
   type: AccountType;
@@ -161,6 +162,7 @@ export interface MerchantInfo {
 }
 
 export interface PlaidTransaction {
+  id?: string;              // Document ID (optional, added by Firestore)
   uid: string;              // User ID
   itemId: string;           // Reference to PlaidItem
   accountId: string;        // Reference to Account

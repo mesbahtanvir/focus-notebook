@@ -113,7 +113,7 @@ function ConnectionBanner({
           <div className="flex items-center gap-3">
             <PlaidLinkButton mode="relink" itemId={itemId} className="text-sm" />
             <p className="text-xs text-gray-500">
-              You'll be taken to your bank to confirm access. This won't change your accounts.
+              You&apos;ll be taken to your bank to confirm access. This won&apos;t change your accounts.
             </p>
           </div>
         )}
