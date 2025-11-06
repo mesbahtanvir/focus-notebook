@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { getToolGroupForTool, getToolSpecById } from "../../../shared/toolSpecs";
 import { Card } from "@/components/ui/card";
