@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart } from "lucide-react";
 import { useToolEnrollment } from "@/store/useToolEnrollment";
-import { CORE_TOOL_IDS } from "../../../shared/toolSpecs";
+import { CORE_TOOL_IDS, toolGroups, isToolInGroup, getToolGroupForTool } from "../../../shared/toolSpecs";
 
 const TOOLS = [
   {
@@ -220,7 +220,20 @@ export default function ToolsPage() {
   const enrolledSet = useMemo(() => new Set(enrolledToolIds), [enrolledToolIds]);
 
   const filteredTools = useMemo(() => {
-    const visible = TOOLS.filter(tool => enrolledSet.has(tool.key));
+    // First, filter to only show enrolled tools
+    let visible = TOOLS.filter(tool => enrolledSet.has(tool.key));
+
+    // Then, filter out non-primary tools from groups
+    visible = visible.filter(tool => {
+      const toolGroup = getToolGroupForTool(tool.key);
+      if (toolGroup) {
+        // Only show if this is the primary tool of the group
+        return tool.key === toolGroup.primaryToolId;
+      }
+      return true;
+    });
+
+    // Finally, apply search filter
     return visible.filter(tool =>
       tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tool.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -292,6 +305,11 @@ export default function ToolsPage() {
           <div className="grid gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredTools.map((tool) => {
               const Icon = tool.icon;
+              const toolGroup = getToolGroupForTool(tool.key);
+              const isGroupPrimary = toolGroup && tool.key === toolGroup.primaryToolId;
+              const displayTitle = isGroupPrimary ? toolGroup.title : tool.title;
+              const displayDescription = isGroupPrimary ? toolGroup.tagline : tool.description;
+
               return (
                 <Link
                   key={tool.key}
@@ -311,10 +329,10 @@ export default function ToolsPage() {
                 {/* Content */}
                 <div className="space-y-1">
                   <h3 className="text-lg font-bold text-gray-800 group-hover:text-gray-900">
-                    {tool.title}
+                    {displayTitle}
                   </h3>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    {tool.description}
+                    {displayDescription}
                   </p>
                 </div>
 

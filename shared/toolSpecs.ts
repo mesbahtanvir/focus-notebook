@@ -31,6 +31,17 @@ export interface ToolSpec {
   negativeExamples: ToolExample[];
 }
 
+export interface ToolGroup {
+  id: string;
+  title: string;
+  tagline: string;
+  description: string;
+  category: string;
+  toolIds: string[];
+  primaryToolId: string; // The main tool that shows in the UI
+  benefits?: string[];
+}
+
 const baseGuidance = [
   'Only act when the thought clearly warrants the tool.',
   'Avoid inventing details that are not present in the thought.',
@@ -796,12 +807,68 @@ export const CORE_TOOL_IDS: ToolSpecId[] = [
 
 export const ALL_TOOL_IDS = Object.keys(toolSpecs) as ToolSpecId[];
 
+export const toolGroups: Record<string, ToolGroup> = {
+  trips: {
+    id: 'trips',
+    title: 'Trips',
+    tagline: 'Plan itineraries, budgets, and travel logistics with smart packing lists.',
+    description: 'Manage trip budgets, itineraries, packing lists, and shared tasks across your travel plans. Packing lists are automatically generated based on your destination, duration, and activities.',
+    category: 'Logistics',
+    toolIds: ['trips', 'packing-list'],
+    primaryToolId: 'trips',
+    benefits: [
+      'Track travel budgets and spending',
+      'Manage itineraries and reservations',
+      'Auto-generate smart packing lists based on trip details',
+      'Link travel tasks and errands',
+    ],
+  },
+  finances: {
+    id: 'finances',
+    title: 'Finances',
+    tagline: 'Comprehensive financial planning and tracking.',
+    description: 'Track investments, analyze spending patterns, manage subscriptions, and model long-term financial scenarios all in one integrated suite.',
+    category: 'Finance',
+    toolIds: ['investments', 'spending', 'subscriptions', 'asset-horizon'],
+    primaryToolId: 'spending',
+    benefits: [
+      'Monitor investment portfolios and performance',
+      'Analyze spending with AI-powered insights',
+      'Track and manage recurring subscriptions',
+      'Model long-term financial horizons and scenarios',
+    ],
+  },
+};
+
+export type ToolGroupId = keyof typeof toolGroups;
+
 export function getToolSpecById(id: ToolSpecId): ToolSpec {
   const spec = toolSpecs[id];
   if (!spec) {
     throw new Error(`Tool spec "${id}" is not defined`);
   }
   return spec;
+}
+
+export function getToolGroupById(id: ToolGroupId): ToolGroup {
+  const group = toolGroups[id];
+  if (!group) {
+    throw new Error(`Tool group "${id}" is not defined`);
+  }
+  return group;
+}
+
+export function getToolGroupForTool(toolId: string): ToolGroup | null {
+  for (const group of Object.values(toolGroups)) {
+    if (group.toolIds.includes(toolId)) {
+      return group;
+    }
+  }
+  return null;
+}
+
+export function isToolInGroup(toolId: string): boolean {
+  return getToolGroupForTool(toolId) !== null;
 }
 
 export function renderToolSpecForPrompt(spec: ToolSpec): string {
