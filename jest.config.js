@@ -9,6 +9,17 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   testEnvironment: 'jsdom',
+
+  // Enable caching for faster test runs
+  cache: true,
+  cacheDirectory: '.jest-cache',
+
+  // Optimize for CI/local environments
+  maxWorkers: process.env.CI ? 2 : '50%',
+
+  // Bail on first failure in CI for faster feedback
+  bail: process.env.CI ? 1 : false,
+
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^\\.\\./\\.\\./shared/(.*)\\.js$': '<rootDir>/shared/$1.ts',

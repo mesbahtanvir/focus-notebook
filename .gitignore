@@ -10,6 +10,8 @@ out/
 
 # Testing
 coverage/
+.jest-cache/
+node_modules/.cache/jest
 
 # Playwright
 test-results/
