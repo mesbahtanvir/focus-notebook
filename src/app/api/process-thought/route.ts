@@ -80,26 +80,31 @@ ${context.errands.map((errand: any) => `- ${errand.title || 'Untitled'} (${erran
 Tool Reference Guidance:
 ${toolReference}
 
-Available Tool Tags (use these to indicate which tools can benefit from this thought):
-- tool-tasks: Thought contains actionable items that should become tasks
-- tool-projects: Relates to project planning or execution
-- tool-goals: Connects to personal or professional goals
-- tool-mood: Expresses emotions or mental state that should be tracked
-- tool-cbt: Contains cognitive distortions or negative thinking patterns suitable for CBT analysis
-- tool-focus: Suitable for focused work sessions or deep work
-- tool-brainstorming: Contains ideas for exploration and ideation
-- tool-relationships: Mentions people or relationship dynamics
-- tool-notes: General reference or learning material to save
-- tool-errands: Contains to-do items for daily tasks
+Available Tools (connect thoughts to tools for processing):
+- tasks: Thought contains actionable items that should become tasks
+- projects: Relates to project planning or execution
+- goals: Connects to personal or professional goals
+- moodtracker: Expresses emotions or mental state that should be tracked
+- cbt: Contains cognitive distortions or negative thinking patterns suitable for CBT analysis
+- focus: Suitable for focused work sessions or deep work
+- brainstorming: Contains ideas for exploration and ideation
+- relationships: Mentions people or relationship dynamics
+- notes: General reference or learning material to save
+- errands: Contains to-do items for daily tasks
 
 Available Actions:
+- createRelationship: Connect this thought to a tool or entity
+  * For tool connections: Use when thought should be processed by a specific tool
+  * For entity connections: Use to link thought to tasks, projects, goals, moods, or people
 - createTask: Create a new task from the thought
 - enhanceTask: Enhance an existing task with information from this thought (provide taskId in data)
 - createProject: Create a new project
 - createGoal: Create a new goal
 - createMood: Create a mood entry
-- addTag: Add a tool tag to the thought
-- linkToProject: Link thought to existing project
+
+DEPRECATED (use createRelationship instead):
+- addTag: Add a tool tag to the thought (use createRelationship with targetType: 'tool')
+- linkToProject: Link thought to existing project (use createRelationship)
 
 ${userContextSection}
 
@@ -126,10 +131,26 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
 {
   "actions": [
     {
-      "type": "addTag",
+      "type": "createRelationship",
       "confidence": 95,
-      "data": { "tag": "tool-tasks" },
-      "reasoning": "Thought contains actionable items"
+      "data": {
+        "targetType": "tool",
+        "targetId": "tasks",
+        "relationshipType": "should-be-processed-by",
+        "reasoning": "Thought contains actionable items that should become tasks"
+      },
+      "reasoning": "Thought contains clear actionable items"
+    },
+    {
+      "type": "createRelationship",
+      "confidence": 90,
+      "data": {
+        "targetType": "tool",
+        "targetId": "cbt",
+        "relationshipType": "should-be-processed-by",
+        "reasoning": "Detected cognitive distortion: catastrophizing"
+      },
+      "reasoning": "CBT analysis would help reframe this thought"
     },
     {
       "type": "createTask",
@@ -142,15 +163,15 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
       "reasoning": "Clear actionable item identified"
     },
     {
-      "type": "enhanceTask",
-      "confidence": 90,
+      "type": "createRelationship",
+      "confidence": 92,
       "data": {
-        "taskId": "existing-task-id",
-        "updates": {
-          "notes": "Additional context from thought"
-        }
+        "targetType": "project",
+        "targetId": "proj-123",
+        "relationshipType": "part-of",
+        "reasoning": "Thought discusses specific aspect of this project"
       },
-      "reasoning": "Thought provides relevant context for existing task"
+      "reasoning": "Directly relates to user's active project"
     },
     {
       "type": "createMood",
@@ -171,7 +192,11 @@ Rules:
 - Be conservative with task creation
 - Consider existing user data when making decisions
 - Match tasks to existing context when enhancing
-- Confidence scores should be accurate and conservative`;
+- Confidence scores should be accurate and conservative
+- Use createRelationship to connect thoughts to tools (for processing) or entities (for organization)
+- When suggesting tool processing, use targetType: 'tool' with appropriate relationshipType
+- For entity links, use specific relationshipTypes: 'part-of' (projects), 'linked-to' (tasks), 'triggered-by' (moods)
+- Each relationship should have clear reasoning explaining why the connection is valuable`;
 
     // Call OpenAI API
     console.log('📤 Calling OpenAI API');
