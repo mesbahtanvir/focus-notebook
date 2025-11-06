@@ -5,10 +5,12 @@ import { DIProvider } from '@/contexts/DIContext'
 import Layout from '@/components/Layout'
 import { FirestoreSubscriber } from '@/components/FirestoreSubscriber'
 import { initializeContainer } from '@/di/setup'
+import { initializeFirebaseResilience } from '@/lib/firebase/initialize-resilience'
 
 // Initialize dependency injection container
 if (typeof window !== 'undefined') {
   initializeContainer()
+  initializeFirebaseResilience()
 }
 
 export const metadata: Metadata = {
