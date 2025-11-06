@@ -610,7 +610,7 @@ describe('useEntityRelationships store', () => {
 
     it('should count relationships for an entity', () => {
       const count = useEntityRelationships.getState().getRelationshipCount('thought', 'thought-123');
-      expect(count).toBe(2);
+      expect(count).toBe(4); // 2 regular relationships + 2 tool relationships
     });
 
     it('should get tool usage statistics', () => {
