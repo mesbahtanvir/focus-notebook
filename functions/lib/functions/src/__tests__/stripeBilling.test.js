@@ -19,7 +19,14 @@ class MockHttpsError extends Error {
 }
 const onCallMock = jest.fn((handler) => handler);
 const onRequestMock = jest.fn((handler) => handler);
+const runWithMock = jest.fn(() => ({
+    https: {
+        onCall: onCallMock,
+        onRequest: onRequestMock,
+    },
+}));
 jest.mock('firebase-functions', () => ({
+    runWith: runWithMock,
     https: {
         onCall: onCallMock,
         onRequest: onRequestMock,
