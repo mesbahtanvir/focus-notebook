@@ -30,7 +30,7 @@ export function ToolGroupNav({ currentToolId }: ToolGroupNavProps) {
         return null;
       }
     })
-    .filter(Boolean);
+    .filter((tool): tool is { id: string; title: string; tagline: string } => tool !== null);
 
   // If there are no related tools, don't show the component
   if (relatedTools.length === 0) {
