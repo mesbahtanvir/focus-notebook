@@ -23,6 +23,10 @@ import {
   createStripePortalSession,
   stripeWebhook,
   syncStripeSubscription,
+  getStripeInvoices,
+  getStripePaymentMethod,
+  reactivateStripeSubscription,
+  getUsageStats,
 } from './stripeBilling';
 import {
   createLinkToken,
@@ -48,6 +52,10 @@ export {
   createStripePortalSession,
   stripeWebhook,
   syncStripeSubscription,
+  getStripeInvoices,
+  getStripePaymentMethod,
+  reactivateStripeSubscription,
+  getUsageStats,
   // Plaid Functions
   createLinkToken,
   exchangePublicToken,

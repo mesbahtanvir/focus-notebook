@@ -24,6 +24,7 @@ import {
   SUBSCRIPTION_STATUS_COLLECTION,
   SUBSCRIPTION_STATUS_DOC_ID,
 } from '../../shared/subscription';
+import { incrementUsageStats } from './stripeBilling';
 
 const ANONYMOUS_SESSION_COLLECTION = 'anonymousSessions';
 const ANONYMOUS_AI_OVERRIDE_KEY = process.env.ANONYMOUS_AI_OVERRIDE_KEY || '';
@@ -719,6 +720,11 @@ async function processThoughtInternal(
     await thoughtRef.update(update);
 
     console.log(`Successfully processed thought ${thoughtId}: ${historyEntry.changesApplied} changes, ${historyEntry.suggestionsCount} suggestions`);
+
+    // Track usage stats (fire and forget - don't block on this)
+    incrementUsageStats(userId).catch((err) => {
+      console.error('Failed to track usage stats:', err);
+    });
 
   } catch (error) {
     console.error(`Processing failed for thought ${thoughtId}:`, error);

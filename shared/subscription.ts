@@ -28,12 +28,52 @@ export interface SubscriptionSnapshot {
   status?: SubscriptionLifecycleStatus | string | null;
   entitlements?: SubscriptionEntitlements | null;
   currentPeriodEnd?: unknown;
+  currentPeriodStart?: unknown;
   cancelAtPeriodEnd?: boolean | null;
+  cancelAt?: unknown;
   updatedAt?: unknown;
   trialEndsAt?: unknown;
   stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;
   priceId?: string | null;
+  amount?: number | null;
+  currency?: string;
+  interval?: 'day' | 'week' | 'month' | 'year';
+  discountAmount?: number | null;
+  discountPercent?: number | null;
+  invoicesCachedAt?: number;
+  usageStatsEnabled?: boolean;
+}
+
+export type InvoiceStatus = 'paid' | 'open' | 'void' | 'uncollectible' | 'draft';
+
+export interface CachedInvoice {
+  id: string;
+  amount: number;
+  currency: string;
+  status: InvoiceStatus;
+  description: string | null;
+  created: number;
+  periodStart: number | null;
+  periodEnd: number | null;
+  invoicePdf: string | null;
+  hostedInvoiceUrl: string | null;
+  cachedAt: number;
+}
+
+export interface CachedPaymentMethod {
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  cachedAt: number;
+}
+
+export interface UsageStats {
+  month: string;
+  thoughtsProcessed: number;
+  lastProcessedAt: number;
+  dailyBreakdown: Record<string, number>;
 }
 
 export type AiEntitlementCode =

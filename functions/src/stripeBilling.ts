@@ -5,6 +5,9 @@ import {
   SUBSCRIPTION_STATUS_COLLECTION,
   SUBSCRIPTION_STATUS_DOC_ID,
   STRIPE_CUSTOMERS_COLLECTION,
+  type CachedInvoice,
+  type CachedPaymentMethod,
+  type UsageStats,
 } from '../../shared/subscription';
 
 const STRIPE_API_VERSION: Stripe.LatestApiVersion = '2023-10-16';
@@ -67,7 +70,8 @@ const ACTIVE_STATUSES = new Set<Stripe.Subscription.Status>(['active', 'trialing
 function mapSubscriptionToSnapshot(subscription: Stripe.Subscription) {
   const status = subscription.status;
   const stripeCustomerId = getStripeCustomerId(subscription);
-  const priceId = subscription.items.data[0]?.price?.id ?? null;
+  const price = subscription.items.data[0]?.price;
+  const priceId = price?.id ?? null;
   const currentPeriodEnd = subscription.current_period_end
     ? subscription.current_period_end * 1000
     : null;
@@ -75,12 +79,27 @@ function mapSubscriptionToSnapshot(subscription: Stripe.Subscription) {
   const cancelAt = subscription.cancel_at ? subscription.cancel_at * 1000 : null;
   const aiAllowed = ACTIVE_STATUSES.has(status);
 
+  // Get price information
+  const amount = price?.unit_amount ?? null;
+  const currency = price?.currency ?? 'usd';
+  const interval = price?.recurring?.interval ?? 'month';
+
+  // Get discount information
+  const discount = subscription.discount;
+  const discountAmount = discount?.coupon?.amount_off ?? null;
+  const discountPercent = discount?.coupon?.percent_off ?? null;
+
   return {
     tier: aiAllowed ? 'pro' : 'free',
     status,
     stripeCustomerId,
     stripeSubscriptionId: subscription.id,
     priceId,
+    amount,
+    currency,
+    interval,
+    discountAmount,
+    discountPercent,
     currentPeriodEnd,
     currentPeriodStart: subscription.current_period_start
       ? subscription.current_period_start * 1000
@@ -496,6 +515,74 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
         );
         break;
       }
+      case 'invoice.paid':
+      case 'invoice.payment_failed':
+      case 'invoice.finalized': {
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerId = typeof invoice.customer === 'string' ? invoice.customer : null;
+
+        if (!customerId) {
+          console.warn(`${event.type}: No customer ID found on invoice.`, 'Invoice ID:', invoice.id);
+          break;
+        }
+
+        const uid = await findUidByCustomer(customerId);
+        if (!uid) {
+          console.warn(`${event.type}: Unable to resolve UID for invoice.`, 'Customer ID:', customerId);
+          break;
+        }
+
+        // Cache invoice in Firestore
+        const cachedInvoice: CachedInvoice = {
+          id: invoice.id,
+          amount: invoice.amount_paid || invoice.total || 0,
+          currency: invoice.currency,
+          status: invoice.status as CachedInvoice['status'],
+          description: invoice.description || invoice.lines.data[0]?.description || null,
+          created: invoice.created * 1000,
+          periodStart: invoice.period_start ? invoice.period_start * 1000 : null,
+          periodEnd: invoice.period_end ? invoice.period_end * 1000 : null,
+          invoicePdf: invoice.invoice_pdf || null,
+          hostedInvoiceUrl: invoice.hosted_invoice_url || null,
+          cachedAt: Date.now(),
+        };
+
+        await getFirestore()
+          .doc(`users/${uid}/invoices/${invoice.id}`)
+          .set(cachedInvoice);
+
+        console.log(`${event.type}: Cached invoice for user ${uid}, invoice ${invoice.id}`);
+        break;
+      }
+      case 'payment_method.attached': {
+        const paymentMethod = event.data.object as Stripe.PaymentMethod;
+        const customerId = typeof paymentMethod.customer === 'string' ? paymentMethod.customer : null;
+
+        if (!customerId) {
+          break;
+        }
+
+        const uid = await findUidByCustomer(customerId);
+        if (!uid || paymentMethod.type !== 'card' || !paymentMethod.card) {
+          break;
+        }
+
+        // Cache payment method
+        const cachedPaymentMethod: CachedPaymentMethod = {
+          brand: paymentMethod.card.brand,
+          last4: paymentMethod.card.last4,
+          expMonth: paymentMethod.card.exp_month,
+          expYear: paymentMethod.card.exp_year,
+          cachedAt: Date.now(),
+        };
+
+        await getFirestore()
+          .doc(`users/${uid}/paymentMethod/default`)
+          .set(cachedPaymentMethod);
+
+        console.log(`payment_method.attached: Cached payment method for user ${uid}`);
+        break;
+      }
       default:
         break;
     }
@@ -573,3 +660,388 @@ export const syncStripeSubscription = functions.https.onCall(async (data, contex
     tier: snapshot.tier,
   };
 });
+
+/**
+ * Fetch and cache Stripe invoices for the authenticated user
+ */
+export const getStripeInvoices = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in required.');
+  }
+
+  const uid = context.auth.uid;
+  const limit = typeof data?.limit === 'number' ? Math.min(data.limit, 100) : 20;
+  const startingAfter = typeof data?.startingAfter === 'string' ? data.startingAfter : undefined;
+  const forceRefresh = data?.forceRefresh === true;
+
+  const firestore = getFirestore();
+  const statusRef = firestore.doc(
+    `users/${uid}/${SUBSCRIPTION_STATUS_COLLECTION}/${SUBSCRIPTION_STATUS_DOC_ID}`
+  );
+  const statusSnap = await statusRef.get();
+  const statusData = statusSnap.data();
+  const customerId =
+    typeof statusData?.stripeCustomerId === 'string' ? statusData.stripeCustomerId : null;
+
+  if (!customerId) {
+    // No Stripe customer, return empty array
+    return {
+      invoices: [],
+      hasMore: false,
+      cachedAt: Date.now(),
+    };
+  }
+
+  // Check cache age (1 hour = 3600000ms)
+  const invoicesCachedAt = typeof statusData?.invoicesCachedAt === 'number'
+    ? statusData.invoicesCachedAt
+    : 0;
+  const cacheAge = Date.now() - invoicesCachedAt;
+  const CACHE_DURATION = 3600000; // 1 hour
+
+  // If cache is fresh and not forcing refresh, return cached invoices
+  if (!forceRefresh && cacheAge < CACHE_DURATION && !startingAfter) {
+    const invoicesSnap = await firestore
+      .collection(`users/${uid}/invoices`)
+      .orderBy('created', 'desc')
+      .limit(limit)
+      .get();
+
+    const cachedInvoices: CachedInvoice[] = [];
+    invoicesSnap.forEach((doc) => {
+      cachedInvoices.push(doc.data() as CachedInvoice);
+    });
+
+    if (cachedInvoices.length > 0) {
+      return {
+        invoices: cachedInvoices,
+        hasMore: cachedInvoices.length === limit,
+        cachedAt: invoicesCachedAt,
+      };
+    }
+  }
+
+  // Fetch from Stripe
+  const stripe = getStripeClient();
+  let invoices: Stripe.Invoice[];
+  let hasMore = false;
+
+  try {
+    const response = await stripe.invoices.list({
+      customer: customerId,
+      limit,
+      starting_after: startingAfter,
+    });
+    invoices = response.data;
+    hasMore = response.has_more;
+  } catch (error) {
+    console.error('Failed to fetch invoices from Stripe:', error);
+    throw new functions.https.HttpsError(
+      'internal',
+      'Unable to fetch invoices. Please try again later.'
+    );
+  }
+
+  // Cache invoices in Firestore
+  const cachedAt = Date.now();
+  const batch = firestore.batch();
+
+  invoices.forEach((invoice) => {
+    const cachedInvoice: CachedInvoice = {
+      id: invoice.id,
+      amount: invoice.amount_paid || invoice.total || 0,
+      currency: invoice.currency,
+      status: invoice.status as CachedInvoice['status'],
+      description: invoice.description || invoice.lines.data[0]?.description || null,
+      created: invoice.created * 1000,
+      periodStart: invoice.period_start ? invoice.period_start * 1000 : null,
+      periodEnd: invoice.period_end ? invoice.period_end * 1000 : null,
+      invoicePdf: invoice.invoice_pdf || null,
+      hostedInvoiceUrl: invoice.hosted_invoice_url || null,
+      cachedAt,
+    };
+
+    const invoiceRef = firestore.doc(`users/${uid}/invoices/${invoice.id}`);
+    batch.set(invoiceRef, cachedInvoice);
+  });
+
+  // Update cache timestamp
+  batch.set(statusRef, { invoicesCachedAt: cachedAt }, { merge: true });
+
+  await batch.commit();
+
+  return {
+    invoices: invoices.map((invoice) => ({
+      id: invoice.id,
+      amount: invoice.amount_paid || invoice.total || 0,
+      currency: invoice.currency,
+      status: invoice.status as CachedInvoice['status'],
+      description: invoice.description || invoice.lines.data[0]?.description || null,
+      created: invoice.created * 1000,
+      periodStart: invoice.period_start ? invoice.period_start * 1000 : null,
+      periodEnd: invoice.period_end ? invoice.period_end * 1000 : null,
+      invoicePdf: invoice.invoice_pdf || null,
+      hostedInvoiceUrl: invoice.hosted_invoice_url || null,
+      cachedAt,
+    })),
+    hasMore,
+    cachedAt,
+  };
+});
+
+/**
+ * Fetch default payment method for the authenticated user
+ */
+export const getStripePaymentMethod = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in required.');
+  }
+
+  const uid = context.auth.uid;
+  const firestore = getFirestore();
+  const statusRef = firestore.doc(
+    `users/${uid}/${SUBSCRIPTION_STATUS_COLLECTION}/${SUBSCRIPTION_STATUS_DOC_ID}`
+  );
+  const statusSnap = await statusRef.get();
+  const statusData = statusSnap.data();
+  const customerId =
+    typeof statusData?.stripeCustomerId === 'string' ? statusData.stripeCustomerId : null;
+
+  if (!customerId) {
+    return null;
+  }
+
+  const stripe = getStripeClient();
+
+  try {
+    const customer = await stripe.customers.retrieve(customerId, {
+      expand: ['invoice_settings.default_payment_method'],
+    });
+
+    if (customer.deleted) {
+      return null;
+    }
+
+    const defaultPaymentMethod = customer.invoice_settings?.default_payment_method;
+
+    // If no default payment method, try to get from subscription
+    let paymentMethod: Stripe.PaymentMethod | null = null;
+
+    if (typeof defaultPaymentMethod === 'string') {
+      paymentMethod = await stripe.paymentMethods.retrieve(defaultPaymentMethod);
+    } else if (defaultPaymentMethod && typeof defaultPaymentMethod === 'object') {
+      paymentMethod = defaultPaymentMethod as Stripe.PaymentMethod;
+    }
+
+    // Fallback: get from active subscription
+    if (!paymentMethod) {
+      const subscriptionId = typeof statusData?.stripeSubscriptionId === 'string'
+        ? statusData.stripeSubscriptionId
+        : null;
+
+      if (subscriptionId) {
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const subPaymentMethod = subscription.default_payment_method;
+
+        if (typeof subPaymentMethod === 'string') {
+          paymentMethod = await stripe.paymentMethods.retrieve(subPaymentMethod);
+        } else if (subPaymentMethod && typeof subPaymentMethod === 'object') {
+          paymentMethod = subPaymentMethod as Stripe.PaymentMethod;
+        }
+      }
+    }
+
+    if (!paymentMethod || paymentMethod.type !== 'card' || !paymentMethod.card) {
+      return null;
+    }
+
+    const cachedPaymentMethod: CachedPaymentMethod = {
+      brand: paymentMethod.card.brand,
+      last4: paymentMethod.card.last4,
+      expMonth: paymentMethod.card.exp_month,
+      expYear: paymentMethod.card.exp_year,
+      cachedAt: Date.now(),
+    };
+
+    // Cache payment method
+    await firestore
+      .doc(`users/${uid}/paymentMethod/default`)
+      .set(cachedPaymentMethod);
+
+    return cachedPaymentMethod;
+  } catch (error) {
+    console.error('Failed to fetch payment method from Stripe:', error);
+    throw new functions.https.HttpsError(
+      'internal',
+      'Unable to fetch payment method. Please try again later.'
+    );
+  }
+});
+
+/**
+ * Reactivate a canceled subscription (undo cancel_at_period_end)
+ */
+export const reactivateStripeSubscription = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in required.');
+  }
+
+  const uid = context.auth.uid;
+  const firestore = getFirestore();
+  const statusRef = firestore.doc(
+    `users/${uid}/${SUBSCRIPTION_STATUS_COLLECTION}/${SUBSCRIPTION_STATUS_DOC_ID}`
+  );
+  const statusSnap = await statusRef.get();
+  const statusData = statusSnap.data();
+
+  const subscriptionId =
+    typeof statusData?.stripeSubscriptionId === 'string' ? statusData.stripeSubscriptionId : null;
+  const cancelAtPeriodEnd = statusData?.cancelAtPeriodEnd === true;
+
+  if (!subscriptionId) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'No active subscription found.'
+    );
+  }
+
+  if (!cancelAtPeriodEnd) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Subscription is not scheduled for cancellation.'
+    );
+  }
+
+  const stripe = getStripeClient();
+
+  try {
+    const subscription = await stripe.subscriptions.update(subscriptionId, {
+      cancel_at_period_end: false,
+    });
+
+    const snapshot = mapSubscriptionToSnapshot(subscription);
+    await updateSubscriptionStatus(uid, {
+      ...snapshot,
+      updatedAt: new Date().toISOString(),
+    });
+
+    console.log('Subscription reactivated successfully:', uid, subscriptionId);
+
+    return {
+      success: true,
+      subscription: snapshot,
+    };
+  } catch (error) {
+    console.error('Failed to reactivate subscription:', error);
+    throw new functions.https.HttpsError(
+      'internal',
+      'Unable to reactivate subscription. Please try again later.'
+    );
+  }
+});
+
+/**
+ * Get usage statistics for the authenticated user
+ */
+export const getUsageStats = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in required.');
+  }
+
+  const uid = context.auth.uid;
+  const months = typeof data?.months === 'number' ? Math.min(data.months, 12) : 3;
+
+  const firestore = getFirestore();
+  const now = new Date();
+  const statsToFetch: string[] = [];
+
+  // Generate month keys (YYYY-MM format)
+  for (let i = 0; i < months; i++) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    statsToFetch.push(monthKey);
+  }
+
+  // Fetch all month stats in parallel
+  const statsPromises = statsToFetch.map((month) =>
+    firestore.doc(`users/${uid}/usageStats/${month}`).get()
+  );
+
+  const statsSnaps = await Promise.all(statsPromises);
+  const stats: UsageStats[] = [];
+  let totalAllTime = 0;
+  let currentMonthTotal = 0;
+
+  statsSnaps.forEach((snap, index) => {
+    const data = snap.data();
+    if (data && typeof data.thoughtsProcessed === 'number') {
+      const stat: UsageStats = {
+        month: statsToFetch[index],
+        thoughtsProcessed: data.thoughtsProcessed,
+        lastProcessedAt: data.lastProcessedAt || 0,
+        dailyBreakdown: data.dailyBreakdown || {},
+      };
+      stats.push(stat);
+      totalAllTime += data.thoughtsProcessed;
+
+      if (index === 0) {
+        currentMonthTotal = data.thoughtsProcessed;
+      }
+    }
+  });
+
+  // If no stats exist, fetch total from all-time counter if it exists
+  if (totalAllTime === 0) {
+    const allTimeRef = firestore.doc(`users/${uid}/usageStats/allTime`);
+    const allTimeSnap = await allTimeRef.get();
+    const allTimeData = allTimeSnap.data();
+    if (allTimeData && typeof allTimeData.thoughtsProcessed === 'number') {
+      totalAllTime = allTimeData.thoughtsProcessed;
+    }
+  }
+
+  return {
+    stats,
+    totalAllTime,
+    currentMonthTotal,
+  };
+});
+
+/**
+ * Helper function to increment usage stats (exported for use in processThought)
+ */
+export async function incrementUsageStats(uid: string): Promise<void> {
+  const firestore = getFirestore();
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const dayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+    now.getDate()
+  ).padStart(2, '0')}`;
+
+  const statsRef = firestore.doc(`users/${uid}/usageStats/${monthKey}`);
+
+  try {
+    await firestore.runTransaction(async (transaction) => {
+      const statsSnap = await transaction.get(statsRef);
+      const currentData = statsSnap.data();
+
+      const thoughtsProcessed = (currentData?.thoughtsProcessed || 0) + 1;
+      const dailyBreakdown = currentData?.dailyBreakdown || {};
+      dailyBreakdown[dayKey] = (dailyBreakdown[dayKey] || 0) + 1;
+
+      transaction.set(
+        statsRef,
+        {
+          month: monthKey,
+          thoughtsProcessed,
+          lastProcessedAt: Date.now(),
+          dailyBreakdown,
+        },
+        { merge: true }
+      );
+    });
+  } catch (error) {
+    console.error('Failed to increment usage stats:', error);
+    // Don't throw - usage tracking shouldn't block thought processing
+  }
+}

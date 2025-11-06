@@ -25,12 +25,12 @@ type ProfileForm = {
 };
 
 const ENTITLEMENT_MESSAGES: Record<string, string> = {
-  allowed: "Focus Notebook Pro is active on your account.",
-  "no-record": "No active subscription detected. Upgrade to Pro to unlock advanced automations.",
-  "tier-mismatch": "Your current plan does not include Pro features.",
-  inactive: "Your subscription is inactive. Renew to continue using Pro features.",
-  disabled: "AI processing is currently disabled for your account.",
-  exhausted: "You have used all available AI credits. Top up or wait for the next billing cycle.",
+  allowed: "All Pro features unlocked",
+  "no-record": "Upgrade to unlock AI automation and advanced features.",
+  "tier-mismatch": "Upgrade to Pro for AI automation and advanced features.",
+  inactive: "Subscription inactive. Renew to restore Pro features.",
+  disabled: "AI processing disabled. Contact support for assistance.",
+  exhausted: "AI credits exhausted. Top up or wait for next billing cycle.",
 };
 
 function ProfilePageContent() {
@@ -346,29 +346,13 @@ function ProfilePageContent() {
 
               {/* User Info */}
               <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <CardTitle className="text-xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent truncate">
-                    {userData.fullName || "User"}
-                  </CardTitle>
-                  <Badge
-                    variant={hasProAccess ? "default" : "secondary"}
-                    className={`flex items-center gap-1 text-xs ${hasProAccess ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white" : ""}`}
-                  >
-                    {hasProAccess ? (
-                      <>
-                        <Crown className="h-3 w-3 md:h-4 md:w-4" />
-                        Pro
-                      </>
-                    ) : (
-                      "Free"
-                    )}
-                  </Badge>
-                </div>
+                <CardTitle className="text-xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent truncate">
+                  {userData.fullName || "User"}
+                </CardTitle>
                 <CardDescription className="text-gray-600 font-medium mt-1 flex items-center gap-2 text-xs md:text-sm truncate">
                   <Mail className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
                   <span className="truncate">{userData.email || "No email provided"}</span>
                 </CardDescription>
-                <p className="mt-2 md:mt-3 text-xs md:text-sm text-gray-600 line-clamp-2">{entitlementMessage}</p>
               </div>
             </div>
 
@@ -427,72 +411,96 @@ function ProfilePageContent() {
           {/* Subscription Overview */}
           <div className="mb-4 md:mb-6 rounded-xl md:rounded-2xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 via-white to-pink-50 p-4 md:p-6 shadow-inner">
             <div className="flex flex-col gap-4 md:gap-6">
-              <div className="space-y-2 md:space-y-3">
-                <div className="flex items-center gap-2 text-xs md:text-sm font-semibold text-purple-700 uppercase tracking-wide">
-                  <Shield className="h-3 w-3 md:h-4 md:w-4" />
-                  Membership
+              <div className="space-y-3">
+                {/* Plan Name */}
+                <div className="flex items-center gap-2">
+                  {hasProAccess ? (
+                    <>
+                      <Crown className="h-5 w-5 md:h-6 md:w-6 text-yellow-500" />
+                      <h3 className="text-lg md:text-xl font-bold text-gray-900">Pro</h3>
+                    </>
+                  ) : (
+                    <h3 className="text-lg md:text-xl font-bold text-gray-900">Free Plan</h3>
+                  )}
                 </div>
-                <div>
-                  <h3 className="text-lg md:text-xl font-bold text-gray-900">
-                    {hasProAccess ? "Focus Notebook Pro" : "Free plan"}
-                  </h3>
-                  <p className="text-xs md:text-sm text-gray-600 mt-1">{entitlementMessage}</p>
-                </div>
-                {hasProAccess && subscription && (
-                  <div className="flex flex-col gap-2 text-xs md:text-sm text-gray-700 bg-white/70 border border-purple-200 rounded-lg md:rounded-xl p-3 md:p-4">
-                    <div className="flex flex-wrap gap-x-4 gap-y-1">
-                      <div>
-                        <span className="font-semibold text-gray-900">Status:</span>{" "}
-                        {subscription.status ?? "active"}
-                      </div>
-                      {subscription.tier && (
-                        <div>
-                          <span className="font-semibold text-gray-900">Tier:</span>{" "}
-                          {subscription.tier}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+
+                {/* Status Line */}
+                <div className="flex items-center gap-2 text-xs md:text-sm text-gray-600">
+                  {hasProAccess && subscription ? (
+                    <>
+                      <span className="capitalize font-medium text-gray-900">
+                        {subscription.status ?? "Active"}
+                      </span>
                       {formatDate(subscription.currentPeriodEnd) && (
-                        <div>
-                          <span className="font-semibold text-gray-900">Renews:</span>{" "}
-                          {formatDate(subscription.currentPeriodEnd)}
-                        </div>
+                        <>
+                          <span>•</span>
+                          <span>
+                            {subscription.cancelAtPeriodEnd ? "Ends" : "Renews"} {formatDate(subscription.currentPeriodEnd)}
+                          </span>
+                        </>
                       )}
-                      {formatDate(lastUpdatedAt) && (
-                        <div>
-                          <span className="font-semibold text-gray-900">Updated:</span>{" "}
-                          {formatDate(lastUpdatedAt)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                    </>
+                  ) : (
+                    <span>{entitlementMessage}</span>
+                  )}
+                </div>
               </div>
 
               <div className="flex flex-col gap-2 md:gap-3">
-                <Button
-                  type="button"
-                  size="lg"
-                  disabled={billingButtonDisabled}
-                  className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-purple-400 disabled:to-pink-400 disabled:cursor-not-allowed text-sm md:text-base"
-                  onClick={() => {
-                    void handleBillingRedirect(hasProAccess ? "portal" : "upgrade");
-                  }}
-                >
-                  {hasProAccess ? "Manage billing" : "Upgrade to Pro"}
-                  {billingButtonDisabled ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ArrowUpRight className="h-4 w-4" />
-                  )}
-                </Button>
-                {!hasProAccess && (
-                  <Button variant="outline" asChild className="w-full text-sm md:text-base">
-                    <Link href="mailto:hello@focusnotebook.ai?subject=Focus%20Notebook%20Pro">
-                      Talk to the team
-                    </Link>
-                  </Button>
+                {hasProAccess ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      asChild
+                      className="w-full text-sm md:text-base"
+                    >
+                      <Link href="/billing">
+                        View Billing Dashboard
+                      </Link>
+                    </Button>
+                    <Button
+                      type="button"
+                      size="lg"
+                      disabled={billingButtonDisabled}
+                      variant="outline"
+                      className="w-full inline-flex items-center justify-center gap-2 text-sm md:text-base"
+                      onClick={() => {
+                        void handleBillingRedirect("portal");
+                      }}
+                    >
+                      Manage via Stripe Portal
+                      {billingButtonDisabled ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ArrowUpRight className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      size="lg"
+                      disabled={billingButtonDisabled}
+                      className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-purple-400 disabled:to-pink-400 disabled:cursor-not-allowed text-sm md:text-base"
+                      onClick={() => {
+                        void handleBillingRedirect("upgrade");
+                      }}
+                    >
+                      Upgrade to Pro
+                      {billingButtonDisabled ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ArrowUpRight className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button variant="outline" asChild className="w-full text-sm md:text-base">
+                      <Link href="mailto:hello@focusnotebook.ai?subject=Focus%20Notebook%20Pro">
+                        Talk to the team
+                      </Link>
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
