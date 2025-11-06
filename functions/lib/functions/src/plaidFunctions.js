@@ -75,7 +75,6 @@ exports.createLinkToken = functions.https.onCall(async (data, context) => {
 // Exchange Public Token (Complete New Connection)
 // ============================================================================
 exports.exchangePublicToken = functions.https.onCall(async (data, context) => {
-    var _a;
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
     }
@@ -89,19 +88,22 @@ exports.exchangePublicToken = functions.https.onCall(async (data, context) => {
         const { accessToken, itemId } = await (0, plaidService_1.exchangePublicToken)(public_token);
         // Encrypt access token
         const kmsRef = (0, encryption_1.encrypt)(accessToken);
-        // Get institution info
-        const accounts = await (0, plaidService_1.getAccounts)(accessToken);
-        const institutionId = ((_a = accounts[0]) === null || _a === void 0 ? void 0 : _a.account_id) ?
-            (await (0, plaidService_1.getInstitutionById)(accounts[0].account_id)).institutionId :
-            'unknown';
+        // Get item info to retrieve institution_id
+        const item = await (0, plaidService_1.getItem)(accessToken);
+        const institutionId = item.institutionId || 'unknown';
+        // Get institution details
         let institutionName = 'Unknown Institution';
-        try {
-            const institutionInfo = await (0, plaidService_1.getInstitutionById)(institutionId);
-            institutionName = institutionInfo.name;
+        if (institutionId !== 'unknown') {
+            try {
+                const institutionInfo = await (0, plaidService_1.getInstitutionById)(institutionId);
+                institutionName = institutionInfo.name;
+            }
+            catch (error) {
+                console.warn('Could not fetch institution name:', error);
+            }
         }
-        catch (error) {
-            console.warn('Could not fetch institution name:', error);
-        }
+        // Get accounts
+        const accounts = await (0, plaidService_1.getAccounts)(accessToken);
         // Create item document
         const itemRef = db.collection('plaidItems').doc(itemId);
         await itemRef.set({

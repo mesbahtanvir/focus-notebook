@@ -10,6 +10,7 @@ import {
   CountryCode,
   LinkTokenCreateRequest,
   ItemPublicTokenExchangeRequest,
+  ItemGetRequest,
   TransactionsSyncRequest,
   AccountsGetRequest,
 } from 'plaid';
@@ -120,6 +121,42 @@ export async function exchangePublicToken(publicToken: string): Promise<{
   } catch (error: any) {
     console.error('Error exchanging public token:', error.response?.data || error);
     throw new Error(`Failed to exchange public token: ${error.message}`);
+  }
+}
+
+// ============================================================================
+// Get Item Info
+// ============================================================================
+
+export async function getItem(accessToken: string): Promise<{
+  itemId: string;
+  institutionId: string | null;
+  webhook: string | null;
+  error: any | null;
+  availableProducts: string[];
+  billedProducts: string[];
+  consentExpirationTime: string | null;
+}> {
+  try {
+    const request: ItemGetRequest = {
+      access_token: accessToken,
+    };
+
+    const response = await plaidClient.itemGet(request);
+    const item = response.data.item;
+
+    return {
+      itemId: item.item_id,
+      institutionId: item.institution_id || null,
+      webhook: item.webhook || null,
+      error: item.error || null,
+      availableProducts: item.available_products,
+      billedProducts: item.billed_products,
+      consentExpirationTime: item.consent_expiration_time || null,
+    };
+  } catch (error: any) {
+    console.error('Error fetching item:', error.response?.data || error);
+    throw new Error(`Failed to fetch item: ${error.message}`);
   }
 }
 

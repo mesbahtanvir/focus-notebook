@@ -7,6 +7,7 @@ import * as admin from 'firebase-admin';
 import {
   createLinkToken as createPlaidLinkToken,
   exchangePublicToken as exchangePlaidPublicToken,
+  getItem,
   getInstitutionById,
   getAccounts,
   syncTransactions,
@@ -74,19 +75,23 @@ export const exchangePublicToken = functions.https.onCall(async (data, context) 
     // Encrypt access token
     const kmsRef = encrypt(accessToken);
 
-    // Get institution info
-    const accounts = await getAccounts(accessToken);
-    const institutionId = accounts[0]?.account_id ?
-      (await getInstitutionById(accounts[0].account_id)).institutionId :
-      'unknown';
+    // Get item info to retrieve institution_id
+    const item = await getItem(accessToken);
+    const institutionId = item.institutionId || 'unknown';
 
+    // Get institution details
     let institutionName = 'Unknown Institution';
-    try {
-      const institutionInfo = await getInstitutionById(institutionId);
-      institutionName = institutionInfo.name;
-    } catch (error) {
-      console.warn('Could not fetch institution name:', error);
+    if (institutionId !== 'unknown') {
+      try {
+        const institutionInfo = await getInstitutionById(institutionId);
+        institutionName = institutionInfo.name;
+      } catch (error) {
+        console.warn('Could not fetch institution name:', error);
+      }
     }
+
+    // Get accounts
+    const accounts = await getAccounts(accessToken);
 
     // Create item document
     const itemRef = db.collection('plaidItems').doc(itemId);

@@ -39,6 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.plaidClient = void 0;
 exports.createLinkToken = createLinkToken;
 exports.exchangePublicToken = exchangePublicToken;
+exports.getItem = getItem;
 exports.getInstitutionById = getInstitutionById;
 exports.getAccounts = getAccounts;
 exports.syncTransactions = syncTransactions;
@@ -120,6 +121,32 @@ async function exchangePublicToken(publicToken) {
     catch (error) {
         console.error('Error exchanging public token:', ((_a = error.response) === null || _a === void 0 ? void 0 : _a.data) || error);
         throw new Error(`Failed to exchange public token: ${error.message}`);
+    }
+}
+// ============================================================================
+// Get Item Info
+// ============================================================================
+async function getItem(accessToken) {
+    var _a;
+    try {
+        const request = {
+            access_token: accessToken,
+        };
+        const response = await exports.plaidClient.itemGet(request);
+        const item = response.data.item;
+        return {
+            itemId: item.item_id,
+            institutionId: item.institution_id || null,
+            webhook: item.webhook || null,
+            error: item.error || null,
+            availableProducts: item.available_products,
+            billedProducts: item.billed_products,
+            consentExpirationTime: item.consent_expiration_time || null,
+        };
+    }
+    catch (error) {
+        console.error('Error fetching item:', ((_a = error.response) === null || _a === void 0 ? void 0 : _a.data) || error);
+        throw new Error(`Failed to fetch item: ${error.message}`);
     }
 }
 // ============================================================================
