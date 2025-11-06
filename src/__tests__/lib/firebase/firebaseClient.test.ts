@@ -39,10 +39,10 @@ describe('Firebase Client Initialization', () => {
 
     // Mock Firebase Auth
     (firebaseAuth.getAuth as jest.Mock).mockReturnValue(mockAuth);
-    (firebaseAuth.GoogleAuthProvider as jest.Mock).mockImplementation(() => ({
+    (firebaseAuth.GoogleAuthProvider as unknown as jest.Mock).mockImplementation(() => ({
       setCustomParameters: jest.fn(),
     }));
-    (firebaseAuth.EmailAuthProvider as jest.Mock).mockImplementation(() => ({}));
+    (firebaseAuth.EmailAuthProvider as unknown as jest.Mock).mockImplementation(() => ({}));
 
     // Mock Firebase Functions
     (firebaseFunctions.getFunctions as jest.Mock).mockReturnValue(mockFunctions);
@@ -224,7 +224,7 @@ describe('Firebase Client Initialization', () => {
       const mockGoogleProvider = {
         setCustomParameters: jest.fn(),
       };
-      (firebaseAuth.GoogleAuthProvider as jest.Mock).mockImplementation(() => mockGoogleProvider);
+      (firebaseAuth.GoogleAuthProvider as unknown as jest.Mock).mockImplementation(() => mockGoogleProvider);
 
       const browserDetection = require('@/lib/utils/browserDetection');
       browserDetection.isSafariBrowser = jest.fn().mockReturnValue(false);
