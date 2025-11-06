@@ -62,8 +62,7 @@ const PREMIUM_CATEGORY_MAP: Record<string, CategoryMapping> = {
   'amazon': { level1: 'Shopping', level2: 'Online Shopping', confidence: 0.95 },
   'ebay': { level1: 'Shopping', level2: 'Online Shopping', confidence: 0.95 },
   'etsy': { level1: 'Shopping', level2: 'Online Shopping', confidence: 0.95 },
-  'target': { level1: 'Shopping', level2: 'General', confidence: 0.90 },
-  'walmart': { level1: 'Shopping', level2: 'General', confidence: 0.85 },
+  // target and walmart already defined above in Food & Drink / Shopping sections
   'costco': { level1: 'Shopping', level2: 'General', confidence: 0.90 },
   'best buy': { level1: 'Shopping', level2: 'Electronics', confidence: 0.95 },
   'apple': { level1: 'Shopping', level2: 'Electronics', confidence: 0.90 },

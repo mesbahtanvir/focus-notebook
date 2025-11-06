@@ -131,23 +131,17 @@ function analyzeTransactionPattern(
 
   // Detect cadence based on mean interval
   let cadence: 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'annual' | null = null;
-  let expectedInterval = 0;
 
   if (meanInterval >= 5 && meanInterval <= 9) {
     cadence = 'weekly';
-    expectedInterval = 7;
   } else if (meanInterval >= 12 && meanInterval <= 16) {
     cadence = 'biweekly';
-    expectedInterval = 14;
   } else if (meanInterval >= 25 && meanInterval <= 35) {
     cadence = 'monthly';
-    expectedInterval = 30;
   } else if (meanInterval >= 85 && meanInterval <= 95) {
     cadence = 'quarterly';
-    expectedInterval = 90;
   } else if (meanInterval >= 355 && meanInterval <= 375) {
     cadence = 'annual';
-    expectedInterval = 365;
   }
 
   if (!cadence) {

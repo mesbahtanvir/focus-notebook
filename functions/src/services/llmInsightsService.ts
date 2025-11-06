@@ -75,10 +75,10 @@ export async function generateMonthlyInsights(
   }, { merge: true });
 
   // Build or fetch rollup
-  let rollup;
   const rollupId = `${uid}_${month}`;
   const rollupDoc = await db.collection('monthlyRollups').doc(rollupId).get();
 
+  let rollup: any;
   if (rollupDoc.exists) {
     rollup = rollupDoc.data();
   } else {
@@ -187,6 +187,7 @@ Return a JSON object with this exact structure:
   "questionsForUser": ["string", ...]
 }`;
 
+  let responseText = '';
   try {
     const message = await anthropic.messages.create({
       model: 'claude-3-5-sonnet-20241022',
@@ -202,6 +203,7 @@ Return a JSON object with this exact structure:
 
     const content = message.content[0];
     if (content.type === 'text') {
+      responseText = content.text;
       // Extract JSON from response (might be wrapped in markdown)
       let jsonText = content.text.trim();
 
@@ -228,7 +230,7 @@ Return a JSON object with this exact structure:
 
     // If JSON parsing fails, try to fix and retry once
     if (error instanceof SyntaxError) {
-      console.error('JSON parsing failed. Response:', content);
+      console.error('JSON parsing failed. Response:', responseText);
       throw new Error('Invalid JSON returned by LLM');
     }
 

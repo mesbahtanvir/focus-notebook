@@ -14,7 +14,7 @@ import {
   AccountsGetRequest,
 } from 'plaid';
 import * as admin from 'firebase-admin';
-import { encrypt, decrypt } from '../utils/encryption';
+import { decrypt } from '../utils/encryption';
 import { ItemStatus, ItemError } from '../types/spending-tool';
 
 const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
@@ -55,7 +55,6 @@ export async function createLinkToken(
 ): Promise<{ link_token: string; expiration: string }> {
   const {
     userId,
-    userEmail,
     platform = 'web',
     redirectUri,
     androidPackageName,
