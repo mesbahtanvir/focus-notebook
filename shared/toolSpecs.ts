@@ -669,6 +669,44 @@ export const toolSpecs: Record<string, ToolSpec> = {
       },
     ],
   },
+  spending: {
+    id: 'spending',
+    title: 'Spending Tracker',
+    tagline: 'Track expenses and analyze spending patterns with AI.',
+    category: 'Finance',
+    benefits: [
+      'Import bank and credit card statements via CSV',
+      'Get AI-powered spending insights and recommendations',
+      'Track monthly spending by category and merchant',
+    ],
+    description:
+      'Upload credit card and bank statements, analyze spending patterns, and get personalized financial insights.',
+    primaryTags: ['tool-spending'],
+    expectedCapabilities: ['collectsMetrics', 'linksItems'],
+    guidance: [
+      ...baseGuidance,
+      'Use spending tracking when the thought references expenses, transactions, or financial analysis.',
+      'Link spending insights to budget planning or financial goals.',
+    ],
+    positiveExamples: [
+      {
+        thought: 'Need to review last month\'s credit card bill and see where all the money went.',
+        rationale: 'Direct request for expense analysis.',
+        recommendedActions: [
+          { type: 'addTag', dataSummary: 'tool-spending' },
+        ],
+      },
+    ],
+    negativeExamples: [
+      {
+        thought: 'I should save more money.',
+        rationale: 'General sentiment without actionable analysis.',
+        recommendedActions: [
+          { type: 'addTag', dataSummary: 'tool-goals' },
+        ],
+      },
+    ],
+  },
   subscriptions: {
     id: 'subscriptions',
     title: 'Subscriptions',
@@ -754,20 +792,6 @@ export type ToolSpecId = keyof typeof toolSpecs;
 
 export const CORE_TOOL_IDS: ToolSpecId[] = [
   'thoughts',
-  'tasks',
-  'projects',
-  'goals',
-  'focus',
-  'brainstorming',
-  'notes',
-  'relationships',
-  'moodtracker',
-  'cbt',
-  'deepreflect',
-  'errands',
-  'packing-list',
-  'trips',
-  'investments',
 ];
 
 export const ALL_TOOL_IDS = Object.keys(toolSpecs) as ToolSpecId[];
