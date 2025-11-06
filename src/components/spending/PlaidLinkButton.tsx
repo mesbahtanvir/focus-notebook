@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { usePlaidLink } from 'react-plaid-link';
+import { usePlaidLink, PlaidLinkError, PlaidLinkOnExitMetadata } from 'react-plaid-link';
 import { Loader2, Link as LinkIcon, RefreshCw } from 'lucide-react';
 import { useSpendingTool } from '@/store/useSpendingTool';
 
@@ -79,7 +79,7 @@ export default function PlaidLinkButton({
   const config: Parameters<typeof usePlaidLink>[0] = {
     token: linkToken,
     onSuccess: onPlaidSuccess,
-    onExit: (err, metadata) => {
+    onExit: (err: PlaidLinkError | null, metadata: PlaidLinkOnExitMetadata) => {
       if (err) {
         console.error('Plaid Link error:', err);
       }
