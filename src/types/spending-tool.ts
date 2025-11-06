@@ -204,6 +204,7 @@ export type RecurrenceCadence = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'q
 export type RecurrenceDirection = 'inflow' | 'outflow';
 
 export interface RecurringStream {
+  id?: string;              // Document ID (optional, added by Firestore)
   uid: string;              // User ID
   direction: RecurrenceDirection;
   merchant: string;         // Normalized merchant name
