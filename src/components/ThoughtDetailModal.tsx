@@ -299,17 +299,19 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const pendingSuggestions = thought.aiSuggestions?.filter(s => s.status === 'pending') || [];
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30 rounded-3xl shadow-2xl border-4 border-purple-200 dark:border-purple-800 max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 border-b-4 border-purple-300 dark:border-purple-700 p-6">
-          <div className="flex items-center justify-between mb-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto" onClick={onClose}>
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" aria-hidden="true" />
+      <div className="relative min-h-full flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-purple-950/30 rounded-3xl shadow-2xl border-4 border-purple-200 dark:border-purple-800 max-w-4xl w-full max-h-[90vh] flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex-shrink-0 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 border-b-4 border-purple-300 dark:border-purple-700 p-6 rounded-t-3xl">
+            <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-200 dark:bg-purple-800 rounded-xl">
                 <Brain className="h-6 w-6 text-purple-600 dark:text-purple-400" />
@@ -405,8 +407,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-hidden">
-          <div className="p-6 bg-white dark:bg-gray-900 overflow-y-auto h-full">
+        <div className="flex-1 overflow-y-auto p-6 bg-white dark:bg-gray-900 space-y-6 overscroll-contain rounded-b-3xl" style={{ WebkitOverflowScrolling: 'touch' }}>
             <div className="space-y-6">
               {/* Thought Text */}
               <div>
@@ -842,9 +843,9 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                 </div>
               )}
             </div>
-          </div>
         </div>
-      </motion.div>
+        </motion.div>
+      </div>
 
       {/* Success Modal */}
       {showSuccessModal && (
@@ -893,12 +894,33 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 {errorMessage}
               </p>
-              <button
-                onClick={() => setShowErrorModal(false)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                OK
-              </button>
+              <div className="flex gap-2 justify-center">
+                {errorMessage?.includes('Focus Notebook Pro is required') ? (
+                  <>
+                    <Link
+                      href="/profile"
+                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg transition-all font-semibold shadow-md hover:shadow-lg flex items-center gap-2"
+                      onClick={() => setShowErrorModal(false)}
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Subscribe to Pro
+                    </Link>
+                    <button
+                      onClick={() => setShowErrorModal(false)}
+                      className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setShowErrorModal(false)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    OK
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
         </div>
