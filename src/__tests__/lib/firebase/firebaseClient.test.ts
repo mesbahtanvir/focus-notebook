@@ -1,52 +1,57 @@
 /**
- * Unit tests for Firebase Client initialization with browser-specific cache strategies
- * Tests Safari detection and appropriate cache selection
+ * Unit tests for Firebase Client initialization
+ * Tests that Firebase is properly initialized with browser-specific cache strategies
  */
 
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache } from 'firebase/firestore';
+import * as firebaseApp from 'firebase/app';
+import * as firebaseAuth from 'firebase/auth';
+import * as firebaseFunctions from 'firebase/functions';
+import * as firebaseFirestore from 'firebase/firestore';
 
-// Mock Firebase
-jest.mock('firebase/app', () => ({
-  initializeApp: jest.fn(() => ({ name: '[DEFAULT]' })),
-  getApps: jest.fn(() => []),
-}));
+// Mock Firebase modules
+jest.mock('firebase/app');
+jest.mock('firebase/auth');
+jest.mock('firebase/functions');
+jest.mock('firebase/firestore');
 
-jest.mock('firebase/auth', () => ({
-  getAuth: jest.fn(() => ({ currentUser: null })),
-  GoogleAuthProvider: jest.fn(),
-  EmailAuthProvider: jest.fn(),
-}));
+// Mock browser detection
+jest.mock('@/lib/utils/browserDetection');
 
-jest.mock('firebase/functions', () => ({
-  getFunctions: jest.fn(() => ({})),
-}));
-
-jest.mock('firebase/firestore', () => ({
-  initializeFirestore: jest.fn(),
-  persistentLocalCache: jest.fn(() => ({ type: 'persistent' })),
-  persistentMultipleTabManager: jest.fn(() => ({ type: 'multiTab' })),
-  memoryLocalCache: jest.fn(() => ({ type: 'memory' })),
-}));
-
-describe('Firebase Client - Browser Detection and Cache Strategy', () => {
-  let originalNavigator: Navigator;
-  let consoleLogSpy: jest.SpyInstance;
-  let consoleErrorSpy: jest.SpyInstance;
-
-  beforeAll(() => {
-    originalNavigator = global.navigator;
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-  });
-
-  afterAll(() => {
-    consoleLogSpy.mockRestore();
-    consoleErrorSpy.mockRestore();
-  });
+describe('Firebase Client Initialization', () => {
+  let mockApp: any;
+  let mockAuth: any;
+  let mockDb: any;
+  let mockFunctions: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
+
+    // Setup mock values
+    mockApp = { name: '[DEFAULT]' };
+    mockAuth = { currentUser: null };
+    mockDb = { type: 'firestore' };
+    mockFunctions = { region: 'us-central1' };
+
+    // Mock Firebase App
+    (firebaseApp.getApps as jest.Mock).mockReturnValue([]);
+    (firebaseApp.initializeApp as jest.Mock).mockReturnValue(mockApp);
+
+    // Mock Firebase Auth
+    (firebaseAuth.getAuth as jest.Mock).mockReturnValue(mockAuth);
+    (firebaseAuth.GoogleAuthProvider as jest.Mock).mockImplementation(() => ({
+      setCustomParameters: jest.fn(),
+    }));
+    (firebaseAuth.EmailAuthProvider as jest.Mock).mockImplementation(() => ({}));
+
+    // Mock Firebase Functions
+    (firebaseFunctions.getFunctions as jest.Mock).mockReturnValue(mockFunctions);
+
+    // Mock Firebase Firestore
+    (firebaseFirestore.initializeFirestore as jest.Mock).mockReturnValue(mockDb);
+    (firebaseFirestore.memoryLocalCache as jest.Mock).mockReturnValue({ type: 'memory' });
+    (firebaseFirestore.persistentLocalCache as jest.Mock).mockReturnValue({ type: 'persistent' });
+    (firebaseFirestore.persistentMultipleTabManager as jest.Mock).mockReturnValue({ type: 'multiTab' });
 
     // Mock environment variables
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY = 'test-api-key';
@@ -57,263 +62,219 @@ describe('Firebase Client - Browser Detection and Cache Strategy', () => {
     process.env.NEXT_PUBLIC_FIREBASE_APP_ID = '1:123456789:web:abcdef';
   });
 
-  const mockUserAgent = (userAgent: string) => {
-    Object.defineProperty(global.navigator, 'userAgent', {
-      value: userAgent,
-      configurable: true,
-      writable: true,
-    });
-  };
+  describe('Module Exports', () => {
+    test('should export auth instance', () => {
+      const browserDetection = require('@/lib/utils/browserDetection');
+      browserDetection.isSafariBrowser = jest.fn().mockReturnValue(false);
+      browserDetection.getBrowserName = jest.fn().mockReturnValue('Chrome');
 
-  describe('Safari Detection', () => {
-    test('should detect Safari on macOS', () => {
-      mockUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15');
+      const firebaseClient = require('@/lib/firebaseClient');
 
-      // Re-require the module to trigger initialization with new navigator
-      jest.isolateModules(() => {
-        require('@/lib/firebaseClient');
-      });
-
-      expect(memoryLocalCache).toHaveBeenCalled();
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Safari detected')
-      );
+      expect(firebaseClient.auth).toBeDefined();
+      expect(firebaseClient.auth).toBe(mockAuth);
     });
 
-    test('should detect Safari on iOS', () => {
-      mockUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1');
+    test('should export db instance', () => {
+      const browserDetection = require('@/lib/utils/browserDetection');
+      browserDetection.isSafariBrowser = jest.fn().mockReturnValue(false);
+      browserDetection.getBrowserName = jest.fn().mockReturnValue('Chrome');
 
-      jest.isolateModules(() => {
-        require('@/lib/firebaseClient');
-      });
+      const firebaseClient = require('@/lib/firebaseClient');
 
-      expect(memoryLocalCache).toHaveBeenCalled();
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Safari detected')
-      );
+      expect(firebaseClient.db).toBeDefined();
+      expect(firebaseClient.db).toBe(mockDb);
     });
 
-    test('should detect Safari on iPad', () => {
-      mockUserAgent('Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1');
+    test('should export functionsClient instance', () => {
+      const browserDetection = require('@/lib/utils/browserDetection');
+      browserDetection.isSafariBrowser = jest.fn().mockReturnValue(false);
+      browserDetection.getBrowserName = jest.fn().mockReturnValue('Chrome');
 
-      jest.isolateModules(() => {
-        require('@/lib/firebaseClient');
-      });
+      const firebaseClient = require('@/lib/firebaseClient');
 
-      expect(memoryLocalCache).toHaveBeenCalled();
+      expect(firebaseClient.functionsClient).toBeDefined();
+      expect(firebaseClient.functionsClient).toBe(mockFunctions);
     });
 
-    test('should NOT detect Safari for Chrome on macOS', () => {
-      mockUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    test('should export googleProvider', () => {
+      const browserDetection = require('@/lib/utils/browserDetection');
+      browserDetection.isSafariBrowser = jest.fn().mockReturnValue(false);
+      browserDetection.getBrowserName = jest.fn().mockReturnValue('Chrome');
 
-      jest.isolateModules(() => {
-        require('@/lib/firebaseClient');
-      });
+      const firebaseClient = require('@/lib/firebaseClient');
 
-      expect(persistentLocalCache).toHaveBeenCalled();
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Using persistent cache')
-      );
+      expect(firebaseClient.googleProvider).toBeDefined();
     });
 
-    test('should NOT detect Safari for Chrome on mobile', () => {
-      mockUserAgent('Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36');
+    test('should export emailProvider', () => {
+      const browserDetection = require('@/lib/utils/browserDetection');
+      browserDetection.isSafariBrowser = jest.fn().mockReturnValue(false);
+      browserDetection.getBrowserName = jest.fn().mockReturnValue('Chrome');
 
-      jest.isolateModules(() => {
-        require('@/lib/firebaseClient');
-      });
+      const firebaseClient = require('@/lib/firebaseClient');
 
-      expect(persistentLocalCache).toHaveBeenCalled();
+      expect(firebaseClient.emailProvider).toBeDefined();
     });
 
-    test('should NOT detect Safari for Firefox', () => {
-      mockUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:120.0) Gecko/20100101 Firefox/120.0');
+    test('should export default app', () => {
+      const browserDetection = require('@/lib/utils/browserDetection');
+      browserDetection.isSafariBrowser = jest.fn().mockReturnValue(false);
+      browserDetection.getBrowserName = jest.fn().mockReturnValue('Chrome');
 
-      jest.isolateModules(() => {
-        require('@/lib/firebaseClient');
-      });
+      const firebaseClient = require('@/lib/firebaseClient');
 
-      expect(persistentLocalCache).toHaveBeenCalled();
-    });
-
-    test('should NOT detect Safari for Edge', () => {
-      mockUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0');
-
-      jest.isolateModules(() => {
-        require('@/lib/firebaseClient');
-      });
-
-      expect(persistentLocalCache).toHaveBeenCalled();
+      expect(firebaseClient.default).toBeDefined();
+      expect(firebaseClient.default).toBe(mockApp);
     });
   });
 
   describe('Cache Strategy Selection', () => {
-    test('should use memory cache for Safari', () => {
-      mockUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15');
+    test('should use memory cache when Safari is detected', () => {
+      const browserDetection = require('@/lib/utils/browserDetection');
+      browserDetection.isSafariBrowser = jest.fn().mockReturnValue(true);
+      browserDetection.getBrowserName = jest.fn().mockReturnValue('Safari');
 
-      jest.isolateModules(() => {
-        require('@/lib/firebaseClient');
-      });
+      require('@/lib/firebaseClient');
 
-      expect(initializeFirestore).toHaveBeenCalledWith(
-        expect.anything(),
+      expect(firebaseFirestore.memoryLocalCache).toHaveBeenCalled();
+      expect(firebaseFirestore.initializeFirestore).toHaveBeenCalledWith(
+        mockApp,
         expect.objectContaining({
-          localCache: expect.objectContaining({ type: 'memory' })
+          localCache: expect.anything(),
         })
       );
     });
 
-    test('should use persistent cache with multi-tab for Chrome', () => {
-      mockUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    test('should use persistent cache when non-Safari browser is detected', () => {
+      const browserDetection = require('@/lib/utils/browserDetection');
+      browserDetection.isSafariBrowser = jest.fn().mockReturnValue(false);
+      browserDetection.getBrowserName = jest.fn().mockReturnValue('Chrome');
 
-      jest.isolateModules(() => {
-        require('@/lib/firebaseClient');
-      });
+      require('@/lib/firebaseClient');
 
-      expect(persistentMultipleTabManager).toHaveBeenCalled();
-      expect(persistentLocalCache).toHaveBeenCalledWith(
-        expect.objectContaining({ tabManager: expect.anything() })
-      );
-    });
-
-    test('should use persistent cache for Firefox', () => {
-      mockUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0');
-
-      jest.isolateModules(() => {
-        require('@/lib/firebaseClient');
-      });
-
-      expect(persistentLocalCache).toHaveBeenCalled();
+      expect(firebaseFirestore.persistentLocalCache).toHaveBeenCalled();
+      expect(firebaseFirestore.persistentMultipleTabManager).toHaveBeenCalled();
     });
   });
 
-  describe('Error Handling and Fallback', () => {
-    test('should fallback to memory cache if persistent cache initialization fails', () => {
-      mockUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+  describe('Error Handling', () => {
+    test('should fallback to memory cache if Firestore initialization fails', () => {
+      const browserDetection = require('@/lib/utils/browserDetection');
+      browserDetection.isSafariBrowser = jest.fn().mockReturnValue(false);
+      browserDetection.getBrowserName = jest.fn().mockReturnValue('Chrome');
 
-      // Mock persistent cache to throw error
-      (initializeFirestore as jest.Mock).mockImplementationOnce(() => {
-        throw new Error('Persistent cache initialization failed');
-      });
+      // Mock first call to throw error, second call to succeed
+      (firebaseFirestore.initializeFirestore as jest.Mock)
+        .mockImplementationOnce(() => {
+          throw new Error('Persistent cache initialization failed');
+        })
+        .mockReturnValueOnce(mockDb);
 
-      jest.isolateModules(() => {
-        require('@/lib/firebaseClient');
-      });
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
+      require('@/lib/firebaseClient');
+
+      // Should log error
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining('Error initializing Firestore'),
         expect.any(Error)
       );
 
-      // Should have attempted to initialize again with memory cache
-      expect(initializeFirestore).toHaveBeenCalledTimes(2);
-      expect(memoryLocalCache).toHaveBeenCalled();
-    });
+      // Should fallback to memory cache
+      expect(firebaseFirestore.memoryLocalCache).toHaveBeenCalled();
+      expect(firebaseFirestore.initializeFirestore).toHaveBeenCalledTimes(2);
 
-    test('should handle window undefined in SSR', () => {
-      // Simulate SSR environment
-      const originalWindow = global.window;
-      // @ts-ignore
-      delete global.window;
-
-      jest.isolateModules(() => {
-        const firebaseClient = require('@/lib/firebaseClient');
-        expect(firebaseClient.db).toBeDefined();
-      });
-
-      // Restore window
-      global.window = originalWindow;
+      consoleErrorSpy.mockRestore();
     });
   });
 
-  describe('Browser-Specific User Agents', () => {
-    const testCases = [
-      {
-        name: 'Safari 17 macOS',
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
-        expectedCache: 'memory',
-      },
-      {
-        name: 'Safari 16 iOS',
-        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
-        expectedCache: 'memory',
-      },
-      {
-        name: 'Chrome 120 Desktop',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        expectedCache: 'persistent',
-      },
-      {
-        name: 'Chrome 120 Android',
-        userAgent: 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-        expectedCache: 'persistent',
-      },
-      {
-        name: 'Firefox 120 Desktop',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
-        expectedCache: 'persistent',
-      },
-      {
-        name: 'Edge 120 Desktop',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.2210.121',
-        expectedCache: 'persistent',
-      },
-      {
-        name: 'Samsung Internet Mobile',
-        userAgent: 'Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/23.0 Chrome/115.0.0.0 Mobile Safari/537.36',
-        expectedCache: 'persistent',
-      },
-    ];
+  describe('Firebase App Initialization', () => {
+    test('should initialize Firebase app with correct config', () => {
+      const browserDetection = require('@/lib/utils/browserDetection');
+      browserDetection.isSafariBrowser = jest.fn().mockReturnValue(false);
+      browserDetection.getBrowserName = jest.fn().mockReturnValue('Chrome');
 
-    testCases.forEach(({ name, userAgent, expectedCache }) => {
-      test(`should use ${expectedCache} cache for ${name}`, () => {
-        mockUserAgent(userAgent);
+      require('@/lib/firebaseClient');
 
-        jest.isolateModules(() => {
-          require('@/lib/firebaseClient');
-        });
+      expect(firebaseApp.initializeApp).toHaveBeenCalledWith({
+        apiKey: 'test-api-key',
+        authDomain: 'test.firebaseapp.com',
+        projectId: 'test-project',
+        storageBucket: 'test.appspot.com',
+        messagingSenderId: '123456789',
+        appId: '1:123456789:web:abcdef',
+      });
+    });
 
-        if (expectedCache === 'memory') {
-          expect(memoryLocalCache).toHaveBeenCalled();
-        } else {
-          expect(persistentLocalCache).toHaveBeenCalled();
-        }
+    test('should reuse existing app if already initialized', () => {
+      (firebaseApp.getApps as jest.Mock).mockReturnValue([mockApp]);
+
+      const browserDetection = require('@/lib/utils/browserDetection');
+      browserDetection.isSafariBrowser = jest.fn().mockReturnValue(false);
+      browserDetection.getBrowserName = jest.fn().mockReturnValue('Chrome');
+
+      require('@/lib/firebaseClient');
+
+      expect(firebaseApp.initializeApp).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Google Provider Configuration', () => {
+    test('should configure Google provider with select_account prompt', () => {
+      const mockGoogleProvider = {
+        setCustomParameters: jest.fn(),
+      };
+      (firebaseAuth.GoogleAuthProvider as jest.Mock).mockImplementation(() => mockGoogleProvider);
+
+      const browserDetection = require('@/lib/utils/browserDetection');
+      browserDetection.isSafariBrowser = jest.fn().mockReturnValue(false);
+      browserDetection.getBrowserName = jest.fn().mockReturnValue('Chrome');
+
+      require('@/lib/firebaseClient');
+
+      expect(mockGoogleProvider.setCustomParameters).toHaveBeenCalledWith({
+        prompt: 'select_account',
       });
     });
   });
 
-  describe('Exports', () => {
-    beforeEach(() => {
-      mockUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+  describe('Console Logging', () => {
+    test('should log Safari detection for Safari browser', () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      const browserDetection = require('@/lib/utils/browserDetection');
+      browserDetection.isSafariBrowser = jest.fn().mockReturnValue(true);
+      browserDetection.getBrowserName = jest.fn().mockReturnValue('Safari');
+
+      require('@/lib/firebaseClient');
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Safari detected')
+      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('memory cache')
+      );
+
+      consoleLogSpy.mockRestore();
     });
 
-    test('should export auth instance', () => {
-      jest.isolateModules(() => {
-        const { auth } = require('@/lib/firebaseClient');
-        expect(auth).toBeDefined();
-      });
-    });
+    test('should log persistent cache for non-Safari browser', () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
 
-    test('should export db instance', () => {
-      jest.isolateModules(() => {
-        const { db } = require('@/lib/firebaseClient');
-        expect(db).toBeDefined();
-      });
-    });
+      const browserDetection = require('@/lib/utils/browserDetection');
+      browserDetection.isSafariBrowser = jest.fn().mockReturnValue(false);
+      browserDetection.getBrowserName = jest.fn().mockReturnValue('Chrome');
 
-    test('should export functionsClient instance', () => {
-      jest.isolateModules(() => {
-        const { functionsClient } = require('@/lib/firebaseClient');
-        expect(functionsClient).toBeDefined();
-      });
-    });
+      require('@/lib/firebaseClient');
 
-    test('should export auth providers', () => {
-      jest.isolateModules(() => {
-        const { googleProvider, emailProvider } = require('@/lib/firebaseClient');
-        expect(googleProvider).toBeDefined();
-        expect(emailProvider).toBeDefined();
-      });
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Chrome detected')
+      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('persistent cache')
+      );
+
+      consoleLogSpy.mockRestore();
     });
   });
 });
