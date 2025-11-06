@@ -27,6 +27,7 @@ import {
   Link2,
   X,
   ExternalLink,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -61,23 +62,25 @@ const ENTITY_ICONS: Record<EntityType, React.ComponentType<{ className?: string 
 // Helper: Get Entity Data
 // ============================================================================
 
-function useEntityData(relationship: Relationship) {
-  const tasks = useTasks((s) => s.tasks);
-  const projects = useProjects((s) => s.projects);
-  const goals = useGoals((s) => s.goals);
-  const moods = useMoods((s) => s.moods);
+interface EntityStores {
+  tasks: any[];
+  projects: any[];
+  goals: any[];
+  moods: any[];
+}
 
+function getEntityData(relationship: Relationship, stores: EntityStores) {
   if (relationship.targetType === 'task') {
-    return tasks.find((t) => t.id === relationship.targetId);
+    return stores.tasks.find((t) => t.id === relationship.targetId);
   }
   if (relationship.targetType === 'project') {
-    return projects.find((p) => p.id === relationship.targetId);
+    return stores.projects.find((p) => p.id === relationship.targetId);
   }
   if (relationship.targetType === 'goal') {
-    return goals.find((g) => g.id === relationship.targetId);
+    return stores.goals.find((g) => g.id === relationship.targetId);
   }
   if (relationship.targetType === 'mood') {
-    return moods.find((m) => m.id === relationship.targetId);
+    return stores.moods.find((m) => m.id === relationship.targetId);
   }
   if (relationship.targetType === 'tool') {
     try {
@@ -239,7 +242,7 @@ function RelationshipCard({
         {/* Reasoning */}
         {relationship.reasoning && (
           <p className="text-xs text-gray-500 dark:text-gray-500 mt-1 italic">
-            "{relationship.reasoning}"
+            &ldquo;{relationship.reasoning}&rdquo;
           </p>
         )}
 
@@ -321,6 +324,17 @@ export function RelationshipsList({
     s.getRelationshipsFor(entityType, entityId).filter((r) => r.status === 'active')
   );
 
+  // Load entity stores at the top level
+  const tasks = useTasks((s) => s.tasks);
+  const projects = useProjects((s) => s.projects);
+  const goals = useGoals((s) => s.goals);
+  const moods = useMoods((s) => s.moods);
+
+  const entityStores = useMemo(
+    () => ({ tasks, projects, goals, moods }),
+    [tasks, projects, goals, moods]
+  );
+
   // Group relationships by type
   const grouped = useMemo(() => {
     const tools: Relationship[] = [];
@@ -372,7 +386,7 @@ export function RelationshipsList({
               <RelationshipCard
                 key={rel.id}
                 relationship={rel}
-                entityData={useEntityData(rel)}
+                entityData={getEntityData(rel, entityStores)}
                 onAccept={onAccept ? () => onAccept(rel.id) : undefined}
                 onReject={onReject ? () => onReject(rel.id) : undefined}
                 showActions={showActions}
@@ -394,7 +408,7 @@ export function RelationshipsList({
               <RelationshipCard
                 key={rel.id}
                 relationship={rel}
-                entityData={useEntityData(rel)}
+                entityData={getEntityData(rel, entityStores)}
                 onDelete={onDelete ? () => onDelete(rel.id) : undefined}
                 showActions={showActions}
               />
@@ -415,7 +429,7 @@ export function RelationshipsList({
               <RelationshipCard
                 key={rel.id}
                 relationship={rel}
-                entityData={useEntityData(rel)}
+                entityData={getEntityData(rel, entityStores)}
                 onDelete={onDelete ? () => onDelete(rel.id) : undefined}
                 showActions={showActions}
               />
@@ -436,7 +450,7 @@ export function RelationshipsList({
               <RelationshipCard
                 key={rel.id}
                 relationship={rel}
-                entityData={useEntityData(rel)}
+                entityData={getEntityData(rel, entityStores)}
                 onDelete={onDelete ? () => onDelete(rel.id) : undefined}
                 showActions={showActions}
               />
@@ -457,7 +471,7 @@ export function RelationshipsList({
               <RelationshipCard
                 key={rel.id}
                 relationship={rel}
-                entityData={useEntityData(rel)}
+                entityData={getEntityData(rel, entityStores)}
                 onDelete={onDelete ? () => onDelete(rel.id) : undefined}
                 showActions={showActions}
               />
@@ -478,7 +492,7 @@ export function RelationshipsList({
               <RelationshipCard
                 key={rel.id}
                 relationship={rel}
-                entityData={useEntityData(rel)}
+                entityData={getEntityData(rel, entityStores)}
                 onDelete={onDelete ? () => onDelete(rel.id) : undefined}
                 showActions={showActions}
               />
