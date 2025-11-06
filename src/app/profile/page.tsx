@@ -471,28 +471,60 @@ function ProfilePageContent() {
               </div>
 
               <div className="flex flex-col gap-2 md:gap-3">
-                <Button
-                  type="button"
-                  size="lg"
-                  disabled={billingButtonDisabled}
-                  className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-purple-400 disabled:to-pink-400 disabled:cursor-not-allowed text-sm md:text-base"
-                  onClick={() => {
-                    void handleBillingRedirect(hasProAccess ? "portal" : "upgrade");
-                  }}
-                >
-                  {hasProAccess ? "Manage billing" : "Upgrade to Pro"}
-                  {billingButtonDisabled ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ArrowUpRight className="h-4 w-4" />
-                  )}
-                </Button>
-                {!hasProAccess && (
-                  <Button variant="outline" asChild className="w-full text-sm md:text-base">
-                    <Link href="mailto:hello@focusnotebook.ai?subject=Focus%20Notebook%20Pro">
-                      Talk to the team
-                    </Link>
-                  </Button>
+                {hasProAccess ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      asChild
+                      className="w-full text-sm md:text-base"
+                    >
+                      <Link href="/billing">
+                        View Billing Dashboard
+                      </Link>
+                    </Button>
+                    <Button
+                      type="button"
+                      size="lg"
+                      disabled={billingButtonDisabled}
+                      variant="outline"
+                      className="w-full inline-flex items-center justify-center gap-2 text-sm md:text-base"
+                      onClick={() => {
+                        void handleBillingRedirect("portal");
+                      }}
+                    >
+                      Manage via Stripe Portal
+                      {billingButtonDisabled ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ArrowUpRight className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      size="lg"
+                      disabled={billingButtonDisabled}
+                      className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-purple-400 disabled:to-pink-400 disabled:cursor-not-allowed text-sm md:text-base"
+                      onClick={() => {
+                        void handleBillingRedirect("upgrade");
+                      }}
+                    >
+                      Upgrade to Pro
+                      {billingButtonDisabled ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ArrowUpRight className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button variant="outline" asChild className="w-full text-sm md:text-base">
+                      <Link href="mailto:hello@focusnotebook.ai?subject=Focus%20Notebook%20Pro">
+                        Talk to the team
+                      </Link>
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
