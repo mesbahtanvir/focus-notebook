@@ -24,6 +24,14 @@ import {
   stripeWebhook,
   syncStripeSubscription,
 } from './stripeBilling';
+import {
+  createLinkToken,
+  exchangePublicToken,
+  createRelinkToken,
+  markRelinking,
+  triggerSync,
+} from './plaidFunctions';
+import { plaidWebhook } from './plaidWebhooks';
 
 // Export cloud functions
 export {
@@ -40,4 +48,11 @@ export {
   createStripePortalSession,
   stripeWebhook,
   syncStripeSubscription,
+  // Plaid Functions
+  createLinkToken,
+  exchangePublicToken,
+  createRelinkToken,
+  markRelinking,
+  triggerSync,
+  plaidWebhook,
 };
