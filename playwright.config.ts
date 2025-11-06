@@ -70,6 +70,33 @@ export default defineConfig({
       },
     },
 
+    // Desktop - Safari
+    {
+      name: 'Desktop Safari',
+      use: {
+        ...devices['Desktop Safari'],
+        viewport: { width: 1280, height: 720 },
+      },
+    },
+
+    // Desktop - Firefox
+    {
+      name: 'Desktop Firefox',
+      use: {
+        ...devices['Desktop Firefox'],
+        viewport: { width: 1280, height: 720 },
+      },
+    },
+
+    // Desktop - Edge
+    {
+      name: 'Desktop Edge',
+      use: {
+        ...devices['Desktop Edge'],
+        viewport: { width: 1280, height: 720 },
+      },
+    },
+
     // Tablet - iPad
     {
       name: 'Tablet',
@@ -85,6 +112,15 @@ export default defineConfig({
       use: {
         ...devices['iPhone 13'],
         viewport: { width: 390, height: 844 },
+      },
+    },
+
+    // Mobile - Android Chrome
+    {
+      name: 'Mobile Chrome Android',
+      use: {
+        ...devices['Pixel 5'],
+        viewport: { width: 393, height: 851 },
       },
     },
   ],
