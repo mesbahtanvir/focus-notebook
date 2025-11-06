@@ -6,9 +6,10 @@ import { useSpending } from "@/store/useSpending";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/store/useSettings";
 import { parseCSV } from "@/lib/transactionParser";
-import { ArrowLeft, Upload, TrendingUp, DollarSign, Calendar, PieChart } from "lucide-react";
+import { ArrowLeft, Upload, TrendingUp, DollarSign, Calendar, PieChart, Link as LinkIcon } from "lucide-react";
 import type { TransactionCategory } from "@/types/transactions";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
+import { PlaidLinkButton } from "@/components/spending/PlaidLinkButton";
 
 export default function SpendingPage() {
   useTrackToolUsage('spending');
@@ -246,21 +247,64 @@ export default function SpendingPage() {
       <div className="card p-6 mb-6">
         <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
           <Upload className="h-5 w-5" />
-          Upload Bank Statement
+          Import Transactions
         </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Upload a CSV file from your bank or credit card statement.
-          Expected format: Date, Description, Amount
-        </p>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv"
-          onChange={handleFileUpload}
-          disabled={isUploading}
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
-        />
-        {isUploading && <p className="text-sm text-gray-600 mt-2">Uploading...</p>}
+
+        {/* Connect Bank Account */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <LinkIcon className="h-4 w-4 text-blue-600" />
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+              Connect Bank Account
+            </h3>
+            <span className="px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+              Recommended
+            </span>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            Automatically import transactions from American Express, Chase, Bank of America, and 12,000+ banks.
+            Secure OAuth connection powered by Plaid.
+          </p>
+          <PlaidLinkButton
+            onSuccess={() => {
+              alert('Bank account connected successfully! Transactions are being synced.');
+            }}
+            onError={(error) => {
+              alert(`Failed to connect bank: ${error.message}`);
+            }}
+            className="btn btn-primary flex items-center gap-2"
+          />
+        </div>
+
+        {/* Divider */}
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white dark:bg-gray-900 text-gray-500">or upload CSV</span>
+          </div>
+        </div>
+
+        {/* CSV Upload */}
+        <div>
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            Upload Bank Statement
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            Upload a CSV file from your bank or credit card statement.
+            Expected format: Date, Description, Amount
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFileUpload}
+            disabled={isUploading}
+            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+          />
+          {isUploading && <p className="text-sm text-gray-600 mt-2">Uploading...</p>}
+        </div>
       </div>
 
       {/* Summary */}

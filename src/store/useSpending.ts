@@ -14,6 +14,15 @@ export interface BankAccount {
   currency: string;
   createdAt: string;
   updatedAt?: number;
+
+  // Plaid integration fields (optional - only for connected accounts)
+  plaidAccessToken?: string; // Encrypted access token for Plaid API
+  plaidItemId?: string; // Plaid item ID
+  plaidInstitutionId?: string; // Plaid institution ID (e.g., ins_3)
+  plaidAccountId?: string; // Plaid account ID within the item
+  isPlaidConnected?: boolean; // True if account is connected via Plaid
+  lastSynced?: string; // ISO timestamp of last transaction sync
+  syncError?: string; // Error message if last sync failed
 }
 
 export interface Transaction {
@@ -28,6 +37,11 @@ export interface Transaction {
   notes?: string;
   createdAt: string;
   updatedAt?: number;
+
+  // Plaid integration fields (optional - only for transactions from Plaid)
+  plaidTransactionId?: string; // Unique Plaid transaction ID to prevent duplicates
+  source?: 'csv' | 'manual' | 'plaid'; // Source of the transaction
+  pending?: boolean; // True if transaction is pending (from Plaid)
 }
 
 export interface SpendingInsight {
