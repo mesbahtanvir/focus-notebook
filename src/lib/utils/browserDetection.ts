@@ -33,12 +33,13 @@ export function getBrowserName(): string {
 
   if (isSafariBrowser()) {
     return 'Safari';
+  } else if (/edg/i.test(ua)) {
+    // Check Edge before Chrome since Edge user agent contains "Chrome"
+    return 'Edge';
   } else if (/chrome/i.test(ua)) {
     return 'Chrome';
   } else if (/firefox/i.test(ua)) {
     return 'Firefox';
-  } else if (/edg/i.test(ua)) {
-    return 'Edge';
   } else {
     return 'Unknown';
   }
