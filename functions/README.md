@@ -19,16 +19,22 @@ Copy the example environment file:
 cp .env.example .env
 ```
 
-Edit `.env` and add your OpenAI API key:
+Edit `.env` and add your API keys:
 
 ```
 OPENAI_API_KEY=sk-your-actual-api-key-here
+ALPHA_VANTAGE_API_KEY=your-alpha-vantage-api-key-here
 ```
+
+**Note:** Get a free Alpha Vantage API key at https://www.alphavantage.co/support/#api-key
 
 ### 3. Set Firebase Environment Config
 
+For production deployment, set environment variables:
+
 ```bash
 firebase functions:config:set openai.api_key="sk-your-actual-api-key-here"
+firebase functions:config:set alpha_vantage.api_key="your-alpha-vantage-api-key-here"
 ```
 
 ## Local Development
@@ -135,6 +141,55 @@ firebase deploy --only functions:processNewThought
   message: string
 }
 ```
+
+### 5. `updateTrackedTickers` (Scheduled - Daily)
+
+**Trigger:** Runs daily at midnight UTC
+
+**What it does:**
+- Scans all user portfolios for stock tickers
+- Collects unique currencies used across portfolios
+- Updates the tracked tickers document in Firestore
+
+### 6. `refreshTrackedTickerPrices` (Scheduled - Daily)
+
+**Trigger:** Runs daily at 12:05 AM UTC
+
+**What it does:**
+- Fetches latest prices for all tracked stock tickers from Alpha Vantage
+- Respects free-tier rate limits (4 requests/minute)
+- Updates latest prices and historical price data in Firestore
+- Requires `ALPHA_VANTAGE_API_KEY` environment variable
+
+### 7. `createStripeCheckoutSession` (Callable)
+
+**Trigger:** Called when user initiates subscription upgrade
+
+**Configuration:** Runs with `minInstances: 1` to stay warm and reduce user churn from cold starts
+
+**Parameters:**
+```typescript
+{
+  origin?: string  // Base URL for redirect URLs
+}
+```
+
+**Returns:**
+```typescript
+{
+  url: string  // Stripe Checkout session URL
+}
+```
+
+### 8. `stripeWebhook` (HTTP Request)
+
+**Trigger:** Stripe webhook events
+
+**Handles:**
+- `checkout.session.completed` - Initial subscription creation
+- `customer.subscription.created` - Subscription activation
+- `customer.subscription.updated` - Subscription changes
+- `customer.subscription.deleted` - Cancellations
 
 ## Architecture
 

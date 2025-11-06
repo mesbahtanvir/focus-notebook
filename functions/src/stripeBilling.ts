@@ -165,7 +165,11 @@ async function loadSubscriptionFromSession(session: Stripe.Checkout.Session, str
   });
 }
 
-export const createStripeCheckoutSession = functions.https.onCall(async (data, context) => {
+export const createStripeCheckoutSession = functions
+  .runWith({
+    minInstances: 1, // Keep warm to reduce user churn from cold starts
+  })
+  .https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign in required.');
   }
