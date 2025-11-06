@@ -20,6 +20,7 @@ export type ToolName =
   | 'packing-list'
   | 'trips'
   | 'spending'
+  | 'spending-unified'
   | 'investments'
   | 'subscriptions'
   | 'asset-horizon';

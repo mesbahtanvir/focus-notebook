@@ -21,6 +21,7 @@
     "lighthouse:single": "lhci autorun --collect.url=\"https://focus.yourthoughts.ca\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
     "@capacitor/cli": "^7.4.3",
     "@capacitor/core": "^7.4.3",
     "@capacitor/haptics": "^7.0.2",
@@ -39,9 +40,11 @@
     "next": "^14.2.33",
     "next-pwa": "^5.6.0",
     "next-themes": "^0.4.6",
+    "plaid": "^39.1.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-hook-form": "7.53.0",
+    "react-plaid-link": "^4.1.1",
     "recharts": "^3.3.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",

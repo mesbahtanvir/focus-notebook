@@ -36,7 +36,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.syncStripeSubscription = exports.stripeWebhook = exports.createStripePortalSession = exports.createStripeCheckoutSession = exports.createDailyPortfolioSnapshots = exports.cleanupExpiredAnonymousUsers = exports.refreshTrackedTickerPrices = exports.updateTrackedTickers = exports.processThoughtQueueWorker = exports.revertThoughtProcessing = exports.reprocessThought = exports.manualProcessThought = exports.processNewThought = void 0;
+exports.plaidWebhook = exports.triggerSync = exports.markRelinking = exports.createRelinkToken = exports.exchangePublicToken = exports.createLinkToken = exports.syncStripeSubscription = exports.stripeWebhook = exports.createStripePortalSession = exports.createStripeCheckoutSession = exports.createDailyPortfolioSnapshots = exports.cleanupExpiredAnonymousUsers = exports.refreshTrackedTickerPrices = exports.updateTrackedTickers = exports.processThoughtQueueWorker = exports.revertThoughtProcessing = exports.reprocessThought = exports.manualProcessThought = exports.processNewThought = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -59,4 +59,12 @@ Object.defineProperty(exports, "createStripeCheckoutSession", { enumerable: true
 Object.defineProperty(exports, "createStripePortalSession", { enumerable: true, get: function () { return stripeBilling_1.createStripePortalSession; } });
 Object.defineProperty(exports, "stripeWebhook", { enumerable: true, get: function () { return stripeBilling_1.stripeWebhook; } });
 Object.defineProperty(exports, "syncStripeSubscription", { enumerable: true, get: function () { return stripeBilling_1.syncStripeSubscription; } });
+const plaidFunctions_1 = require("./plaidFunctions");
+Object.defineProperty(exports, "createLinkToken", { enumerable: true, get: function () { return plaidFunctions_1.createLinkToken; } });
+Object.defineProperty(exports, "exchangePublicToken", { enumerable: true, get: function () { return plaidFunctions_1.exchangePublicToken; } });
+Object.defineProperty(exports, "createRelinkToken", { enumerable: true, get: function () { return plaidFunctions_1.createRelinkToken; } });
+Object.defineProperty(exports, "markRelinking", { enumerable: true, get: function () { return plaidFunctions_1.markRelinking; } });
+Object.defineProperty(exports, "triggerSync", { enumerable: true, get: function () { return plaidFunctions_1.triggerSync; } });
+const plaidWebhooks_1 = require("./plaidWebhooks");
+Object.defineProperty(exports, "plaidWebhook", { enumerable: true, get: function () { return plaidWebhooks_1.plaidWebhook; } });
 //# sourceMappingURL=index.js.map

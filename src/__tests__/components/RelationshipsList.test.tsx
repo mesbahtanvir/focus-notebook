@@ -492,7 +492,7 @@ describe('RelationshipsList Component', () => {
 
     it('should show formatted creation date', () => {
       const taskRel = createMockRelationship({
-        createdAt: '2025-01-15T00:00:00Z',
+        createdAt: '2025-01-15T12:00:00Z', // Use noon UTC to avoid timezone boundary issues
       });
       mockUseEntityRelationships.mockImplementation((selector) =>
         selector({
