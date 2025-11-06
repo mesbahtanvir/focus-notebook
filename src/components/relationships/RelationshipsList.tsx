@@ -6,7 +6,6 @@ import { useTasks } from '@/store/useTasks';
 import { useProjects } from '@/store/useProjects';
 import { useGoals } from '@/store/useGoals';
 import { useMoods } from '@/store/useMoods';
-import { useToolEnrollment } from '@/store/useToolEnrollment';
 import { getToolSpecById } from '../../../shared/toolSpecs';
 import type { Relationship, EntityType } from '@/types/relationship';
 import {
@@ -57,22 +56,6 @@ const ENTITY_ICONS: Record<EntityType, React.ComponentType<{ className?: string 
   person: User,
   thought: Link2,
 };
-
-const TOOL_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  tasks: ListChecks,
-  projects: FolderKanban,
-  goals: Target,
-  moodtracker: Smile,
-  cbt: Brain,
-  focus: Target,
-  brainstorming: Sparkles,
-  relationships: User,
-  notes: FileText,
-  errands: ShoppingBag,
-};
-
-// Import missing icons
-import { Brain, Sparkles, FileText, ShoppingBag } from 'lucide-react';
 
 // ============================================================================
 // Helper: Get Entity Data
