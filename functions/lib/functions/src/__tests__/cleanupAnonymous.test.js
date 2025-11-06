@@ -42,7 +42,6 @@ jest.mock('firebase-functions', () => ({
             onRun: jest.fn(),
         })),
     },
-    config: jest.fn(() => ({ ci: {} })),
 }));
 const cleanupAnonymous_1 = require("../cleanupAnonymous");
 const buildSessionDoc = (data = {}) => ({

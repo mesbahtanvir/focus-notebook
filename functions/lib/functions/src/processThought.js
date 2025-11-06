@@ -41,7 +41,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.processThoughtQueueWorker = exports.revertThoughtProcessing = exports.reprocessThought = exports.manualProcessThought = exports.processNewThought = void 0;
 const functions = __importStar(require("firebase-functions"));
@@ -54,7 +53,7 @@ const toolSpecUtils_1 = require("../../shared/toolSpecUtils");
 const toolSpecs_1 = require("../../shared/toolSpecs");
 const subscription_1 = require("../../shared/subscription");
 const ANONYMOUS_SESSION_COLLECTION = 'anonymousSessions';
-const ANONYMOUS_AI_OVERRIDE_KEY = process.env.ANONYMOUS_AI_OVERRIDE_KEY || ((_b = (_a = functions.config()) === null || _a === void 0 ? void 0 : _a.ci) === null || _b === void 0 ? void 0 : _b.anonymous_key);
+const ANONYMOUS_AI_OVERRIDE_KEY = process.env.ANONYMOUS_AI_OVERRIDE_KEY || '';
 const PROCESSING_QUEUE_SUBCOLLECTION = 'processingQueue';
 const PROCESSING_USAGE_DOC = 'processingUsage/meta';
 const MIN_PROCESSING_INTERVAL_MS = 10000;
