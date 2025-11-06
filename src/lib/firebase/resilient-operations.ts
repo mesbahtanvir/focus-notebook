@@ -17,14 +17,14 @@ import {
   resilientUpdateDoc,
   resilientDeleteDoc,
 } from '@/lib/data/subscribe';
-import type { DocumentReference, DocumentData } from 'firebase/firestore';
+import type { DocumentReference, DocumentData, DocumentSnapshot } from 'firebase/firestore';
 
 /**
  * Read operation with full resilience
  */
 export async function resilientRead<T = DocumentData>(
   ref: DocumentReference<T>
-): Promise<T | null> {
+): Promise<DocumentSnapshot<T>> {
   const startTime = Date.now();
   const path = ref.path;
   const breaker = getCircuitBreaker('firebase-read');
@@ -33,7 +33,7 @@ export async function resilientRead<T = DocumentData>(
   try {
     // Execute through circuit breaker
     const result = await breaker.execute(async () => {
-      return await resilientGetDoc(ref);
+      return await resilientGetDoc(ref as DocumentReference<DocumentData>);
     });
 
     // Record success metrics
@@ -47,7 +47,7 @@ export async function resilientRead<T = DocumentData>(
       fromCache: false,
     });
 
-    return result;
+    return result as DocumentSnapshot<T>;
   } catch (error) {
     // Record failure metrics
     metrics.recordOperation({
@@ -92,7 +92,7 @@ export async function resilientCreate<T = DocumentData>(
   try {
     // Execute through circuit breaker
     await breaker.execute(async () => {
-      return await resilientSetDoc(ref, data);
+      return await resilientSetDoc(ref as DocumentReference<DocumentData>, data as DocumentData);
     });
 
     // Record success metrics
@@ -149,7 +149,7 @@ export async function resilientUpdate<T = DocumentData>(
   try {
     // Execute through circuit breaker
     await breaker.execute(async () => {
-      return await resilientUpdateDoc(ref, data);
+      return await resilientUpdateDoc(ref as DocumentReference<DocumentData>, data as Partial<DocumentData>);
     });
 
     // Record success metrics
@@ -205,7 +205,7 @@ export async function resilientRemove<T = DocumentData>(
   try {
     // Execute through circuit breaker
     await breaker.execute(async () => {
-      return await resilientDeleteDoc(ref);
+      return await resilientDeleteDoc(ref as DocumentReference<DocumentData>);
     });
 
     // Record success metrics

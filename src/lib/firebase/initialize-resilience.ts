@@ -12,7 +12,7 @@ import {
   getConnectionMonitor,
   circuitBreakerRegistry,
 } from '@/lib/data/subscribe';
-import { db } from './client';
+import { db } from '@/lib/firebaseClient';
 import { setDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
