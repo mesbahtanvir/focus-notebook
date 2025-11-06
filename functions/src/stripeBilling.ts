@@ -70,7 +70,8 @@ const ACTIVE_STATUSES = new Set<Stripe.Subscription.Status>(['active', 'trialing
 function mapSubscriptionToSnapshot(subscription: Stripe.Subscription) {
   const status = subscription.status;
   const stripeCustomerId = getStripeCustomerId(subscription);
-  const priceId = subscription.items.data[0]?.price?.id ?? null;
+  const price = subscription.items.data[0]?.price;
+  const priceId = price?.id ?? null;
   const currentPeriodEnd = subscription.current_period_end
     ? subscription.current_period_end * 1000
     : null;
@@ -78,12 +79,27 @@ function mapSubscriptionToSnapshot(subscription: Stripe.Subscription) {
   const cancelAt = subscription.cancel_at ? subscription.cancel_at * 1000 : null;
   const aiAllowed = ACTIVE_STATUSES.has(status);
 
+  // Get price information
+  const amount = price?.unit_amount ?? null;
+  const currency = price?.currency ?? 'usd';
+  const interval = price?.recurring?.interval ?? 'month';
+
+  // Get discount information
+  const discount = subscription.discount;
+  const discountAmount = discount?.coupon?.amount_off ?? null;
+  const discountPercent = discount?.coupon?.percent_off ?? null;
+
   return {
     tier: aiAllowed ? 'pro' : 'free',
     status,
     stripeCustomerId,
     stripeSubscriptionId: subscription.id,
     priceId,
+    amount,
+    currency,
+    interval,
+    discountAmount,
+    discountPercent,
     currentPeriodEnd,
     currentPeriodStart: subscription.current_period_start
       ? subscription.current_period_start * 1000

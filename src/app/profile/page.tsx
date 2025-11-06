@@ -25,12 +25,12 @@ type ProfileForm = {
 };
 
 const ENTITLEMENT_MESSAGES: Record<string, string> = {
-  allowed: "Focus Notebook Pro is active on your account.",
-  "no-record": "No active subscription detected. Upgrade to Pro to unlock advanced automations.",
-  "tier-mismatch": "Your current plan does not include Pro features.",
-  inactive: "Your subscription is inactive. Renew to continue using Pro features.",
-  disabled: "AI processing is currently disabled for your account.",
-  exhausted: "You have used all available AI credits. Top up or wait for the next billing cycle.",
+  allowed: "All Pro features unlocked",
+  "no-record": "Upgrade to unlock AI automation and advanced features.",
+  "tier-mismatch": "Upgrade to Pro for AI automation and advanced features.",
+  inactive: "Subscription inactive. Renew to restore Pro features.",
+  disabled: "AI processing disabled. Contact support for assistance.",
+  exhausted: "AI credits exhausted. Top up or wait for next billing cycle.",
 };
 
 function ProfilePageContent() {

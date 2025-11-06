@@ -38,6 +38,22 @@ export function SubscriptionOverview({ subscription, onManageBilling }: Subscrip
   const isPro = tier === 'pro';
   const isActive = status === 'active' || status === 'trialing' || status === 'past_due';
 
+  // Format price
+  const formatPrice = (): string => {
+    const amount = subscription.amount;
+    const currency = subscription.currency || 'usd';
+    const interval = subscription.interval || 'month';
+
+    if (!amount) return '$9.99/month'; // Fallback
+
+    const price = (amount / 100).toFixed(2);
+    const currencySymbol = currency === 'usd' ? '$' : currency.toUpperCase();
+    return `${currencySymbol}${price}/${interval}`;
+  };
+
+  // Check if there's a discount
+  const hasDiscount = subscription.discountPercent || subscription.discountAmount;
+
   // Determine renewal status
   const renewalStatus = cancelAtPeriodEnd ? {
     icon: AlertCircle,
@@ -117,14 +133,26 @@ export function SubscriptionOverview({ subscription, onManageBilling }: Subscrip
 
         {/* Price (only for Pro users with active subscription) */}
         {isPro && isActive && (
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              <DollarSign className="inline h-4 w-4 mr-1" />
-              Plan
-            </span>
-            <span className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              $9.99/month
-            </span>
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                <DollarSign className="inline h-4 w-4 mr-1" />
+                Plan
+              </span>
+              <span className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                {formatPrice()}
+              </span>
+            </div>
+            {hasDiscount && (
+              <div className="flex items-center justify-end gap-2">
+                <Badge variant="outline" className="text-green-600 border-green-600 dark:text-green-400 dark:border-green-400">
+                  {subscription.discountPercent
+                    ? `${subscription.discountPercent}% off`
+                    : `$${(subscription.discountAmount! / 100).toFixed(2)} off`
+                  }
+                </Badge>
+              </div>
+            )}
           </div>
         )}
 

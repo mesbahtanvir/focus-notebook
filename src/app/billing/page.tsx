@@ -104,6 +104,21 @@ export default function BillingPage() {
       : new Date(String(subscription.currentPeriodEnd))
     : new Date();
 
+  // Format price for display
+  const formatPrice = (): string => {
+    if (!subscription) return '$9.99/month';
+
+    const amount = subscription.amount;
+    const currency = subscription.currency || 'usd';
+    const interval = subscription.interval || 'month';
+
+    if (!amount) return '$9.99/month'; // Fallback
+
+    const price = (amount / 100).toFixed(2);
+    const currencySymbol = currency === 'usd' ? '$' : currency.toUpperCase();
+    return `${currencySymbol}${price}/${interval}`;
+  };
+
   const isLoading = subscriptionLoading || billingLoading;
 
   return (
@@ -184,7 +199,7 @@ export default function BillingPage() {
           onConfirm={handleReactivateConfirm}
           onCancel={() => setShowReactivateDialog(false)}
           nextBillingDate={currentPeriodEnd}
-          amount="$9.99/month"
+          amount={formatPrice()}
         />
       </div>
     </div>

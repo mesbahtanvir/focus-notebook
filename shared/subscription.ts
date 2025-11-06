@@ -36,6 +36,11 @@ export interface SubscriptionSnapshot {
   stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;
   priceId?: string | null;
+  amount?: number | null;
+  currency?: string;
+  interval?: 'day' | 'week' | 'month' | 'year';
+  discountAmount?: number | null;
+  discountPercent?: number | null;
   invoicesCachedAt?: number;
   usageStatsEnabled?: boolean;
 }
