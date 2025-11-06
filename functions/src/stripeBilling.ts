@@ -341,15 +341,13 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
         const session = event.data.object as Stripe.Checkout.Session;
         const customerId = typeof session.customer === 'string' ? session.customer : null;
         const uid = session.metadata?.uid ?? null;
+
+        // Record customer mapping first
         if (customerId && uid) {
           await recordCustomerMapping(customerId, uid);
-          await updateSubscriptionStatus(uid, {
-            stripeCustomerId: customerId,
-            lastCheckoutCompletedAt: new Date().toISOString(),
-            lastCheckoutSessionId: session.id,
-          });
         }
 
+        // Retrieve and process subscription with full data
         const subscriptionId =
           typeof session.subscription === 'string' ? session.subscription : null;
         if (subscriptionId) {
@@ -360,20 +358,58 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
             const resolvedUid =
               uid ?? (customerId ? await findUidByCustomer(customerId) : null);
             if (!resolvedUid) {
-              console.warn(
-                'Unable to resolve UID for subscription after checkout.',
-                subscriptionId
+              console.error(
+                'checkout.session.completed: Unable to resolve UID for subscription.',
+                'Session ID:',
+                session.id,
+                'Subscription ID:',
+                subscriptionId,
+                'Customer ID:',
+                customerId
               );
               break;
             }
             const resolvedCustomerId = getStripeCustomerId(subscription);
-            if (resolvedCustomerId) {
+            if (resolvedCustomerId && resolvedCustomerId !== customerId) {
               await recordCustomerMapping(resolvedCustomerId, resolvedUid);
             }
-            await updateSubscriptionStatus(resolvedUid, mapSubscriptionToSnapshot(subscription));
+
+            // Update with full subscription data including tier and entitlements
+            const subscriptionSnapshot = mapSubscriptionToSnapshot(subscription);
+            await updateSubscriptionStatus(resolvedUid, {
+              ...subscriptionSnapshot,
+              lastCheckoutCompletedAt: new Date().toISOString(),
+              lastCheckoutSessionId: session.id,
+            });
+            console.log(
+              'checkout.session.completed: Successfully updated subscription status.',
+              'User ID:',
+              resolvedUid,
+              'Tier:',
+              subscriptionSnapshot.tier,
+              'Status:',
+              subscriptionSnapshot.status
+            );
           } catch (error) {
-            console.error('Failed to retrieve subscription after checkout:', error);
+            console.error(
+              'checkout.session.completed: Failed to retrieve or process subscription.',
+              'Session ID:',
+              session.id,
+              'Subscription ID:',
+              subscriptionId,
+              'Error:',
+              error
+            );
+            // Don't write partial data - let customer.subscription.created event handle it
           }
+        } else {
+          console.warn(
+            'checkout.session.completed: No subscription ID found.',
+            'Session ID:',
+            session.id,
+            'Payment status:',
+            session.payment_status
+          );
         }
         break;
       }
@@ -385,13 +421,31 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
         const uid =
           uidFromMetadata ?? (customerId ? await findUidByCustomer(customerId) : null);
         if (!uid) {
-          console.warn('Received subscription event without mapped uid', subscription.id);
+          console.error(
+            `${event.type}: Unable to resolve UID for subscription.`,
+            'Subscription ID:',
+            subscription.id,
+            'Customer ID:',
+            customerId,
+            'Metadata UID:',
+            uidFromMetadata
+          );
           break;
         }
         if (customerId) {
           await recordCustomerMapping(customerId, uid);
         }
-        await updateSubscriptionStatus(uid, mapSubscriptionToSnapshot(subscription));
+        const subscriptionSnapshot = mapSubscriptionToSnapshot(subscription);
+        await updateSubscriptionStatus(uid, subscriptionSnapshot);
+        console.log(
+          `${event.type}: Successfully updated subscription status.`,
+          'User ID:',
+          uid,
+          'Tier:',
+          subscriptionSnapshot.tier,
+          'Status:',
+          subscriptionSnapshot.status
+        );
         break;
       }
       case 'customer.subscription.deleted': {
@@ -401,7 +455,15 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
         const uid =
           uidFromMetadata ?? (customerId ? await findUidByCustomer(customerId) : null);
         if (!uid) {
-          console.warn('Received subscription deletion without mapped uid', subscription.id);
+          console.error(
+            'customer.subscription.deleted: Unable to resolve UID for subscription.',
+            'Subscription ID:',
+            subscription.id,
+            'Customer ID:',
+            customerId,
+            'Metadata UID:',
+            uidFromMetadata
+          );
           break;
         }
 
@@ -423,6 +485,11 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
         }
 
         await updateSubscriptionStatus(uid, payload);
+        console.log(
+          'customer.subscription.deleted: Successfully downgraded user to free tier.',
+          'User ID:',
+          uid
+        );
         break;
       }
       default:
