@@ -114,13 +114,20 @@ export const useSpendingTool = create<SpendingToolState>((set, get) => ({
         collection(db, 'plaidItems'),
         where('uid', '==', uid)
       );
-      const unsubItems = onSnapshot(itemsQuery, (snapshot) => {
-        const items: Record<string, PlaidItem> = {};
-        snapshot.forEach((doc) => {
-          items[doc.id] = { ...doc.data() } as PlaidItem;
-        });
-        set({ items });
-      });
+      const unsubItems = onSnapshot(
+        itemsQuery,
+        (snapshot) => {
+          const items: Record<string, PlaidItem> = {};
+          snapshot.forEach((doc) => {
+            items[doc.id] = { ...doc.data() } as PlaidItem;
+          });
+          set({ items });
+        },
+        (error) => {
+          console.error('Error listening to plaidItems:', error);
+          // Don't set error state, just log it - collection may not exist yet
+        }
+      );
       unsubscribers.push(unsubItems);
 
       // Listen to accounts
@@ -128,13 +135,20 @@ export const useSpendingTool = create<SpendingToolState>((set, get) => ({
         collection(db, 'accounts'),
         where('uid', '==', uid)
       );
-      const unsubAccounts = onSnapshot(accountsQuery, (snapshot) => {
-        const accounts: Record<string, Account> = {};
-        snapshot.forEach((doc) => {
-          accounts[doc.id] = { ...doc.data() } as Account;
-        });
-        set({ accounts });
-      });
+      const unsubAccounts = onSnapshot(
+        accountsQuery,
+        (snapshot) => {
+          const accounts: Record<string, Account> = {};
+          snapshot.forEach((doc) => {
+            accounts[doc.id] = { ...doc.data() } as Account;
+          });
+          set({ accounts });
+        },
+        (error) => {
+          console.error('Error listening to accounts:', error);
+          // Don't set error state, just log it - collection may not exist yet
+        }
+      );
       unsubscribers.push(unsubAccounts);
 
       // Listen to transactions (last 90 days)
@@ -149,13 +163,20 @@ export const useSpendingTool = create<SpendingToolState>((set, get) => ({
         orderBy('postedAt', 'desc'),
         firestoreLimit(500)
       );
-      const unsubTxns = onSnapshot(txnsQuery, (snapshot) => {
-        const transactions: PlaidTransaction[] = [];
-        snapshot.forEach((doc) => {
-          transactions.push({ ...doc.data(), id: doc.id } as PlaidTransaction);
-        });
-        set({ transactions });
-      });
+      const unsubTxns = onSnapshot(
+        txnsQuery,
+        (snapshot) => {
+          const transactions: PlaidTransaction[] = [];
+          snapshot.forEach((doc) => {
+            transactions.push({ ...doc.data(), id: doc.id } as PlaidTransaction);
+          });
+          set({ transactions });
+        },
+        (error) => {
+          console.error('Error listening to transactions:', error);
+          // Don't set error state, just log it - collection may not exist yet
+        }
+      );
       unsubscribers.push(unsubTxns);
 
       // Listen to subscriptions
@@ -164,13 +185,20 @@ export const useSpendingTool = create<SpendingToolState>((set, get) => ({
         where('uid', '==', uid),
         where('active', '==', true)
       );
-      const unsubSubs = onSnapshot(subsQuery, (snapshot) => {
-        const subscriptions: RecurringStream[] = [];
-        snapshot.forEach((doc) => {
-          subscriptions.push({ ...doc.data(), id: doc.id } as RecurringStream);
-        });
-        set({ subscriptions });
-      });
+      const unsubSubs = onSnapshot(
+        subsQuery,
+        (snapshot) => {
+          const subscriptions: RecurringStream[] = [];
+          snapshot.forEach((doc) => {
+            subscriptions.push({ ...doc.data(), id: doc.id } as RecurringStream);
+          });
+          set({ subscriptions });
+        },
+        (error) => {
+          console.error('Error listening to recurringStreams:', error);
+          // Don't set error state, just log it - collection may not exist yet
+        }
+      );
       unsubscribers.push(unsubSubs);
 
       // Store unsubscribers for cleanup
@@ -203,7 +231,7 @@ export const useSpendingTool = create<SpendingToolState>((set, get) => ({
   // ============================================================================
 
   createLinkToken: async (platform = 'web') => {
-    set({ linkLoading: true, error: null });
+    set({ linkLoading: true });
 
     try {
       const createLinkTokenFn = httpsCallable(functions, 'createLinkToken');
@@ -214,7 +242,8 @@ export const useSpendingTool = create<SpendingToolState>((set, get) => ({
       return linkToken;
     } catch (error: any) {
       console.error('Error creating link token:', error);
-      set({ error: error.message, linkLoading: false });
+      // Don't set global error state - link button will handle this
+      set({ linkLoading: false });
       throw error;
     }
   },
@@ -235,7 +264,7 @@ export const useSpendingTool = create<SpendingToolState>((set, get) => ({
   },
 
   createRelinkToken: async (itemId: string) => {
-    set({ linkLoading: true, error: null });
+    set({ linkLoading: true });
 
     try {
       const createRelinkFn = httpsCallable(functions, 'createRelinkToken');
@@ -246,7 +275,8 @@ export const useSpendingTool = create<SpendingToolState>((set, get) => ({
       return linkToken;
     } catch (error: any) {
       console.error('Error creating relink token:', error);
-      set({ error: error.message, linkLoading: false });
+      // Don't set global error state - link button will handle this
+      set({ linkLoading: false });
       throw error;
     }
   },
