@@ -894,12 +894,33 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 {errorMessage}
               </p>
-              <button
-                onClick={() => setShowErrorModal(false)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                OK
-              </button>
+              <div className="flex gap-2 justify-center">
+                {errorMessage?.includes('Focus Notebook Pro is required') ? (
+                  <>
+                    <Link
+                      href="/profile"
+                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg transition-all font-semibold shadow-md hover:shadow-lg flex items-center gap-2"
+                      onClick={() => setShowErrorModal(false)}
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Subscribe to Pro
+                    </Link>
+                    <button
+                      onClick={() => setShowErrorModal(false)}
+                      className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setShowErrorModal(false)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    OK
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
         </div>
