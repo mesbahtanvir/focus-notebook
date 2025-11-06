@@ -5,8 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTrips } from '@/store/useTrips';
 import { TripCard } from '@/components/trip/TripCard';
 import { TripFormModal } from '@/components/trip/TripFormModal';
-import { ToolHeader } from '@/components/tools/ToolHeader';
-import { SearchAndFilters } from '@/components/tools/SearchAndFilters';
+import { ToolHeader, SearchAndFilters, ToolGroupNav } from '@/components/tools';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { toolThemes } from '@/components/tools/themes';
 import { useToast } from '@/hooks/use-toast';
@@ -97,6 +96,9 @@ export default function TripsPage() {
           }
           theme={theme}
         />
+
+        {/* Tool Group Navigation */}
+        <ToolGroupNav currentToolId="trips" />
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">

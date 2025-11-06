@@ -31,6 +31,18 @@ export interface ToolSpec {
   negativeExamples: ToolExample[];
 }
 
+export interface ToolGroup {
+  id: string;
+  title: string;
+  tagline: string;
+  description: string;
+  category: string;
+  toolIds: string[];
+  primaryToolId: string; // The main tool that shows in the UI
+  hubPath: string; // The path to the group's hub/dashboard page
+  benefits?: string[];
+}
+
 const baseGuidance = [
   'Only act when the thought clearly warrants the tool.',
   'Avoid inventing details that are not present in the thought.',
@@ -796,12 +808,103 @@ export const CORE_TOOL_IDS: ToolSpecId[] = [
 
 export const ALL_TOOL_IDS = Object.keys(toolSpecs) as ToolSpecId[];
 
+export const toolGroups: Record<string, ToolGroup> = {
+  'work-goals': {
+    id: 'work-goals',
+    title: 'Work & Goals',
+    tagline: 'Manage tasks, projects, and goals with focused execution.',
+    description: 'A comprehensive productivity suite for managing your daily tasks, multi-step projects, long-term goals, and focused work sessions. Includes brainstorming for ideation, notes for knowledge capture, and errands for life admin.',
+    category: 'Productivity',
+    toolIds: ['tasks', 'projects', 'goals', 'focus', 'brainstorming', 'notes', 'errands'],
+    primaryToolId: 'tasks',
+    hubPath: '/tools/work-goals',
+    benefits: [
+      'Organize tasks, projects, and goals in one place',
+      'Run focused work sessions with timers',
+      'Capture ideas and knowledge for later',
+      'Manage both work and life errands',
+    ],
+  },
+  'inner-life': {
+    id: 'inner-life',
+    title: 'Inner Life',
+    tagline: 'Process thoughts, track emotions, and nurture connections.',
+    description: 'A complete wellbeing suite for processing everyday thoughts, tracking mood patterns, managing relationships, working through negative thinking with CBT, and exploring deeper philosophical questions.',
+    category: 'Wellbeing',
+    toolIds: ['thoughts', 'moodtracker', 'relationships', 'cbt', 'deepreflect'],
+    primaryToolId: 'thoughts',
+    hubPath: '/tools/inner-life',
+    benefits: [
+      'Process and enhance daily thoughts',
+      'Track mood patterns over time',
+      'Nurture important relationships',
+      'Work through negative thinking patterns',
+      'Explore deeper philosophical questions',
+    ],
+  },
+  trips: {
+    id: 'trips',
+    title: 'Trips',
+    tagline: 'Plan itineraries, budgets, and travel logistics with smart packing lists.',
+    description: 'Manage trip budgets, itineraries, packing lists, and shared tasks across your travel plans. Packing lists are automatically generated based on your destination, duration, and activities.',
+    category: 'Logistics',
+    toolIds: ['trips', 'packing-list'],
+    primaryToolId: 'trips',
+    hubPath: '/tools/trips',
+    benefits: [
+      'Track travel budgets and spending',
+      'Manage itineraries and reservations',
+      'Auto-generate smart packing lists based on trip details',
+      'Link travel tasks and errands',
+    ],
+  },
+  finances: {
+    id: 'finances',
+    title: 'Finances',
+    tagline: 'Comprehensive financial planning and tracking.',
+    description: 'Track investments, analyze spending patterns, manage subscriptions, and model long-term financial scenarios all in one integrated suite.',
+    category: 'Finance',
+    toolIds: ['investments', 'spending', 'subscriptions', 'asset-horizon'],
+    primaryToolId: 'spending',
+    hubPath: '/tools/finances',
+    benefits: [
+      'Monitor investment portfolios and performance',
+      'Analyze spending with AI-powered insights',
+      'Track and manage recurring subscriptions',
+      'Model long-term financial horizons and scenarios',
+    ],
+  },
+};
+
+export type ToolGroupId = keyof typeof toolGroups;
+
 export function getToolSpecById(id: ToolSpecId): ToolSpec {
   const spec = toolSpecs[id];
   if (!spec) {
     throw new Error(`Tool spec "${id}" is not defined`);
   }
   return spec;
+}
+
+export function getToolGroupById(id: ToolGroupId): ToolGroup {
+  const group = toolGroups[id];
+  if (!group) {
+    throw new Error(`Tool group "${id}" is not defined`);
+  }
+  return group;
+}
+
+export function getToolGroupForTool(toolId: string): ToolGroup | null {
+  for (const group of Object.values(toolGroups)) {
+    if (group.toolIds.includes(toolId)) {
+      return group;
+    }
+  }
+  return null;
+}
+
+export function isToolInGroup(toolId: string): boolean {
+  return getToolGroupForTool(toolId) !== null;
 }
 
 export function renderToolSpecForPrompt(spec: ToolSpec): string {

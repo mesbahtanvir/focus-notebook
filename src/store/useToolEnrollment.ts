@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import { collection, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebaseClient';
 import { subscribeCol } from '@/lib/data/subscribe';
-import type { ToolSpecId } from '../../shared/toolSpecs';
-import { CORE_TOOL_IDS } from '../../shared/toolSpecs';
+import type { ToolSpecId, ToolGroupId } from '../../shared/toolSpecs';
+import { CORE_TOOL_IDS, toolGroups } from '../../shared/toolSpecs';
 
 export interface ToolEnrollmentStats {
   totalThoughtsProcessed: number;
@@ -40,6 +40,12 @@ type State = {
   enroll: (toolId: ToolSpecId) => Promise<void>;
   unenroll: (toolId: ToolSpecId) => Promise<void>;
   isToolEnrolled: (toolId: ToolSpecId) => boolean;
+
+  // Group enrollment
+  enrollGroup: (groupId: ToolGroupId) => Promise<void>;
+  unenrollGroup: (groupId: ToolGroupId) => Promise<void>;
+  isGroupEnrolled: (groupId: ToolGroupId) => boolean;
+  getGroupEnrollmentStatus: (groupId: ToolGroupId) => 'all' | 'partial' | 'none';
 
   // Stats management
   updateToolStats: (toolId: ToolSpecId, stats: Partial<ToolEnrollmentStats>) => Promise<void>;
@@ -132,6 +138,66 @@ export const useToolEnrollment = create<State>((set, get) => ({
 
   isToolEnrolled: (toolId) => {
     return get().enrolledToolIds.includes(toolId);
+  },
+
+  // ----- Group Enrollment -----
+  enrollGroup: async (groupId) => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) throw new Error('Not authenticated');
+
+    const group = toolGroups[groupId];
+    if (!group) throw new Error(`Tool group ${groupId} not found`);
+
+    // Enroll all tools in the group
+    const writes = group.toolIds.map((toolId) =>
+      setDoc(
+        doc(db, `users/${userId}/toolEnrollments/${toolId}`),
+        {
+          status: 'active',
+          enrolledAt: serverTimestamp(),
+        },
+        { merge: true }
+      )
+    );
+
+    await Promise.all(writes);
+  },
+
+  unenrollGroup: async (groupId) => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) throw new Error('Not authenticated');
+
+    const group = toolGroups[groupId];
+    if (!group) throw new Error(`Tool group ${groupId} not found`);
+
+    // Unenroll all tools in the group
+    const deletes = group.toolIds.map((toolId) =>
+      deleteDoc(doc(db, `users/${userId}/toolEnrollments/${toolId}`))
+    );
+
+    await Promise.all(deletes);
+  },
+
+  isGroupEnrolled: (groupId) => {
+    const group = toolGroups[groupId];
+    if (!group) return false;
+
+    const enrolledToolIds = get().enrolledToolIds;
+    return group.toolIds.every((toolId) => enrolledToolIds.includes(toolId as ToolSpecId));
+  },
+
+  getGroupEnrollmentStatus: (groupId) => {
+    const group = toolGroups[groupId];
+    if (!group) return 'none';
+
+    const enrolledToolIds = get().enrolledToolIds;
+    const enrolledCount = group.toolIds.filter((toolId) =>
+      enrolledToolIds.includes(toolId as ToolSpecId)
+    ).length;
+
+    if (enrolledCount === 0) return 'none';
+    if (enrolledCount === group.toolIds.length) return 'all';
+    return 'partial';
   },
 
   // ----- Stats Management -----
