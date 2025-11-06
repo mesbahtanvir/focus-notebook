@@ -36,26 +36,24 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.stripeWebhook = exports.createStripePortalSession = exports.createStripeCheckoutSession = void 0;
+exports.syncStripeSubscription = exports.stripeWebhook = exports.createStripePortalSession = exports.createStripeCheckoutSession = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const stripe_1 = __importDefault(require("stripe"));
 const subscription_1 = require("../../shared/subscription");
 const STRIPE_API_VERSION = '2023-10-16';
 function getStripeClient() {
-    var _a;
-    const secretKey = (_a = functions.config().stripe) === null || _a === void 0 ? void 0 : _a.secret;
+    const secretKey = process.env.STRIPE_SECRET;
     if (!secretKey) {
         throw new functions.https.HttpsError('internal', 'Stripe is not configured. Please contact support.');
     }
     return new stripe_1.default(secretKey, { apiVersion: STRIPE_API_VERSION });
 }
 function resolveBaseUrl(origin) {
-    var _a;
     if (typeof origin === 'string' && origin.startsWith('http')) {
         return origin.replace(/\/$/, '');
     }
-    const fallback = (_a = functions.config().app) === null || _a === void 0 ? void 0 : _a.base_url;
+    const fallback = process.env.APP_BASE_URL;
     if (typeof fallback === 'string' && fallback.startsWith('http')) {
         return fallback.replace(/\/$/, '');
     }
@@ -126,8 +124,56 @@ async function updateSubscriptionStatus(uid, payload) {
         .doc(`users/${uid}/${subscription_1.SUBSCRIPTION_STATUS_COLLECTION}/${subscription_1.SUBSCRIPTION_STATUS_DOC_ID}`)
         .set(Object.assign(Object.assign({}, payload), { lastSyncedAt: new Date().toISOString() }), { merge: true });
 }
-exports.createStripeCheckoutSession = functions.https.onCall(async (data, context) => {
-    var _a, _b, _c, _d;
+function normalizeCheckoutCustomer(customer) {
+    if (!customer) {
+        return null;
+    }
+    if (typeof customer === 'string') {
+        return customer;
+    }
+    if (typeof customer === 'object' && customer !== null && 'id' in customer) {
+        const maybeId = customer.id;
+        return typeof maybeId === 'string' ? maybeId : null;
+    }
+    return null;
+}
+function assertSessionOwnership(session, uid) {
+    var _a;
+    const sessionUid = typeof ((_a = session.metadata) === null || _a === void 0 ? void 0 : _a.uid) === 'string' ? session.metadata.uid : null;
+    if (sessionUid && sessionUid !== uid) {
+        throw new functions.https.HttpsError('permission-denied', 'Checkout session does not belong to the authenticated user.');
+    }
+}
+async function resolveSessionOwner(session) {
+    var _a;
+    const sessionUid = typeof ((_a = session.metadata) === null || _a === void 0 ? void 0 : _a.uid) === 'string' ? session.metadata.uid : null;
+    if (sessionUid) {
+        return sessionUid;
+    }
+    const customerId = normalizeCheckoutCustomer(session.customer);
+    if (!customerId) {
+        return null;
+    }
+    return await findUidByCustomer(customerId);
+}
+async function loadSubscriptionFromSession(session, stripe) {
+    const subscriptionFromSession = session.subscription;
+    if (!subscriptionFromSession) {
+        return null;
+    }
+    if (typeof subscriptionFromSession !== 'string') {
+        return subscriptionFromSession;
+    }
+    return await stripe.subscriptions.retrieve(subscriptionFromSession, {
+        expand: ['latest_invoice.payment_intent'],
+    });
+}
+exports.createStripeCheckoutSession = functions
+    .runWith({
+    minInstances: 1, // Keep warm to reduce user churn from cold starts
+})
+    .https.onCall(async (data, context) => {
+    var _a, _b, _c;
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Sign in required.');
     }
@@ -140,14 +186,14 @@ exports.createStripeCheckoutSession = functions.https.onCall(async (data, contex
     if (typeof email !== 'string' || email.length === 0) {
         throw new functions.https.HttpsError('failed-precondition', 'A verified email address is required before upgrading.');
     }
-    const priceId = (_d = functions.config().stripe) === null || _d === void 0 ? void 0 : _d.price_id;
+    const priceId = process.env.STRIPE_PRICE_ID;
     if (!priceId) {
         console.error('Stripe price id is not configured.');
         throw new functions.https.HttpsError('internal', 'Billing configuration incomplete. Please contact support.');
     }
     const baseUrl = resolveBaseUrl(data === null || data === void 0 ? void 0 : data.origin);
-    const successUrl = `${baseUrl}/settings?upgrade=success&session_id={CHECKOUT_SESSION_ID}`;
-    const cancelUrl = `${baseUrl}/settings?upgrade=cancelled`;
+    const successUrl = `${baseUrl}/profile?upgrade=success&session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${baseUrl}/profile?upgrade=cancelled`;
     const firestore = getFirestore();
     const statusRef = firestore.doc(`users/${uid}/${subscription_1.SUBSCRIPTION_STATUS_COLLECTION}/${subscription_1.SUBSCRIPTION_STATUS_DOC_ID}`);
     const statusSnap = await statusRef.get();
@@ -205,7 +251,7 @@ exports.createStripePortalSession = functions.https.onCall(async (data, context)
     const stripe = getStripeClient();
     const session = await stripe.billingPortal.sessions.create({
         customer: customerId,
-        return_url: `${resolveBaseUrl(data === null || data === void 0 ? void 0 : data.origin)}/settings`,
+        return_url: `${resolveBaseUrl(data === null || data === void 0 ? void 0 : data.origin)}/profile`,
     });
     if (!session.url) {
         throw new functions.https.HttpsError('internal', 'Unable to open the billing portal right now. Please try again shortly.');
@@ -217,13 +263,13 @@ exports.createStripePortalSession = functions.https.onCall(async (data, context)
     return { url: session.url };
 });
 exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f;
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
         res.status(405).send('Method Not Allowed');
         return;
     }
-    const webhookSecret = (_a = functions.config().stripe) === null || _a === void 0 ? void 0 : _a.webhook_secret;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!webhookSecret) {
         console.error('Stripe webhook secret is not configured.');
         res.status(500).send('Webhook misconfigured.');
@@ -249,15 +295,12 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
             case 'checkout.session.completed': {
                 const session = event.data.object;
                 const customerId = typeof session.customer === 'string' ? session.customer : null;
-                const uid = (_c = (_b = session.metadata) === null || _b === void 0 ? void 0 : _b.uid) !== null && _c !== void 0 ? _c : null;
+                const uid = (_b = (_a = session.metadata) === null || _a === void 0 ? void 0 : _a.uid) !== null && _b !== void 0 ? _b : null;
+                // Record customer mapping first
                 if (customerId && uid) {
                     await recordCustomerMapping(customerId, uid);
-                    await updateSubscriptionStatus(uid, {
-                        stripeCustomerId: customerId,
-                        lastCheckoutCompletedAt: new Date().toISOString(),
-                        lastCheckoutSessionId: session.id,
-                    });
                 }
+                // Retrieve and process subscription with full data
                 const subscriptionId = typeof session.subscription === 'string' ? session.subscription : null;
                 if (subscriptionId) {
                     try {
@@ -266,18 +309,25 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
                         });
                         const resolvedUid = uid !== null && uid !== void 0 ? uid : (customerId ? await findUidByCustomer(customerId) : null);
                         if (!resolvedUid) {
-                            console.warn('Unable to resolve UID for subscription after checkout.', subscriptionId);
+                            console.error('checkout.session.completed: Unable to resolve UID for subscription.', 'Session ID:', session.id, 'Subscription ID:', subscriptionId, 'Customer ID:', customerId);
                             break;
                         }
                         const resolvedCustomerId = getStripeCustomerId(subscription);
-                        if (resolvedCustomerId) {
+                        if (resolvedCustomerId && resolvedCustomerId !== customerId) {
                             await recordCustomerMapping(resolvedCustomerId, resolvedUid);
                         }
-                        await updateSubscriptionStatus(resolvedUid, mapSubscriptionToSnapshot(subscription));
+                        // Update with full subscription data including tier and entitlements
+                        const subscriptionSnapshot = mapSubscriptionToSnapshot(subscription);
+                        await updateSubscriptionStatus(resolvedUid, Object.assign(Object.assign({}, subscriptionSnapshot), { lastCheckoutCompletedAt: new Date().toISOString(), lastCheckoutSessionId: session.id }));
+                        console.log('checkout.session.completed: Successfully updated subscription status.', 'User ID:', resolvedUid, 'Tier:', subscriptionSnapshot.tier, 'Status:', subscriptionSnapshot.status);
                     }
                     catch (error) {
-                        console.error('Failed to retrieve subscription after checkout:', error);
+                        console.error('checkout.session.completed: Failed to retrieve or process subscription.', 'Session ID:', session.id, 'Subscription ID:', subscriptionId, 'Error:', error);
+                        // Don't write partial data - let customer.subscription.created event handle it
                     }
+                }
+                else {
+                    console.warn('checkout.session.completed: No subscription ID found.', 'Session ID:', session.id, 'Payment status:', session.payment_status);
                 }
                 break;
             }
@@ -285,25 +335,27 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
             case 'customer.subscription.updated': {
                 const subscription = event.data.object;
                 const customerId = getStripeCustomerId(subscription);
-                const uidFromMetadata = (_e = (_d = subscription.metadata) === null || _d === void 0 ? void 0 : _d.uid) !== null && _e !== void 0 ? _e : null;
+                const uidFromMetadata = (_d = (_c = subscription.metadata) === null || _c === void 0 ? void 0 : _c.uid) !== null && _d !== void 0 ? _d : null;
                 const uid = uidFromMetadata !== null && uidFromMetadata !== void 0 ? uidFromMetadata : (customerId ? await findUidByCustomer(customerId) : null);
                 if (!uid) {
-                    console.warn('Received subscription event without mapped uid', subscription.id);
+                    console.error(`${event.type}: Unable to resolve UID for subscription.`, 'Subscription ID:', subscription.id, 'Customer ID:', customerId, 'Metadata UID:', uidFromMetadata);
                     break;
                 }
                 if (customerId) {
                     await recordCustomerMapping(customerId, uid);
                 }
-                await updateSubscriptionStatus(uid, mapSubscriptionToSnapshot(subscription));
+                const subscriptionSnapshot = mapSubscriptionToSnapshot(subscription);
+                await updateSubscriptionStatus(uid, subscriptionSnapshot);
+                console.log(`${event.type}: Successfully updated subscription status.`, 'User ID:', uid, 'Tier:', subscriptionSnapshot.tier, 'Status:', subscriptionSnapshot.status);
                 break;
             }
             case 'customer.subscription.deleted': {
                 const subscription = event.data.object;
                 const customerId = getStripeCustomerId(subscription);
-                const uidFromMetadata = (_g = (_f = subscription.metadata) === null || _f === void 0 ? void 0 : _f.uid) !== null && _g !== void 0 ? _g : null;
+                const uidFromMetadata = (_f = (_e = subscription.metadata) === null || _e === void 0 ? void 0 : _e.uid) !== null && _f !== void 0 ? _f : null;
                 const uid = uidFromMetadata !== null && uidFromMetadata !== void 0 ? uidFromMetadata : (customerId ? await findUidByCustomer(customerId) : null);
                 if (!uid) {
-                    console.warn('Received subscription deletion without mapped uid', subscription.id);
+                    console.error('customer.subscription.deleted: Unable to resolve UID for subscription.', 'Subscription ID:', subscription.id, 'Customer ID:', customerId, 'Metadata UID:', uidFromMetadata);
                     break;
                 }
                 const payload = {
@@ -322,6 +374,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
                     payload.stripeCustomerId = customerId;
                 }
                 await updateSubscriptionStatus(uid, payload);
+                console.log('customer.subscription.deleted: Successfully downgraded user to free tier.', 'User ID:', uid);
                 break;
             }
             default:
@@ -334,5 +387,48 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
         return;
     }
     res.json({ received: true });
+});
+exports.syncStripeSubscription = functions.https.onCall(async (data, context) => {
+    var _a, _b;
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Sign in required.');
+    }
+    const uid = context.auth.uid;
+    const rawSessionId = typeof (data === null || data === void 0 ? void 0 : data.sessionId) === 'string' ? data.sessionId.trim() : '';
+    if (!rawSessionId) {
+        throw new functions.https.HttpsError('invalid-argument', 'A valid Stripe session id is required.');
+    }
+    const stripe = getStripeClient();
+    let session;
+    try {
+        session = await stripe.checkout.sessions.retrieve(rawSessionId, {
+            expand: ['subscription'],
+        });
+    }
+    catch (error) {
+        console.error('Failed to retrieve Stripe checkout session for manual sync:', error);
+        throw new functions.https.HttpsError('internal', 'Unable to verify Stripe checkout session. Please try again or contact support.');
+    }
+    assertSessionOwnership(session, uid);
+    const resolvedUid = (_a = (await resolveSessionOwner(session))) !== null && _a !== void 0 ? _a : uid;
+    if (resolvedUid !== uid) {
+        throw new functions.https.HttpsError('permission-denied', 'Checkout session is associated with a different account.');
+    }
+    const subscription = await loadSubscriptionFromSession(session, stripe);
+    if (!subscription) {
+        throw new functions.https.HttpsError('failed-precondition', 'No subscription is associated with the provided checkout session.');
+    }
+    const customerId = (_b = getStripeCustomerId(subscription)) !== null && _b !== void 0 ? _b : normalizeCheckoutCustomer(session.customer);
+    if (customerId) {
+        await recordCustomerMapping(customerId, uid);
+    }
+    const snapshot = mapSubscriptionToSnapshot(subscription);
+    await updateSubscriptionStatus(uid, Object.assign(Object.assign({}, snapshot), { lastManualSyncSessionId: session.id, lastManualSyncAt: new Date().toISOString() }));
+    return {
+        success: true,
+        subscriptionId: subscription.id,
+        status: snapshot.status,
+        tier: snapshot.tier,
+    };
 });
 //# sourceMappingURL=stripeBilling.js.map

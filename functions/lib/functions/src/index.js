@@ -36,7 +36,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.stripeWebhook = exports.createStripePortalSession = exports.createStripeCheckoutSession = exports.createDailyPortfolioSnapshots = exports.cleanupExpiredAnonymousUsers = exports.refreshTrackedTickerPrices = exports.updateTrackedTickers = exports.processThoughtQueueWorker = exports.revertThoughtProcessing = exports.reprocessThought = exports.manualProcessThought = exports.processNewThought = void 0;
+exports.syncStripeSubscription = exports.stripeWebhook = exports.createStripePortalSession = exports.createStripeCheckoutSession = exports.createDailyPortfolioSnapshots = exports.cleanupExpiredAnonymousUsers = exports.refreshTrackedTickerPrices = exports.updateTrackedTickers = exports.processThoughtQueueWorker = exports.revertThoughtProcessing = exports.reprocessThought = exports.manualProcessThought = exports.processNewThought = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -58,4 +58,5 @@ const stripeBilling_1 = require("./stripeBilling");
 Object.defineProperty(exports, "createStripeCheckoutSession", { enumerable: true, get: function () { return stripeBilling_1.createStripeCheckoutSession; } });
 Object.defineProperty(exports, "createStripePortalSession", { enumerable: true, get: function () { return stripeBilling_1.createStripePortalSession; } });
 Object.defineProperty(exports, "stripeWebhook", { enumerable: true, get: function () { return stripeBilling_1.stripeWebhook; } });
+Object.defineProperty(exports, "syncStripeSubscription", { enumerable: true, get: function () { return stripeBilling_1.syncStripeSubscription; } });
 //# sourceMappingURL=index.js.map

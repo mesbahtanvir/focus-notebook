@@ -32,7 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.__private__ = exports.cleanupExpiredAnonymousUsers = void 0;
 exports.cleanupExpiredAnonymousUsersHandler = cleanupExpiredAnonymousUsersHandler;
@@ -40,7 +39,7 @@ const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const ANONYMOUS_SESSION_COLLECTION = 'anonymousSessions';
 const ANONYMOUS_SESSION_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
-const ANONYMOUS_AI_OVERRIDE_KEY = process.env.ANONYMOUS_AI_OVERRIDE_KEY || ((_b = (_a = functions.config()) === null || _a === void 0 ? void 0 : _a.ci) === null || _b === void 0 ? void 0 : _b.anonymous_key);
+const ANONYMOUS_AI_OVERRIDE_KEY = process.env.ANONYMOUS_AI_OVERRIDE_KEY || '';
 async function cleanupExpiredAnonymousUsersHandler() {
     var _a, _b;
     console.log('Starting cleanup of expired anonymous users');
