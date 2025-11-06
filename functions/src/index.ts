@@ -18,6 +18,7 @@ import {
 import { refreshTrackedTickerPrices, updateTrackedTickers } from './marketData';
 import { cleanupExpiredAnonymousUsers } from './cleanupAnonymous';
 import { createDailyPortfolioSnapshots } from './portfolioSnapshots';
+import { generateMonthlySpendingReports } from './monthlySpendingReport';
 import {
   createStripeCheckoutSession,
   createStripePortalSession,
@@ -36,6 +37,7 @@ export {
   refreshTrackedTickerPrices,
   cleanupExpiredAnonymousUsers,
   createDailyPortfolioSnapshots,
+  generateMonthlySpendingReports,
   createStripeCheckoutSession,
   createStripePortalSession,
   stripeWebhook,

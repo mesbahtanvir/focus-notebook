@@ -36,7 +36,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.syncStripeSubscription = exports.stripeWebhook = exports.createStripePortalSession = exports.createStripeCheckoutSession = exports.createDailyPortfolioSnapshots = exports.cleanupExpiredAnonymousUsers = exports.refreshTrackedTickerPrices = exports.updateTrackedTickers = exports.processThoughtQueueWorker = exports.revertThoughtProcessing = exports.reprocessThought = exports.manualProcessThought = exports.processNewThought = void 0;
+exports.syncStripeSubscription = exports.stripeWebhook = exports.createStripePortalSession = exports.createStripeCheckoutSession = exports.generateMonthlySpendingReports = exports.createDailyPortfolioSnapshots = exports.cleanupExpiredAnonymousUsers = exports.refreshTrackedTickerPrices = exports.updateTrackedTickers = exports.processThoughtQueueWorker = exports.revertThoughtProcessing = exports.reprocessThought = exports.manualProcessThought = exports.processNewThought = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -54,6 +54,8 @@ const cleanupAnonymous_1 = require("./cleanupAnonymous");
 Object.defineProperty(exports, "cleanupExpiredAnonymousUsers", { enumerable: true, get: function () { return cleanupAnonymous_1.cleanupExpiredAnonymousUsers; } });
 const portfolioSnapshots_1 = require("./portfolioSnapshots");
 Object.defineProperty(exports, "createDailyPortfolioSnapshots", { enumerable: true, get: function () { return portfolioSnapshots_1.createDailyPortfolioSnapshots; } });
+const monthlySpendingReport_1 = require("./monthlySpendingReport");
+Object.defineProperty(exports, "generateMonthlySpendingReports", { enumerable: true, get: function () { return monthlySpendingReport_1.generateMonthlySpendingReports; } });
 const stripeBilling_1 = require("./stripeBilling");
 Object.defineProperty(exports, "createStripeCheckoutSession", { enumerable: true, get: function () { return stripeBilling_1.createStripeCheckoutSession; } });
 Object.defineProperty(exports, "createStripePortalSession", { enumerable: true, get: function () { return stripeBilling_1.createStripePortalSession; } });
