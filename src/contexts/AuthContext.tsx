@@ -287,6 +287,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      console.log('[AuthContext] Auth state changed:', {
+        hasUser: !!authUser,
+        userId: authUser?.uid,
+        isAnonymous: authUser?.isAnonymous,
+        email: authUser?.email
+      });
+
       setUser(authUser);
       setLoading(false);
 
@@ -300,9 +307,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       if (authUser) {
-        console.log('✅ User logged in:', authUser.email || authUser.uid);
+        console.log('✅ [AuthContext] User authenticated:', authUser.email || authUser.uid);
       } else {
-        console.log('👋 User logged out');
+        console.log('👋 [AuthContext] User logged out');
       }
     });
 

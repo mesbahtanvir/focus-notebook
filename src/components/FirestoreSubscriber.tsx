@@ -26,18 +26,28 @@ export function FirestoreSubscriber() {
 
   useEffect(() => {
     if (userId) {
-      console.log('🔥 Initializing Firestore subscriptions for user:', userId);
-      subscribeTasks(userId);
-      subscribeThoughts(userId);
-      subscribeMoods(userId);
-      subscribeFocus(userId);
-      subscribeToolEnrollment(userId);
-      subscribeSubscriptionStatus(userId);
-      
-      // Load any active focus session
-      loadActiveSession();
+      console.log('🔥 [FirestoreSubscriber] Initializing Firestore subscriptions for user:', userId);
+      try {
+        subscribeTasks(userId);
+        subscribeThoughts(userId);
+        subscribeMoods(userId);
+        subscribeFocus(userId);
+        subscribeToolEnrollment(userId);
+        subscribeSubscriptionStatus(userId);
+
+        // Load any active focus session
+        loadActiveSession();
+        console.log('✅ [FirestoreSubscriber] All subscriptions started successfully');
+      } catch (error) {
+        console.error('❌ [FirestoreSubscriber] Error starting subscriptions:', error);
+      }
+    } else {
+      console.log('⏳ [FirestoreSubscriber] Waiting for userId...');
     }
     return () => {
+      if (userId) {
+        console.log('🔌 [FirestoreSubscriber] Cleaning up subscriptions for user:', userId);
+      }
       clearSubscriptionStatus();
     };
   }, [

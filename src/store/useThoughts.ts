@@ -110,6 +110,7 @@ type State = {
   fromCache: boolean
   hasPendingWrites: boolean
   syncError: Error | null
+  isSubscribed: boolean
   unsubscribe: (() => void) | null
   subscribe: (userId: string) => void
   add: (data: Omit<Thought, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>) => Promise<void>
@@ -123,6 +124,7 @@ export const useThoughts = create<State>((set, get) => ({
   fromCache: false,
   hasPendingWrites: false,
   syncError: null,
+  isSubscribed: false,
   unsubscribe: null,
 
   subscribe: (userId: string) => {
@@ -132,28 +134,49 @@ export const useThoughts = create<State>((set, get) => ({
       currentUnsub()
     }
 
-    // Subscribe to ALL thoughts (no pagination)
-    const thoughtsQuery = query(
-      collection(db, `users/${userId}/thoughts`),
-      orderBy('createdAt', 'desc')
-    )
+    console.log('[useThoughts] Starting subscription for user:', userId);
 
-    const unsub = subscribeCol<Thought>(thoughtsQuery, (thoughts, meta) => {
-      set({
-        thoughts,
-        isLoading: false,
-        fromCache: meta.fromCache,
-        hasPendingWrites: meta.hasPendingWrites,
-        syncError: meta.error || null,
+    try {
+      // Mark subscription as started
+      set({ isSubscribed: true, isLoading: true, syncError: null })
+
+      // Subscribe to ALL thoughts (no pagination)
+      const thoughtsQuery = query(
+        collection(db, `users/${userId}/thoughts`),
+        orderBy('createdAt', 'desc')
+      )
+
+      const unsub = subscribeCol<Thought>(thoughtsQuery, (thoughts, meta) => {
+        console.log('[useThoughts] Snapshot received:', {
+          thoughtCount: thoughts.length,
+          fromCache: meta.fromCache,
+          hasError: !!meta.error,
+          error: meta.error?.message
+        });
+
+        set({
+          thoughts,
+          isLoading: false,
+          fromCache: meta.fromCache,
+          hasPendingWrites: meta.hasPendingWrites,
+          syncError: meta.error || null,
+        })
+
+        // Log sync errors to help with debugging
+        if (meta.error) {
+          console.error('[useThoughts] Sync error:', meta.error);
+        }
       })
 
-      // Log sync errors to help with debugging
-      if (meta.error) {
-        console.error('Thoughts sync error:', meta.error);
-      }
-    })
-
-    set({ unsubscribe: unsub })
+      set({ unsubscribe: unsub })
+    } catch (error) {
+      console.error('[useThoughts] Failed to set up subscription:', error);
+      set({
+        isLoading: false,
+        syncError: error as Error,
+        isSubscribed: false,
+      })
+    }
   },
 
   add: async (data) => {
