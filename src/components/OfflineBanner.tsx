@@ -12,7 +12,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { WifiOff, RefreshCw, AlertCircle, Wifi, Clock } from "lucide-react";
+import { WifiOff, RefreshCw, Wifi } from "lucide-react";
 import { visibilityManager } from "@/lib/firebase/visibility-manager";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +34,6 @@ interface ConnectionState {
 export default function OfflineBanner() {
   const [isOffline, setIsOffline] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
-  const [backgroundDuration, setBackgroundDuration] = useState(0);
   const [showStaleWarning, setShowStaleWarning] = useState(false);
 
   // Monitor browser online/offline status
@@ -70,26 +69,13 @@ export default function OfflineBanner() {
   }, []);
 
   // Monitor tab visibility and background duration
+  // Note: Stale warning disabled - background tab message removed
   useEffect(() => {
     const unsubscribe = visibilityManager.onVisibilityChange(
-      (isBackground, duration) => {
+      (isBackground) => {
+        // Still monitor visibility for other purposes, but don't show stale warning
         if (isBackground) {
-          // Tab went to background
           setShowStaleWarning(false);
-        } else if (duration !== undefined) {
-          // Tab returned to foreground
-          setBackgroundDuration(duration);
-
-          // Show stale warning if tab was in background for > 5 minutes
-          const STALE_THRESHOLD = 5 * 60 * 1000; // 5 minutes
-          if (duration > STALE_THRESHOLD && !isOffline) {
-            setShowStaleWarning(true);
-
-            // Auto-hide stale warning after 10 seconds
-            setTimeout(() => {
-              setShowStaleWarning(false);
-            }, 10000);
-          }
         }
       }
     );
@@ -121,17 +107,7 @@ export default function OfflineBanner() {
       };
     }
 
-    if (showStaleWarning) {
-      const minutes = Math.round(backgroundDuration / 1000 / 60);
-      return {
-        status: 'stale',
-        message: `Tab was in background for ${minutes} minutes. Data has been refreshed.`,
-        icon: <Clock className="w-4 h-4" />,
-        bgColor: 'bg-orange-50 dark:bg-orange-900/30',
-        textColor: 'text-orange-900 dark:text-orange-200',
-        borderColor: 'border-orange-200 dark:border-orange-900',
-      };
-    }
+    // Stale warning removed - no longer showing background tab messages
 
     return null; // No banner needed
   };
