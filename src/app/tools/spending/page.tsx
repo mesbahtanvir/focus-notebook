@@ -9,6 +9,7 @@ import { parseCSV } from "@/lib/transactionParser";
 import { ArrowLeft, Upload, TrendingUp, DollarSign, Calendar, PieChart } from "lucide-react";
 import type { TransactionCategory } from "@/types/transactions";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
+import { ToolGroupNav } from "@/components/tools";
 
 export default function SpendingPage() {
   useTrackToolUsage('spending');
@@ -227,6 +228,9 @@ export default function SpendingPage() {
           </div>
         </div>
       </div>
+
+      {/* Tool Group Navigation */}
+      <ToolGroupNav currentToolId="spending" />
 
       {/* Month selector */}
       <div className="mb-6 flex items-center gap-4">

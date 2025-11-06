@@ -32,7 +32,8 @@ import {
   ToolCard,
   EmptyState,
   ToolHeader,
-  SearchAndFilters
+  SearchAndFilters,
+  ToolGroupNav
 } from "@/components/tools";
 import { toolThemes } from "@/components/tools/themes";
 
@@ -258,6 +259,9 @@ function ThoughtsPageContent() {
         }
         theme={theme}
       />
+
+      {/* Tool Group Navigation */}
+      <ToolGroupNav currentToolId="thoughts" />
 
       {/* Popular Tags Filter */}
       {popularTags.length > 0 && (

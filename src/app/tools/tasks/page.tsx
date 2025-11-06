@@ -30,7 +30,7 @@ import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import Link from "next/link";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
-import { toolThemes, ToolHeader, SearchAndFilters, ToolPageLayout } from "@/components/tools";
+import { toolThemes, ToolHeader, SearchAndFilters, ToolPageLayout, ToolGroupNav } from "@/components/tools";
 import { isTaskCompletedToday } from "@/lib/utils/date";
 
 type SortOption = 'priority' | 'dueDate' | 'createdAt' | 'title';
@@ -308,6 +308,9 @@ function TasksPageContent() {
         }
         theme={theme}
       />
+
+      {/* Tool Group Navigation */}
+      <ToolGroupNav currentToolId="tasks" />
 
       {/* Task List - Grouped by Frequency */}
       <div className="space-y-6">
