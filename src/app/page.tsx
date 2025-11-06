@@ -42,21 +42,28 @@ export default function Page() {
   const tasksFromCache = useTasks((s) => s.fromCache);
   const thoughtsSyncError = useThoughts((s) => s.syncError);
   const tasksSyncError = useTasks((s) => s.syncError);
+  const thoughtsSubscribed = useThoughts((s) => s.isSubscribed);
+  const tasksSubscribed = useTasks((s) => s.isSubscribed);
+
+  // Only show loading if subscriptions are active and still loading (without cache data yet)
   const isInitialLoading = (thoughtsLoading && !thoughtsFromCache) || (tasksLoading && !tasksFromCache);
   const hasSyncError = thoughtsSyncError || tasksSyncError;
+  const subscriptionsActive = thoughtsSubscribed || tasksSubscribed;
 
-  // Add timeout to prevent infinite loading state (max 8 seconds)
+  // Add timeout to prevent infinite loading state (max 15 seconds)
+  // Only start timeout if subscriptions are active
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   useEffect(() => {
-    if (isInitialLoading) {
+    if (isInitialLoading && subscriptionsActive) {
       const timer = setTimeout(() => {
+        console.warn('[Page] Loading timeout triggered after 15 seconds');
         setLoadingTimeout(true);
-      }, 8000);
+      }, 15000); // Increased from 8 to 15 seconds
       return () => clearTimeout(timer);
     } else {
       setLoadingTimeout(false);
     }
-  }, [isInitialLoading]);
+  }, [isInitialLoading, subscriptionsActive]);
   
   // Get errands count (non-focus-eligible tasks)
   const activeErrands = useMemo(() => 

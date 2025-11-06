@@ -155,6 +155,7 @@ type State = {
   fromCache: boolean
   hasPendingWrites: boolean
   syncError: Error | null
+  isSubscribed: boolean
   unsubscribe: (() => void) | null
   subscribe: (userId: string) => void
   add: (task: Omit<Task, 'id' | 'done' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>) => Promise<string>
@@ -172,43 +173,65 @@ export const useTasks = create<State>((set, get) => ({
   fromCache: false,
   hasPendingWrites: false,
   syncError: null,
+  isSubscribed: false,
   unsubscribe: null,
-  
+
   subscribe: (userId: string) => {
     // Unsubscribe from previous subscription if any
     const currentUnsub = get().unsubscribe
     if (currentUnsub) {
       currentUnsub()
     }
-    
-    // Subscribe to tasks collection
-    const tasksQuery = query(
-      collection(db, `users/${userId}/tasks`),
-      orderBy('createdAt', 'desc')
-    )
-    
-    const unsub = subscribeCol<Task>(tasksQuery, async (tasks, meta) => {
-      set({
-        tasks,
-        isLoading: false,
-        fromCache: meta.fromCache,
-        hasPendingWrites: meta.hasPendingWrites,
-        syncError: meta.error || null,
+
+    console.log('[useTasks] Starting subscription for user:', userId);
+
+    try {
+      // Mark subscription as started
+      set({ isSubscribed: true, isLoading: true, syncError: null })
+
+      // Subscribe to tasks collection
+      const tasksQuery = query(
+        collection(db, `users/${userId}/tasks`),
+        orderBy('createdAt', 'desc')
+      )
+
+      const unsub = subscribeCol<Task>(tasksQuery, async (tasks, meta) => {
+        console.log('[useTasks] Snapshot received:', {
+          taskCount: tasks.length,
+          fromCache: meta.fromCache,
+          hasError: !!meta.error,
+          error: meta.error?.message
+        });
+
+        set({
+          tasks,
+          isLoading: false,
+          fromCache: meta.fromCache,
+          hasPendingWrites: meta.hasPendingWrites,
+          syncError: meta.error || null,
+        })
+
+        // Log sync errors to help with debugging
+        if (meta.error) {
+          console.error('[useTasks] Sync error:', meta.error);
+        }
+
+        // DISABLED: Recurring tasks now track completions by date instead of creating instances
+        // Generate missing recurring tasks (only on first load, not from cache)
+        // if (!meta.fromCache && tasks.length > 0) {
+        //   await generateMissingRecurringTasks(tasks, userId)
+        // }
       })
 
-      // Log sync errors to help with debugging
-      if (meta.error) {
-        console.error('Tasks sync error:', meta.error);
-      }
-
-      // DISABLED: Recurring tasks now track completions by date instead of creating instances
-      // Generate missing recurring tasks (only on first load, not from cache)
-      // if (!meta.fromCache && tasks.length > 0) {
-      //   await generateMissingRecurringTasks(tasks, userId)
-      // }
-    })
-    
-    set({ unsubscribe: unsub })
+      set({ unsubscribe: unsub })
+    } catch (error) {
+      console.error('[useTasks] Failed to set up subscription:', error);
+      set({
+        isLoading: false,
+        syncError: error as Error,
+        isSubscribed: false,
+      })
+    }
   },
   
   add: async (task) => {
