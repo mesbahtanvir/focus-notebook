@@ -207,7 +207,7 @@ describe('ThoughtProcessingService', () => {
           priority: 'high',
           status: 'active',
           focusEligible: true,
-          thoughtId: 'thought-1', // Bug 4 fix
+          // NOTE: thoughtId no longer in task data - linking via relationships store
           createdBy: 'ai', // Bug 1 fix
         })
       );
@@ -256,7 +256,7 @@ describe('ThoughtProcessingService', () => {
       expect(addMood).toHaveBeenCalledWith({
         value: 7,
         note: 'Feeling good',
-        metadata: { sourceThoughtId: 'thought-1' }, // Bug 4 fix
+        // NOTE: sourceThoughtId no longer in metadata - linking via relationships store
       });
     });
 
@@ -344,7 +344,7 @@ describe('ThoughtProcessingService', () => {
           priority: 'medium',
           status: 'active',
           focusEligible: true,
-          thoughtId: 'thought-1', // Bug 4 fix
+          // NOTE: thoughtId no longer in task data - linking via relationships store
           createdBy: 'ai', // Bug 1 fix
         })
       );

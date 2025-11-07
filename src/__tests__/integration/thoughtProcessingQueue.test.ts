@@ -159,15 +159,17 @@ describe('Thought processing queue integration', () => {
         title: 'Follow up with Priya',
         category: 'mastery',
         priority: 'high',
-        thoughtId: baseThought.id,
+        // NOTE: thoughtId no longer in task data - linking via relationships store
         createdBy: 'ai',
+        focusEligible: true,
+        status: 'active',
       })
     );
 
     expect(addMood).toHaveBeenCalledWith({
       value: 4,
       note: 'Feeling anxious about presentation',
-      metadata: { sourceThoughtId: baseThought.id },
+      // NOTE: sourceThoughtId no longer in metadata - linking via relationships store
     });
 
     const suggestionCall = updateThought.mock.calls

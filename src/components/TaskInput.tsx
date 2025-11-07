@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Check, Repeat, Target, SlidersHorizontal } from 'lucide-react';
-import { useTasks, TaskPriority, RecurrenceType } from '@/store/useTasks';
+import { TaskPriority, RecurrenceType } from '@/store/useTasks';
 import { useProjects } from '@/store/useProjects';
+import * as EntityService from '@/services/entityService';
 
 type TaskDestination = 'today' | 'backlog';
 
@@ -29,7 +30,6 @@ export function TaskInput({ onClose, onTaskCreated, defaultProjectId }: TaskInpu
   const [showSuccess, setShowSuccess] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const addTask = useTasks((state) => state.add);
   const projects = useProjects((state) => state.projects);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,20 +48,31 @@ export function TaskInput({ onClose, onTaskCreated, defaultProjectId }: TaskInpu
       frequency: recurrenceFrequency ? parseInt(recurrenceFrequency) : undefined,
     } : undefined;
 
-    // Add task with metadata
-    const taskId = await addTask({
-      title: taskName.trim(),
-      priority,
-      dueDate: dueDate || (destination === 'today' ? new Date().toISOString().split('T')[0] : undefined),
-      status: destination === 'today' ? 'active' : 'backlog',
-      notes: notes.trim() || undefined,
-      tags: tagArray.length > 0 ? tagArray : undefined,
-      estimatedMinutes: estimatedMinutes ? parseInt(estimatedMinutes) : undefined,
-      recurrence: recurrenceConfig,
-      completionCount: 0,
-      focusEligible,
-      projectId: projectId || undefined,
-    });
+    // Add task via EntityService for data consistency
+    const result = await EntityService.createTask(
+      {
+        title: taskName.trim(),
+        priority,
+        dueDate: dueDate || (destination === 'today' ? new Date().toISOString().split('T')[0] : undefined),
+        status: destination === 'today' ? 'active' : 'backlog',
+        notes: notes.trim() || undefined,
+        tags: tagArray.length > 0 ? tagArray : undefined,
+        estimatedMinutes: estimatedMinutes ? parseInt(estimatedMinutes) : undefined,
+        recurrence: recurrenceConfig,
+        completionCount: 0,
+        focusEligible,
+        projectId: projectId || undefined,
+        done: false,
+        category: 'mastery', // Default category
+      },
+      {
+        createdBy: 'user',
+        // If projectId provided, create relationship
+        sourceEntity: projectId ? { type: 'project', id: projectId } : undefined,
+      }
+    );
+
+    const taskId = result.data;
 
     // Call onTaskCreated callback if provided
     if (onTaskCreated && taskId) {

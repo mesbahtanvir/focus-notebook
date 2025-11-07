@@ -31,7 +31,7 @@ type State = {
   hasPendingWrites: boolean;
   unsubscribe: (() => void) | null;
   subscribe: (userId: string) => void;
-  add: (goal: Omit<Goal, 'id' | 'createdAt'>) => Promise<void>;
+  add: (goal: Omit<Goal, 'id' | 'createdAt'>) => Promise<string>;
   updateGoal: (id: string, updates: Partial<Goal>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
   toggleStatus: (id: string) => Promise<void>;
@@ -82,6 +82,7 @@ export const useGoals = create<State>((set, get) => ({
     };
 
     await createAt(`users/${userId}/goals/${goalId}`, newGoal);
+    return goalId;
   },
 
   updateGoal: async (id, updates) => {

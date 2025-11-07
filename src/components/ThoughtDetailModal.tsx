@@ -7,6 +7,8 @@ import { useTasks } from "@/store/useTasks";
 import { useProjects } from "@/store/useProjects";
 import { useMoods } from "@/store/useMoods";
 import { useFriends } from "@/store/useFriends";
+import { useGoals } from "@/store/useGoals";
+import { useEntityRelationships } from "@/store/useEntityRelationships";
 import { ThoughtProcessingService } from "@/services/thoughtProcessingService";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import Link from "next/link";
@@ -54,14 +56,11 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const [showAIResources, setShowAIResources] = useState(false);
   const [showRevertConfirm, setShowRevertConfirm] = useState(false);
   const [isProcessingSuggestion, setIsProcessingSuggestion] = useState(false);
-  const [showLinkingUI, setShowLinkingUI] = useState(false);
-  const [selectedTasksToLink, setSelectedTasksToLink] = useState<string[]>(thought.linkedTaskIds || []);
-  const [selectedMoodsToLink, setSelectedMoodsToLink] = useState<string[]>(thought.linkedMoodIds || []);
-  const [selectedProjectsToLink, setSelectedProjectsToLink] = useState<string[]>(thought.linkedProjectIds || []);
+  // Manual linking removed - now handled via relationship store
 
   const updateThought = useThoughts((s) => s.updateThought);
   const deleteThought = useThoughts((s) => s.deleteThought);
-  
+
   const tasks = useTasks((s) => s.tasks);
   const deleteTask = useTasks((s) => s.deleteTask);
   const projects = useProjects((s) => s.projects);
@@ -69,9 +68,17 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const moods = useMoods((s) => s.moods);
   const deleteMood = useMoods((s) => s.delete);
   const friends = useFriends((s) => s.friends);
+  const goals = useGoals((s) => s.goals);
+  const relationships = useEntityRelationships((s) => s.relationships);
   const { isAnonymous, isAnonymousAiAllowed } = useAuth();
   
   const isProcessed = Array.isArray(thought.tags) && thought.tags.includes('processed');
+
+  // Check if button should be shown - hide if processed or currently processing
+  const shouldShowProcessButton = !isProcessed &&
+    thought.aiProcessingStatus !== 'pending' &&
+    thought.aiProcessingStatus !== 'processing' &&
+    thought.aiProcessingStatus !== 'completed';
 
   // Helper function to get shortname from full name
   const getShortName = (name: string): string => {
@@ -104,27 +111,90 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
     );
   };
 
-  // Find AI-created resources linked to this thought
-  const aiCreatedResources = useMemo(() => {
-    const linkedTasks = tasks.filter(t => t.thoughtId === thought.id);
-    const linkedProjects = projects.filter(p => {
-      // Check if project was created from this thought
-      try {
-        const projectNotes = p.notes ? JSON.parse(p.notes) : null;
-        return projectNotes?.sourceThoughtId === thought.id;
-      } catch {
-        return false;
-      }
-    });
-    const linkedMoods = moods.filter(m => m.metadata?.sourceThoughtId === thought.id);
-    
-    return {
-      tasks: linkedTasks,
-      projects: linkedProjects,
-      moods: linkedMoods,
-      total: linkedTasks.length + linkedProjects.length + linkedMoods.length,
+  // Find all items linked to this thought via relationships
+  const linkedItems = useMemo(() => {
+    // Get all relationships for this thought
+    const thoughtRels = relationships.filter(
+      r => (r.sourceType === 'thought' && r.sourceId === thought.id) ||
+           (r.targetType === 'thought' && r.targetId === thought.id)
+    );
+
+    // Filter by relationship type - created vs linked
+    const createdRels = thoughtRels.filter(r =>
+      r.sourceType === 'thought' &&
+      r.sourceId === thought.id &&
+      r.relationshipType === 'created-from'
+    );
+    const linkedRels = thoughtRels.filter(r =>
+      r.sourceType === 'thought' &&
+      r.sourceId === thought.id &&
+      (r.relationshipType === 'linked-to' || r.relationshipType === 'mentions')
+    );
+
+    // Map relationships to actual entities
+    const getEntityFromRel = (rel: any, entityList: any[], type: string) => {
+      const id = rel.targetId;
+      return entityList.find(e => e.id === id);
     };
-  }, [thought.id, tasks, projects, moods]);
+
+    // AI-created items
+    const createdTasks = createdRels
+      .filter(r => r.targetType === 'task')
+      .map(r => getEntityFromRel(r, tasks, 'task'))
+      .filter(Boolean);
+    const createdProjects = createdRels
+      .filter(r => r.targetType === 'project')
+      .map(r => getEntityFromRel(r, projects, 'project'))
+      .filter(Boolean);
+    const createdGoals = createdRels
+      .filter(r => r.targetType === 'goal')
+      .map(r => getEntityFromRel(r, goals, 'goal'))
+      .filter(Boolean);
+    const createdMoods = createdRels
+      .filter(r => r.targetType === 'mood')
+      .map(r => getEntityFromRel(r, moods, 'mood'))
+      .filter(Boolean);
+
+    // Linked items
+    const linkedTasks = linkedRels
+      .filter(r => r.targetType === 'task')
+      .map(r => getEntityFromRel(r, tasks, 'task'))
+      .filter(Boolean);
+    const linkedProjects = linkedRels
+      .filter(r => r.targetType === 'project')
+      .map(r => getEntityFromRel(r, projects, 'project'))
+      .filter(Boolean);
+    const linkedGoals = linkedRels
+      .filter(r => r.targetType === 'goal')
+      .map(r => getEntityFromRel(r, goals, 'goal'))
+      .filter(Boolean);
+    const linkedPersons = linkedRels
+      .filter(r => r.targetType === 'person')
+      .map(r => getEntityFromRel(r, friends, 'person'))
+      .filter(Boolean);
+    const linkedMoods = linkedRels
+      .filter(r => r.targetType === 'mood')
+      .map(r => getEntityFromRel(r, moods, 'mood'))
+      .filter(Boolean);
+
+    return {
+      created: {
+        tasks: createdTasks,
+        projects: createdProjects,
+        goals: createdGoals,
+        moods: createdMoods,
+        total: createdTasks.length + createdProjects.length + createdGoals.length + createdMoods.length,
+      },
+      linked: {
+        tasks: linkedTasks,
+        projects: linkedProjects,
+        goals: linkedGoals,
+        persons: linkedPersons,
+        moods: linkedMoods,
+        total: linkedTasks.length + linkedProjects.length + linkedGoals.length + linkedPersons.length + linkedMoods.length,
+      },
+    };
+  }, [thought.id, relationships, tasks, projects, goals, moods, friends]);
 
   const handleSave = async () => {
     const tags = tagsInput
@@ -139,32 +209,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
     setIsEditing(false);
   };
 
-  const handleSaveLinking = async () => {
-    await updateThought(thought.id, {
-      linkedTaskIds: selectedTasksToLink.length > 0 ? selectedTasksToLink : undefined,
-      linkedMoodIds: selectedMoodsToLink.length > 0 ? selectedMoodsToLink : undefined,
-      linkedProjectIds: selectedProjectsToLink.length > 0 ? selectedProjectsToLink : undefined,
-    });
-    setShowLinkingUI(false);
-  };
-
-  const toggleTaskLink = (taskId: string) => {
-    setSelectedTasksToLink(prev =>
-      prev.includes(taskId) ? prev.filter(id => id !== taskId) : [...prev, taskId]
-    );
-  };
-
-  const toggleMoodLink = (moodId: string) => {
-    setSelectedMoodsToLink(prev =>
-      prev.includes(moodId) ? prev.filter(id => id !== moodId) : [...prev, moodId]
-    );
-  };
-
-  const toggleProjectLink = (projectId: string) => {
-    setSelectedProjectsToLink(prev =>
-      prev.includes(projectId) ? prev.filter(id => id !== projectId) : [...prev, projectId]
-    );
-  };
+  // Manual linking handlers removed - will use relationship creation in future
 
   const handleDelete = async () => {
     await deleteThought(thought.id);
@@ -174,13 +219,13 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
 
   const handleRevertProcessing = async () => {
     // Delete all AI-created resources
-    for (const task of aiCreatedResources.tasks) {
+    for (const task of linkedItems.created.tasks) {
       await deleteTask(task.id);
     }
-    for (const project of aiCreatedResources.projects) {
+    for (const project of linkedItems.created.projects) {
       await deleteProject(project.id);
     }
-    for (const mood of aiCreatedResources.moods) {
+    for (const mood of linkedItems.created.moods) {
       await deleteMood(mood.id);
     }
 
@@ -292,8 +337,94 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
       createProject: 'Create Project',
       createGoal: 'Create Goal',
       linkToProject: 'Link to Project',
+      linkToGoal: 'Link to Goal',
+      linkToTask: 'Link to Task',
+      linkToPerson: 'Link to Person',
+      linkToRelationship: 'Link to Relationship',
+      createRelationship: 'Create Relationship',
+      linkToMood: 'Link to Mood',
+      linkToNote: 'Link to Note',
+      enhanceProject: 'Enhance Project',
+      enhanceGoal: 'Enhance Goal',
+      enhanceRelationship: 'Enhance Relationship',
+      createErrand: 'Create Errand',
+      createNote: 'Create Note',
     };
     return typeMap[type] || type;
+  };
+
+  // Helper to render entity details for linking suggestions
+  const renderSuggestionEntityDetails = (suggestion: any) => {
+    switch (suggestion.type) {
+      case 'linkToGoal':
+        const goal = goals.find(g => g.id === suggestion.data.goalId);
+        if (goal) {
+          return (
+            <div className="mt-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded border border-purple-200 dark:border-purple-700">
+              <Link
+                href={`/tools/goals/${goal.id}`}
+                className="text-sm font-medium text-purple-700 dark:text-purple-300 hover:underline flex items-center gap-1"
+              >
+                <Target className="h-3 w-3" />
+                Goal: {goal.title}
+              </Link>
+            </div>
+          );
+        }
+        break;
+
+      case 'linkToProject':
+        const project = projects.find(p => p.id === suggestion.data.projectId);
+        if (project) {
+          return (
+            <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-700">
+              <Link
+                href={`/tools/projects/${project.id}`}
+                className="text-sm font-medium text-green-700 dark:text-green-300 hover:underline flex items-center gap-1"
+              >
+                <Target className="h-3 w-3" />
+                Project: {project.title}
+              </Link>
+            </div>
+          );
+        }
+        break;
+
+      case 'linkToTask':
+        const task = tasks.find(t => t.id === suggestion.data.taskId);
+        if (task) {
+          return (
+            <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-700">
+              <Link
+                href={`/tools/tasks?id=${task.id}`}
+                className="text-sm font-medium text-blue-700 dark:text-blue-300 hover:underline flex items-center gap-1"
+              >
+                <ListChecks className="h-3 w-3" />
+                Task: {task.title}
+              </Link>
+            </div>
+          );
+        }
+        break;
+
+      case 'linkToPerson':
+        const person = friends.find(f => f.id === suggestion.data.personId);
+        if (person) {
+          return (
+            <div className="mt-2 p-2 bg-pink-50 dark:bg-pink-900/20 rounded border border-pink-200 dark:border-pink-700">
+              <Link
+                href={`/tools/relationships/${person.id}`}
+                className="text-sm font-medium text-pink-700 dark:text-pink-300 hover:underline flex items-center gap-1"
+              >
+                <Smile className="h-3 w-3" />
+                Person: {person.name}
+              </Link>
+            </div>
+          );
+        }
+        break;
+    }
+    return null;
   };
 
   const pendingSuggestions = thought.aiSuggestions?.filter(s => s.status === 'pending') || [];
@@ -336,7 +467,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {!isProcessed && (
+              {shouldShowProcessButton && (
                 <button
                   onClick={handleProcessNow}
                   disabled={isProcessing || (isAnonymous && !isAnonymousAiAllowed)}
@@ -486,139 +617,6 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                 )}
               </div>
 
-              {/* Manual Linking Section */}
-              <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                <button
-                  onClick={() => setShowLinkingUI(!showLinkingUI)}
-                  className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 border-2 border-blue-200 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-700 transition-all"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
-                      <Link2 className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="text-left">
-                      <h3 className="text-base font-bold text-gray-900 dark:text-white">
-                        Link Items
-                      </h3>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
-                        {(selectedTasksToLink.length + selectedMoodsToLink.length + selectedProjectsToLink.length) > 0
-                          ? `${selectedTasksToLink.length + selectedMoodsToLink.length + selectedProjectsToLink.length} item(s) linked`
-                          : 'Connect tasks, moods, and projects'}
-                      </p>
-                    </div>
-                  </div>
-                  {showLinkingUI ? (
-                    <ChevronUp className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                  )}
-                </button>
-
-                {showLinkingUI && (
-                  <div className="mt-4 space-y-4 p-4 bg-white dark:bg-gray-800 rounded-xl border-2 border-blue-200 dark:border-blue-800">
-                    {/* Tasks Section */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                        <ListChecks className="h-4 w-4 text-green-600" />
-                        Tasks ({selectedTasksToLink.length} selected)
-                      </h4>
-                      <div className="max-h-40 overflow-y-auto space-y-2">
-                        {tasks.filter(t => !t.done).slice(0, 10).map((task) => (
-                          <label
-                            key={task.id}
-                            className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedTasksToLink.includes(task.id)}
-                              onChange={() => toggleTaskLink(task.id)}
-                              className="w-4 h-4 text-blue-600 rounded"
-                            />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">{task.title}</span>
-                          </label>
-                        ))}
-                        {tasks.filter(t => !t.done).length === 0 && (
-                          <p className="text-sm text-gray-500 dark:text-gray-400 italic">No active tasks available</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Projects Section */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                        <Target className="h-4 w-4 text-purple-600" />
-                        Projects ({selectedProjectsToLink.length} selected)
-                      </h4>
-                      <div className="max-h-40 overflow-y-auto space-y-2">
-                        {projects.filter(p => p.status === 'active').slice(0, 10).map((project) => (
-                          <label
-                            key={project.id}
-                            className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedProjectsToLink.includes(project.id)}
-                              onChange={() => toggleProjectLink(project.id)}
-                              className="w-4 h-4 text-blue-600 rounded"
-                            />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">{project.title}</span>
-                          </label>
-                        ))}
-                        {projects.filter(p => p.status === 'active').length === 0 && (
-                          <p className="text-sm text-gray-500 dark:text-gray-400 italic">No active projects available</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Moods Section */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                        <Smile className="h-4 w-4 text-yellow-600" />
-                        Recent Moods ({selectedMoodsToLink.length} selected)
-                      </h4>
-                      <div className="max-h-40 overflow-y-auto space-y-2">
-                        {moods.slice(0, 10).map((mood) => (
-                          <label
-                            key={mood.id}
-                            className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedMoodsToLink.includes(mood.id)}
-                              onChange={() => toggleMoodLink(mood.id)}
-                              className="w-4 h-4 text-blue-600 rounded"
-                            />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
-                              Mood: {mood.value}/10 {mood.note && `- ${mood.note.substring(0, 30)}...`}
-                            </span>
-                          </label>
-                        ))}
-                        {moods.length === 0 && (
-                          <p className="text-sm text-gray-500 dark:text-gray-400 italic">No moods tracked yet</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-                      <button
-                        onClick={handleSaveLinking}
-                        className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
-                      >
-                        <Save className="h-4 w-4" />
-                        Save Links
-                      </button>
-                      <button
-                        onClick={() => setShowLinkingUI(false)}
-                        className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg transition-all"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
               {/* AI Suggestions */}
               {pendingSuggestions.length > 0 && (
                 <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
@@ -645,7 +643,9 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                             </span>
                           </div>
 
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                          {renderSuggestionEntityDetails(suggestion)}
+
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 mt-2">
                             {suggestion.reasoning}
                           </p>
 
@@ -687,8 +687,8 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                             AI Processing Complete
                           </h3>
                           <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                            {aiCreatedResources.total > 0 
-                              ? `Created ${aiCreatedResources.tasks.length} task(s), ${aiCreatedResources.projects.length} project(s), ${aiCreatedResources.moods.length} mood(s)`
+                            {linkedItems.created.total > 0 
+                              ? `Created ${linkedItems.created.tasks.length} task(s), ${linkedItems.created.projects.length} project(s), ${linkedItems.created.moods.length} mood(s)`
                               : 'This thought has been analyzed'}
                           </p>
                         </div>
@@ -706,7 +706,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
               )}
 
               {/* AI-Created Resources Section */}
-              {aiCreatedResources.total > 0 && (
+              {linkedItems.created.total > 0 && (
                 <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={() => setShowAIResources(!showAIResources)}
@@ -721,7 +721,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                           AI-Created Resources
                         </h3>
                         <p className="text-xs text-gray-600 dark:text-gray-400">
-                          {aiCreatedResources.total} item{aiCreatedResources.total !== 1 ? 's' : ''} created from this thought
+                          {linkedItems.created.total} item{linkedItems.created.total !== 1 ? 's' : ''} created from this thought
                         </p>
                       </div>
                     </div>
@@ -740,14 +740,14 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                       className="mt-4 space-y-4"
                     >
                       {/* Tasks */}
-                      {aiCreatedResources.tasks.length > 0 && (
+                      {linkedItems.created.tasks.length > 0 && (
                         <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 border-2 border-blue-200 dark:border-blue-800 p-4">
                           <h4 className="font-bold text-blue-800 dark:text-blue-200 mb-3 flex items-center gap-2">
                             <ListChecks className="h-4 w-4" />
-                            Tasks ({aiCreatedResources.tasks.length})
+                            Tasks ({linkedItems.created.tasks.length})
                           </h4>
                           <div className="space-y-2">
-                            {aiCreatedResources.tasks.map((task) => (
+                            {linkedItems.created.tasks.map((task) => (
                               <Link
                                 key={task.id}
                                 href={`/tools/tasks?id=${task.id}`}
@@ -770,14 +770,14 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                       )}
 
                       {/* Projects */}
-                      {aiCreatedResources.projects.length > 0 && (
+                      {linkedItems.created.projects.length > 0 && (
                         <div className="rounded-lg bg-green-50 dark:bg-green-950/20 border-2 border-green-200 dark:border-green-800 p-4">
                           <h4 className="font-bold text-green-800 dark:text-green-200 mb-3 flex items-center gap-2">
                             <Target className="h-4 w-4" />
-                            Projects ({aiCreatedResources.projects.length})
+                            Projects ({linkedItems.created.projects.length})
                           </h4>
                           <div className="space-y-2">
-                            {aiCreatedResources.projects.map((project) => (
+                            {linkedItems.created.projects.map((project) => (
                               <Link
                                 key={project.id}
                                 href={`/tools/projects/${project.id}`}
@@ -798,14 +798,14 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                       )}
 
                       {/* Moods */}
-                      {aiCreatedResources.moods.length > 0 && (
+                      {linkedItems.created.moods.length > 0 && (
                         <div className="rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border-2 border-yellow-200 dark:border-yellow-800 p-4">
                           <h4 className="font-bold text-yellow-800 dark:text-yellow-200 mb-3 flex items-center gap-2">
                             <Smile className="h-4 w-4" />
-                            Mood Entries ({aiCreatedResources.moods.length})
+                            Mood Entries ({linkedItems.created.moods.length})
                           </h4>
                           <div className="space-y-2">
-                            {aiCreatedResources.moods.map((mood) => (
+                            {linkedItems.created.moods.map((mood) => (
                               <div
                                 key={mood.id}
                                 className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-yellow-200 dark:border-yellow-700"
@@ -840,6 +840,180 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                       )}
                     </motion.div>
                   )}
+                </div>
+              )}
+
+              {/* Manually Linked Items Section */}
+              {linkedItems.linked.total > 0 && (
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-950/30 dark:to-cyan-950/30 border-2 border-teal-200 dark:border-teal-800">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-lg">
+                        <Link2 className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                          Linked Items
+                        </h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          {linkedItems.linked.total} item{linkedItems.linked.total !== 1 ? 's' : ''} linked to this thought
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {/* Linked Goals */}
+                      {linkedItems.linked.goals.length > 0 && (
+                        <div className="rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-700 p-3">
+                          <h4 className="font-semibold text-purple-800 dark:text-purple-200 mb-2 flex items-center gap-2 text-sm">
+                            <Target className="h-4 w-4" />
+                            Goals ({linkedItems.linked.goals.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {linkedItems.linked.goals.map((goal) => (
+                              <Link
+                                key={goal.id}
+                                href={`/tools/goals/${goal.id}`}
+                                className="block p-2 bg-white dark:bg-gray-800 rounded border border-purple-200 dark:border-purple-700 hover:border-purple-400 dark:hover:border-purple-500 transition-all hover:shadow-sm"
+                              >
+                                <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  {goal.title}
+                                </div>
+                                {goal.objective && (
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-1">
+                                    {goal.objective}
+                                  </div>
+                                )}
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Linked Tasks */}
+                      {linkedItems.linked.tasks.length > 0 && (
+                        <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-700 p-3">
+                          <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2 flex items-center gap-2 text-sm">
+                            <ListChecks className="h-4 w-4" />
+                            Tasks ({linkedItems.linked.tasks.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {linkedItems.linked.tasks.map((task) => (
+                              <Link
+                                key={task.id}
+                                href={`/tools/tasks?id=${task.id}`}
+                                className="block p-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700 hover:border-blue-400 dark:hover:border-blue-500 transition-all hover:shadow-sm"
+                              >
+                                <div className="flex items-center gap-2">
+                                  {task.done ? (
+                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                  ) : (
+                                    <div className="h-4 w-4 rounded-full border-2 border-gray-400" />
+                                  )}
+                                  <span className={`text-sm font-medium ${task.done ? 'line-through text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>
+                                    {task.title}
+                                  </span>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Linked Projects */}
+                      {linkedItems.linked.projects.length > 0 && (
+                        <div className="rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-700 p-3">
+                          <h4 className="font-semibold text-green-800 dark:text-green-200 mb-2 flex items-center gap-2 text-sm">
+                            <Target className="h-4 w-4" />
+                            Projects ({linkedItems.linked.projects.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {linkedItems.linked.projects.map((project) => (
+                              <Link
+                                key={project.id}
+                                href={`/tools/projects/${project.id}`}
+                                className="block p-2 bg-white dark:bg-gray-800 rounded border border-green-200 dark:border-green-700 hover:border-green-400 dark:hover:border-green-500 transition-all hover:shadow-sm"
+                              >
+                                <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  {project.title}
+                                </div>
+                                {project.objective && (
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-1">
+                                    {project.objective}
+                                  </div>
+                                )}
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Linked People */}
+                      {linkedItems.linked.persons.length > 0 && (
+                        <div className="rounded-lg bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-700 p-3">
+                          <h4 className="font-semibold text-pink-800 dark:text-pink-200 mb-2 flex items-center gap-2 text-sm">
+                            <Smile className="h-4 w-4" />
+                            People ({linkedItems.linked.persons.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {linkedItems.linked.persons.map((person) => (
+                              <Link
+                                key={person.id}
+                                href={`/tools/relationships/${person.id}`}
+                                className="block p-2 bg-white dark:bg-gray-800 rounded border border-pink-200 dark:border-pink-700 hover:border-pink-400 dark:hover:border-pink-500 transition-all hover:shadow-sm"
+                              >
+                                <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  {person.name}
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Linked Moods */}
+                      {linkedItems.linked.moods.length > 0 && (
+                        <div className="rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-700 p-3">
+                          <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2 flex items-center gap-2 text-sm">
+                            <Smile className="h-4 w-4" />
+                            Moods ({linkedItems.linked.moods.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {linkedItems.linked.moods.map((mood) => (
+                              <div
+                                key={mood.id}
+                                className="p-2 bg-white dark:bg-gray-800 rounded border border-yellow-200 dark:border-yellow-700"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400">
+                                    {mood.value}/10
+                                  </span>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    {(() => {
+                                      try {
+                                        if (!mood.createdAt) return 'N/A';
+                                        if (typeof mood.createdAt === 'object' && 'toDate' in mood.createdAt) {
+                                          return mood.createdAt.toDate().toLocaleDateString();
+                                        }
+                                        return new Date(mood.createdAt).toLocaleDateString();
+                                      } catch {
+                                        return 'N/A';
+                                      }
+                                    })()}
+                                  </span>
+                                </div>
+                                {mood.note && (
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                                    {mood.note}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -944,7 +1118,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
         onConfirm={handleRevertProcessing}
         onCancel={() => setShowRevertConfirm(false)}
         title="Revert AI Processing?"
-        message={`This will delete ${aiCreatedResources.total} AI-created resource(s) (${aiCreatedResources.tasks.length} tasks, ${aiCreatedResources.projects.length} projects, ${aiCreatedResources.moods.length} moods) and mark this thought as unprocessed. This action cannot be undone.`}
+        message={`This will delete ${linkedItems.created.total} AI-created resource(s) (${linkedItems.created.tasks.length} tasks, ${linkedItems.created.projects.length} projects, ${linkedItems.created.moods.length} moods) and mark this thought as unprocessed. This action cannot be undone.`}
         confirmText="Revert & Delete All"
         cancelText="Cancel"
         variant="warning"
