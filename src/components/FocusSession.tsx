@@ -19,6 +19,7 @@ import { FormattedNotes } from '@/lib/formatNotes';
 import { ConfirmModal } from "./ConfirmModal";
 import { formatTimeGentle } from '@/lib/utils/date';
 import { TimeTrackingService } from '@/services/TimeTrackingService';
+import * as EntityService from '@/services/entityService';
 
 export function FocusSession() {
   const router = useRouter();
@@ -32,7 +33,6 @@ export function FocusSession() {
   const pauseSession = useFocus((s) => s.pauseSession);
   const resumeSession = useFocus((s) => s.resumeSession);
   const toggleTask = useTasks((s) => s.toggle);
-  const addTask = useTasks((s) => s.add);
 
   const [currentTime, setCurrentTime] = useState(0);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
@@ -308,16 +308,26 @@ export function FocusSession() {
     if (!followUpTitle.trim() || !currentSession) return;
 
     try {
-      // Create a new task
-      const newTask = await addTask({
-        title: followUpTitle.trim(),
-        category: currentFocusTask.task.category,
-        priority: currentFocusTask.task.priority,
-        status: 'active' as const,
-        focusEligible: true,
-      });
+      // Create a new task via EntityService for data consistency
+      const result = await EntityService.createTask(
+        {
+          title: followUpTitle.trim(),
+          category: currentFocusTask.task.category,
+          priority: currentFocusTask.task.priority,
+          status: 'active' as const,
+          focusEligible: true,
+          done: false,
+        },
+        {
+          createdBy: 'user',
+          // Create relationship with the current task
+          sourceEntity: { type: 'task', id: currentFocusTask.task.id },
+          relationshipType: 'linked-to', // Follow-up relationship
+        }
+      );
 
       // Link it as a follow-up task
+      const newTask = result.data;
       if (newTask) {
         await addFollowUpTask(currentTaskIndex, newTask);
       }
