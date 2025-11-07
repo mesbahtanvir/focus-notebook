@@ -22,21 +22,37 @@ const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
 const PLAID_SECRET = process.env.PLAID_SECRET;
 const PLAID_ENV = process.env.PLAID_ENV || 'sandbox';
 
-if (!PLAID_CLIENT_ID || !PLAID_SECRET) {
-  console.warn('Plaid credentials not configured. Set PLAID_CLIENT_ID and PLAID_SECRET.');
+// Lazy initialization to avoid warnings during build
+let _plaidClient: PlaidApi | null = null;
+
+function getPlaidClient(): PlaidApi {
+  if (!_plaidClient) {
+    if (!PLAID_CLIENT_ID || !PLAID_SECRET) {
+      throw new Error('Plaid credentials not configured. Set PLAID_CLIENT_ID and PLAID_SECRET in .env file.');
+    }
+
+    const configuration = new Configuration({
+      basePath: PlaidEnvironments[PLAID_ENV as keyof typeof PlaidEnvironments],
+      baseOptions: {
+        headers: {
+          'PLAID-CLIENT-ID': PLAID_CLIENT_ID,
+          'PLAID-SECRET': PLAID_SECRET,
+        },
+      },
+    });
+
+    _plaidClient = new PlaidApi(configuration);
+  }
+  return _plaidClient;
 }
 
-const configuration = new Configuration({
-  basePath: PlaidEnvironments[PLAID_ENV as keyof typeof PlaidEnvironments],
-  baseOptions: {
-    headers: {
-      'PLAID-CLIENT-ID': PLAID_CLIENT_ID,
-      'PLAID-SECRET': PLAID_SECRET,
-    },
-  },
+export const plaidClient = new Proxy({} as PlaidApi, {
+  get: (target, prop) => {
+    const client = getPlaidClient();
+    const value = (client as any)[prop];
+    return typeof value === 'function' ? value.bind(client) : value;
+  }
 });
-
-export const plaidClient = new PlaidApi(configuration);
 
 // ============================================================================
 // Link Token Creation
