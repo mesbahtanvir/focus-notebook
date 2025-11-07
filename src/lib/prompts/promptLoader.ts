@@ -65,9 +65,16 @@ export function renderTemplate(template: string, variables: Record<string, any>)
     result = result.replace(regex, String(value ?? ''));
   });
 
-  // Handle nested object access: {{object.property}}
+  // Handle nested object/array access: {{object.property}} and {{array.length}}
   Object.entries(variables).forEach(([key, value]) => {
     if (typeof value === 'object' && value !== null) {
+      // Handle array.length
+      if (Array.isArray(value)) {
+        const lengthRegex = new RegExp(`{{${key}\\.length}}`, 'g');
+        result = result.replace(lengthRegex, String(value.length));
+      }
+
+      // Handle object properties
       Object.entries(value).forEach(([subKey, subValue]) => {
         const regex = new RegExp(`{{${key}\\.${subKey}}}`, 'g');
         result = result.replace(regex, String(subValue ?? ''));
@@ -176,4 +183,106 @@ export function listPrompts(): string[] {
     .readdirSync(promptsDir)
     .filter(file => file.endsWith('.yml'))
     .map(file => file.replace('.yml', ''));
+}
+
+/**
+ * Export a prompt for GitHub Models interface
+ * @param promptName - Name of the prompt file
+ * @param variables - Test variables for the prompt
+ * @param context - Test context data
+ * @returns Formatted string for GitHub Models
+ */
+export function exportPromptForGitHubModels(
+  promptName: string,
+  variables: Record<string, any> = {},
+  context: Record<string, any> = {}
+): string {
+  const config = loadPrompt(promptName);
+  const messages = buildMessages(config, variables, context);
+
+  const systemMessage = messages.find(m => m.role === 'system')?.content || '';
+  const userMessage = messages.find(m => m.role === 'user')?.content || '';
+
+  return `# ${config.name} - GitHub Models Export
+
+**Description:** ${config.description}
+**Version:** ${config.version}
+
+---
+
+## System Message:
+${systemMessage}
+
+---
+
+## User Prompt:
+${userMessage}
+
+---
+
+## Model Configuration:
+- **Default Model:** ${config.model.default}
+- **Alternative Models:** ${config.model.alternatives?.join(', ') || 'None'}
+- **Temperature:** ${config.model.temperature}
+- **Max Tokens:** ${config.model.maxTokens}
+
+## Test Instructions:
+1. Copy the System Message and User Prompt above
+2. Paste into GitHub Models interface or API
+3. Use the recommended model settings above
+4. Expected response format: ${config.responseValidation?.format || 'text'}
+
+${config.responseValidation?.format === 'json' ? `
+## Expected JSON Response Structure:
+The model should respond with JSON matching this schema:
+\`\`\`json
+${JSON.stringify(config.responseValidation.schema, null, 2)}
+\`\`\`
+` : ''}
+
+## Customization:
+To test with your own data, modify the variables passed to this export function.
+Current test data includes:
+${Object.keys(variables).map(key => `- ${key}: ${typeof variables[key]}`).join('\n')}
+${Object.keys(context).map(key => `- ${key}: ${Array.isArray(context[key]) ? `${context[key].length} items` : typeof context[key]}`).join('\n')}
+`;
+}
+
+/**
+ * Build a complete prompt string (system + user) for direct use
+ * Useful for quick testing or non-API scenarios
+ * @param promptName - Name of the prompt file
+ * @param variables - Variables for the prompt
+ * @param context - Context data
+ * @returns Complete prompt string
+ */
+export function buildCompletePrompt(
+  promptName: string,
+  variables: Record<string, any> = {},
+  context: Record<string, any> = {}
+): string {
+  const config = loadPrompt(promptName);
+  const messages = buildMessages(config, variables, context);
+
+  return messages.map(m => `[${m.role.toUpperCase()}]\n${m.content}`).join('\n\n---\n\n');
+}
+
+/**
+ * Get prompt metadata without loading the full prompt
+ * @param promptName - Name of the prompt file
+ * @returns Prompt metadata
+ */
+export function getPromptMetadata(promptName: string): {
+  name: string;
+  description: string;
+  version: string;
+  model: ModelConfig;
+} {
+  const config = loadPrompt(promptName);
+  return {
+    name: config.name,
+    description: config.description,
+    version: config.version,
+    model: config.model,
+  };
 }
