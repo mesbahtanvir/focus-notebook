@@ -304,10 +304,40 @@ export const createStripePortalSession = functions.https.onCall(async (data, con
   }
 
   const stripe = getStripeClient();
-  const session = await stripe.billingPortal.sessions.create({
+
+  // Prepare portal session creation parameters
+  const portalParams: { customer: string; return_url: string; configuration?: string } = {
     customer: customerId,
     return_url: `${resolveBaseUrl(data?.origin)}/profile`,
-  });
+  };
+
+  // Add configuration ID if provided (required for live mode)
+  const portalConfigId = process.env.STRIPE_PORTAL_CONFIG_ID;
+  if (portalConfigId) {
+    portalParams.configuration = portalConfigId;
+  }
+
+  let session;
+  try {
+    session = await stripe.billingPortal.sessions.create(portalParams);
+  } catch (error: any) {
+    console.error('Failed to create billing portal session:', error);
+
+    // Provide helpful error message for missing configuration
+    if (error.code === 'parameter_missing' || error.type === 'invalid_request_error') {
+      if (error.message?.includes('configuration')) {
+        throw new functions.https.HttpsError(
+          'internal',
+          'Billing portal is not configured. Please contact support.'
+        );
+      }
+    }
+
+    throw new functions.https.HttpsError(
+      'internal',
+      'Unable to open the billing portal right now. Please try again shortly.'
+    );
+  }
 
   if (!session.url) {
     throw new functions.https.HttpsError(

@@ -30,12 +30,40 @@ ALPHA_VANTAGE_API_KEY=your-alpha-vantage-api-key-here
 
 ### 3. Set Firebase Environment Config
 
-For production deployment, set environment variables:
+For production deployment, set environment variables using Firebase CLI or the Firebase Console.
+
+#### Required Variables:
 
 ```bash
+# OpenAI for AI processing
 firebase functions:config:set openai.api_key="sk-your-actual-api-key-here"
-firebase functions:config:set alpha_vantage.api_key="your-alpha-vantage-api-key-here"
+
+# Stripe for billing
+firebase functions:config:set stripe.secret="sk_live_your-stripe-secret"
+firebase functions:config:set stripe.price_id="price_your-subscription-price-id"
+firebase functions:config:set stripe.webhook_secret="whsec_your-webhook-secret"
+firebase functions:config:set stripe.portal_config_id="bpc_1SQbloDdrpmFOJwOXqZjXWc4"
 ```
+
+#### Optional Variables:
+
+```bash
+# Alpha Vantage for stock prices
+firebase functions:config:set alpha_vantage.api_key="your-alpha-vantage-api-key"
+
+# Anthropic for Claude-powered features
+firebase functions:config:set anthropic.api_key="sk-ant-your-anthropic-key"
+
+# Plaid for bank integration
+firebase functions:config:set plaid.client_id="your-plaid-client-id"
+firebase functions:config:set plaid.secret="your-plaid-secret"
+firebase functions:config:set plaid.env="sandbox"
+
+# App configuration
+firebase functions:config:set app.base_url="https://your-domain.com"
+```
+
+**Note:** Environment variables in Firebase use dot notation (e.g., `stripe.secret`) but are accessed in code as uppercase with underscores (e.g., `STRIPE_SECRET`).
 
 ## Local Development
 
