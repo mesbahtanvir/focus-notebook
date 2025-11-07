@@ -7,7 +7,7 @@ jest.mock('firebase-admin', () => ({
 }));
 
 import * as admin from 'firebase-admin';
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v1';
 import { __private__ } from '../marketData';
 
 describe('marketData helpers', () => {
