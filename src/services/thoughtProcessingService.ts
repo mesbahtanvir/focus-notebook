@@ -3,7 +3,6 @@ import { useTasks } from '@/store/useTasks';
 import { useProjects } from '@/store/useProjects';
 import { useGoals } from '@/store/useGoals';
 import { useMoods } from '@/store/useMoods';
-import { useEntityRelationships } from '@/store/useEntityRelationships';
 import { auth } from '@/lib/firebaseClient';
 import { useAnonymousSession } from '@/store/useAnonymousSession';
 import { httpsCallable } from 'firebase/functions';
@@ -12,6 +11,7 @@ import { resolveToolSpecIds } from '../../shared/toolSpecUtils';
 import { useToolEnrollment } from '@/store/useToolEnrollment';
 import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
 import { type AiEntitlementCode } from '../../shared/subscription';
+import * as EntityService from './entityService';
 
 export interface ThoughtProcessingResult {
   success: boolean;
@@ -194,32 +194,23 @@ export class ThoughtProcessingService {
             break;
 
           case 'createTask':
-            // Create new task
-            const addTask = useTasks.getState().add;
-            // Validate category - must be 'mastery' or 'pleasure' only
-            const validCategory = action.data.category === 'mastery' || action.data.category === 'pleasure'
-              ? action.data.category
-              : 'mastery'; // Default to mastery if invalid
-            const taskId = await addTask({
-              title: action.data.title,
-              category: validCategory,
-              priority: action.data.priority || 'medium',
-              status: 'active',
-              focusEligible: true,
-              createdBy: 'ai',
-            });
-
-            // Create relationship: thought → task
-            await useEntityRelationships.getState().createRelationship({
-              sourceType: 'thought',
-              sourceId: thoughtId,
-              targetType: 'task',
-              targetId: taskId,
-              relationshipType: 'created-from',
-              strength: action.confidence,
-              createdBy: 'ai',
-              reasoning: action.reasoning,
-            });
+            // Create new task via EntityService
+            await EntityService.createTask(
+              {
+                title: action.data.title,
+                category: action.data.category,
+                priority: action.data.priority || 'medium',
+                status: 'active',
+                focusEligible: true,
+                done: false,
+              },
+              {
+                sourceEntity: { type: 'thought', id: thoughtId },
+                createdBy: 'ai',
+                confidence: action.confidence,
+                reasoning: action.reasoning,
+              }
+            );
             break;
 
           case 'enhanceTask':
@@ -230,143 +221,122 @@ export class ThoughtProcessingService {
 
           case 'createMood':
           case 'createMoodEntry':
-            // Create mood entry with validation
-            const addMood = useMoods.getState().add;
-            // Validate and sanitize mood value (must be 1-10)
-            let moodValue = 5; // Default to neutral
-            if (typeof action.data.value === 'number' && !isNaN(action.data.value)) {
-              moodValue = Math.min(10, Math.max(1, Math.round(action.data.value)));
-            } else if (typeof action.data.value === 'string') {
-              const parsed = parseFloat(action.data.value);
-              if (!isNaN(parsed)) {
-                moodValue = Math.min(10, Math.max(1, Math.round(parsed)));
+            // Create mood entry via EntityService (includes validation)
+            await EntityService.createMood(
+              {
+                value: action.data.value,
+                note: action.data.note || '',
+              },
+              {
+                sourceEntity: { type: 'thought', id: thoughtId },
+                createdBy: 'ai',
+                confidence: action.confidence,
+                reasoning: action.reasoning,
               }
-            }
-            const moodId = await addMood({
-              value: moodValue,
-              note: action.data.note || '',
-            });
-
-            // Create relationship: thought → mood
-            await useEntityRelationships.getState().createRelationship({
-              sourceType: 'thought',
-              sourceId: thoughtId,
-              targetType: 'mood',
-              targetId: moodId,
-              relationshipType: 'created-from',
-              strength: action.confidence,
-              createdBy: 'ai',
-              reasoning: action.reasoning,
-            });
+            );
             break;
 
           case 'createProject':
-            // Create new project
-            const addProject = useProjects.getState().add;
-            const projectId = await addProject({
-              title: action.data.title,
-              description: action.data.description,
-              source: 'ai',
-              objective: action.data.objective || '',
-              actionPlan: action.data.actionPlan || [],
-              timeframe: action.data.timeframe || 'short-term',
-              status: 'active',
-              priority: action.data.priority || 'medium',
-              category: action.data.category || 'mastery',
-            });
-
-            // Create relationship: thought → project
-            await useEntityRelationships.getState().createRelationship({
-              sourceType: 'thought',
-              sourceId: thoughtId,
-              targetType: 'project',
-              targetId: projectId,
-              relationshipType: 'created-from',
-              strength: action.confidence,
-              createdBy: 'ai',
-              reasoning: action.reasoning,
-            });
+            // Create new project via EntityService
+            await EntityService.createProject(
+              {
+                title: action.data.title,
+                description: action.data.description,
+                objective: action.data.objective || '',
+                actionPlan: action.data.actionPlan || [],
+                timeframe: action.data.timeframe || 'short-term',
+                status: 'active',
+                priority: action.data.priority || 'medium',
+                category: action.data.category || 'mastery',
+                linkedThoughtIds: [], // Managed via relationships
+                linkedTaskIds: [], // Managed via relationships
+              },
+              {
+                sourceEntity: { type: 'thought', id: thoughtId },
+                createdBy: 'ai',
+                confidence: action.confidence,
+                reasoning: action.reasoning,
+              }
+            );
             break;
 
           case 'createGoal':
-            // Create new goal
-            const addGoal = useGoals.getState().add;
-            const goalId = await addGoal({
-              title: action.data.title,
-              objective: action.data.objective,
-              source: 'ai',
-              timeframe: action.data.timeframe || 'short-term',
-              status: 'active',
-              priority: action.data.priority || 'medium',
-            });
-
-            // Create relationship: thought → goal
-            await useEntityRelationships.getState().createRelationship({
-              sourceType: 'thought',
-              sourceId: thoughtId,
-              targetType: 'goal',
-              targetId: goalId,
-              relationshipType: 'created-from',
-              strength: action.confidence,
-              createdBy: 'ai',
-              reasoning: action.reasoning,
-            });
+            // Create new goal via EntityService
+            await EntityService.createGoal(
+              {
+                title: action.data.title,
+                objective: action.data.objective,
+                timeframe: action.data.timeframe || 'short-term',
+                status: 'active',
+                priority: action.data.priority || 'medium',
+              },
+              {
+                sourceEntity: { type: 'thought', id: thoughtId },
+                createdBy: 'ai',
+                confidence: action.confidence,
+                reasoning: action.reasoning,
+              }
+            );
             break;
 
           case 'linkToProject':
-            // Link thought to project via relationship
-            await useEntityRelationships.getState().createRelationship({
-              sourceType: 'thought',
-              sourceId: thoughtId,
-              targetType: 'project',
-              targetId: action.data.projectId,
-              relationshipType: 'linked-to',
-              strength: action.confidence,
-              createdBy: 'ai',
-              reasoning: action.reasoning,
-            });
+            // Link thought to project via EntityService
+            await EntityService.linkProjectToEntity(
+              action.data.projectId,
+              'thought',
+              thoughtId,
+              {
+                relationshipType: 'linked-to',
+                strength: action.confidence,
+                createdBy: 'ai',
+                reasoning: action.reasoning,
+              }
+            );
             break;
 
           case 'linkToGoal':
-            // Link thought to goal via relationship
-            await useEntityRelationships.getState().createRelationship({
-              sourceType: 'thought',
-              sourceId: thoughtId,
-              targetType: 'goal',
-              targetId: action.data.goalId,
-              relationshipType: 'linked-to',
-              strength: action.confidence,
-              createdBy: 'ai',
-              reasoning: action.reasoning,
-            });
+            // Link thought to goal via EntityService
+            await EntityService.linkGoalToEntity(
+              action.data.goalId,
+              'thought',
+              thoughtId,
+              {
+                relationshipType: 'linked-to',
+                strength: action.confidence,
+                createdBy: 'ai',
+                reasoning: action.reasoning,
+              }
+            );
             break;
 
           case 'linkToTask':
-            // Link thought to task via relationship
-            await useEntityRelationships.getState().createRelationship({
-              sourceType: 'thought',
-              sourceId: thoughtId,
-              targetType: 'task',
-              targetId: action.data.taskId,
-              relationshipType: 'linked-to',
-              strength: action.confidence,
-              createdBy: 'ai',
-              reasoning: action.reasoning,
-            });
+            // Link thought to task via EntityService
+            await EntityService.linkTaskToEntity(
+              action.data.taskId,
+              'thought',
+              thoughtId,
+              {
+                relationshipType: 'linked-to',
+                strength: action.confidence,
+                createdBy: 'ai',
+                reasoning: action.reasoning,
+              }
+            );
             break;
 
           case 'linkToPerson':
-            // Link thought to person via relationship
-            await useEntityRelationships.getState().createRelationship({
-              sourceType: 'thought',
-              sourceId: thoughtId,
-              targetType: 'person',
-              targetId: action.data.personId,
-              relationshipType: 'mentions',
-              strength: action.confidence,
-              createdBy: 'ai',
-              reasoning: action.reasoning,
-            });
+            // Link thought to person via EntityService
+            await EntityService.linkPersonToEntity(
+              action.data.personId,
+              'thought',
+              thoughtId,
+              {
+                relationshipType: 'mentions',
+                strength: action.confidence,
+                createdBy: 'ai',
+                reasoning: action.reasoning,
+              }
+            );
             break;
 
           default:
