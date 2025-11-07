@@ -62,7 +62,7 @@ export default function FinancesPage() {
       monthlySubscriptionCost,
       upcomingRenewals: upcomingRenewals.length,
     };
-  }, [transactions, portfolios, subscriptions, getTotalSpentByMonth]);
+  }, [portfolios, subscriptions, getTotalSpentByMonth]);
 
   const recentTransactions = useMemo(() => {
     return [...transactions]

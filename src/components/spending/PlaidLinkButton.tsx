@@ -9,6 +9,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { usePlaidLink, PlaidLinkError, PlaidLinkOnExitMetadata } from 'react-plaid-link';
 import { Loader2, Link as LinkIcon, RefreshCw } from 'lucide-react';
 import { useSpendingTool } from '@/store/useSpendingTool';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PlaidLinkButtonProps {
   mode?: 'new' | 'relink';
@@ -25,6 +26,7 @@ export default function PlaidLinkButton({
 }: PlaidLinkButtonProps) {
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [isCreatingToken, setIsCreatingToken] = useState(false);
+  const { user } = useAuth();
 
   const {
     createLinkToken,
@@ -36,6 +38,10 @@ export default function PlaidLinkButton({
 
   // Initialize link token
   useEffect(() => {
+    if (!user?.uid) {
+      return;
+    }
+
     const initLinkToken = async () => {
       setIsCreatingToken(true);
       try {
@@ -58,7 +64,7 @@ export default function PlaidLinkButton({
       initLinkToken();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, itemId]); // Intentionally excluding functions to prevent infinite loop
+  }, [mode, itemId, user?.uid]); // Intentionally excluding functions to prevent infinite loop
 
   const onPlaidSuccess = useCallback(
     async (public_token: string, metadata: any) => {

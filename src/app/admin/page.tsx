@@ -1,16 +1,34 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRequestLog } from "@/store/useRequestLog";
-import { Shield, RefreshCw, ChevronDown, ChevronUp, Database, Cloud } from "lucide-react";
+import { useLLMLogs } from "@/store/useLLMLogs";
+import {
+  Shield,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  Database,
+  Cloud,
+  Brain,
+  Copy,
+} from "lucide-react";
 import { db as firestore } from "@/lib/firebaseClient";
 import { collection, getDocs } from "firebase/firestore";
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
   const { logs, getPendingRequests, getInProgressRequests } = useRequestLog();
+  const { logs: llmLogs, isLoading: llmLogsLoading, subscribe: subscribeLLMLogs } = useLLMLogs(
+    (state) => ({
+      logs: state.logs,
+      isLoading: state.isLoading,
+      subscribe: state.subscribe,
+    })
+  );
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedPromptId, setExpandedPromptId] = useState<string | null>(null);
   const [showCloudData, setShowCloudData] = useState(false);
   const [selectedCloudDataType, setSelectedCloudDataType] = useState<string>('tasks');
   const [cloudData, setCloudData] = useState<any>({
@@ -26,6 +44,12 @@ export default function AdminPage() {
     cbt: []
   });
   const [loadingCloudData, setLoadingCloudData] = useState(false);
+  const [requestStatusFilter, setRequestStatusFilter] = useState<'all' | 'pending' | 'in-progress' | 'completed' | 'failed'>('all');
+  const [requestTypeFilter, setRequestTypeFilter] = useState<'all' | 'firebase' | 'api' | 'sync'>('all');
+  const [requestSearch, setRequestSearch] = useState('');
+  const [promptTriggerFilter, setPromptTriggerFilter] = useState<'all' | 'auto' | 'manual' | 'reprocess'>('all');
+  const [promptStatusFilter, setPromptStatusFilter] = useState<'all' | 'completed' | 'failed'>('all');
+  const [promptSearch, setPromptSearch] = useState('');
   
   const pendingRequests = getPendingRequests();
   const inProgressRequests = getInProgressRequests();
@@ -59,6 +83,50 @@ export default function AdminPage() {
     }
   }, [showCloudData, user, loadCloudData]);
 
+  useEffect(() => {
+    if (user?.uid) {
+      subscribeLLMLogs(user.uid);
+    }
+    return () => {
+      useLLMLogs.getState().clear();
+    };
+  }, [user?.uid, subscribeLLMLogs]);
+
+  const filteredLogs = useMemo(() => {
+    const search = requestSearch.trim().toLowerCase();
+    return logs.filter((log) => {
+      if (requestStatusFilter !== 'all' && log.requestStatus !== requestStatusFilter) {
+        return false;
+      }
+      if (requestTypeFilter !== 'all' && log.type !== requestTypeFilter) {
+        return false;
+      }
+      if (search) {
+        const haystack = `${log.method} ${log.url ?? ''} ${log.id}`.toLowerCase();
+        return haystack.includes(search);
+      }
+      return true;
+    });
+  }, [logs, requestStatusFilter, requestTypeFilter, requestSearch]);
+
+  const filteredPromptLogs = useMemo(() => {
+    const search = promptSearch.trim().toLowerCase();
+    return llmLogs.filter((log) => {
+      const status = resolvePromptStatus(log.status, log.error);
+      if (promptStatusFilter !== 'all' && status !== promptStatusFilter) {
+        return false;
+      }
+      if (promptTriggerFilter !== 'all' && log.trigger !== promptTriggerFilter) {
+        return false;
+      }
+      if (search) {
+        const haystack = `${log.prompt ?? ''} ${log.rawResponse ?? ''} ${(log.toolSpecIds ?? []).join(' ')}`.toLowerCase();
+        return haystack.includes(search);
+      }
+      return true;
+    });
+  }, [llmLogs, promptStatusFilter, promptTriggerFilter, promptSearch]);
+
   // Note: Force sync removed - real-time Firestore listeners handle all syncing automatically
 
   if (loading) {
@@ -71,8 +139,6 @@ export default function AdminPage() {
       </div>
     );
   }
-
-  const filteredLogs = logs;
 
   const getStatusColor = (status?: number) => {
     if (!status) return "text-gray-600 bg-gray-100";
@@ -98,6 +164,29 @@ export default function AdminPage() {
       case "failed": return "text-red-700 bg-red-100 border-red-300";
       default: return "text-gray-700 bg-gray-100 border-gray-300";
     }
+  };
+
+  const getPromptStatusColor = (status: 'completed' | 'failed') => {
+    if (status === 'failed') {
+      return "text-red-700 bg-red-100 border-red-200";
+    }
+    return "text-green-700 bg-green-100 border-green-200";
+  };
+
+  const resolvePromptStatus = (status?: 'completed' | 'failed', error?: string): 'completed' | 'failed' => {
+    if (status) return status;
+    return error ? 'failed' : 'completed';
+  };
+
+  const getPromptPreview = (text?: string) => {
+    if (!text) return "—";
+    const singleLine = text.replace(/\s+/g, " ").trim();
+    return singleLine.length > 110 ? `${singleLine.slice(0, 110)}…` : singleLine;
+  };
+
+  const copyToClipboard = (value?: string) => {
+    if (!value || typeof navigator === "undefined" || !navigator.clipboard) return;
+    void navigator.clipboard.writeText(value);
   };
 
   return (
@@ -388,106 +477,333 @@ export default function AdminPage() {
 
       {/* Note: Cloud Sync Monitor removed - use Firestore Console for monitoring */}
 
-      {/* Logs List */}
-      <div className="space-y-3">
-        {filteredLogs.length === 0 ? (
-          <div className="bg-white rounded-xl p-12 text-center border-2 border-gray-200">
-            <Shield className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-bold text-gray-800 mb-2">No logs found</h3>
-            <p className="text-gray-600">
-              No requests have been logged yet. Activity will appear here automatically.
-            </p>
+      {/* AI Prompt History */}
+      <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-pink-50 rounded-2xl border-4 border-purple-200 shadow-lg p-4 md:p-6 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent flex items-center gap-2">
+              <Brain className="h-6 w-6 text-purple-600" />
+              🧠 AI Prompt History
+            </h2>
+            <p className="text-sm text-gray-600">See exactly what we sent to the LLM and how it responded.</p>
           </div>
-        ) : (
-          filteredLogs.map((log) => (
-            <div
-              key={log.id}
-              className="bg-white rounded-xl border-2 border-purple-200 shadow-md overflow-hidden"
-            >
-              {/* Header */}
-              <div
-                className="p-4 cursor-pointer hover:bg-purple-50 transition-colors"
-                onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
+          <div className="text-sm text-gray-500">
+            Showing {filteredPromptLogs.length} of {llmLogs.length} entries
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="flex flex-wrap gap-3">
+            <label className="text-xs text-gray-600 font-semibold flex flex-col">
+              Trigger
+              <select
+                value={promptTriggerFilter}
+                onChange={(e) => setPromptTriggerFilter(e.target.value as 'all' | 'auto' | 'manual' | 'reprocess')}
+                className="mt-1 rounded-lg border border-purple-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
               >
-                <div className="flex items-start gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${getTypeColor(log.type)}`}>
-                        {log.type.toUpperCase()}
-                      </span>
-                      <span className={`px-2 py-1 rounded-lg text-xs font-bold border-2 ${getRequestStatusColor(log.requestStatus)}`}>
-                        {log.requestStatus === 'in-progress' && '⏳ '}
-                        {log.requestStatus === 'completed' && '✓ '}
-                        {log.requestStatus === 'failed' && '✗ '}
-                        {log.requestStatus === 'pending' && '⏸ '}
-                        {log.requestStatus.toUpperCase().replace('-', ' ')}
-                      </span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(log.status)}`}>
-                        {log.status || "N/A"}
-                      </span>
-                      <span className="text-xs text-gray-600">
-                        {log.duration ? `${log.duration}ms` : ""}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {new Date(log.timestamp).toLocaleTimeString()}
-                      </span>
+                <option value="all">All triggers</option>
+                <option value="auto">Auto</option>
+                <option value="manual">Manual</option>
+                <option value="reprocess">Reprocess</option>
+              </select>
+            </label>
+            <label className="text-xs text-gray-600 font-semibold flex flex-col">
+              Status
+              <select
+                value={promptStatusFilter}
+                onChange={(e) => setPromptStatusFilter(e.target.value as 'all' | 'completed' | 'failed')}
+                className="mt-1 rounded-lg border border-purple-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              >
+                <option value="all">All statuses</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+              </select>
+            </label>
+          </div>
+          <div className="w-full md:max-w-xs">
+            <label className="text-xs text-gray-600 font-semibold flex flex-col">
+              Search
+              <input
+                type="search"
+                value={promptSearch}
+                onChange={(e) => setPromptSearch(e.target.value)}
+                placeholder="Prompt, response, or tool"
+                className="mt-1 rounded-lg border border-purple-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {llmLogsLoading && (
+            <div className="flex justify-center py-6">
+              <div className="flex flex-col items-center gap-2 text-sm text-gray-600">
+                <RefreshCw className="h-5 w-5 animate-spin text-purple-500" />
+                Loading prompt history...
+              </div>
+            </div>
+          )}
+
+          {!llmLogsLoading && filteredPromptLogs.length === 0 && (
+            <div className="bg-white rounded-xl border-2 border-dashed border-purple-200 p-8 text-center">
+              <p className="text-base font-semibold text-purple-700 mb-1">No prompts match your filters</p>
+              <p className="text-sm text-gray-600">Try changing the trigger, status, or search term.</p>
+            </div>
+          )}
+
+          {filteredPromptLogs.map((log) => {
+            const status = resolvePromptStatus(log.status, log.error);
+            return (
+              <div
+                key={log.id}
+                className="bg-white rounded-xl border border-purple-200 shadow-sm overflow-hidden"
+              >
+                <button
+                  className="w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-purple-50 transition-colors"
+                  onClick={() => setExpandedPromptId(expandedPromptId === log.id ? null : log.id)}
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="p-2 bg-purple-100 rounded-full">
+                      <Brain className="h-4 w-4 text-purple-600" />
                     </div>
-                    <div className="font-mono text-sm font-bold text-gray-800 mb-1">
-                      {log.method}
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">
+                        {getPromptPreview(log.prompt)}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {log.toolSpecIds && log.toolSpecIds.length > 0
+                          ? `Tools: ${log.toolSpecIds.join(', ')}`
+                          : getPromptPreview(log.rawResponse)}
+                      </p>
                     </div>
-                    <div className="font-mono text-xs text-gray-600 truncate">
-                      {log.url}
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                    <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-semibold uppercase">
+                      {log.trigger}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full border text-xs font-bold ${getPromptStatusColor(status)}`}>
+                      {status === 'failed' ? 'Failed' : 'Completed'}
+                    </span>
+                    <span className="hidden sm:inline-block">
+                      {log.createdAt ? new Date(log.createdAt).toLocaleTimeString() : ''}
+                    </span>
+                    {expandedPromptId === log.id ? (
+                      <ChevronUp className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    )}
+                  </div>
+                </button>
+
+                {expandedPromptId === log.id && (
+                  <div className="border-t border-purple-100 bg-gray-50 p-4 space-y-4">
+                    <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                      <span>ID: {log.id}</span>
+                      {log.thoughtId && <span>Thought: {log.thoughtId}</span>}
+                      {log.createdAt && <span>{new Date(log.createdAt).toLocaleString()}</span>}
                     </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => copyToClipboard(log.prompt)}
+                        className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full bg-purple-100 text-purple-700 hover:bg-purple-200"
+                      >
+                        <Copy className="h-3 w-3" />
+                        Copy Prompt
+                      </button>
+                      <button
+                        onClick={() => copyToClipboard(log.rawResponse)}
+                        className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                      >
+                        <Copy className="h-3 w-3" />
+                        Copy Response
+                      </button>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-800 mb-1">Prompt</h4>
+                      <pre className="text-xs bg-white p-3 rounded-lg border border-gray-200 max-h-64 overflow-auto whitespace-pre-wrap">
+                        {log.prompt || '—'}
+                      </pre>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-800 mb-1">Response</h4>
+                      <pre className="text-xs bg-white p-3 rounded-lg border border-gray-200 max-h-64 overflow-auto whitespace-pre-wrap">
+                        {log.rawResponse || '—'}
+                      </pre>
+                    </div>
+
+                    {log.actions && log.actions.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-bold text-gray-800 mb-1">Actions</h4>
+                        <pre className="text-xs bg-white p-3 rounded-lg border border-gray-200 max-h-64 overflow-auto whitespace-pre-wrap">
+                          {JSON.stringify(log.actions, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+
+                    {log.usage && (
+                      <div className="text-xs text-gray-500 flex flex-wrap gap-3">
+                        {log.usage.prompt_tokens !== undefined && <span>Prompt tokens: {log.usage.prompt_tokens}</span>}
+                        {log.usage.completion_tokens !== undefined && <span>Completion tokens: {log.usage.completion_tokens}</span>}
+                        {log.usage.total_tokens !== undefined && <span>Total tokens: {log.usage.total_tokens}</span>}
+                      </div>
+                    )}
+
                     {log.error && (
-                      <div className="mt-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
-                        <p className="text-xs font-medium text-red-600">⚠️ Error: {log.error}</p>
+                      <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
+                        Error: {log.error}
                       </div>
                     )}
                   </div>
-                  <div className="flex-shrink-0">
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Update History (Request Logs) */}
+      <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 rounded-2xl border-4 border-blue-200 shadow-lg p-4 md:p-6 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            🔄 Update History
+          </h2>
+          <div className="text-sm text-gray-500">
+            Showing {filteredLogs.length} of {logs.length} requests
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="flex flex-wrap gap-3">
+            <label className="text-xs text-gray-600 font-semibold flex flex-col">
+              Status
+              <select
+                value={requestStatusFilter}
+                onChange={(e) => setRequestStatusFilter(e.target.value as 'all' | 'pending' | 'in-progress' | 'completed' | 'failed')}
+                className="mt-1 rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="all">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+              </select>
+            </label>
+            <label className="text-xs text-gray-600 font-semibold flex flex-col">
+              Type
+              <select
+                value={requestTypeFilter}
+                onChange={(e) => setRequestTypeFilter(e.target.value as 'all' | 'firebase' | 'api' | 'sync')}
+                className="mt-1 rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="all">All types</option>
+                <option value="firebase">Firebase</option>
+                <option value="api">API</option>
+                <option value="sync">Sync</option>
+              </select>
+            </label>
+          </div>
+          <div className="w-full md:max-w-xs">
+            <label className="text-xs text-gray-600 font-semibold flex flex-col">
+              Search
+              <input
+                type="search"
+                value={requestSearch}
+                onChange={(e) => setRequestSearch(e.target.value)}
+                placeholder="Method, URL, or ID"
+                className="mt-1 rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {filteredLogs.length === 0 ? (
+            <div className="bg-white rounded-xl p-8 text-center border-2 border-dashed border-blue-200">
+              <Shield className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+              <h3 className="text-lg font-bold text-gray-800 mb-1">No matching requests</h3>
+              <p className="text-gray-600 text-sm">Adjust the filters above to see more results.</p>
+            </div>
+          ) : (
+            filteredLogs.map((log) => (
+              <div
+                key={log.id}
+                className="bg-white rounded-xl border border-blue-200 shadow-sm overflow-hidden"
+              >
+                <button
+                  className="w-full flex flex-col gap-2 px-4 py-3 text-left hover:bg-blue-50 transition-colors md:flex-row md:items-center"
+                  onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <span className="text-xs font-bold uppercase text-gray-500">{log.method}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${getTypeColor(log.type)}`}>
+                      {log.type.toUpperCase()}
+                    </span>
+                    <span className="text-xs text-gray-600 font-mono truncate flex-1">
+                      {log.url}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                    <span className={`px-2 py-0.5 rounded-full border font-semibold ${getRequestStatusColor(log.requestStatus)}`}>
+                      {log.requestStatus === 'in-progress' && '⏳ '}
+                      {log.requestStatus === 'completed' && '✓ '}
+                      {log.requestStatus === 'failed' && '✗ '}
+                      {log.requestStatus === 'pending' && '⏸ '}
+                      {log.requestStatus.toUpperCase().replace('-', ' ')}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${getStatusColor(log.status)}`}>
+                      {log.status || "N/A"}
+                    </span>
+                    <span>{log.duration ? `${log.duration}ms` : ''}</span>
+                    <span className="hidden sm:inline-block">
+                      {new Date(log.timestamp).toLocaleTimeString()}
+                    </span>
                     {expandedId === log.id ? (
-                      <ChevronUp className="h-5 w-5 text-gray-400" />
+                      <ChevronUp className="h-4 w-4 text-gray-400" />
                     ) : (
-                      <ChevronDown className="h-5 w-5 text-gray-400" />
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
                     )}
                   </div>
-                </div>
-              </div>
+                </button>
 
-              {/* Expanded Details */}
-              {expandedId === log.id && (
-                <div className="border-t-2 border-purple-200 p-4 bg-gray-50 space-y-4">
-                  {log.request && (
-                    <div>
-                      <h4 className="font-bold text-sm text-gray-800 mb-2">📤 Request:</h4>
-                      <pre className="text-xs bg-white p-3 rounded-lg border border-gray-200 overflow-x-auto">
-                        {JSON.stringify(log.request, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-                  {log.response && (
-                    <div>
-                      <h4 className="font-bold text-sm text-gray-800 mb-2">📥 Response:</h4>
-                      <pre className="text-xs bg-white p-3 rounded-lg border border-gray-200 overflow-x-auto">
-                        {JSON.stringify(log.response, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-                  <div>
-                    <h4 className="font-bold text-sm text-gray-800 mb-2">ℹ️ Metadata:</h4>
-                    <div className="text-xs bg-white p-3 rounded-lg border border-gray-200 space-y-1">
+                {expandedId === log.id && (
+                  <div className="border-t border-blue-100 bg-gray-50 p-4 space-y-4">
+                    {log.error && (
+                      <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
+                        ⚠️ {log.error}
+                      </div>
+                    )}
+                    {log.request && (
+                      <div>
+                        <h4 className="font-bold text-sm text-gray-800 mb-2">📤 Request</h4>
+                        <pre className="text-xs bg-white p-3 rounded-lg border border-gray-200 overflow-x-auto">
+                          {JSON.stringify(log.request, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                    {log.response && (
+                      <div>
+                        <h4 className="font-bold text-sm text-gray-800 mb-2">📥 Response</h4>
+                        <pre className="text-xs bg-white p-3 rounded-lg border border-gray-200 overflow-x-auto">
+                          {JSON.stringify(log.response, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                    <div className="text-xs bg-white p-3 rounded-lg border border-gray-200 grid gap-1">
                       <p><strong>ID:</strong> {log.id}</p>
                       <p><strong>Timestamp:</strong> {new Date(log.timestamp).toISOString()}</p>
-                      <p><strong>Type:</strong> {log.type}</p>
                       {log.duration && <p><strong>Duration:</strong> {log.duration}ms</p>}
-                      {log.status && <p><strong>Status:</strong> {log.status}</p>}
+                      {log.startTime && <p><strong>Started:</strong> {new Date(log.startTime).toLocaleTimeString()}</p>}
+                      {log.endTime && <p><strong>Ended:</strong> {new Date(log.endTime).toLocaleTimeString()}</p>}
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))
-        )}
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

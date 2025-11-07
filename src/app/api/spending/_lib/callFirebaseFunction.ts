@@ -21,7 +21,8 @@ export async function callFirebaseCallable<TData extends object = any>(
   functionName: string,
   data: TData,
   idToken: string,
-  appCheckToken?: string | null
+  appCheckToken?: string | null,
+  instanceIdToken?: string | null
 ) {
   if (!baseUrl) {
     throw new FirebaseCallableError(
@@ -36,6 +37,9 @@ export async function callFirebaseCallable<TData extends object = any>(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${idToken}`,
       ...(appCheckToken ? { 'X-Firebase-AppCheck': appCheckToken } : {}),
+      ...(instanceIdToken
+        ? { 'Firebase-Instance-ID-Token': instanceIdToken }
+        : {}),
     },
     body: JSON.stringify({ data }),
   });

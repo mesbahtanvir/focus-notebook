@@ -2,6 +2,7 @@ import { initializeApp, getApps } from "firebase/app";
 import { getAuth, GoogleAuthProvider, EmailAuthProvider } from "firebase/auth";
 import { getFunctions } from "firebase/functions";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache } from "firebase/firestore";
+import { initializeAppCheck, ReCaptchaV3Provider, getToken as getAppCheckToken, AppCheck } from "firebase/app-check";
 import { isSafariBrowser, getBrowserName } from "@/lib/utils/browserDetection";
 
 const firebaseConfig = {
@@ -49,6 +50,62 @@ try {
 export const db = firestoreDb;
 
 export const functionsClient = getFunctions(app);
+
+let appCheckInstance: AppCheck | null = null;
+let attemptedAppCheckInit = false;
+let appCheckWarningLogged = false;
+
+function initializeAppCheckIfNeeded() {
+  if (appCheckInstance || attemptedAppCheckInit) {
+    return appCheckInstance;
+  }
+  attemptedAppCheckInit = true;
+
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const siteKey = process.env.NEXT_PUBLIC_FIREBASE_APPCHECK_SITE_KEY;
+  const debugToken = process.env.NEXT_PUBLIC_FIREBASE_APPCHECK_DEBUG_TOKEN;
+
+  if (!siteKey) {
+    if (!appCheckWarningLogged) {
+      console.warn('[Firebase] App Check site key is not configured; callable functions that enforce App Check may reject requests.');
+      appCheckWarningLogged = true;
+    }
+    return null;
+  }
+
+  if (debugToken) {
+    (window as any).FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken === 'true' ? true : debugToken;
+  }
+
+  appCheckInstance = initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider(siteKey),
+    isTokenAutoRefreshEnabled: true,
+  });
+
+  return appCheckInstance;
+}
+
+export async function getClientAppCheckToken(forceRefresh = false): Promise<string | null> {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const instance = initializeAppCheckIfNeeded();
+  if (!instance) {
+    return null;
+  }
+
+  try {
+    const { token } = await getAppCheckToken(instance, forceRefresh);
+    return token;
+  } catch (error) {
+    console.warn('[Firebase] Unable to fetch App Check token:', error);
+    return null;
+  }
+}
 
 export const googleProvider = new GoogleAuthProvider();
 export const emailProvider = new EmailAuthProvider();

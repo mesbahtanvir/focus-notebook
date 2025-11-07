@@ -4,7 +4,8 @@
  */
 
 import { create } from 'zustand';
-import { auth, db } from '@/lib/firebaseClient';
+import app, { auth, db, getClientAppCheckToken } from '@/lib/firebaseClient';
+import { getInstallations, getToken as getInstallationsToken } from 'firebase/installations';
 import {
   Account,
   PlaidItem,
@@ -25,6 +26,25 @@ import {
   limit as firestoreLimit,
 } from 'firebase/firestore';
 
+let cachedInstallations: ReturnType<typeof getInstallations> | null = null;
+
+async function getFirebaseInstanceIdToken() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  if (!cachedInstallations) {
+    cachedInstallations = getInstallations(app);
+  }
+
+  try {
+    return await getInstallationsToken(cachedInstallations);
+  } catch (error) {
+    console.warn('Unable to fetch Firebase Instance ID token:', error);
+    return null;
+  }
+}
+
 async function callSpendingApi(
   endpoint: string,
   payload: Record<string, unknown> = {}
@@ -34,13 +54,27 @@ async function callSpendingApi(
     throw new Error('User must be authenticated before using Plaid.');
   }
 
-  const idToken = await user.getIdToken();
+  const [idToken, instanceIdToken, appCheckToken] = await Promise.all([
+    user.getIdToken(),
+    getFirebaseInstanceIdToken(),
+    getClientAppCheckToken(),
+  ]);
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${idToken}`,
+  };
+
+  if (instanceIdToken) {
+    headers['Firebase-Instance-ID-Token'] = instanceIdToken;
+  }
+  if (appCheckToken) {
+    headers['X-Firebase-AppCheck'] = appCheckToken;
+  }
+
   const response = await fetch(`/api/spending/${endpoint}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${idToken}`,
-    },
+    headers,
     body: JSON.stringify(payload),
   });
 

@@ -42,6 +42,7 @@ export async function POST(
   }
   const idToken = authHeader.replace('Bearer', '').trim();
   const appCheckToken = req.headers.get('x-firebase-appcheck');
+  const instanceIdToken = req.headers.get('firebase-instance-id-token');
 
   try {
     const payload = await parseRequestBody(req);
@@ -49,7 +50,8 @@ export async function POST(
       functionName,
       payload,
       idToken,
-      appCheckToken
+      appCheckToken,
+      instanceIdToken
     );
     return NextResponse.json(result);
   } catch (error) {
