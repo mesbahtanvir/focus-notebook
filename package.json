@@ -16,9 +16,7 @@
     "test:screenshots": "playwright test",
     "test:screenshots:ui": "playwright test --ui",
     "test:screenshots:debug": "playwright test --debug",
-    "test:screenshots:update": "playwright test --update-snapshots",
-    "lighthouse": "./run-lighthouse.sh",
-    "lighthouse:single": "lhci autorun --collect.url=\"https://focus.yourthoughts.ca\""
+    "test:screenshots:update": "playwright test --update-snapshots"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
@@ -52,7 +50,6 @@
     "zustand": "4.5.4"
   },
   "devDependencies": {
-    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.56.1",
     "@testing-library/jest-dom": "6.6.3",
     "@testing-library/react": "14.3.1",
