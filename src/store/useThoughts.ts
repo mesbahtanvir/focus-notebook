@@ -11,9 +11,30 @@ export interface TextChange {
   to: string
 }
 
+export type AISuggestionType =
+  | 'createTask'
+  | 'enhanceTask'
+  | 'createMood'
+  | 'addTag'
+  | 'createProject'
+  | 'createGoal'
+  | 'linkToProject'
+  | 'linkToGoal'
+  | 'linkToTask'
+  | 'linkToPerson'
+  | 'linkToRelationship'
+  | 'createRelationship'
+  | 'linkToMood'
+  | 'linkToNote'
+  | 'enhanceProject'
+  | 'enhanceGoal'
+  | 'enhanceRelationship'
+  | 'createErrand'
+  | 'createNote';
+
 export interface AISuggestion {
   id: string
-  type: 'createTask' | 'enhanceTask' | 'createMood' | 'addTag' | 'createProject' | 'createGoal' | 'linkToProject'
+  type: AISuggestionType
   confidence: number // 0-100
   data: any
   reasoning: string
@@ -21,7 +42,7 @@ export interface AISuggestion {
   status: 'pending' | 'accepted' | 'rejected'
   // Track if accepted suggestion created an entity
   createdEntityId?: string
-  createdEntityType?: 'task' | 'project' | 'goal'
+  createdEntityType?: 'task' | 'project' | 'goal' | 'relationship'
 }
 
 export interface ProcessingHistoryEntry {

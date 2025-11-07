@@ -262,6 +262,108 @@ Complete guide to all features in Personal Notebook.
 
 ---
 
+### 10. Unified Spending Tool
+
+**Purpose**: Privacy-first financial aggregation powered by Plaid and Claude.
+
+**Key Features**:
+- 🔐 **Bank Linking via Plaid**: OAuth flows for new connections + relink (update mode) through `PlaidLinkButton`.
+- 🧩 **Token Security**: Access tokens encrypted with AES-256-GCM before storage (`functions/src/services/encryption.ts`).
+- 📝 **Transactions**: Cursor-based sync with merchant normalization, premium categorization, and subscription detection.
+- 📈 **DashboardSummary**: Balance, income, spending, and subscription totals, plus quick health-state banners.
+- 📋 **TransactionsList**: Search, sort, and filter UI with badges for pending and recurring charges.
+- 🔁 **SubscriptionsList**: Confidence scoring, cadence labels, normalized monthly totals, and upcoming renewals.
+- 📊 **SpendingTrends**: Cashflow line charts, category pies, and top merchant bar charts (Recharts).
+- 🔧 **ConnectionsManager**: Relink flows, sync-now actions, account health badges, and institution grouping.
+- 🧠 **LLM Insights**: Claude-generated summaries with recommendations and anomaly alerts.
+
+**How to Use**:
+1. Open `/tools/spending-unified`.
+2. Review the global banner—if Plaid credentials are missing you’ll see actionable warnings.
+3. Use **Connect account** (new) or **Relink** for stale connections. On success, the dashboard populates automatically.
+4. Explore the tabs: **Dashboard**, **Transactions**, **Subscriptions**, **Trends**, **Connections**.
+5. Trigger manual syncs or relinks from the Connections tab as needed.
+
+**Backend Stack**: `functions/src/plaidFunctions.ts`, `plaidWebhooks.ts`, and services for categorization, subscription detection, monthly rollups, and LLM insights. See [docs/FUNCTIONS.md](./FUNCTIONS.md#spending-tool-functions) for details.
+
+**Roadmap**:
+- Cron jobs for daily sync / rollups.
+- Firestore security rules for the new collections.
+- Frontend polish for insights and rollup explorers.
+
+---
+
+### 11. Investment & Stock Tracking
+
+**Purpose**: Track portfolios with live stock prices, manual assets, AI projections, and daily snapshots.
+
+**Key Features**:
+- 📈 **Ticker Support**: Automatic quote fetching via Alpha Vantage with quantity-aware valuations.
+- 🧮 **Manual Assets**: Track real estate, crypto, or any custom investment manually.
+- 📊 **Portfolio Charts**: Current allocation, historical value, and asset-level performance.
+- 🤖 **AI Predictions**: On-demand OpenAI analysis for trends, risk factors, and support/resistance ranges.
+- 🗓️ **Daily Snapshots**: Capture point-in-time portfolio values for longitudinal charts.
+
+**Setup**:
+1. Request a free Alpha Vantage key: https://www.alphavantage.co/support/#api-key
+2. Add `ALPHA_VANTAGE_API_KEY=...` to `.env.local` (and Firebase Functions `.env` if cron jobs run server-side).
+3. Restart `npm run dev`.
+
+**Using the Tool**:
+1. Go to `/tools/investments`, create or open a portfolio.
+2. Choose **Stock Ticker (Auto-Track)** for equities; enter the ticker (e.g., `AAPL`) and quantity. Prices auto-load.
+3. Choose **Manual Entry** for assets without tickers; update value manually.
+4. Click **Refresh Prices** in a portfolio to re-fetch quotes (cached for 5 minutes).
+5. Use **Generate Prediction** to invoke the AI summary (requires OpenAI key).
+6. Press **Create Snapshot** daily to log history.
+
+**Rate Limits**:
+- Alpha Vantage free tier = 25 calls/day; the client caches responses to stay within limits.
+- Consider alternatives (Finnhub, IEX Cloud) if you need higher throughput.
+
+---
+
+### 12. Data Export & Import Registry
+
+**Purpose**: Self-service registration of tools that participate in the global export/import workflow.
+
+**Why**:
+- ✅ Tools opt-in by registering once.
+- ✅ Registry enforces priority (e.g., goals before tasks).
+- ✅ Shared validation and transformation hooks prevent copy/paste logic.
+
+**Quick Example**:
+```ts
+// src/lib/exportSources/tasksExportSource.ts
+import { registerExportSource } from '@/lib/exportSources';
+import { useTasks } from '@/store/useTasks';
+
+registerExportSource({
+  id: 'tasks',
+  name: 'Tasks',
+  priority: 100,
+  export: async () => useTasks.getState().tasks,
+  import: async (_userId, data) => {
+    const { add } = useTasks.getState();
+    const ids: string[] = [];
+    for (const task of data) {
+      const { id, ...payload } = task;
+      const created = await add(payload);
+      if (created?.id) ids.push(created.id);
+    }
+    return ids;
+  },
+  validate: (tasks) =>
+    tasks.flatMap((task, index) =>
+      !task.title ? [`Task ${index} missing title`] : []
+    ),
+});
+```
+
+Add the module to `src/lib/exportSources/index.ts` and it becomes available in export screens immediately. Use priorities (`0–1000`) to control import order (settings → goals → projects → tasks, etc.).
+
+---
+
 ## Settings & Configuration
 
 ### General Settings
@@ -301,15 +403,13 @@ Complete guide to all features in Personal Notebook.
 
 ## Data Export/Import
 
-**Export**:
-- Format: JSON
-- Includes: Tasks, thoughts, moods
-- Location: Downloads folder
+Use the registry pattern above to decide which tools participate. Frontend export/import screens call the registry so every tool follows the same flow:
 
-**Import**:
-- Format: JSON (from export)
-- Replaces current data
-- Backup recommended
+1. `exportRegistry.exportAll(userId)` collects data from each source (respecting priority).
+2. Users download a single JSON blob.
+3. `exportRegistry.importAll(userId, data)` replays imports in order; each source implements validation and optional transforms (e.g., strip sensitive data, rename fields).
+
+Always back up data before importing, and implement validation to guard against mismatched schemas.
 
 ---
 

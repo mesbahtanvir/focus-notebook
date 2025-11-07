@@ -43,9 +43,13 @@ Next.js 14 · TypeScript · Tailwind CSS · Firebase · Zustand · Capacitor
 
 ## Documentation
 
-- **[Setup Guide](docs/SETUP.md)** - Firebase setup, deployment, environment variables
-- **[Development](docs/DEVELOPMENT.md)** - Local development, testing, contributing
-- **[Cloud Functions](docs/FUNCTIONS.md)** - Firebase Functions setup and API
+- **[Setup Guide](docs/SETUP.md)** – Firebase, environment variables, deployment, iPad build steps
+- **[Development Workflow](docs/DEVELOPMENT.md)** – Local workflow, CI strategy, troubleshooting
+- **[Testing Reference](docs/TESTING.md)** – Jest suites, Safari fix coverage, Playwright + emulator setup
+- **[Feature Catalog](docs/FEATURES.md)** – Tool-by-tool overview (tasks, focus, spending, investments, etc.)
+- **[Architecture & Resilience](docs/ARCHITECTURE.md)** – Project structure, offline queue, circuit breakers
+- **[Cloud Functions](docs/FUNCTIONS.md)** – Callable endpoints, Stripe, Plaid, and AI services
+- **[Codebase Audit Snapshot](docs/CODEBASE_AUDIT.md)** – Active technical-debt findings and priorities
 
 ---
 

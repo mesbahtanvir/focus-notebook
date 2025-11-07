@@ -103,6 +103,7 @@ This PR implements the complete MVP for the Unified Spending Tool - a privacy-fi
 - [ ] Relink flow works for broken connections
 
 **Backend Cloud Functions Testing**
+
 - [ ] createLinkToken returns valid Plaid link token
 - [ ] exchangePublicToken stores encrypted access token
 - [ ] syncTransactions fetches and categorizes transactions
@@ -147,17 +148,13 @@ This PR implements the complete MVP for the Unified Spending Tool - a privacy-fi
 Before deploying to production:
 
 ### 1. Environment Variables (Cloud Functions)
-
-Configure environment variables in the Firebase Console:
-1. Go to [Firebase Console](https://console.firebase.google.com) → Your Project
-2. Navigate to **Functions** → **Configuration**
-3. Add the following environment variables:
-   - `PLAID_CLIENT_ID`: Your Plaid client ID
-   - `PLAID_SECRET`: Your Plaid secret
-   - `PLAID_ENV`: Plaid environment (`sandbox`, `development`, or `production`)
-   - `ANTHROPIC_API_KEY`: Your Anthropic API key
-
-For local development, copy `functions/.env.example` to `functions/.env` and add your values.
+```bash
+firebase functions:config:set \
+  plaid.client_id="YOUR_PLAID_CLIENT_ID" \
+  plaid.secret="YOUR_PLAID_SECRET" \
+  plaid.env="sandbox" \
+  anthropic.api_key="YOUR_ANTHROPIC_KEY"
+```
 
 ### 2. Firestore Security Rules
 ```javascript

@@ -211,6 +211,49 @@ firebase deploy --only functions:processNewThought
 - `customer.subscription.updated` - Subscription changes
 - `customer.subscription.deleted` - Cancellations
 
+---
+
+## Spending Tool Functions
+
+The Unified Spending Tool relies on a dedicated Plaid + analytics stack under `functions/src/`.
+
+### Core Plaid Functions (`plaidFunctions.ts`)
+- `createLinkToken` – Generates tokens for first-time connections.
+- `exchangePublicToken` – Exchanges the public token, encrypts the access token via `services/encryption.ts`, and stores item/account metadata.
+- `createRelinkToken` – Issues update-mode tokens for relink flows.
+- `markRelinking` – Clears degraded statuses once a relink succeeds.
+- `triggerSync` – Manual transaction sync (used by “Sync now”).
+
+### Webhooks (`plaidWebhooks.ts`)
+- Handles `TRANSACTIONS.*`, `ITEM.ERROR`, `ITEM.PENDING_EXPIRATION`, `ITEM.USER_PERMISSION_REVOKED`, etc.
+- Maps Plaid error codes to item statuses (`ok`, `needs_relink`, `pending_expiration`, `institution_down`, `paused`, `error`) so the UI can show precise messaging.
+
+### Supporting Services (`services/*`)
+- `plaidService.ts` – Thin Plaid API wrapper with cursor helpers.
+- `categorizationService.ts` – Premium taxonomy, merchant normalization, and LLM fallback for low-confidence transactions.
+- `subscriptionDetection.ts` – Detects recurring streams with cadence/jitter/variance heuristics and assigns confidence scores.
+- `monthlyRollupService.ts` – Aggregates category totals, cashflow, top merchants, and anomalies per month.
+- `llmInsightsService.ts` – Calls Claude to produce structured recommendations (insights, warnings, clarifying questions) with cached prompts to avoid duplicate billing.
+- `encryption.ts` – AES-256-GCM helper reused across Plaid services and any future sensitive storage.
+
+### Scheduled Jobs (Planned)
+- `dailySync` – Catch up stale items and enforce relink reminders.
+- `monthlyRollup` – Recompute aggregates at the month boundary.
+- `rebuildStreams` – Weekly subscription recalculation.
+- `stalenessCheck` – Mark items `pending_expiration` if `lastSyncAt` > 72h.
+
+### Environment Variables
+Configure via `.env` or `firebase functions:config:set`:
+- `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`
+- `APP_BASE_URL` (redirect for Link)
+- `ENCRYPTION_KEY` (optional override; defaults to `PLAID_SECRET`)
+- `ANTHROPIC_API_KEY` (LLM insights)
+
+### Security & Privacy
+- Access tokens never leave the backend and are encrypted at rest.
+- LLM calls exclude PII—only aggregated spend, merchant labels, and anomalies are sent.
+- Firestore security rules (TBD) must scope `plaidItems`, `accounts`, `transactions`, `recurringStreams`, `monthlyRollups`, and `llmAnalyses` by `request.auth.uid`.
+
 ## Architecture
 
 ### Processing Flow

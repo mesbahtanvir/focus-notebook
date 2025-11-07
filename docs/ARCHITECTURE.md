@@ -246,6 +246,35 @@ users/{userId}/
   └── focusSessions/{sessionId}
 ```
 
+## Resilience & Offline Infrastructure
+
+Long-running browser sessions, background tabs, and flaky networks drove an entire resilience stack. Keep these modules in mind when debugging sync issues.
+
+### Background Visibility Management
+- `src/lib/firebase/visibility-manager.ts` exposes `visibilityManager.onVisibilityChange` for precise background/foreground events.
+- `src/hooks/useVisibilityRefresh.ts` auto-refreshes data when the tab returns to the foreground and marks data as stale if the background duration exceeds a configurable threshold.
+- UI helpers such as `StaleDataWarning` and the enhanced `OfflineBanner` show background staleness alongside offline state.
+
+### Offline Queue & Retry
+- `src/lib/firebase/offline-queue.ts` persists write operations (create/update/delete) into localStorage when offline. Operations register executors and replay automatically when connectivity is restored.
+- `src/lib/firebase/retry.ts` + `gateway.ts` provide exponential backoff, jitter, and timeout utilities. The helper distinguishes retryable errors (network, rate-limit) from hard failures (auth, invalid-argument).
+
+### Circuit Breakers & Resilient Operations
+- `src/lib/firebase/circuit-breaker.ts` implements CLOSED → OPEN → HALF_OPEN cycles to prevent hammering Firebase during incidents.
+- `src/lib/firebase/resilient-operations.ts` wraps reads/writes with the queue, retry, and circuit breaker layers so components call `resilientRead`, `resilientCreate`, etc. instead of direct SDK calls.
+
+### Connection Health Monitoring
+- `src/lib/firebase/initialize-resilience.ts` wires together the offline queue, metrics, and monitors and is invoked once from `app/layout.tsx`.
+- `src/components/ConnectionHealthMonitor.tsx` + `src/hooks/useConnectionHealth.ts` surface degraded states (offline queue growth, breaker open, high latency) so users understand what’s happening.
+
+### Metrics & Logging
+- Metrics collectors track operation timings, queue depth, circuit-breaker transitions, and reconnection attempts. Logging is verbose in development and reduced in production; wrap noisy logs behind a debug flag when extending functionality.
+
+### Background Tab Fixes
+- `visibilityManager` ties into Auth token refreshes and Firestore subscription restarts, eliminating stale data when the browser tab resumes after being inactive. Use `subscribeWithAutoReconnect` from `src/lib/data/subscribe` to automatically recover listeners.
+
+Together these pieces explain the “Sprint 2/3” markdown notes that previously lived in the repo—refer back here instead of resurrecting separate documents.
+
 ## State Management
 
 ### Zustand Stores

@@ -187,6 +187,21 @@ GitHub Actions now runs ONLY fast validation checks:
 
 ---
 
+## CI & Automation Strategy
+
+The audit of GitHub Actions usage surfaced ~3,150 minutes/month of runtime. The current setup trims that to ~750 minutes by following these rules:
+
+- **Single Node version**: Run validation on Node 22.x only; dual-node matrices doubled runtime with no benefit.
+- **Screenshot/Lighthouse locally**: Keep Playwright and Lighthouse runs on developer machines unless a PR explicitly touches UI (use `[update-screenshots]` when you need CI to refresh baselines).
+- **Path filters**: Skip CI for documentation-only commits (`[skip ci]` still works for absolute skips).
+- **Short-lived artifacts**: Store screenshot diffs for 7 days max to cut storage churn.
+- **Cache expensive tooling**: Cache Playwright browsers and `node_modules` between runs to shave 1–2 minutes.
+- **Manual-only Lighthouse**: Trigger `lighthouse.yml` via workflow dispatch instead of on every push/schedule.
+
+Result: quick PRs finish in ~8 minutes, UI-heavy ones in ~20, and main pushes in ~15 without burning through Actions credits.
+
+---
+
 ## 🚀 Recommended Workflow
 
 ### For Small Changes (Bug Fixes, Minor Updates)
@@ -287,6 +302,16 @@ Install these extensions for faster feedback:
 - **ESLint** - Shows linting errors in editor
 - **TypeScript** - Shows type errors inline
 - **Jest** - Run tests from editor
+
+### Dependency Gotchas
+
+- **`react-plaid-link` not found**: If TypeScript throws `TS2307: Cannot find module 'react-plaid-link'`, run:
+  ```bash
+  rm -rf node_modules package-lock.json
+  npm install
+  npx tsc --noEmit
+  ```
+  (This refreshes dependencies to match the spending-tool branch. Avoid installing `@types/react-plaid-link`; the library ships its own types.)
 
 ### Faster Screenshot Tests
 

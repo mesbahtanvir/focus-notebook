@@ -46,11 +46,35 @@ interface PromptConfig {
   }>;
 }
 
+const PROMPT_FILE_NAME = 'process-thought.prompt.yml';
+
+function resolvePromptPath(): string {
+  const overriddenPath = process.env.PROCESS_THOUGHT_PROMPT_PATH;
+  const candidatePaths = [
+    overriddenPath,
+    path.join(__dirname, '../../prompts', PROMPT_FILE_NAME),
+    path.join(__dirname, '../../../../functions/prompts', PROMPT_FILE_NAME),
+    path.join(__dirname, '../../../../prompts', PROMPT_FILE_NAME),
+    path.join(process.cwd(), 'functions', 'prompts', PROMPT_FILE_NAME),
+    path.join(process.cwd(), 'prompts', PROMPT_FILE_NAME),
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    `Prompt file "${PROMPT_FILE_NAME}" not found. Checked: ${candidatePaths.join(', ')}`
+  );
+}
+
 /**
  * Load prompt configuration from YAML file
  */
 function loadPromptConfig(): PromptConfig {
-  const promptPath = path.join(__dirname, '../../prompts/process-thought.prompt.yml');
+  const promptPath = resolvePromptPath();
   const fileContents = fs.readFileSync(promptPath, 'utf8');
   return yaml.parse(fileContents);
 }

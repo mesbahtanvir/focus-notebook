@@ -238,6 +238,81 @@ npm run build
 
 ---
 
+## iPad / iOS Build & Distribution
+
+Capacitor already ships an iOS project under `ios/App`. Build it from Xcode—command-line builds routinely fail because the CocoaPods “[CP] Embed Pods Frameworks” script needs the Xcode sandbox.
+
+### Prerequisites
+- macOS with the latest **Xcode** and **Command Line Tools**
+- **CocoaPods** (`brew install cocoapods`)
+- Optional: **Apple Developer Program** membership for App Store distribution
+
+### Recommended Workflow (Always from Xcode)
+```bash
+# From the repo root
+npm run build              # Build the web app
+npx cap sync ios           # Sync Capacitor assets
+open ios/App/App.xcworkspace
+```
+1. Select the blue **App** project in the Xcode sidebar.
+2. Choose the **App** target (not the project).
+3. Press **⌘R** to build/run on any simulator or connected device.
+
+> 💡 Command-line builds (`xcodebuild …`) often exit with “Operation not permitted” because sandboxed shells cannot execute the Pods embed script. Launching from Xcode avoids the issue entirely.
+
+### Signing & Capabilities
+1. In the **Signing & Capabilities** tab check **Automatically manage signing**.
+2. Pick your Apple ID under **Team** (add the account if you have not already).
+3. Keep the bundle identifier `com.mesbah.personalnotebook` or append a suffix for personal builds.
+4. Free Apple IDs can run on simulators and personal devices (apps expire after 7 days). A paid account is required for TestFlight/App Store.
+
+### Running on Simulator
+1. In Xcode’s device picker select an iPad simulator (e.g., “iPad Pro 11-inch (M4)”).
+2. Press **⌘R**. The simulator launches automatically.
+3. Use **⌘⇧H** for the Home button, **⌘←/⌘→** to rotate, and **⌘S** for screenshots.
+
+### Installing on a Physical iPad
+1. Connect the iPad via USB, unlock it, and tap **Trust** if prompted.
+2. Enable **Developer Mode** on iOS 16+ (Settings → Privacy & Security).
+3. Pick the device from the Xcode toolbar and run (**⌘R**).
+4. On first install, approve the developer certificate under Settings → General → VPN & Device Management.
+
+### App Store Submission Snapshot
+- Verify assets/resources in the Capacitor project.
+- Archive from Xcode (**Product → Archive**), then deliver via the Organizer.
+- Complete App Store Connect metadata, screenshots, and compliance answers.
+
+### CocoaPods Sandbox / Permission Errors
+If you see errors like `deny file-read-data Pods-App-frameworks.sh` or “Operation not permitted”:
+
+```bash
+# Clean derived data & reinstall pods
+xcodebuild clean -workspace ios/App/App.xcworkspace -scheme App
+cd ios/App
+pod deintegrate
+pod install
+cd ../..
+npx cap sync ios
+```
+
+If needed, reapply execute permissions:
+```bash
+cd ios/App
+chmod +x "Pods/Target Support Files/Pods-App/Pods-App-frameworks.sh"
+cd ../..
+```
+
+Still stuck? Remove Xcode’s derived data and reinstall pods:
+```bash
+rm -rf ~/Library/Developer/Xcode/DerivedData
+cd ios/App && pod install && cd ../..
+npx cap sync ios
+```
+
+Avoid the terminal build if possible; building inside Xcode bypasses macOS sandbox restrictions. Use command-line builds only as a last resort (with `CODE_SIGNING_ALLOWED=NO`) for quick smoke tests.
+
+---
+
 ## Production Checklist
 
 Before deploying to production:
