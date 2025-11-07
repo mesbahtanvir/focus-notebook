@@ -9,17 +9,6 @@ import { CORE_TOOL_IDS, toolGroups, isToolInGroup, getToolGroupForTool } from ".
 
 const TOOLS = [
   {
-    key: "brainstorming",
-    title: "Brainstorming",
-    description: "Generate ideas quickly and capture them.",
-    icon: Lightbulb,
-    emoji: "💡",
-    gradient: "from-yellow-400 to-orange-500",
-    bgGradient: "from-yellow-50 to-orange-50",
-    borderColor: "border-yellow-300",
-    priority: "high" as const,
-  },
-  {
     key: "cbt",
     title: "CBT",
     description: "Cognitive Behavioral Therapy worksheets and prompts.",
@@ -171,17 +160,6 @@ const TOOLS = [
     gradient: "from-teal-400 to-cyan-500",
     bgGradient: "from-teal-50 to-cyan-50",
     borderColor: "border-teal-300",
-    priority: "high" as const,
-  },
-  {
-    key: "spending",
-    title: "Spending Tracker",
-    description: "Upload bank statements and credit card CSVs to analyze spending patterns with AI.",
-    icon: LineChart,
-    emoji: "💳",
-    gradient: "from-green-400 to-emerald-500",
-    bgGradient: "from-green-50 to-emerald-50",
-    borderColor: "border-green-300",
     priority: "high" as const,
   },
   {
