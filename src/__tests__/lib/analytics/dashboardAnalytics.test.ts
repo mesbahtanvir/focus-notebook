@@ -1,7 +1,8 @@
 import { computeDashboardAnalytics } from "@/lib/analytics/dashboard";
 import type { Task } from "@/store/useTasks";
-import type { MoodEntry } from "@/store/useMoods";
 import type { FocusSession } from "@/store/useFocus";
+import type { Goal } from "@/store/useGoals";
+import type { Project } from "@/store/useProjects";
 
 function createTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -19,13 +20,31 @@ function createTask(overrides: Partial<Task> = {}): Task {
   } as Task;
 }
 
-function createMood(overrides: Partial<MoodEntry> = {}): MoodEntry {
+function createGoal(overrides: Partial<Goal> = {}): Goal {
   return {
-    id: overrides.id ?? `mood-${Math.random()}`,
-    value: overrides.value ?? 5,
+    id: overrides.id ?? `goal-${Math.random()}`,
+    title: overrides.title ?? "Goal",
+    status: overrides.status ?? "active",
     createdAt: overrides.createdAt ?? new Date().toISOString(),
     ...overrides,
-  } as MoodEntry;
+  } as Goal;
+}
+
+function createProject(overrides: Partial<Project> = {}): Project {
+  return {
+    id: overrides.id ?? `project-${Math.random()}`,
+    title: overrides.title ?? "Project",
+    objective: overrides.objective ?? "Project objective",
+    actionPlan: overrides.actionPlan ?? [],
+    timeframe: overrides.timeframe ?? "short-term",
+    status: overrides.status ?? "active",
+    priority: overrides.priority ?? "medium",
+    category: overrides.category ?? "mastery",
+    linkedThoughtIds: overrides.linkedThoughtIds ?? [],
+    linkedTaskIds: overrides.linkedTaskIds ?? [],
+    createdAt: overrides.createdAt ?? new Date().toISOString(),
+    ...overrides,
+  } as Project;
 }
 
 function createSession(overrides: Partial<FocusSession> = {}): FocusSession {
@@ -72,9 +91,14 @@ describe("computeDashboardAnalytics", () => {
       }),
     ];
 
-    const moods: MoodEntry[] = [
-      createMood({ id: "recent-mood", createdAt: "2024-06-13T15:00:00.000Z", value: 8 }),
-      createMood({ id: "older-mood", createdAt: "2024-04-10T12:00:00.000Z", value: 3 }),
+    const goals: Goal[] = [
+      createGoal({ id: "goal-1", status: "active" }),
+      createGoal({ id: "goal-2", status: "completed" }),
+    ];
+
+    const projects: Project[] = [
+      createProject({ id: "project-1", status: "active" }),
+      createProject({ id: "project-2", status: "completed" }),
     ];
 
     const sessions: FocusSession[] = [
@@ -104,21 +128,27 @@ describe("computeDashboardAnalytics", () => {
 
     const analytics = computeDashboardAnalytics({
       tasks,
-      moods,
       sessions,
+      goals,
+      projects,
       period: "week",
       referenceDate,
     });
 
     expect(analytics.stats.completedTasks).toBe(1);
     expect(analytics.stats.totalFocusTime).toBe(45);
-    expect(analytics.summary.mastery).toBe(1);
-    expect(analytics.summary.pleasure).toBe(0);
-    expect(analytics.moodData).toHaveLength(7);
-    expect(analytics.moodData.filter((point) => point.value !== null)).toHaveLength(1);
+    expect(analytics.stats.masteryTasks).toBe(1);
+    expect(analytics.stats.pleasureTasks).toBe(0);
+    expect(analytics.focusData).toHaveLength(7);
     expect(analytics.focusData[6].minutes).toBeCloseTo(45);
     expect(analytics.timeOfDayData.morning.sessions).toBe(1);
     expect(analytics.timeOfDayData.night.sessions).toBe(1);
+    expect(analytics.goals.total).toBe(2);
+    expect(analytics.goals.active).toBe(1);
+    expect(analytics.goals.completed).toBe(1);
+    expect(analytics.projects.total).toBe(2);
+    expect(analytics.projects.active).toBe(1);
+    expect(analytics.projects.completed).toBe(1);
   });
 
   it("returns month length and aggregates categories across the range", () => {
@@ -137,15 +167,16 @@ describe("computeDashboardAnalytics", () => {
 
     const analytics = computeDashboardAnalytics({
       tasks,
-      moods: [],
       sessions: [],
+      goals: [],
+      projects: [],
       period: "month",
       referenceDate,
     });
 
     expect(analytics.days).toBeGreaterThanOrEqual(30);
-    expect(analytics.summary.tasksCompleted).toBe(2);
-    expect(analytics.summary.mastery).toBe(1);
-    expect(analytics.summary.pleasure).toBe(1);
+    expect(analytics.stats.completedTasks).toBe(2);
+    expect(analytics.stats.masteryTasks).toBe(1);
+    expect(analytics.stats.pleasureTasks).toBe(1);
   });
 });

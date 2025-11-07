@@ -252,7 +252,8 @@ function calculateStreak(sessions: FocusSession[], referenceDate: Date): number 
   const sessionsByDate = new Map<string, FocusSession[]>();
 
   sessions.forEach((session) => {
-    const dateStr = startOfDay(session.startTime).toDateString();
+    const sessionDate = new Date(session.startTime);
+    const dateStr = startOfDay(sessionDate).toDateString();
     if (!sessionsByDate.has(dateStr)) {
       sessionsByDate.set(dateStr, []);
     }

@@ -32,7 +32,7 @@ export default function TodaysAgenda({ tasks }: TodaysAgendaProps) {
             </div>
             <div>
               <CardTitle className="text-xl font-bold text-green-700 dark:text-green-300">
-                Today's Agenda
+                Today&apos;s Agenda
               </CardTitle>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 {todaysTasks.length} task{todaysTasks.length !== 1 ? "s" : ""} due today
