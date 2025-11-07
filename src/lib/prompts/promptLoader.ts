@@ -26,16 +26,100 @@ export interface PromptConfig {
 }
 
 /**
+ * GitHub .prompt.yml format (for GitHub Models)
+ */
+export interface GitHubPromptConfig {
+  name: string;
+  description: string;
+  model: string; // e.g., "openai/gpt-4o"
+  modelParameters?: {
+    temperature?: number;
+    max_tokens?: number;
+    [key: string]: any;
+  };
+  messages: Array<{
+    role: 'system' | 'user' | 'assistant';
+    content: string;
+  }>;
+  testData?: Array<Record<string, any>>;
+  evaluators?: Array<{
+    name: string;
+    string?: Record<string, any>;
+    [key: string]: any;
+  }>;
+}
+
+/**
+ * Load a GitHub .prompt.yml file
+ * @param promptName - Name of the prompt file (without extension)
+ * @returns Parsed GitHub prompt configuration
+ */
+export function loadGitHubPrompt(promptName: string): GitHubPromptConfig {
+  const promptsDir = path.join(process.cwd(), 'prompts');
+  const promptPath = path.join(promptsDir, `${promptName}.prompt.yml`);
+
+  if (!fs.existsSync(promptPath)) {
+    throw new Error(`GitHub prompt file not found: ${promptName}.prompt.yml`);
+  }
+
+  const fileContents = fs.readFileSync(promptPath, 'utf8');
+  const config = yaml.parse(fileContents) as GitHubPromptConfig;
+
+  // Validate required fields
+  if (!config.name || !config.model || !config.messages) {
+    throw new Error(`Invalid GitHub prompt configuration in ${promptName}.prompt.yml`);
+  }
+
+  return config;
+}
+
+/**
+ * Convert GitHub .prompt.yml format to internal PromptConfig format
+ * @param githubConfig - GitHub prompt configuration
+ * @returns Internal prompt configuration
+ */
+export function convertGitHubPromptToInternal(githubConfig: GitHubPromptConfig): PromptConfig {
+  const systemMessage = githubConfig.messages.find(m => m.role === 'system');
+  const userMessage = githubConfig.messages.find(m => m.role === 'user');
+
+  return {
+    name: githubConfig.name,
+    description: githubConfig.description,
+    version: '1.0', // GitHub format doesn't have version
+    model: {
+      default: githubConfig.model,
+      alternatives: [],
+      temperature: githubConfig.modelParameters?.temperature ?? 0.7,
+      maxTokens: githubConfig.modelParameters?.max_tokens ?? 1000,
+    },
+    systemPrompt: systemMessage?.content || '',
+    userPrompt: userMessage?.content,
+    responseValidation: {
+      format: 'json', // Assume JSON for now
+    },
+  };
+}
+
+/**
  * Load a prompt configuration from a .yml file
- * @param promptName - Name of the prompt file (without .yml extension)
+ * Supports both internal format (.yml) and GitHub format (.prompt.yml)
+ * @param promptName - Name of the prompt file (without extension)
  * @returns Parsed prompt configuration
  */
 export function loadPrompt(promptName: string): PromptConfig {
   const promptsDir = path.join(process.cwd(), 'prompts');
-  const promptPath = path.join(promptsDir, `${promptName}.yml`);
 
+  // Try GitHub .prompt.yml format first
+  const githubPromptPath = path.join(promptsDir, `${promptName}.prompt.yml`);
+  if (fs.existsSync(githubPromptPath)) {
+    const githubConfig = loadGitHubPrompt(promptName);
+    return convertGitHubPromptToInternal(githubConfig);
+  }
+
+  // Fall back to internal .yml format
+  const promptPath = path.join(promptsDir, `${promptName}.yml`);
   if (!fs.existsSync(promptPath)) {
-    throw new Error(`Prompt file not found: ${promptName}.yml`);
+    throw new Error(`Prompt file not found: ${promptName}.yml or ${promptName}.prompt.yml`);
   }
 
   const fileContents = fs.readFileSync(promptPath, 'utf8');
@@ -169,7 +253,7 @@ export function buildMessages(
 }
 
 /**
- * Get all available prompts
+ * Get all available prompts (both .yml and .prompt.yml)
  * @returns Array of prompt names
  */
 export function listPrompts(): string[] {
@@ -179,10 +263,17 @@ export function listPrompts(): string[] {
     return [];
   }
 
-  return fs
-    .readdirSync(promptsDir)
-    .filter(file => file.endsWith('.yml'))
-    .map(file => file.replace('.yml', ''));
+  const prompts = new Set<string>();
+
+  fs.readdirSync(promptsDir).forEach(file => {
+    if (file.endsWith('.prompt.yml')) {
+      prompts.add(file.replace('.prompt.yml', ''));
+    } else if (file.endsWith('.yml')) {
+      prompts.add(file.replace('.yml', ''));
+    }
+  });
+
+  return Array.from(prompts).sort();
 }
 
 /**
