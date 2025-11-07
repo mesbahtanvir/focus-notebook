@@ -17,6 +17,7 @@ import { useMoods } from '@/store/useMoods';
 import { useFocus } from '@/store/useFocus';
 import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
 import { EnhancedDataManagement } from '@/components/EnhancedDataManagement';
+import { TokenUsageDashboard } from '@/components/TokenUsageDashboard';
 import { Crown, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
 
 const PRO_BENEFITS = [
@@ -208,6 +209,8 @@ export default function SettingsPage() {
       </Card>
 
       <EnhancedDataManagement onDataChanged={refreshAllStores} />
+
+      <TokenUsageDashboard />
     </div>
   );
 }
