@@ -41,7 +41,6 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   } = useInvestments();
 
   const { settings } = useSettings();
-  const openAIKey = settings.openaiApiKey;
   const openAIModel = settings.aiModel;
   const { currency } = useCurrency();
 
@@ -201,15 +200,6 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   };
 
   const handleGeneratePrediction = async () => {
-    if (!openAIKey) {
-      toast({
-        title: 'OpenAI API Key Required',
-        description: 'Please configure your OpenAI API key in settings to use predictions.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
     // Get a stock investment with history
     const stockInvestment = portfolio.investments.find(
       inv => inv.assetType === 'stock' && inv.priceHistory && inv.priceHistory.length >= 30
@@ -240,7 +230,6 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
         body: JSON.stringify({
           historicalData,
           symbol: stockInvestment.ticker,
-          apiKey: openAIKey,
           model: openAIModel || 'gpt-4o-mini'
         })
       });

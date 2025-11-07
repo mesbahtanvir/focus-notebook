@@ -4,29 +4,8 @@ import { verifyAiRequest, UnauthorizedError, ForbiddenError } from '@/lib/server
 export async function POST(request: NextRequest) {
   try {
     await verifyAiRequest(request);
-    const { historicalData, symbol, apiKey, model } = await request.json();
+    const { historicalData, symbol, model } = await request.json();
     const selectedModel = model || 'gpt-4o-mini'; // Use GPT-4 for better predictions
-
-    // Validate API key
-    if (!apiKey || !apiKey.trim()) {
-      return NextResponse.json(
-        {
-          error: 'OpenAI API key not configured',
-          needsSetup: true
-        },
-        { status: 200 }
-      );
-    }
-
-    if (!apiKey.startsWith('sk-')) {
-      return NextResponse.json(
-        {
-          error: 'Invalid API key format',
-          needsSetup: true
-        },
-        { status: 200 }
-      );
-    }
 
     if (!historicalData || historicalData.length < 30) {
       return NextResponse.json(
@@ -101,104 +80,19 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
 
 Generate predictions for the next 30 days (every 3 days for efficiency).`;
 
-    // Call OpenAI API
-    console.log('📤 Calling OpenAI API for prediction');
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+    // TODO: Implement server-side AI service integration
+    // This endpoint should now connect to a backend AI service
+    // instead of making direct OpenAI API calls with user keys
+
+    console.log('📤 AI service integration needed for:', symbol);
+
+    return NextResponse.json(
+      {
+        error: 'AI service not configured',
+        details: 'Investment prediction functionality is currently being updated. Please check back later.'
       },
-      body: JSON.stringify({
-        model: selectedModel,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a financial analyst assistant. Always respond with valid JSON only. Your predictions are for educational purposes only and should not be considered financial advice.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.5, // Lower temperature for more consistent predictions
-        max_tokens: 2000,
-      }),
-    });
-
-    console.log('📥 OpenAI response status:', response.status);
-
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('❌ OpenAI API error:', error);
-
-      return NextResponse.json(
-        {
-          error: 'Failed to generate prediction',
-          details: error.error?.message || 'Unknown error'
-        },
-        { status: 200 }
-      );
-    }
-
-    const data = await response.json();
-    let aiResponse = data.choices[0]?.message?.content;
-
-    console.log('🤖 Raw AI response:', aiResponse?.substring(0, 200));
-
-    // Track token usage
-    if (data.usage) {
-      try {
-        const { useTokenUsage } = await import('@/store/useTokenUsage');
-        useTokenUsage.getState().addUsage({
-          model: selectedModel,
-          promptTokens: data.usage.prompt_tokens || 0,
-          completionTokens: data.usage.completion_tokens || 0,
-          totalTokens: data.usage.total_tokens || 0,
-          endpoint: `/api/predict-investment/${symbol}`,
-        });
-        console.log('📊 Token usage tracked:', data.usage);
-      } catch (error) {
-        console.warn('⚠️ Failed to track token usage:', error);
-      }
-    }
-
-    // Clean up response - remove markdown code blocks if present
-    if (aiResponse) {
-      aiResponse = aiResponse.trim();
-      if (aiResponse.startsWith('```json')) {
-        aiResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-      } else if (aiResponse.startsWith('```')) {
-        aiResponse = aiResponse.replace(/```\n?/g, '');
-      }
-      aiResponse = aiResponse.trim();
-    }
-
-    // Parse the AI response
-    let parsedResponse;
-    try {
-      parsedResponse = JSON.parse(aiResponse);
-    } catch (parseError) {
-      console.error('❌ Failed to parse AI response:', parseError);
-      console.error('Response was:', aiResponse);
-      return NextResponse.json(
-        {
-          error: 'Failed to parse AI response',
-          details: 'AI returned invalid JSON'
-        },
-        { status: 200 }
-      );
-    }
-
-    console.log('✅ Generated prediction for', symbol);
-
-    return NextResponse.json({
-      success: true,
-      symbol,
-      prediction: parsedResponse,
-      usage: data.usage,
-      disclaimer: 'This prediction is for informational purposes only and should not be considered financial advice. Past performance does not guarantee future results.'
-    });
+      { status: 503 }
+    );
 
   } catch (error) {
     if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
