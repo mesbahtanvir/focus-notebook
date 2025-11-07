@@ -1,7 +1,7 @@
 /**
  * OpenAI Client for AI Thought Processing
  *
- * Handles communication with OpenAI API using GitHub .prompt.yml format
+ * Handles communication with OpenAI API using .prompt.yml configuration
  */
 
 import * as fs from 'fs';
@@ -31,9 +31,9 @@ export interface OpenAIResponse {
 }
 
 /**
- * GitHub .prompt.yml configuration format
+ * Prompt configuration format
  */
-interface GitHubPromptConfig {
+interface PromptConfig {
   name: string;
   model: string; // e.g., "openai/gpt-4o"
   modelParameters: {
@@ -47,9 +47,9 @@ interface GitHubPromptConfig {
 }
 
 /**
- * Load GitHub .prompt.yml file
+ * Load prompt configuration from YAML file
  */
-function loadPromptConfig(): GitHubPromptConfig {
+function loadPromptConfig(): PromptConfig {
   const promptPath = path.join(__dirname, '../../prompts/process-thought.prompt.yml');
   const fileContents = fs.readFileSync(promptPath, 'utf8');
   return yaml.parse(fileContents);
