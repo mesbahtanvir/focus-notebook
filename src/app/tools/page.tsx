@@ -355,13 +355,6 @@ export default function ToolsPage() {
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
-              href="/tools/llm-logs"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold shadow-lg hover:shadow-xl transition-all"
-            >
-              View Prompt History
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
               href="/tools/marketplace"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-purple-300 text-purple-700 text-sm font-semibold hover:bg-purple-50 transition-all"
             >

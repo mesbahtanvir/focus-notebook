@@ -80,8 +80,7 @@ function normalizeMerchantName(name: string): string {
 - **File 1:** `/home/user/focus-notebook/src/lib/cbtUtils.ts:73-118` - Handles Firestore Timestamps
 - **File 2:** `/home/user/focus-notebook/src/lib/formatDateTime.ts:2-16` - Formats to "10th Oct 2025"
 - **File 3:** `/home/user/focus-notebook/src/components/billing/InvoiceHistory.tsx` - Local date formatting
-- **File 4:** `/home/user/focus-notebook/src/app/tools/llm-logs/page.tsx` - Local date formatting
-- **File 5:** Additional patterns in various utilities
+- **File 4:** Additional patterns in various utilities
 - **Issue:** Same function name doing different things causes confusion and import errors
 - **Recommendation:** 
   - Rename cbtUtils version to `parseDate()` or `normalizeFirestoreDate()`
@@ -621,4 +620,3 @@ The import-export service totals **2,387 lines** across 5 large files:
 - Improve type safety across codebase
 - Consolidate validation logic
 - Split import-export services
-

@@ -41,14 +41,11 @@ Locations:
   
 - /home/user/focus-notebook/src/components/billing/InvoiceHistory.tsx
   → Local date formatting implementation
-  
-- /home/user/focus-notebook/src/app/tools/llm-logs/page.tsx
-  → Local date formatting implementation
 
 Action: 
 1. Rename cbtUtils version to parseFirestoreDate() or normalizeDate()
 2. Consolidate formatDateTime as the ordinal format function
-3. Remove local duplicates in InvoiceHistory.tsx and llm-logs/page.tsx
+3. Remove local duplicates in InvoiceHistory.tsx
 4. Update all imports
 ```
 

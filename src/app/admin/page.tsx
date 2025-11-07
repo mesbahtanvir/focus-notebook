@@ -92,54 +92,6 @@ export default function AdminPage() {
     };
   }, [user?.uid, subscribeLLMLogs]);
 
-  const filteredLogs = useMemo(() => {
-    const search = requestSearch.trim().toLowerCase();
-    return logs.filter((log) => {
-      if (requestStatusFilter !== 'all' && log.requestStatus !== requestStatusFilter) {
-        return false;
-      }
-      if (requestTypeFilter !== 'all' && log.type !== requestTypeFilter) {
-        return false;
-      }
-      if (search) {
-        const haystack = `${log.method} ${log.url ?? ''} ${log.id}`.toLowerCase();
-        return haystack.includes(search);
-      }
-      return true;
-    });
-  }, [logs, requestStatusFilter, requestTypeFilter, requestSearch]);
-
-  const filteredPromptLogs = useMemo(() => {
-    const search = promptSearch.trim().toLowerCase();
-    return llmLogs.filter((log) => {
-      const status = resolvePromptStatus(log.status, log.error);
-      if (promptStatusFilter !== 'all' && status !== promptStatusFilter) {
-        return false;
-      }
-      if (promptTriggerFilter !== 'all' && log.trigger !== promptTriggerFilter) {
-        return false;
-      }
-      if (search) {
-        const haystack = `${log.prompt ?? ''} ${log.rawResponse ?? ''} ${(log.toolSpecIds ?? []).join(' ')}`.toLowerCase();
-        return haystack.includes(search);
-      }
-      return true;
-    });
-  }, [llmLogs, promptStatusFilter, promptTriggerFilter, promptSearch]);
-
-  // Note: Force sync removed - real-time Firestore listeners handle all syncing automatically
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 font-medium">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   const getStatusColor = (status?: number) => {
     if (!status) return "text-gray-600 bg-gray-100";
     if (status >= 200 && status < 300) return "text-green-600 bg-green-100";
@@ -188,6 +140,65 @@ export default function AdminPage() {
     if (!value || typeof navigator === "undefined" || !navigator.clipboard) return;
     void navigator.clipboard.writeText(value);
   };
+
+  const logDate = (value?: string) => {
+    if (!value) return 0;
+    const time = Date.parse(value);
+    return Number.isNaN(time) ? 0 : time;
+  };
+
+  const filteredLogs = useMemo(() => {
+    const search = requestSearch.trim().toLowerCase();
+    return logs.filter((log) => {
+      if (requestStatusFilter !== 'all' && log.requestStatus !== requestStatusFilter) {
+        return false;
+      }
+      if (requestTypeFilter !== 'all' && log.type !== requestTypeFilter) {
+        return false;
+      }
+      if (search) {
+        const haystack = `${log.method} ${log.url ?? ''} ${log.id}`.toLowerCase();
+        return haystack.includes(search);
+      }
+      return true;
+    }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [logs, requestStatusFilter, requestTypeFilter, requestSearch]);
+
+  const filteredPromptLogs = useMemo(() => {
+    const search = promptSearch.trim().toLowerCase();
+    return llmLogs.filter((log) => {
+      const status = resolvePromptStatus(log.status, log.error);
+      if (promptStatusFilter !== 'all' && status !== promptStatusFilter) {
+        return false;
+      }
+      if (promptTriggerFilter !== 'all' && log.trigger !== promptTriggerFilter) {
+        return false;
+      }
+      if (search) {
+        const haystack = `${log.prompt ?? ''} ${log.rawResponse ?? ''} ${(log.toolSpecIds ?? []).join(' ')}`.toLowerCase();
+        return haystack.includes(search);
+      }
+      return true;
+    }).sort((a, b) => {
+      const aDate = logDate(a.createdAt);
+      const bDate = logDate(b.createdAt);
+      return bDate - aDate;
+    });
+  }, [llmLogs, promptStatusFilter, promptTriggerFilter, promptSearch]);
+
+  // Note: Force sync removed - real-time Firestore listeners handle all syncing automatically
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">

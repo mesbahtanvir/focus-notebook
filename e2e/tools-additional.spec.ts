@@ -259,40 +259,6 @@ test.describe('Tools Marketplace', () => {
   });
 });
 
-test.describe('LLM Logs & Analytics', () => {
-  test.beforeEach(async ({ page }) => {
-    await mockDateTime(page);
-    await setupMockAuth(page);
-  });
-
-  test('llm logs page - initial state', async ({ page }) => {
-    await page.goto('/tools/llm-logs');
-    await waitForPageReady(page);
-    await hideDynamicElements(page);
-    await page.waitForTimeout(1000);
-
-    await takeScreenshot(page, {
-      name: 'llm-logs-initial',
-      fullPage: true,
-      mask: ['[data-testid="timestamp"]'],
-    });
-  });
-
-  test('llm logs page - mobile viewport', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/tools/llm-logs');
-    await waitForPageReady(page);
-    await hideDynamicElements(page);
-    await page.waitForTimeout(1000);
-
-    await takeScreenshot(page, {
-      name: 'llm-logs-mobile',
-      fullPage: true,
-      mask: ['[data-testid="timestamp"]'],
-    });
-  });
-});
-
 test.describe('Admin Panel', () => {
   test.beforeEach(async ({ page }) => {
     await mockDateTime(page);
