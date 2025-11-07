@@ -1,9 +1,9 @@
 import { getTimeOfDayCategory } from "@/lib/formatDateTime";
 import type { Task } from "@/store/useTasks";
-import type { MoodEntry } from "@/store/useMoods";
 import type { FocusSession } from "@/store/useFocus";
+import type { Goal } from "@/store/useGoals";
+import type { Project } from "@/store/useProjects";
 import {
-  average,
   buildDateOffsets,
   DAY_IN_MS,
   endOfDay,
@@ -34,24 +34,35 @@ export interface TimeOfDayStats {
 export type TimeOfDayData = Record<TimeOfDayKey, TimeOfDayStats>;
 
 export interface DashboardAnalytics {
-  moodData: { date: Date; value: number | null }[];
   focusData: { date: Date; minutes: number }[];
-  taskData: { date: Date; total: number }[];
+  taskData: { date: Date; total: number; mastery: number; pleasure: number }[];
   categoryData: { date: Date; mastery: number; pleasure: number }[];
   timeOfDayData: TimeOfDayData;
   stats: {
     totalFocusTime: number;
     totalSessions: number;
     completedTasks: number;
-    avgMood: number;
-    totalTaskTime: number;
+    masteryTasks: number;
+    pleasureTasks: number;
+    currentStreak: number;
+    completionRate: number;
   };
-  summary: {
-    tasksCompleted: number;
-    mastery: number;
-    pleasure: number;
-    avgMood: number;
+  comparison: {
     focusTime: number;
+    tasks: number;
+  } | null;
+  goals: {
+    total: number;
+    active: number;
+    completed: number;
+    progress: number;
+    topGoal: Goal | null;
+  };
+  projects: {
+    total: number;
+    active: number;
+    completed: number;
+    progress: number;
   };
   period: SummaryPeriod;
   days: number;
@@ -59,16 +70,18 @@ export interface DashboardAnalytics {
 
 interface AnalyticsInput {
   tasks: Task[];
-  moods: MoodEntry[];
   sessions: FocusSession[];
+  goals: Goal[];
+  projects: Project[];
   period: SummaryPeriod;
   referenceDate?: Date;
 }
 
 export function computeDashboardAnalytics({
   tasks,
-  moods,
   sessions,
+  goals,
+  projects,
   period,
   referenceDate = new Date(),
 }: AnalyticsInput): DashboardAnalytics {
@@ -81,20 +94,9 @@ export function computeDashboardAnalytics({
     range,
     (session) => session.startTime
   );
-  const moodsInRange = filterByDateRange(moods, range, (mood) => mood.createdAt);
 
   const tasksByDate = groupByDate(completedTasks, (task) => task.completedAt!);
   const sessionsByDate = groupByDate(sessionsInRange, (session) => session.startTime);
-  const moodsByDate = groupByDate(moodsInRange, (mood) => mood.createdAt);
-
-  const moodData = dateOffsets.map((date) => {
-    const entries = moodsByDate.get(date.toDateString()) ?? [];
-    if (entries.length === 0) {
-      return { date, value: null as number | null };
-    }
-
-    return { date, value: average(entries.map((entry) => entry.value)) };
-  });
 
   const focusData = dateOffsets.map((date) => {
     const daySessions = sessionsByDate.get(date.toDateString()) ?? [];
@@ -105,7 +107,13 @@ export function computeDashboardAnalytics({
 
   const taskData = dateOffsets.map((date) => {
     const dayTasks = tasksByDate.get(date.toDateString()) ?? [];
-    return { date, total: dayTasks.length };
+    const categories = countTasksByCategory(dayTasks);
+    return {
+      date,
+      total: dayTasks.length,
+      mastery: categories.mastery,
+      pleasure: categories.pleasure
+    };
   });
 
   const categoryData = dateOffsets.map((date) => {
@@ -116,13 +124,25 @@ export function computeDashboardAnalytics({
   });
 
   const totalFocusSeconds = sum(sessionsInRange.map((session) => sumSessionTime(session)));
-  const totalTaskTime = sum(completedTasks.map((task) => task.estimatedMinutes ?? 0));
-  const averageMood = average(moodsInRange.map((mood) => mood.value));
   const categoryTotals = countTasksByCategory(completedTasks);
   const timeOfDayData = buildTimeOfDayData(sessionsInRange);
 
+  // Calculate streak (consecutive days with at least 1 focus session)
+  const currentStreak = calculateStreak(sessions, referenceDate);
+
+  // Calculate completion rate
+  const allTasks = tasks.length;
+  const completed = tasks.filter(task => task.done).length;
+  const completionRate = allTasks > 0 ? (completed / allTasks) * 100 : 0;
+
+  // Calculate comparison with previous period
+  const comparison = calculateComparison(tasks, sessions, period, referenceDate, range);
+
+  // Calculate goal and project stats
+  const goalStats = calculateGoalStats(goals);
+  const projectStats = calculateProjectStats(projects);
+
   return {
-    moodData,
     focusData,
     taskData,
     categoryData,
@@ -131,16 +151,14 @@ export function computeDashboardAnalytics({
       totalFocusTime: Math.round(totalFocusSeconds / 60),
       totalSessions: sessionsInRange.length,
       completedTasks: completedTasks.length,
-      avgMood: averageMood,
-      totalTaskTime,
+      masteryTasks: categoryTotals.mastery,
+      pleasureTasks: categoryTotals.pleasure,
+      currentStreak,
+      completionRate,
     },
-    summary: {
-      tasksCompleted: completedTasks.length,
-      mastery: categoryTotals.mastery,
-      pleasure: categoryTotals.pleasure,
-      avgMood: averageMood,
-      focusTime: Math.round(totalFocusSeconds / 60),
-    },
+    comparison,
+    goals: goalStats,
+    projects: projectStats,
     period,
     days: range.days,
   };
@@ -227,4 +245,164 @@ function buildTimeOfDayData(sessions: FocusSession[]): TimeOfDayData {
   });
 
   return base;
+}
+
+function calculateStreak(sessions: FocusSession[], referenceDate: Date): number {
+  // Calculate consecutive days with at least 1 focus session
+  const sessionsByDate = new Map<string, FocusSession[]>();
+
+  sessions.forEach((session) => {
+    const sessionDate = new Date(session.startTime);
+    const dateStr = startOfDay(sessionDate).toDateString();
+    if (!sessionsByDate.has(dateStr)) {
+      sessionsByDate.set(dateStr, []);
+    }
+    sessionsByDate.get(dateStr)!.push(session);
+  });
+
+  let streak = 0;
+  let currentDate = startOfDay(referenceDate);
+
+  // Count backwards from today
+  while (true) {
+    const dateStr = currentDate.toDateString();
+    if (sessionsByDate.has(dateStr) && sessionsByDate.get(dateStr)!.length > 0) {
+      streak++;
+      currentDate = new Date(currentDate.getTime() - DAY_IN_MS);
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+}
+
+function calculateComparison(
+  tasks: Task[],
+  sessions: FocusSession[],
+  period: SummaryPeriod,
+  referenceDate: Date,
+  currentRange: DateRange
+): { focusTime: number; tasks: number } | null {
+  if (period === "today") {
+    // Compare with yesterday
+    const previousRange = {
+      startDate: new Date(currentRange.startDate.getTime() - DAY_IN_MS),
+      endDate: new Date(currentRange.endDate.getTime() - DAY_IN_MS)
+    };
+
+    const prevTasks = filterByDateRange(tasks, previousRange, (task) => task.completedAt);
+    const prevSessions = filterByDateRange(sessions, previousRange, (session) => session.startTime);
+
+    const prevFocusTime = Math.round(sum(prevSessions.map((s) => sumSessionTime(s))) / 60);
+    const currFocusTime = Math.round(sum(
+      filterByDateRange(sessions, currentRange, (s) => s.startTime).map((s) => sumSessionTime(s))
+    ) / 60);
+
+    const prevTaskCount = prevTasks.length;
+    const currTaskCount = filterByDateRange(tasks, currentRange, (task) => task.completedAt).length;
+
+    return {
+      focusTime: prevFocusTime > 0 ? ((currFocusTime - prevFocusTime) / prevFocusTime) * 100 : 0,
+      tasks: prevTaskCount > 0 ? ((currTaskCount - prevTaskCount) / prevTaskCount) * 100 : 0
+    };
+  }
+
+  if (period === "week") {
+    // Compare with last week
+    const previousRange = {
+      startDate: new Date(currentRange.startDate.getTime() - (7 * DAY_IN_MS)),
+      endDate: new Date(currentRange.endDate.getTime() - (7 * DAY_IN_MS))
+    };
+
+    const prevTasks = filterByDateRange(tasks, previousRange, (task) => task.completedAt);
+    const prevSessions = filterByDateRange(sessions, previousRange, (session) => session.startTime);
+
+    const prevFocusTime = Math.round(sum(prevSessions.map((s) => sumSessionTime(s))) / 60);
+    const currFocusTime = Math.round(sum(
+      filterByDateRange(sessions, currentRange, (s) => s.startTime).map((s) => sumSessionTime(s))
+    ) / 60);
+
+    const prevTaskCount = prevTasks.length;
+    const currTaskCount = filterByDateRange(tasks, currentRange, (task) => task.completedAt).length;
+
+    return {
+      focusTime: prevFocusTime > 0 ? ((currFocusTime - prevFocusTime) / prevFocusTime) * 100 : 0,
+      tasks: prevTaskCount > 0 ? ((currTaskCount - prevTaskCount) / prevTaskCount) * 100 : 0
+    };
+  }
+
+  if (period === "month") {
+    // Compare with last month
+    const refDate = new Date(referenceDate);
+    const lastMonth = new Date(refDate.getFullYear(), refDate.getMonth() - 1, 1);
+    const previousRange = {
+      startDate: startOfMonth(lastMonth),
+      endDate: endOfMonth(lastMonth)
+    };
+
+    const prevTasks = filterByDateRange(tasks, previousRange, (task) => task.completedAt);
+    const prevSessions = filterByDateRange(sessions, previousRange, (session) => session.startTime);
+
+    const prevFocusTime = Math.round(sum(prevSessions.map((s) => sumSessionTime(s))) / 60);
+    const currFocusTime = Math.round(sum(
+      filterByDateRange(sessions, currentRange, (s) => s.startTime).map((s) => sumSessionTime(s))
+    ) / 60);
+
+    const prevTaskCount = prevTasks.length;
+    const currTaskCount = filterByDateRange(tasks, currentRange, (task) => task.completedAt).length;
+
+    return {
+      focusTime: prevFocusTime > 0 ? ((currFocusTime - prevFocusTime) / prevFocusTime) * 100 : 0,
+      tasks: prevTaskCount > 0 ? ((currTaskCount - prevTaskCount) / prevTaskCount) * 100 : 0
+    };
+  }
+
+  return null;
+}
+
+function calculateGoalStats(goals: Goal[]): {
+  total: number;
+  active: number;
+  completed: number;
+  progress: number;
+  topGoal: Goal | null;
+} {
+  const total = goals.length;
+  const activeGoals = goals.filter((g) => g.status === "active");
+  const completed = goals.filter((g) => g.status === "completed").length;
+  const progress = total > 0 ? (completed / total) * 100 : 0;
+
+  // Find goal with highest completion % (based on projects/tasks if available)
+  // For now, just pick the first active goal
+  const topGoal = activeGoals.length > 0 ? activeGoals[0] : null;
+
+  return {
+    total,
+    active: activeGoals.length,
+    completed,
+    progress,
+    topGoal
+  };
+}
+
+function calculateProjectStats(projects: Project[]): {
+  total: number;
+  active: number;
+  completed: number;
+  progress: number;
+} {
+  const total = projects.length;
+  const active = projects.filter(
+    (p) => p.status === "active" || p.status === "on-hold"
+  ).length;
+  const completed = projects.filter((p) => p.status === "completed").length;
+  const progress = total > 0 ? (completed / total) * 100 : 0;
+
+  return {
+    total,
+    active,
+    completed,
+    progress
+  };
 }
