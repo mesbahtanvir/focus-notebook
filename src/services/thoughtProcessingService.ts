@@ -218,11 +218,21 @@ export class ThoughtProcessingService {
 
           case 'createMood':
           case 'createMoodEntry':
-            // Create mood entry
+            // Create mood entry with validation
             const addMood = useMoods.getState().add;
+            // Validate and sanitize mood value (must be 1-10)
+            let moodValue = 5; // Default to neutral
+            if (typeof action.data.value === 'number' && !isNaN(action.data.value)) {
+              moodValue = Math.min(10, Math.max(1, Math.round(action.data.value)));
+            } else if (typeof action.data.value === 'string') {
+              const parsed = parseFloat(action.data.value);
+              if (!isNaN(parsed)) {
+                moodValue = Math.min(10, Math.max(1, Math.round(parsed)));
+              }
+            }
             await addMood({
-              value: action.data.value,
-              note: action.data.note,
+              value: moodValue,
+              note: action.data.note || '',
               metadata: { sourceThoughtId: thoughtId },
             });
             break;
@@ -264,6 +274,45 @@ export class ThoughtProcessingService {
               if (!currentLinkedProjects.includes(action.data.projectId)) {
                 await updateThought(thoughtId, {
                   linkedProjectIds: [...currentLinkedProjects, action.data.projectId],
+                });
+              }
+            }
+            break;
+
+          case 'linkToGoal':
+            // Link thought to goal
+            const currentThoughtForGoalLink = useThoughts.getState().thoughts.find(t => t.id === thoughtId);
+            if (currentThoughtForGoalLink) {
+              const currentLinkedGoals = currentThoughtForGoalLink.linkedGoalIds || [];
+              if (!currentLinkedGoals.includes(action.data.goalId)) {
+                await updateThought(thoughtId, {
+                  linkedGoalIds: [...currentLinkedGoals, action.data.goalId],
+                });
+              }
+            }
+            break;
+
+          case 'linkToTask':
+            // Link thought to task
+            const currentThoughtForTaskLink = useThoughts.getState().thoughts.find(t => t.id === thoughtId);
+            if (currentThoughtForTaskLink) {
+              const currentLinkedTasks = currentThoughtForTaskLink.linkedTaskIds || [];
+              if (!currentLinkedTasks.includes(action.data.taskId)) {
+                await updateThought(thoughtId, {
+                  linkedTaskIds: [...currentLinkedTasks, action.data.taskId],
+                });
+              }
+            }
+            break;
+
+          case 'linkToPerson':
+            // Link thought to person
+            const currentThoughtForPersonLink = useThoughts.getState().thoughts.find(t => t.id === thoughtId);
+            if (currentThoughtForPersonLink) {
+              const currentLinkedPersons = currentThoughtForPersonLink.linkedPersonIds || [];
+              if (!currentLinkedPersons.includes(action.data.personId)) {
+                await updateThought(thoughtId, {
+                  linkedPersonIds: [...currentLinkedPersons, action.data.personId],
                 });
               }
             }

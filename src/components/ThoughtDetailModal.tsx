@@ -7,6 +7,7 @@ import { useTasks } from "@/store/useTasks";
 import { useProjects } from "@/store/useProjects";
 import { useMoods } from "@/store/useMoods";
 import { useFriends } from "@/store/useFriends";
+import { useGoals } from "@/store/useGoals";
 import { ThoughtProcessingService } from "@/services/thoughtProcessingService";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import Link from "next/link";
@@ -61,7 +62,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
 
   const updateThought = useThoughts((s) => s.updateThought);
   const deleteThought = useThoughts((s) => s.deleteThought);
-  
+
   const tasks = useTasks((s) => s.tasks);
   const deleteTask = useTasks((s) => s.deleteTask);
   const projects = useProjects((s) => s.projects);
@@ -69,9 +70,16 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const moods = useMoods((s) => s.moods);
   const deleteMood = useMoods((s) => s.delete);
   const friends = useFriends((s) => s.friends);
+  const goals = useGoals((s) => s.goals);
   const { isAnonymous, isAnonymousAiAllowed } = useAuth();
   
   const isProcessed = Array.isArray(thought.tags) && thought.tags.includes('processed');
+
+  // Check if button should be shown - hide if processed or currently processing
+  const shouldShowProcessButton = !isProcessed &&
+    thought.aiProcessingStatus !== 'pending' &&
+    thought.aiProcessingStatus !== 'processing' &&
+    thought.aiProcessingStatus !== 'completed';
 
   // Helper function to get shortname from full name
   const getShortName = (name: string): string => {
@@ -117,7 +125,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
       }
     });
     const linkedMoods = moods.filter(m => m.metadata?.sourceThoughtId === thought.id);
-    
+
     return {
       tasks: linkedTasks,
       projects: linkedProjects,
@@ -125,6 +133,24 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
       total: linkedTasks.length + linkedProjects.length + linkedMoods.length,
     };
   }, [thought.id, tasks, projects, moods]);
+
+  // Find manually linked items (via linkedXIds fields)
+  const manuallyLinkedItems = useMemo(() => {
+    const linkedGoals = goals.filter(g => thought.linkedGoalIds?.includes(g.id));
+    const linkedTasks = tasks.filter(t => thought.linkedTaskIds?.includes(t.id));
+    const linkedProjects = projects.filter(p => thought.linkedProjectIds?.includes(p.id));
+    const linkedPersons = friends.filter(f => thought.linkedPersonIds?.includes(f.id));
+    const linkedMoods = moods.filter(m => thought.linkedMoodIds?.includes(m.id));
+
+    return {
+      goals: linkedGoals,
+      tasks: linkedTasks,
+      projects: linkedProjects,
+      persons: linkedPersons,
+      moods: linkedMoods,
+      total: linkedGoals.length + linkedTasks.length + linkedProjects.length + linkedPersons.length + linkedMoods.length,
+    };
+  }, [thought, goals, tasks, projects, friends, moods]);
 
   const handleSave = async () => {
     const tags = tagsInput
@@ -292,8 +318,94 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
       createProject: 'Create Project',
       createGoal: 'Create Goal',
       linkToProject: 'Link to Project',
+      linkToGoal: 'Link to Goal',
+      linkToTask: 'Link to Task',
+      linkToPerson: 'Link to Person',
+      linkToRelationship: 'Link to Relationship',
+      createRelationship: 'Create Relationship',
+      linkToMood: 'Link to Mood',
+      linkToNote: 'Link to Note',
+      enhanceProject: 'Enhance Project',
+      enhanceGoal: 'Enhance Goal',
+      enhanceRelationship: 'Enhance Relationship',
+      createErrand: 'Create Errand',
+      createNote: 'Create Note',
     };
     return typeMap[type] || type;
+  };
+
+  // Helper to render entity details for linking suggestions
+  const renderSuggestionEntityDetails = (suggestion: any) => {
+    switch (suggestion.type) {
+      case 'linkToGoal':
+        const goal = goals.find(g => g.id === suggestion.data.goalId);
+        if (goal) {
+          return (
+            <div className="mt-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded border border-purple-200 dark:border-purple-700">
+              <Link
+                href={`/tools/goals/${goal.id}`}
+                className="text-sm font-medium text-purple-700 dark:text-purple-300 hover:underline flex items-center gap-1"
+              >
+                <Target className="h-3 w-3" />
+                Goal: {goal.title}
+              </Link>
+            </div>
+          );
+        }
+        break;
+
+      case 'linkToProject':
+        const project = projects.find(p => p.id === suggestion.data.projectId);
+        if (project) {
+          return (
+            <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-700">
+              <Link
+                href={`/tools/projects/${project.id}`}
+                className="text-sm font-medium text-green-700 dark:text-green-300 hover:underline flex items-center gap-1"
+              >
+                <Target className="h-3 w-3" />
+                Project: {project.title}
+              </Link>
+            </div>
+          );
+        }
+        break;
+
+      case 'linkToTask':
+        const task = tasks.find(t => t.id === suggestion.data.taskId);
+        if (task) {
+          return (
+            <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-700">
+              <Link
+                href={`/tools/tasks?id=${task.id}`}
+                className="text-sm font-medium text-blue-700 dark:text-blue-300 hover:underline flex items-center gap-1"
+              >
+                <ListChecks className="h-3 w-3" />
+                Task: {task.title}
+              </Link>
+            </div>
+          );
+        }
+        break;
+
+      case 'linkToPerson':
+        const person = friends.find(f => f.id === suggestion.data.personId);
+        if (person) {
+          return (
+            <div className="mt-2 p-2 bg-pink-50 dark:bg-pink-900/20 rounded border border-pink-200 dark:border-pink-700">
+              <Link
+                href={`/tools/relationships/${person.id}`}
+                className="text-sm font-medium text-pink-700 dark:text-pink-300 hover:underline flex items-center gap-1"
+              >
+                <Smile className="h-3 w-3" />
+                Person: {person.name}
+              </Link>
+            </div>
+          );
+        }
+        break;
+    }
+    return null;
   };
 
   const pendingSuggestions = thought.aiSuggestions?.filter(s => s.status === 'pending') || [];
@@ -336,7 +448,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {!isProcessed && (
+              {shouldShowProcessButton && (
                 <button
                   onClick={handleProcessNow}
                   disabled={isProcessing || (isAnonymous && !isAnonymousAiAllowed)}
@@ -645,7 +757,9 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                             </span>
                           </div>
 
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                          {renderSuggestionEntityDetails(suggestion)}
+
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 mt-2">
                             {suggestion.reasoning}
                           </p>
 
@@ -840,6 +954,180 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                       )}
                     </motion.div>
                   )}
+                </div>
+              )}
+
+              {/* Manually Linked Items Section */}
+              {manuallyLinkedItems.total > 0 && (
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-950/30 dark:to-cyan-950/30 border-2 border-teal-200 dark:border-teal-800">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-lg">
+                        <Link2 className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                          Linked Items
+                        </h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          {manuallyLinkedItems.total} item{manuallyLinkedItems.total !== 1 ? 's' : ''} linked to this thought
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {/* Linked Goals */}
+                      {manuallyLinkedItems.goals.length > 0 && (
+                        <div className="rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-700 p-3">
+                          <h4 className="font-semibold text-purple-800 dark:text-purple-200 mb-2 flex items-center gap-2 text-sm">
+                            <Target className="h-4 w-4" />
+                            Goals ({manuallyLinkedItems.goals.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {manuallyLinkedItems.goals.map((goal) => (
+                              <Link
+                                key={goal.id}
+                                href={`/tools/goals/${goal.id}`}
+                                className="block p-2 bg-white dark:bg-gray-800 rounded border border-purple-200 dark:border-purple-700 hover:border-purple-400 dark:hover:border-purple-500 transition-all hover:shadow-sm"
+                              >
+                                <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  {goal.title}
+                                </div>
+                                {goal.objective && (
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-1">
+                                    {goal.objective}
+                                  </div>
+                                )}
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Linked Tasks */}
+                      {manuallyLinkedItems.tasks.length > 0 && (
+                        <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-700 p-3">
+                          <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2 flex items-center gap-2 text-sm">
+                            <ListChecks className="h-4 w-4" />
+                            Tasks ({manuallyLinkedItems.tasks.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {manuallyLinkedItems.tasks.map((task) => (
+                              <Link
+                                key={task.id}
+                                href={`/tools/tasks?id=${task.id}`}
+                                className="block p-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700 hover:border-blue-400 dark:hover:border-blue-500 transition-all hover:shadow-sm"
+                              >
+                                <div className="flex items-center gap-2">
+                                  {task.done ? (
+                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                  ) : (
+                                    <div className="h-4 w-4 rounded-full border-2 border-gray-400" />
+                                  )}
+                                  <span className={`text-sm font-medium ${task.done ? 'line-through text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>
+                                    {task.title}
+                                  </span>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Linked Projects */}
+                      {manuallyLinkedItems.projects.length > 0 && (
+                        <div className="rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-700 p-3">
+                          <h4 className="font-semibold text-green-800 dark:text-green-200 mb-2 flex items-center gap-2 text-sm">
+                            <Target className="h-4 w-4" />
+                            Projects ({manuallyLinkedItems.projects.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {manuallyLinkedItems.projects.map((project) => (
+                              <Link
+                                key={project.id}
+                                href={`/tools/projects/${project.id}`}
+                                className="block p-2 bg-white dark:bg-gray-800 rounded border border-green-200 dark:border-green-700 hover:border-green-400 dark:hover:border-green-500 transition-all hover:shadow-sm"
+                              >
+                                <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  {project.title}
+                                </div>
+                                {project.objective && (
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-1">
+                                    {project.objective}
+                                  </div>
+                                )}
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Linked People */}
+                      {manuallyLinkedItems.persons.length > 0 && (
+                        <div className="rounded-lg bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-700 p-3">
+                          <h4 className="font-semibold text-pink-800 dark:text-pink-200 mb-2 flex items-center gap-2 text-sm">
+                            <Smile className="h-4 w-4" />
+                            People ({manuallyLinkedItems.persons.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {manuallyLinkedItems.persons.map((person) => (
+                              <Link
+                                key={person.id}
+                                href={`/tools/relationships/${person.id}`}
+                                className="block p-2 bg-white dark:bg-gray-800 rounded border border-pink-200 dark:border-pink-700 hover:border-pink-400 dark:hover:border-pink-500 transition-all hover:shadow-sm"
+                              >
+                                <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  {person.name}
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Linked Moods */}
+                      {manuallyLinkedItems.moods.length > 0 && (
+                        <div className="rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-700 p-3">
+                          <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2 flex items-center gap-2 text-sm">
+                            <Smile className="h-4 w-4" />
+                            Moods ({manuallyLinkedItems.moods.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {manuallyLinkedItems.moods.map((mood) => (
+                              <div
+                                key={mood.id}
+                                className="p-2 bg-white dark:bg-gray-800 rounded border border-yellow-200 dark:border-yellow-700"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400">
+                                    {mood.value}/10
+                                  </span>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    {(() => {
+                                      try {
+                                        if (!mood.createdAt) return 'N/A';
+                                        if (typeof mood.createdAt === 'object' && 'toDate' in mood.createdAt) {
+                                          return mood.createdAt.toDate().toLocaleDateString();
+                                        }
+                                        return new Date(mood.createdAt).toLocaleDateString();
+                                      } catch {
+                                        return 'N/A';
+                                      }
+                                    })()}
+                                  </span>
+                                </div>
+                                {mood.note && (
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                                    {mood.note}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

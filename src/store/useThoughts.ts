@@ -123,6 +123,8 @@ export interface Thought {
   linkedTaskIds?: string[] // Tasks manually linked to this thought
   linkedMoodIds?: string[] // Mood entries manually linked to this thought
   linkedProjectIds?: string[] // Projects manually linked to this thought
+  linkedGoalIds?: string[] // Goals manually linked to this thought
+  linkedPersonIds?: string[] // People manually linked to this thought
 }
 
 type State = {
