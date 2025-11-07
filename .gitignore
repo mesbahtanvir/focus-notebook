@@ -20,10 +20,6 @@ playwright/.cache/
 e2e/**/*-actual.png
 e2e/**/*-diff.png
 
-# Lighthouse CI
-lhci_reports/
-.lighthouseci/
-
 # Environment variables
 .env*.local
 .env
