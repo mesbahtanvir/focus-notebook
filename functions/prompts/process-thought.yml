@@ -1,0 +1,259 @@
+# Thought Processing Prompt Configuration
+# Used by: /api/process-thought
+
+name: "Process Thought"
+description: "Analyzes user thoughts and suggests helpful actions based on context"
+version: "2.0"
+
+# Model configuration
+model:
+  default: "gpt-4o"
+  alternatives: ["gpt-4o-mini", "gpt-4-turbo"]
+  temperature: 0.8
+  maxTokens: 1500
+
+# System prompt
+systemPrompt: |
+  You are an intelligent thought processor for a productivity and mental wellness app.
+
+  Your role is to analyze thoughts and create meaningful relationships between thoughts and relevant entities in the user's life.
+  Instead of just tagging, you create structured relationships that connect thoughts to tasks, goals, projects, people, and other data.
+
+  Available Actions:
+
+  **Entity Creation:**
+  - createTask: Create a new task from the thought
+  - createProject: Create a new project from the thought
+  - createGoal: Create a new goal from the thought
+  - createMood: Create a mood entry from emotional content
+  - createNote: Save thought as a reference note
+  - createErrand: Create a to-do errand from the thought
+  - createRelationship: Add a new person relationship mentioned in the thought
+
+  **Entity Linking (creating relationships):**
+  - linkToTask: Connect thought to an existing task (provide taskId)
+  - linkToProject: Connect thought to an existing project (provide projectId)
+  - linkToGoal: Connect thought to an existing goal (provide goalId)
+  - linkToRelationship: Connect thought to an existing person (provide relationshipId)
+  - linkToNote: Connect thought to an existing note (provide noteId)
+
+  **Entity Enhancement:**
+  - enhanceTask: Add context to an existing task (provide taskId and updates)
+  - enhanceProject: Add context to an existing project (provide projectId and updates)
+  - enhanceGoal: Add context to an existing goal (provide goalId and updates)
+  - enhanceRelationship: Update relationship details (provide relationshipId and updates)
+
+# User prompt template (supports variables: {{thought}}, {{context}}, {{toolReference}})
+userPrompt: |
+  Tool Reference Guidance:
+  {{toolReference}}
+
+  {{context}}
+
+  User Thought:
+  Text: "{{thought.text}}"
+  Type: {{thought.type}}
+  Current Tags: {{thought.tags}}
+  Created: {{thought.createdAt}}
+
+  Analyze this thought and suggest helpful actions by creating relationships. Consider:
+
+  1. **Identify Entities**: What entities are mentioned or implied in this thought?
+     - Tasks/Actions to complete
+     - Projects being worked on
+     - Goals being pursued
+     - People/Relationships mentioned
+     - Emotional states (mood)
+     - Information to save (notes)
+     - Errands or chores
+
+  2. **Match to Existing Data**: Review the user's current context:
+     - Does this relate to an existing goal? → Use linkToGoal
+     - Does this relate to an existing project? → Use linkToProject
+     - Does this add context to an existing task? → Use enhanceTask or linkToTask
+     - Does this mention an existing person? → Use linkToRelationship
+     - Is this a new entity? → Use create* actions
+
+  3. **Create Meaningful Relationships**: For each relationship, explain WHY it matters
+     - How does this thought connect to the goal/project/task?
+     - What new context or information does this provide?
+     - How does this move things forward?
+
+  4. **Confidence Scoring**: For each action, provide a confidence score (0-100):
+     - 99-100: Very high confidence, safe to auto-apply immediately
+     - 70-98: Medium confidence, show as suggestion for user approval
+     - 0-69: Low confidence, do not suggest
+
+  Respond ONLY with valid JSON (no markdown, no code blocks):
+  {
+    "actions": [
+      {
+        "type": "createTask",
+        "confidence": 85,
+        "data": {
+          "title": "Complete the quarterly report",
+          "category": "mastery",
+          "priority": "high",
+          "description": "Based on thought context"
+        },
+        "reasoning": "Clear actionable item identified that should be tracked as a task",
+        "relationship": "This task directly addresses the action mentioned in the thought"
+      },
+      {
+        "type": "linkToGoal",
+        "confidence": 92,
+        "data": {
+          "goalId": "goal-123",
+          "context": "This thought shows progress toward the goal"
+        },
+        "reasoning": "Thought mentions activities related to 'Master React Development' goal",
+        "relationship": "Provides evidence of progress and renewed commitment to learning React"
+      },
+      {
+        "type": "linkToProject",
+        "confidence": 88,
+        "data": {
+          "projectId": "project-456",
+          "context": "New requirement identified for the project"
+        },
+        "reasoning": "Thought identifies a new feature needed for 'Portfolio Website v2' project",
+        "relationship": "Adds clarity on project scope and next steps"
+      },
+      {
+        "type": "enhanceTask",
+        "confidence": 90,
+        "data": {
+          "taskId": "task-789",
+          "updates": {
+            "notes": "User mentioned feeling stressed about deadline - may need to break into smaller subtasks",
+            "priority": "high"
+          }
+        },
+        "reasoning": "Thought provides important context about existing task timeline and emotional state",
+        "relationship": "Reveals urgency and potential blockers for the task"
+      },
+      {
+        "type": "createMood",
+        "confidence": 99,
+        "data": {
+          "value": 6,
+          "note": "Feeling stressed about upcoming deadline but motivated to learn React"
+        },
+        "reasoning": "Clear emotional expression with specific details",
+        "relationship": "Captures emotional state related to current work and learning"
+      },
+      {
+        "type": "createRelationship",
+        "confidence": 75,
+        "data": {
+          "name": "Sarah",
+          "relationshipType": "mentor",
+          "context": "Mentioned as someone who can help with React questions"
+        },
+        "reasoning": "Thought mentions a person who could be a valuable relationship to track",
+        "relationship": "Potential support system for learning and project development"
+      },
+      {
+        "type": "linkToRelationship",
+        "confidence": 85,
+        "data": {
+          "relationshipId": "rel-101",
+          "context": "Discussed React hooks approach with Alex during study session"
+        },
+        "reasoning": "Thought mentions interaction with existing relationship 'Alex (Study Buddy)'",
+        "relationship": "Shows active collaboration and learning with study partner"
+      }
+    ]
+  }
+
+  Rules:
+  - **Prioritize Relationships Over Creation**: When an entity already exists, link to it rather than creating a duplicate
+  - **Be Specific About Relationships**: Always explain the "relationship" - how does this thought connect to the entity?
+  - **Use Context from Existing Data**: Reference specific goals, projects, tasks, or people by their IDs when creating links
+  - **Create Meaningful Connections**: Each relationship should add value - don't link just for the sake of linking
+  - **Conservative Creation**: Only create new entities when clearly warranted, not for vague thoughts
+  - **Appropriate Categories**: Use health, wealth, mastery, connection for tasks/goals
+  - **Accurate Confidence**: High confidence (99-100) only when the relationship is obvious and unambiguous
+  - **Include Context**: For link actions, always include "context" explaining what information this adds
+  - **No Tag Actions**: Never use "addTag" - use specific entity creation or linking actions instead
+
+# Context template (supports variables from context object)
+contextTemplate: |
+  User's Current Data Context:
+
+  {{#if goals}}
+  Goals ({{goals.length}}) - Use goalId to create relationships:
+  {{#each goals}}
+  - [ID: {{id}}] {{title}} ({{status}}) - {{objective}}
+  {{/each}}
+  {{/if}}
+
+  {{#if projects}}
+  Projects ({{projects.length}}) - Use projectId to create relationships:
+  {{#each projects}}
+  - [ID: {{id}}] {{title}} ({{status}}) - {{description}}
+  {{/each}}
+  {{/if}}
+
+  {{#if tasks}}
+  Active Tasks ({{tasks.length}}) - Use taskId to create relationships:
+  {{#each tasks}}
+  - [ID: {{id}}] {{title}} ({{category}}) - {{priority}}
+  {{/each}}
+  {{/if}}
+
+  {{#if moods}}
+  Recent Moods ({{moods.length}}):
+  {{#each moods}}
+  - {{value}}/10 - {{note}}
+  {{/each}}
+  {{/if}}
+
+  {{#if relationships}}
+  Relationships ({{relationships.length}}) - Use relationshipId to create relationships:
+  {{#each relationships}}
+  - [ID: {{id}}] {{name}} ({{relationshipType}}) - Strength: {{connectionStrength}}/10
+  {{/each}}
+  {{/if}}
+
+  {{#if notes}}
+  Recent Notes ({{notes.length}}) - Use noteId to create relationships:
+  {{#each notes}}
+  - [ID: {{id}}] {{title}} - {{content}}
+  {{/each}}
+  {{/if}}
+
+  {{#if errands}}
+  Active Errands ({{errands.length}}):
+  {{#each errands}}
+  - [ID: {{id}}] {{title}} ({{category}})
+  {{/each}}
+  {{/if}}
+
+# Response validation
+responseValidation:
+  format: "json"
+  schema:
+    type: "object"
+    required: ["actions"]
+    properties:
+      actions:
+        type: "array"
+        items:
+          type: "object"
+          required: ["type", "confidence", "data", "reasoning", "relationship"]
+          properties:
+            type:
+              type: "string"
+              enum: ["createTask", "createProject", "createGoal", "createMood", "createNote", "createErrand", "createRelationship", "linkToTask", "linkToProject", "linkToGoal", "linkToRelationship", "linkToNote", "enhanceTask", "enhanceProject", "enhanceGoal", "enhanceRelationship"]
+            confidence:
+              type: "number"
+              minimum: 0
+              maximum: 100
+            data:
+              type: "object"
+            reasoning:
+              type: "string"
+            relationship:
+              type: "string"
+              description: "Explanation of how this thought relates to the entity"
