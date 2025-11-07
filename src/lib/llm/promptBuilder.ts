@@ -1,9 +1,9 @@
 /**
- * LLM Prompt Builder with parameterized values
+ * LLM Prompt Builder - Relationship-Based Framework
  * For use with GitHub Models tab or other LLM interfaces
  *
- * This module provides backward compatibility and test data generation
- * for the YAML-based prompt system. YAML prompts are the source of truth.
+ * This module uses YAML prompts as the single source of truth.
+ * All prompts support creating relationships between thoughts and entities.
  */
 
 import {
@@ -14,6 +14,19 @@ import {
   getPromptMetadata,
 } from '../prompts/promptLoader';
 
+/**
+ * Entity with ID for relationship linking
+ */
+export interface Entity {
+  id: string;
+  title?: string;
+  name?: string;
+  [key: string]: any;
+}
+
+/**
+ * Thought context for processing
+ */
 export interface ThoughtContext {
   text: string;
   type?: string;
@@ -22,29 +35,72 @@ export interface ThoughtContext {
   id: string;
 }
 
+/**
+ * User context with entity IDs for relationship creation
+ */
 export interface UserContext {
-  goals?: Array<{ title: string; status: string; objective?: string }>;
-  projects?: Array<{ title: string; status: string; description?: string }>;
-  tasks?: Array<{ title: string; category?: string; priority?: string }>;
+  goals?: Array<Entity & { status: string; objective?: string }>;
+  projects?: Array<Entity & { status: string; description?: string }>;
+  tasks?: Array<Entity & { category?: string; priority?: string }>;
   moods?: Array<{ value?: number; mood?: number; note?: string }>;
-  relationships?: Array<{ name: string; relationshipType?: string; connectionStrength?: number }>;
-  notes?: Array<{ title?: string; content?: string }>;
-  errands?: Array<{ title?: string; category?: string }>;
-}
-
-export interface PromptParams {
-  thought: ThoughtContext;
-  context?: UserContext;
-  toolReference?: string;
+  relationships?: Array<Entity & { relationshipType?: string; connectionStrength?: number }>;
+  notes?: Array<Entity & { content?: string }>;
+  errands?: Array<Entity & { category?: string }>;
 }
 
 /**
- * Build the complete thought processing prompt using YAML-based system
- * @deprecated Use loadPrompt('process-thought') and buildMessages() instead
+ * Action types for relationship-based processing
  */
-export function buildThoughtProcessingPrompt(params: PromptParams): string {
-  const { thought, context, toolReference = '(Tool reference not provided)' } = params;
+export type ActionType =
+  // Entity creation
+  | 'createTask'
+  | 'createProject'
+  | 'createGoal'
+  | 'createMood'
+  | 'createNote'
+  | 'createErrand'
+  | 'createRelationship'
+  // Entity linking (relationships)
+  | 'linkToTask'
+  | 'linkToProject'
+  | 'linkToGoal'
+  | 'linkToRelationship'
+  | 'linkToNote'
+  // Entity enhancement
+  | 'enhanceTask'
+  | 'enhanceProject'
+  | 'enhanceGoal'
+  | 'enhanceRelationship';
 
+/**
+ * Action response from thought processing
+ */
+export interface ProcessedAction {
+  type: ActionType;
+  confidence: number;
+  data: Record<string, any>;
+  reasoning: string;
+  relationship: string; // Explanation of how thought relates to entity
+}
+
+/**
+ * Response from thought processing
+ */
+export interface ProcessedThought {
+  actions: ProcessedAction[];
+}
+
+/**
+ * Build prompt messages for thought processing
+ * @param thought - The thought to process
+ * @param context - User's current data context with entity IDs
+ * @param toolReference - Optional tool reference guidance
+ */
+export function buildThoughtProcessingMessages(
+  thought: ThoughtContext,
+  context: UserContext = {},
+  toolReference: string = '(Tool reference not provided)'
+) {
   const variables = {
     thought: {
       text: thought.text,
@@ -56,33 +112,13 @@ export function buildThoughtProcessingPrompt(params: PromptParams): string {
   };
 
   const promptConfig = loadPrompt('process-thought');
-  const messages = buildMessages(promptConfig, variables, context || {});
-
-  // Return combined system + user message for backward compatibility
-  return messages.map(m => m.content).join('\n\n');
+  return buildMessages(promptConfig, variables, context);
 }
 
 /**
- * Build the user context section from provided data
- * @deprecated This is now handled by the YAML contextTemplate
+ * Generate test values with entity IDs for relationships
  */
-export function buildUserContextSection(context?: UserContext): string {
-  // This function is kept for backward compatibility
-  // The actual context rendering is now done by the YAML system
-  if (!context) return '';
-
-  const promptConfig = loadPrompt('process-thought');
-  const { renderContext } = require('../prompts/promptLoader');
-
-  return promptConfig.contextTemplate
-    ? renderContext(promptConfig.contextTemplate, context)
-    : '';
-}
-
-/**
- * Generate test values for GitHub Models tab
- */
-export function getTestPromptValues(): PromptParams {
+export function getTestPromptValues() {
   return {
     thought: {
       id: 'test-thought-123',
@@ -93,33 +129,33 @@ export function getTestPromptValues(): PromptParams {
     },
     context: {
       goals: [
-        { title: 'Master React Development', status: 'active', objective: 'Become proficient in React and modern web development' },
-        { title: 'Launch Personal Brand', status: 'active', objective: 'Build online presence through portfolio and content' },
+        { id: 'goal-react-dev', title: 'Master React Development', status: 'active', objective: 'Become proficient in React and modern web development' },
+        { id: 'goal-personal-brand', title: 'Launch Personal Brand', status: 'active', objective: 'Build online presence through portfolio and content' },
       ],
       projects: [
-        { title: 'Portfolio Website v2', status: 'active', description: 'Redesign portfolio with React and showcase recent projects' },
-        { title: 'Learn Advanced TypeScript', status: 'active', description: 'Deep dive into TypeScript patterns and best practices' },
+        { id: 'project-portfolio-v2', title: 'Portfolio Website v2', status: 'active', description: 'Redesign portfolio with React and showcase recent projects' },
+        { id: 'project-typescript', title: 'Learn Advanced TypeScript', status: 'active', description: 'Deep dive into TypeScript patterns and best practices' },
       ],
       tasks: [
-        { title: 'Complete React hooks tutorial', category: 'mastery', priority: 'high' },
-        { title: 'Design portfolio mockup', category: 'mastery', priority: 'medium' },
-        { title: 'Research hosting options', category: 'mastery', priority: 'low' },
+        { id: 'task-react-hooks', title: 'Complete React hooks tutorial', category: 'mastery', priority: 'high' },
+        { id: 'task-portfolio-mockup', title: 'Design portfolio mockup', category: 'mastery', priority: 'medium' },
+        { id: 'task-hosting-research', title: 'Research hosting options', category: 'mastery', priority: 'low' },
       ],
       moods: [
         { value: 6, note: 'Feeling motivated but a bit overwhelmed' },
         { value: 7, note: 'Good progress on learning today' },
       ],
       relationships: [
-        { name: 'Sarah (Mentor)', relationshipType: 'professional', connectionStrength: 8 },
-        { name: 'Alex (Study Buddy)', relationshipType: 'friend', connectionStrength: 7 },
+        { id: 'rel-sarah-mentor', name: 'Sarah (Mentor)', relationshipType: 'professional', connectionStrength: 8 },
+        { id: 'rel-alex-friend', name: 'Alex (Study Buddy)', relationshipType: 'friend', connectionStrength: 7 },
       ],
       notes: [
-        { title: 'React Hooks Best Practices', content: 'Key points from documentation: useState, useEffect, custom hooks...' },
-        { title: 'Portfolio Design Inspiration', content: 'Collection of great developer portfolios for reference' },
+        { id: 'note-react-hooks', title: 'React Hooks Best Practices', content: 'Key points from documentation: useState, useEffect, custom hooks...' },
+        { id: 'note-portfolio-inspiration', title: 'Portfolio Design Inspiration', content: 'Collection of great developer portfolios for reference' },
       ],
       errands: [
-        { title: 'Buy new laptop charger', category: 'shopping' },
-        { title: 'Schedule dentist appointment', category: 'health' },
+        { id: 'errand-laptop-charger', title: 'Buy new laptop charger', category: 'shopping' },
+        { id: 'errand-dentist', title: 'Schedule dentist appointment', category: 'health' },
       ],
     },
     toolReference: '(Tool specs would be dynamically loaded based on enrolled tools)',
@@ -127,8 +163,7 @@ export function getTestPromptValues(): PromptParams {
 }
 
 /**
- * Export the prompt as a ready-to-use string for GitHub Models
- * Uses YAML-based prompt system
+ * Export the thought processing prompt for GitHub Models with test data
  */
 export function exportPromptForGitHubModels(): string {
   const testParams = getTestPromptValues();
@@ -140,17 +175,17 @@ export function exportPromptForGitHubModels(): string {
       tags: testParams.thought.tags?.join(', ') || 'none',
       createdAt: testParams.thought.createdAt,
     },
-    toolReference: testParams.toolReference || '(Tool reference not provided)',
+    toolReference: testParams.toolReference,
   };
 
-  return exportFromLoader('process-thought', variables, testParams.context || {});
+  return exportFromLoader('process-thought', variables, testParams.context);
 }
 
 /**
  * Export any prompt by name for GitHub Models
  * @param promptName - Name of the YAML prompt file
  * @param variables - Test variables
- * @param context - Test context
+ * @param context - Test context with entity IDs
  */
 export function exportPromptByName(
   promptName: string,
@@ -160,5 +195,11 @@ export function exportPromptByName(
   return exportFromLoader(promptName, variables, context);
 }
 
-// Re-export useful functions from promptLoader for convenience
-export { loadPrompt, buildMessages, buildCompletePrompt, getPromptMetadata } from '../prompts/promptLoader';
+// Re-export core prompt functions for convenience
+export {
+  loadPrompt,
+  buildMessages,
+  buildCompletePrompt,
+  getPromptMetadata,
+  listPrompts,
+} from '../prompts/promptLoader';

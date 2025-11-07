@@ -37,33 +37,33 @@ export function generateProcessThoughtTestData(): ThoughtTestData {
     },
     context: {
       goals: [
-        { title: 'Master React Development', status: 'active', objective: 'Become proficient in React and modern web development' },
-        { title: 'Launch Personal Brand', status: 'active', objective: 'Build online presence through portfolio and content' },
+        { id: 'goal-react-dev', title: 'Master React Development', status: 'active', objective: 'Become proficient in React and modern web development' },
+        { id: 'goal-personal-brand', title: 'Launch Personal Brand', status: 'active', objective: 'Build online presence through portfolio and content' },
       ],
       projects: [
-        { title: 'Portfolio Website v2', status: 'active', description: 'Redesign portfolio with React and showcase recent projects' },
-        { title: 'Learn Advanced TypeScript', status: 'active', description: 'Deep dive into TypeScript patterns and best practices' },
+        { id: 'project-portfolio-v2', title: 'Portfolio Website v2', status: 'active', description: 'Redesign portfolio with React and showcase recent projects' },
+        { id: 'project-typescript', title: 'Learn Advanced TypeScript', status: 'active', description: 'Deep dive into TypeScript patterns and best practices' },
       ],
       tasks: [
-        { title: 'Complete React hooks tutorial', category: 'mastery', priority: 'high' },
-        { title: 'Design portfolio mockup', category: 'mastery', priority: 'medium' },
-        { title: 'Research hosting options', category: 'mastery', priority: 'low' },
+        { id: 'task-react-hooks', title: 'Complete React hooks tutorial', category: 'mastery', priority: 'high' },
+        { id: 'task-portfolio-mockup', title: 'Design portfolio mockup', category: 'mastery', priority: 'medium' },
+        { id: 'task-hosting-research', title: 'Research hosting options', category: 'mastery', priority: 'low' },
       ],
       moods: [
         { value: 6, note: 'Feeling motivated but a bit overwhelmed' },
         { value: 7, note: 'Good progress on learning today' },
       ],
       relationships: [
-        { name: 'Sarah (Mentor)', relationshipType: 'professional', connectionStrength: 8 },
-        { name: 'Alex (Study Buddy)', relationshipType: 'friend', connectionStrength: 7 },
+        { id: 'rel-sarah-mentor', name: 'Sarah (Mentor)', relationshipType: 'professional', connectionStrength: 8 },
+        { id: 'rel-alex-friend', name: 'Alex (Study Buddy)', relationshipType: 'friend', connectionStrength: 7 },
       ],
       notes: [
-        { title: 'React Hooks Best Practices', content: 'Key points from documentation: useState, useEffect, custom hooks...' },
-        { title: 'Portfolio Design Inspiration', content: 'Collection of great developer portfolios for reference' },
+        { id: 'note-react-hooks', title: 'React Hooks Best Practices', content: 'Key points from documentation: useState, useEffect, custom hooks...' },
+        { id: 'note-portfolio-inspiration', title: 'Portfolio Design Inspiration', content: 'Collection of great developer portfolios for reference' },
       ],
       errands: [
-        { title: 'Buy new laptop charger', category: 'shopping' },
-        { title: 'Schedule dentist appointment', category: 'health' },
+        { id: 'errand-laptop-charger', title: 'Buy new laptop charger', category: 'shopping' },
+        { id: 'errand-dentist', title: 'Schedule dentist appointment', category: 'health' },
       ],
     },
     toolReference: '(Tool specs would be dynamically loaded based on enrolled tools)',
