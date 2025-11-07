@@ -54,6 +54,11 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 
+# Compiled JavaScript from TypeScript (Cloud Functions)
+functions/lib/
+shared/*.js
+shared/*.js.map
+
 # PWA
 **/public/sw.js
 **/public/workbox-*.js
