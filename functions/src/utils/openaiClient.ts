@@ -8,7 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
 import { CONFIG } from '../config';
-import { ProcessingContext, formatContextForPrompt } from './contextGatherer';
+import { ProcessingContext } from './contextGatherer';
 import { renderToolSpecsForPrompt, type ToolSpec } from '../../../shared/toolSpecs';
 
 export interface AIAction {
