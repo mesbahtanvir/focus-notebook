@@ -191,7 +191,7 @@ class ExportRegistry {
         if (source.validate) {
           const errors = source.validate(sourceData);
           if (errors.length > 0) {
-            console.error(`❌ Validation failed for ${source.id}:`, errors);
+            console.warn(`⚠️ Validation failed for ${source.id}:`, errors);
             result[source.id] = 0;
             continue;
           }

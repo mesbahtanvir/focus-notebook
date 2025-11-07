@@ -4,8 +4,7 @@
  */
 
 import { create } from 'zustand';
-import { httpsCallable } from 'firebase/functions';
-import { functionsClient as functions } from '@/lib/firebaseClient';
+import { auth, db } from '@/lib/firebaseClient';
 import {
   Account,
   PlaidItem,
@@ -24,9 +23,47 @@ import {
   where,
   orderBy,
   limit as firestoreLimit,
-  Timestamp,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebaseClient';
+
+async function callSpendingApi(
+  endpoint: string,
+  payload: Record<string, unknown> = {}
+) {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('User must be authenticated before using Plaid.');
+  }
+
+  const idToken = await user.getIdToken();
+  const response = await fetch(`/api/spending/${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const raw = await response.text();
+  let data: any = {};
+  if (raw) {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      throw new Error('Received malformed response from server.');
+    }
+  }
+
+  if (!response.ok) {
+    const message =
+      data?.error ||
+      data?.message ||
+      `Request failed with status ${response.status}`;
+    throw new Error(message);
+  }
+
+  return data;
+}
 
 // ============================================================================
 // State Interface
@@ -234,9 +271,8 @@ export const useSpendingTool = create<SpendingToolState>((set, get) => ({
     set({ linkLoading: true });
 
     try {
-      const createLinkTokenFn = httpsCallable(functions, 'createLinkToken');
-      const result = await createLinkTokenFn({ platform }) as any;
-      const linkToken = result.data.link_token;
+      const result = await callSpendingApi('link-token', { platform });
+      const linkToken = result.link_token;
 
       set({ linkToken, linkLoading: false });
       return linkToken;
@@ -252,8 +288,9 @@ export const useSpendingTool = create<SpendingToolState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const exchangeFn = httpsCallable(functions, 'exchangePublicToken');
-      await exchangeFn({ public_token: publicToken });
+      await callSpendingApi('exchange-public-token', {
+        public_token: publicToken,
+      });
 
       set({ loading: false });
     } catch (error: any) {
@@ -267,9 +304,8 @@ export const useSpendingTool = create<SpendingToolState>((set, get) => ({
     set({ linkLoading: true });
 
     try {
-      const createRelinkFn = httpsCallable(functions, 'createRelinkToken');
-      const result = await createRelinkFn({ itemId }) as any;
-      const linkToken = result.data.link_token;
+      const result = await callSpendingApi('relink-token', { itemId });
+      const linkToken = result.link_token;
 
       set({ linkToken, linkLoading: false });
       return linkToken;
@@ -285,8 +321,7 @@ export const useSpendingTool = create<SpendingToolState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const markRelinkingFn = httpsCallable(functions, 'markRelinking');
-      await markRelinkingFn({ itemId });
+      await callSpendingApi('mark-relinking', { itemId });
 
       set({ loading: false });
     } catch (error: any) {
@@ -300,8 +335,7 @@ export const useSpendingTool = create<SpendingToolState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const triggerSyncFn = httpsCallable(functions, 'triggerSync');
-      await triggerSyncFn({ itemId });
+      await callSpendingApi('trigger-sync', { itemId });
 
       set({ loading: false });
     } catch (error: any) {
