@@ -11,7 +11,6 @@ import {
  * Additional Tools - Screenshot Tests
  *
  * Tests for:
- * - Brainstorming tool
  * - CBT (Cognitive Behavioral Therapy) tool
  * - Deep Reflection tool
  * - Notes tool
@@ -21,38 +20,6 @@ import {
  * - Tools marketplace
  * - LLM Logs
  */
-
-test.describe('Brainstorming Tool', () => {
-  test.beforeEach(async ({ page }) => {
-    await mockDateTime(page);
-    await setupMockAuth(page);
-  });
-
-  test('brainstorming page - initial state', async ({ page }) => {
-    await page.goto('/tools/brainstorming');
-    await waitForPageReady(page);
-    await hideDynamicElements(page);
-    await page.waitForTimeout(1000);
-
-    await takeScreenshot(page, {
-      name: 'brainstorming-initial',
-      fullPage: true,
-    });
-  });
-
-  test('brainstorming page - mobile viewport', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/tools/brainstorming');
-    await waitForPageReady(page);
-    await hideDynamicElements(page);
-    await page.waitForTimeout(1000);
-
-    await takeScreenshot(page, {
-      name: 'brainstorming-mobile',
-      fullPage: true,
-    });
-  });
-});
 
 test.describe('CBT Tool', () => {
   test.beforeEach(async ({ page }) => {
