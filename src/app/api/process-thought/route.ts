@@ -6,7 +6,7 @@ import { resolveToolSpecIds } from '../../../../shared/toolSpecUtils';
 export async function POST(request: NextRequest) {
   try {
     await verifyAiRequest(request);
-    const { thought, apiKey, model, context, toolSpecIds: incomingToolSpecIds } = await request.json();
+    const { thought, model, context, toolSpecIds: incomingToolSpecIds } = await request.json();
     const selectedModel = model || 'gpt-4o'; // Default to highest quality model
 
     const resolvedSpecIds = Array.from(
@@ -24,27 +24,6 @@ export async function POST(request: NextRequest) {
       }
     });
     const toolReference = renderToolSpecsForPrompt(toolSpecs);
-
-    // Validate API key
-    if (!apiKey || !apiKey.trim()) {
-      return NextResponse.json(
-        { 
-          error: 'OpenAI API key not configured',
-          needsSetup: true
-        },
-        { status: 200 }
-      );
-    }
-
-    if (!apiKey.startsWith('sk-')) {
-      return NextResponse.json(
-        { 
-          error: 'Invalid API key format',
-          needsSetup: true
-        },
-        { status: 200 }
-      );
-    }
 
     console.log('🤖 Processing thought:', thought.id);
     console.log('💭 Thought text:', thought.text);
@@ -198,104 +177,19 @@ Rules:
 - For entity links, use specific relationshipTypes: 'part-of' (projects), 'linked-to' (tasks), 'triggered-by' (moods)
 - Each relationship should have clear reasoning explaining why the connection is valuable`;
 
-    // Call OpenAI API
-    console.log('📤 Calling OpenAI API');
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+    // TODO: Implement server-side AI service integration
+    // This endpoint should now connect to a backend AI service
+    // instead of making direct OpenAI API calls with user keys
+
+    console.log('📤 AI service integration needed');
+
+    return NextResponse.json(
+      {
+        error: 'AI service not configured',
+        details: 'Thought processing functionality is currently being updated. Please check back later.'
       },
-      body: JSON.stringify({
-        model: selectedModel,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful thought processor. Always respond with valid JSON only, no markdown formatting.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 1500,
-      }),
-    });
-
-    console.log('📥 OpenAI response status:', response.status);
-
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('❌ OpenAI API error:', error);
-      
-      return NextResponse.json(
-        { 
-          error: 'Failed to process thought',
-          details: error.error?.message || 'Unknown error'
-        },
-        { status: 200 }
-      );
-    }
-
-    const data = await response.json();
-    let aiResponse = data.choices[0]?.message?.content;
-
-    console.log('🤖 Raw AI response:', aiResponse);
-
-    // Track token usage
-    if (data.usage) {
-      try {
-        const { useTokenUsage } = await import('@/store/useTokenUsage');
-        useTokenUsage.getState().addUsage({
-          model: selectedModel,
-          promptTokens: data.usage.prompt_tokens || 0,
-          completionTokens: data.usage.completion_tokens || 0,
-          totalTokens: data.usage.total_tokens || 0,
-          endpoint: '/api/process-thought',
-          thoughtId: thought.id,
-        });
-        console.log('📊 Token usage tracked:', data.usage);
-      } catch (error) {
-        console.warn('⚠️ Failed to track token usage:', error);
-      }
-    }
-
-    // Clean up response - remove markdown code blocks if present
-    if (aiResponse) {
-      aiResponse = aiResponse.trim();
-      if (aiResponse.startsWith('```json')) {
-        aiResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-      } else if (aiResponse.startsWith('```')) {
-        aiResponse = aiResponse.replace(/```\n?/g, '');
-      }
-      aiResponse = aiResponse.trim();
-    }
-
-    // Parse the AI response
-    let parsedResponse;
-    try {
-      parsedResponse = JSON.parse(aiResponse);
-    } catch (parseError) {
-      console.error('❌ Failed to parse AI response:', parseError);
-      console.error('Response was:', aiResponse);
-      return NextResponse.json(
-        { 
-          error: 'Failed to parse AI response',
-          details: 'AI returned invalid JSON'
-        },
-        { status: 200 }
-      );
-    }
-
-    console.log('✅ Parsed AI response:', parsedResponse);
-    console.log('📊 Tokens used:', data.usage);
-
-    return NextResponse.json({
-      success: true,
-      result: parsedResponse,
-      usage: data.usage
-    });
+      { status: 503 }
+    );
 
   } catch (error) {
     if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {

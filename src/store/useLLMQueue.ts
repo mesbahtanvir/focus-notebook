@@ -227,7 +227,7 @@ export const useLLMQueue = create<State>()(
 
 // Helper functions for processing different request types
 async function processThoughtRequest(request: LLMRequest) {
-  // Import settings dynamically to get API key
+  // Import settings dynamically to get model preference
   const { useSettings } = await import('./useSettings');
   const settings = useSettings.getState().settings;
   const idToken = await getIdTokenOrThrow();
@@ -246,7 +246,6 @@ async function processThoughtRequest(request: LLMRequest) {
         createdAt: new Date().toISOString(),
       },
       context: request.input.context,
-      apiKey: settings.openaiApiKey,
       model: settings.aiModel || 'gpt-4o',
     }),
   });
@@ -265,7 +264,7 @@ async function processThoughtRequest(request: LLMRequest) {
 }
 
 async function processBrainstormingRequest(request: LLMRequest) {
-  // Import settings dynamically to get API key
+  // Import settings dynamically to get model preference
   const { useSettings } = await import('./useSettings');
   const settings = useSettings.getState().settings;
   const idToken = await getIdTokenOrThrow();
@@ -279,7 +278,6 @@ async function processBrainstormingRequest(request: LLMRequest) {
     body: JSON.stringify({
       messages: request.input.context?.messages || [],
       context: request.input.context,
-      apiKey: settings.openaiApiKey,
       model: settings.aiModel || 'gpt-4o',
     }),
   });

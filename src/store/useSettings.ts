@@ -4,7 +4,6 @@ import { persist } from 'zustand/middleware';
 export type AIModel = 'gpt-3.5-turbo' | 'gpt-4-turbo-preview' | 'gpt-4o' | 'gpt-4o-mini';
 
 export interface UserSettings {
-  openaiApiKey?: string;
   theme?: 'light' | 'dark' | 'system';
   aiModel?: AIModel; // Default: gpt-4o (best overall)
 }
@@ -12,8 +11,6 @@ export interface UserSettings {
 type SettingsState = {
   settings: UserSettings;
   updateSettings: (updates: Partial<UserSettings>) => void;
-  clearApiKey: () => void;
-  hasApiKey: () => boolean;
 };
 
 export const useSettings = create<SettingsState>()(
@@ -31,20 +28,6 @@ export const useSettings = create<SettingsState>()(
             ...updates,
           },
         }));
-      },
-
-      clearApiKey: () => {
-        set((state) => ({
-          settings: {
-            ...state.settings,
-            openaiApiKey: undefined,
-          },
-        }));
-      },
-
-      hasApiKey: () => {
-        const { settings } = get();
-        return Boolean(settings.openaiApiKey && settings.openaiApiKey.trim().length > 0);
       },
     }),
     {
