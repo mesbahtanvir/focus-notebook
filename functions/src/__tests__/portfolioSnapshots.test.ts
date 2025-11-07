@@ -31,7 +31,7 @@ const collectionMock = jest.fn((path: string) => ({
   get: ensureCollectionGet(path),
 }));
 
-jest.mock('firebase-functions', () => ({
+jest.mock('firebase-functions/v1', () => ({
   logger,
   pubsub: {
     schedule: scheduleMock,

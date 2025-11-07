@@ -24,7 +24,7 @@ const runWithMock = jest.fn(() => ({
   },
 }));
 
-jest.mock('firebase-functions', () => ({
+jest.mock('firebase-functions/v1', () => ({
   runWith: runWithMock,
   https: {
     onCall: onCallMock,
