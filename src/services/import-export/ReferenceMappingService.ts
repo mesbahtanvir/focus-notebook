@@ -52,19 +52,8 @@ export class ReferenceMappingService {
     }
 
     // Build thought relationships
-    if (entities.thoughts) {
-      for (const thought of entities.thoughts) {
-        if (thought.linkedTaskIds) {
-          thoughtToTasks.set(thought.id, thought.linkedTaskIds);
-        }
-        if (thought.linkedProjectIds) {
-          thoughtToProjects.set(thought.id, thought.linkedProjectIds);
-        }
-        if (thought.linkedMoodIds) {
-          thoughtToMoods.set(thought.id, thought.linkedMoodIds);
-        }
-      }
-    }
+    // NOTE: Thought linking is now handled via relationships store
+    // No linkedXIds arrays to process
 
     // Build people relationships
     if (entities.people) {
@@ -309,15 +298,7 @@ export class ReferenceMappingService {
       updated.thoughts = entities.thoughts.map(thought => ({
         ...thought,
         id: idMapping.oldToNew.get(thought.id) || thought.id,
-        linkedTaskIds: thought.linkedTaskIds
-          ? thought.linkedTaskIds.map(id => idMapping.oldToNew.get(id) || id)
-          : thought.linkedTaskIds,
-        linkedProjectIds: thought.linkedProjectIds
-          ? thought.linkedProjectIds.map(id => idMapping.oldToNew.get(id) || id)
-          : thought.linkedProjectIds,
-        linkedMoodIds: thought.linkedMoodIds
-          ? thought.linkedMoodIds.map(id => idMapping.oldToNew.get(id) || id)
-          : thought.linkedMoodIds,
+        // NOTE: linkedXIds arrays removed - linking now via relationships store
       }));
     }
 

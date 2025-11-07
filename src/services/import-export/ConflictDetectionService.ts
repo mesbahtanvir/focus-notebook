@@ -189,78 +189,8 @@ export class ConflictDetectionService {
     }
 
     // Check thoughts
-    if (importedEntities.thoughts) {
-      for (const thought of importedEntities.thoughts) {
-        // Check linkedTaskIds
-        if (thought.linkedTaskIds) {
-          for (const taskId of thought.linkedTaskIds) {
-            if (!importedIds.tasks.has(taskId)) {
-              conflicts.push({
-                id: `thought-${thought.id}-task-ref-${taskId}`,
-                type: ConflictType.BROKEN_REFERENCE,
-                entityType: 'thoughts',
-                entityId: thought.id,
-                itemTitle: thought.text?.substring(0, 50),
-                importedItem: thought,
-                message: `Thought references non-existent task (${taskId})`,
-                suggestedResolution: ConflictResolution.ASK_USER,
-                details: {
-                  referencedEntity: 'tasks',
-                  referencedId: taskId,
-                  fieldName: 'linkedTaskIds'
-                }
-              });
-            }
-          }
-        }
-
-        // Check linkedProjectIds
-        if (thought.linkedProjectIds) {
-          for (const projectId of thought.linkedProjectIds) {
-            if (!importedIds.projects.has(projectId)) {
-              conflicts.push({
-                id: `thought-${thought.id}-project-ref-${projectId}`,
-                type: ConflictType.BROKEN_REFERENCE,
-                entityType: 'thoughts',
-                entityId: thought.id,
-                itemTitle: thought.text?.substring(0, 50),
-                importedItem: thought,
-                message: `Thought references non-existent project (${projectId})`,
-                suggestedResolution: ConflictResolution.ASK_USER,
-                details: {
-                  referencedEntity: 'projects',
-                  referencedId: projectId,
-                  fieldName: 'linkedProjectIds'
-                }
-              });
-            }
-          }
-        }
-
-        // Check linkedMoodIds
-        if (thought.linkedMoodIds) {
-          for (const moodId of thought.linkedMoodIds) {
-            if (!importedIds.moods.has(moodId)) {
-              conflicts.push({
-                id: `thought-${thought.id}-mood-ref-${moodId}`,
-                type: ConflictType.BROKEN_REFERENCE,
-                entityType: 'thoughts',
-                entityId: thought.id,
-                itemTitle: thought.text?.substring(0, 50),
-                importedItem: thought,
-                message: `Thought references non-existent mood (${moodId})`,
-                suggestedResolution: ConflictResolution.ASK_USER,
-                details: {
-                  referencedEntity: 'moods',
-                  referencedId: moodId,
-                  fieldName: 'linkedMoodIds'
-                }
-              });
-            }
-          }
-        }
-      }
-    }
+    // NOTE: Thought linking is now handled via relationships store
+    // No need to check linkedXIds arrays as they no longer exist
 
     // Check people
     if (importedEntities.people) {

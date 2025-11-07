@@ -172,6 +172,10 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
       .filter(r => r.targetType === 'person')
       .map(r => getEntityFromRel(r, friends, 'person'))
       .filter(Boolean);
+    const linkedMoods = linkedRels
+      .filter(r => r.targetType === 'mood')
+      .map(r => getEntityFromRel(r, moods, 'mood'))
+      .filter(Boolean);
 
     return {
       created: {
@@ -186,7 +190,8 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
         projects: linkedProjects,
         goals: linkedGoals,
         persons: linkedPersons,
-        total: linkedTasks.length + linkedProjects.length + linkedGoals.length + linkedPersons.length,
+        moods: linkedMoods,
+        total: linkedTasks.length + linkedProjects.length + linkedGoals.length + linkedPersons.length + linkedMoods.length,
       },
     };
   }, [thought.id, relationships, tasks, projects, goals, moods, friends]);
