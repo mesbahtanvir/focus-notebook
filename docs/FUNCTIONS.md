@@ -28,42 +28,34 @@ ALPHA_VANTAGE_API_KEY=your-alpha-vantage-api-key-here
 
 **Note:** Get a free Alpha Vantage API key at https://www.alphavantage.co/support/#api-key
 
-### 3. Set Firebase Environment Config
+### 3. Configure Production Environment Variables
 
-For production deployment, set environment variables using Firebase CLI or the Firebase Console.
+For production deployment, configure environment variables in the Firebase Console:
+
+1. Go to [Firebase Console](https://console.firebase.google.com)
+2. Select your project
+3. Navigate to **Functions** → **Configuration** (or **Build** → **Functions** → **Environment variables**)
+4. Add the following environment variables:
 
 #### Required Variables:
 
-```bash
-# OpenAI for AI processing
-firebase functions:config:set openai.api_key="sk-your-actual-api-key-here"
-
-# Stripe for billing
-firebase functions:config:set stripe.secret="sk_live_your-stripe-secret"
-firebase functions:config:set stripe.price_id="price_your-subscription-price-id"
-firebase functions:config:set stripe.webhook_secret="whsec_your-webhook-secret"
-firebase functions:config:set stripe.portal_config_id="bpc_1SQbloDdrpmFOJwOXqZjXWc4"
-```
+- `OPENAI_API_KEY` - Your OpenAI API key (e.g., `sk-your-actual-api-key-here`)
+- `STRIPE_SECRET` - Your Stripe secret key (e.g., `sk_live_your-stripe-secret`)
+- `STRIPE_PRICE_ID` - Your subscription price ID (e.g., `price_your-subscription-price-id`)
+- `STRIPE_WEBHOOK_SECRET` - Your Stripe webhook secret (e.g., `whsec_your-webhook-secret`)
+- `STRIPE_PORTAL_CONFIG_ID` - Your Stripe portal config ID (e.g., `bpc_1SQbloDdrpmFOJwOXqZjXWc4`)
 
 #### Optional Variables:
 
-```bash
-# Alpha Vantage for stock prices
-firebase functions:config:set alpha_vantage.api_key="your-alpha-vantage-api-key"
+- `ALPHA_VANTAGE_API_KEY` - Your Alpha Vantage API key for stock prices
+- `ANTHROPIC_API_KEY` - Your Anthropic API key for Claude-powered features
+- `PLAID_CLIENT_ID` - Your Plaid client ID for bank integration
+- `PLAID_SECRET` - Your Plaid secret
+- `PLAID_ENV` - Plaid environment (`sandbox`, `development`, or `production`)
+- `APP_BASE_URL` - Your application's base URL (e.g., `https://your-domain.com`)
+- `ENCRYPTION_KEY` - Encryption key for sensitive data (optional, falls back to PLAID_SECRET)
 
-# Anthropic for Claude-powered features
-firebase functions:config:set anthropic.api_key="sk-ant-your-anthropic-key"
-
-# Plaid for bank integration
-firebase functions:config:set plaid.client_id="your-plaid-client-id"
-firebase functions:config:set plaid.secret="your-plaid-secret"
-firebase functions:config:set plaid.env="sandbox"
-
-# App configuration
-firebase functions:config:set app.base_url="https://your-domain.com"
-```
-
-**Note:** Environment variables in Firebase use dot notation (e.g., `stripe.secret`) but are accessed in code as uppercase with underscores (e.g., `STRIPE_SECRET`).
+**Note:** The Firebase Functions runtime automatically loads environment variables from the `.env` file during local development and from the Firebase Console configuration in production.
 
 ## Local Development
 
