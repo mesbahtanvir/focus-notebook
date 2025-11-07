@@ -39,7 +39,7 @@ jest.mock('firebase-admin', () => ({
   firestore: firestoreMock,
 }));
 
-jest.mock('firebase-functions', () => ({
+jest.mock('firebase-functions/v1', () => ({
   pubsub: {
     schedule: jest.fn(() => ({
       onRun: jest.fn(),
