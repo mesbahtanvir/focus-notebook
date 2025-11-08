@@ -50,7 +50,44 @@ async function loadPrompt(): Promise<any> {
 }
 
 /**
+ * Parse a single CSV line handling quoted fields properly (RFC 4180)
+ */
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        // Escaped quote within quoted field
+        current += '"';
+        i++; // Skip next quote
+      } else {
+        // Toggle quote state
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      // Field separator outside quotes
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  // Push the last field
+  result.push(current.trim());
+
+  return result;
+}
+
+/**
  * Parse CSV content into transaction objects
+ * Handles quoted fields with commas (common in Amex statements)
  */
 function parseCSV(csvContent: string): CSVTransaction[] {
   const lines = csvContent.trim().split('\n');
@@ -64,14 +101,25 @@ function parseCSV(csvContent: string): CSVTransaction[] {
     const line = lines[i].trim();
     if (!line) continue;
 
-    // Simple CSV parsing (handles basic cases)
-    const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+    // Parse CSV line properly handling quoted fields
+    const values = parseCSVLine(line);
 
     if (values.length >= 3) {
+      // Parse amount - handle negative numbers, currency symbols, parentheses
+      let amountStr = values[2].replace(/[$,]/g, '');
+      let amount = 0;
+
+      // Handle parentheses notation for negative numbers (common in accounting)
+      if (amountStr.includes('(') && amountStr.includes(')')) {
+        amountStr = '-' + amountStr.replace(/[()]/g, '');
+      }
+
+      amount = parseFloat(amountStr) || 0;
+
       transactions.push({
         date: values[0],
         description: values[1],
-        amount: parseFloat(values[2]) || 0,
+        amount: amount,
       });
     }
   }
