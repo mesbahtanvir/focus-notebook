@@ -766,18 +766,25 @@ function FocusPageContent() {
       )}
 
       {!currentSession && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <FloatingActionButton
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
+          <button
             onClick={handleStartSession}
-            title={selectedTasks.length > 0 ? `Start Focus Session (${selectedTasks.length} tasks)` : "Select tasks to start"}
-            icon={<Play className="h-6 w-6" />}
             disabled={selectedTasks.length === 0}
-          />
-          {selectedTasks.length > 0 && (
-            <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold rounded-full h-7 w-7 flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-900">
-              {selectedTasks.length}
-            </div>
-          )}
+            className={`w-full py-4 px-6 rounded-2xl font-bold text-lg shadow-2xl transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-3 ${
+              selectedTasks.length === 0
+                ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'
+                : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-700 hover:via-indigo-700 hover:to-purple-700 text-white'
+            }`}
+            title={selectedTasks.length > 0 ? `Start Focus Session with ${selectedTasks.length} task${selectedTasks.length === 1 ? '' : 's'}` : "Select tasks to start"}
+          >
+            <Play className="h-6 w-6" />
+            <span>
+              {selectedTasks.length === 0
+                ? 'Select Tasks to Start'
+                : `Start Focus Session (${selectedTasks.length} task${selectedTasks.length === 1 ? '' : 's'})`
+              }
+            </span>
+          </button>
         </div>
       )}
     </div>
