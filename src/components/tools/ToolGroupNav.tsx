@@ -62,10 +62,10 @@ export function ToolGroupNav({ currentToolId, showAllTools = false }: ToolGroupN
           </div>
           <div className="min-w-0">
             <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
-              {toolGroup.title}
+              {activeGroup.title}
             </h3>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-              {toolGroup.tagline}
+              {activeGroup.tagline}
             </p>
           </div>
         </div>
