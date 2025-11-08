@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useFocus } from '@/store/useFocus';
 import { useTasks } from '@/store/useTasks';
@@ -24,6 +24,7 @@ import * as EntityService from '@/services/entityService';
 export function FocusSession() {
   const router = useRouter();
   const currentSession = useFocus((s) => s.currentSession);
+  const sessions = useFocus((s) => s.sessions);
   const endSession = useFocus((s) => s.endSession);
   const switchToTask = useFocus((s) => s.switchToTask);
   const markTaskComplete = useFocus((s) => s.markTaskComplete);
@@ -48,6 +49,36 @@ export function FocusSession() {
   const lastUpdateRef = useRef<number>(Date.now());
   const hasPendingChangesRef = useRef<boolean>(false);
   const pendingNotesTaskIndexRef = useRef<number>(0);
+
+  // Get previous session notes for the current task
+  const previousSessionNotes = useMemo(() => {
+    if (!currentSession) return [];
+
+    const currentTaskId = currentSession.tasks[currentSession.currentTaskIndex].task.id;
+
+    // Filter completed sessions that contain this task
+    const relevantSessions = sessions
+      .filter(session =>
+        !session.isActive &&
+        session.endTime &&
+        session.id !== currentSession.id
+      )
+      .map(session => {
+        const taskInSession = session.tasks.find(t => t.task.id === currentTaskId);
+        if (taskInSession && taskInSession.notes && taskInSession.notes.trim()) {
+          return {
+            date: session.startTime,
+            duration: taskInSession.timeSpent,
+            notes: taskInSession.notes
+          };
+        }
+        return null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => new Date(b!.date).getTime() - new Date(a!.date).getTime()); // Most recent first
+
+    return relevantSessions as Array<{ date: string; duration: number; notes: string }>;
+  }, [currentSession, sessions]);
 
   // Timer effect - calculates time from task switch timestamp to work reliably when browser is out of focus
   useEffect(() => {
@@ -582,6 +613,21 @@ export function FocusSession() {
                         )}
                       </div>
 
+                      {/* Description */}
+                      {currentFocusTask.task.notes && (
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Description
+                          </h3>
+                          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                            <FormattedNotes notes={currentFocusTask.task.notes} />
+                          </div>
+                        </div>
+                      )}
+
                       {/* Task Steps */}
                       {currentFocusTask.task.steps && currentFocusTask.task.steps.length > 0 && (
                         <div className="space-y-3">
@@ -673,21 +719,73 @@ export function FocusSession() {
                     </div>
 
                     {/* Notes Column */}
-                    <div className="space-y-2 lg:sticky lg:top-4 lg:self-start">
-                      {autoSaving && (
-                        <div className="flex justify-end">
-                          <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                            <div className="w-1.5 h-1.5 bg-amber-600 dark:bg-amber-400 rounded-full animate-pulse" />
-                            Saving...
-                          </span>
+                    <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+                      {/* Previous Sessions */}
+                      {previousSessionNotes.length > 0 && (
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Previous Sessions
+                          </h3>
+                          <div className="max-h-48 overflow-y-auto rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-3 space-y-3">
+                            {previousSessionNotes.map((session, idx) => (
+                              <div key={idx} className="text-sm">
+                                <div className="flex items-center gap-2 mb-1 text-xs text-gray-600 dark:text-gray-400">
+                                  <span className="font-semibold">
+                                    Session {previousSessionNotes.length - idx}
+                                  </span>
+                                  <span>•</span>
+                                  <span>
+                                    {new Date(session.date).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric'
+                                    })}
+                                  </span>
+                                  <span>•</span>
+                                  <span>{formatTimeGentle(session.duration)}</span>
+                                </div>
+                                <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                  <FormattedNotes notes={session.notes} />
+                                </div>
+                                {idx < previousSessionNotes.length - 1 && (
+                                  <div className="mt-3 border-b border-gray-300 dark:border-gray-600" />
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
-                      <textarea
-                        value={localNotes}
-                        onChange={(e) => setLocalNotes(e.target.value)}
-                        placeholder="Session notes... (auto-saved per task)"
-                        className="w-full h-[calc(100vh-16rem)] lg:h-[calc(100vh-12rem)] px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 dark:focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900/50 resize-none bg-white dark:bg-gray-800 text-sm transition-colors outline-none"
-                      />
+
+                      {/* Current Session */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                            Current Session
+                          </h3>
+                          {autoSaving && (
+                            <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                              <div className="w-1.5 h-1.5 bg-amber-600 dark:bg-amber-400 rounded-full animate-pulse" />
+                              Saving...
+                            </span>
+                          )}
+                        </div>
+                        <textarea
+                          value={localNotes}
+                          onChange={(e) => setLocalNotes(e.target.value)}
+                          placeholder="Session notes... (auto-saved per task)"
+                          className={`w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 dark:focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900/50 resize-none bg-white dark:bg-gray-800 text-sm transition-colors outline-none ${
+                            previousSessionNotes.length > 0
+                              ? 'h-[calc(100vh-32rem)] lg:h-[calc(100vh-28rem)]'
+                              : 'h-[calc(100vh-16rem)] lg:h-[calc(100vh-12rem)]'
+                          }`}
+                        />
+                      </div>
                     </div>
                   </div>
                 </motion.div>
