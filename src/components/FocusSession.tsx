@@ -315,8 +315,8 @@ export function FocusSession() {
     try {
       const result = await endSession(undefined, undefined, handleProgressUpdate);
 
-      // Brief delay to show completion state
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Brief delay to show completion state before transitioning
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Show summary instead of redirecting
       setCompletedSessionData({
@@ -364,26 +364,39 @@ export function FocusSession() {
     router.push('/tools/focus?tab=history');
   };
 
-  // Show summary if session is completed
-  if (showSummary && completedSessionData) {
+  // Show end session flow (progress → summary) in a single seamless view
+  if (isEndingSession || (showSummary && completedSessionData)) {
     return (
-      <SessionSummary
-        session={completedSessionData}
-        onStartNewSession={handleStartNewSession}
-        onViewHistory={handleViewHistory}
-      />
-    );
-  }
-
-  // Show progress screen while ending session
-  if (isEndingSession) {
-    return (
-      <EndSessionProgress
-        currentStep={currentProgressStep}
-        stepStatuses={progressSteps}
-        onRetry={handleRetryEndSession}
-        onContinue={handleContinueAnyway}
-      />
+      <AnimatePresence mode="wait">
+        {!showSummary ? (
+          <motion.div
+            key="progress"
+            initial={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+          >
+            <EndSessionProgress
+              currentStep={currentProgressStep}
+              stepStatuses={progressSteps}
+              onRetry={handleRetryEndSession}
+              onContinue={handleContinueAnyway}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="summary"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+          >
+            <SessionSummary
+              session={completedSessionData!}
+              onStartNewSession={handleStartNewSession}
+              onViewHistory={handleViewHistory}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     );
   }
 
