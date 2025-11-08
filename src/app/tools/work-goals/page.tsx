@@ -64,7 +64,7 @@ export default function WorkGoalsPage() {
   return (
     <ToolPageLayout>
       <ToolHeader
-        title="Work & Goals"
+        title="Productivity"
         emoji="🎯"
         showBackButton
         stats={[
