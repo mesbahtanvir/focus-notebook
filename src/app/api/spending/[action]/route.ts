@@ -10,6 +10,7 @@ const FUNCTION_MAP: Record<string, string> = {
   'exchange-public-token': 'exchangePublicToken',
   'mark-relinking': 'markRelinking',
   'trigger-sync': 'triggerSync',
+  'process-csv': 'processCSVTransactions',
 };
 
 async function parseRequestBody(req: NextRequest) {
