@@ -81,7 +81,7 @@ export default function InnerLifePage() {
   return (
     <ToolPageLayout>
       <ToolHeader
-        title="Inner Life"
+        title="Soulful"
         emoji="🧠"
         showBackButton
         stats={[

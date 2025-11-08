@@ -827,7 +827,7 @@ export const toolGroups: Record<string, ToolGroup> = {
   },
   'inner-life': {
     id: 'inner-life',
-    title: 'Inner Life',
+    title: 'Soulful',
     tagline: 'Process thoughts, track emotions, and nurture connections.',
     description: 'A complete wellbeing suite for processing everyday thoughts, tracking mood patterns, managing relationships, working through negative thinking with CBT, and exploring deeper philosophical questions.',
     category: 'Wellbeing',
