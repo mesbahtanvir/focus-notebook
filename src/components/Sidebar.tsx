@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, LayoutDashboard, Settings, User, Wrench, Menu, X, Shield } from 'lucide-react';
+import { Home, LayoutDashboard, Settings, User, Wrench, Menu, X, Shield, ChevronDown, ChevronRight, Target, Heart, Wallet, Plane } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { toolGroups } from '@/shared/toolSpecs';
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [toolsExpanded, setToolsExpanded] = useState(true);
   const pathname = usePathname();
   const { user } = useAuth();
 
@@ -36,9 +38,15 @@ export default function Sidebar() {
     badge?: string | number;
   }> = [
     { href: '/', icon: Home, label: 'Home', color: 'from-purple-500 to-pink-500' },
-    { href: '/tools', icon: Wrench, label: 'Tools', color: 'from-green-500 to-emerald-500' },
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: 'from-blue-500 to-cyan-500' },
     { href: '/settings', icon: Settings, label: 'Settings', color: 'from-orange-500 to-yellow-500' },
+  ];
+
+  const toolGroupItems = [
+    { id: 'work-goals', icon: Target, label: 'Productivity', color: 'text-purple-600' },
+    { id: 'inner-life', icon: Heart, label: 'Soulful', color: 'text-pink-600' },
+    { id: 'finances', icon: Wallet, label: 'Finances', color: 'text-green-600' },
+    { id: 'trips', icon: Plane, label: 'Trips', color: 'text-blue-600' },
   ];
 
   const closeSidebar = () => setIsOpen(false);
@@ -158,14 +166,14 @@ export default function Sidebar() {
                 <span className="font-medium lg:hidden xl:inline flex-1">{item.label}</span>
                 {item.badge && (
                   <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                    isActive 
-                      ? 'bg-white/20 text-white' 
+                    isActive
+                      ? 'bg-white/20 text-white'
                       : 'bg-purple-500 text-white'
                   }`}>
                     {item.badge}
                   </span>
                 )}
-                
+
                 {/* Tooltip for tablet view */}
                 <span className="hidden lg:block xl:hidden absolute left-full ml-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
                   {item.label}
@@ -173,7 +181,93 @@ export default function Sidebar() {
               </Link>
             );
           })}
-          
+
+          {/* Tools Section with Expandable Categories */}
+          <div className="space-y-1">
+            <button
+              onClick={() => setToolsExpanded(!toolsExpanded)}
+              className={`
+                group relative flex items-center gap-3 p-4 min-h-[44px] rounded-xl w-full
+                transition-all duration-200 transform
+                focus:outline-none focus:ring-4 focus:ring-green-300
+                touch-manipulation
+                ${pathname.startsWith('/tools')
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-md scale-105'
+                  : 'text-gray-700 hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 hover:scale-105'
+                }
+                lg:justify-center xl:justify-start
+              `}
+              title="Tools"
+            >
+              <Wrench className={`h-5 w-5 ${pathname.startsWith('/tools') ? 'text-white' : 'text-gray-600'}`} />
+              <span className="font-medium lg:hidden xl:inline flex-1 text-left">Tools</span>
+              {toolsExpanded ? (
+                <ChevronDown className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/tools') ? 'text-white' : 'text-gray-600'}`} />
+              ) : (
+                <ChevronRight className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/tools') ? 'text-white' : 'text-gray-600'}`} />
+              )}
+
+              {/* Tooltip for tablet view */}
+              <span className="hidden lg:block xl:hidden absolute left-full ml-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                Tools
+              </span>
+            </button>
+
+            {/* Tool Group Sub-items */}
+            {toolsExpanded && (
+              <div className="lg:hidden xl:block space-y-1 pl-4">
+                {toolGroupItems.map((group) => {
+                  const groupPath = `/tools/${group.id}`;
+                  const isActive = pathname === groupPath;
+                  return (
+                    <Link
+                      key={group.id}
+                      href={groupPath}
+                      onClick={closeSidebar}
+                      className={`
+                        flex items-center gap-3 p-3 min-h-[40px] rounded-lg
+                        transition-all duration-200
+                        focus:outline-none focus:ring-2 focus:ring-purple-300
+                        touch-manipulation
+                        ${isActive
+                          ? 'bg-white/60 shadow-sm'
+                          : 'hover:bg-white/40'
+                        }
+                      `}
+                      title={group.label}
+                    >
+                      <group.icon className={`h-4 w-4 ${group.color}`} />
+                      <span className={`text-sm font-medium ${isActive ? 'text-gray-900' : 'text-gray-700'}`}>
+                        {group.label}
+                      </span>
+                    </Link>
+                  );
+                })}
+
+                {/* View All Tools Link */}
+                <Link
+                  href="/tools"
+                  onClick={closeSidebar}
+                  className={`
+                    flex items-center gap-3 p-3 min-h-[40px] rounded-lg
+                    transition-all duration-200
+                    focus:outline-none focus:ring-2 focus:ring-purple-300
+                    touch-manipulation
+                    ${pathname === '/tools'
+                      ? 'bg-white/60 shadow-sm'
+                      : 'hover:bg-white/40'
+                    }
+                  `}
+                >
+                  <Wrench className="h-4 w-4 text-gray-600" />
+                  <span className={`text-sm font-medium ${pathname === '/tools' ? 'text-gray-900' : 'text-gray-700'}`}>
+                    All Tools
+                  </span>
+                </Link>
+              </div>
+            )}
+          </div>
+
           {/* Debug Link - Visible for all users */}
           <Link
             href="/admin"
@@ -194,7 +288,7 @@ export default function Sidebar() {
           >
             <Shield className={`h-5 w-5 ${pathname === '/admin' ? 'text-white' : 'text-blue-600'}`} />
             <span className="font-medium lg:hidden xl:inline">Debug</span>
-            
+
             {/* Tooltip for tablet view */}
             <span className="hidden lg:block xl:hidden absolute left-full ml-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
               Debug
