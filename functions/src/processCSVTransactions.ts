@@ -5,10 +5,10 @@
 
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
-import { callOpenAI } from './utils/openaiClient';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import * as yaml from 'js-yaml';
+import * as yaml from 'yaml';
+import { CONFIG } from './config';
 
 const ENHANCE_TRANSACTIONS_PROMPT_PATH = path.join(
   __dirname,
@@ -42,7 +42,7 @@ interface ProcessCSVRequest {
 async function loadPrompt(): Promise<any> {
   try {
     const promptContent = await fs.readFile(ENHANCE_TRANSACTIONS_PROMPT_PATH, 'utf8');
-    return yaml.load(promptContent);
+    return yaml.parse(promptContent);
   } catch (error) {
     console.error('Failed to load prompt:', error);
     throw new Error('Failed to load AI prompt configuration');
@@ -97,24 +97,48 @@ async function enhanceTransactions(
 
   const systemMessage = prompt.messages.find((m: any) => m.role === 'system')?.content;
 
-  // Call OpenAI
-  const response = await callOpenAI({
-    model: prompt.model || 'openai/gpt-4o',
-    messages: [
-      { role: 'system', content: systemMessage },
-      { role: 'user', content: userMessage },
-    ],
-    temperature: prompt.modelParameters?.temperature || 0.3,
-    max_tokens: prompt.modelParameters?.max_tokens || 2000,
+  // Extract model name (remove provider prefix if present)
+  const modelName = prompt.model?.includes('/')
+    ? prompt.model.split('/')[1]
+    : prompt.model || 'gpt-4o';
+
+  // Call OpenAI API directly
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${CONFIG.OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: modelName,
+      messages: [
+        { role: 'system', content: systemMessage },
+        { role: 'user', content: userMessage },
+      ],
+      temperature: prompt.modelParameters?.temperature || 0.3,
+      max_tokens: prompt.modelParameters?.max_tokens || 2000,
+    }),
   });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`);
+  }
+
+  const data = await response.json();
+  const aiResponse = data.choices[0]?.message?.content;
+
+  if (!aiResponse) {
+    throw new Error('No response from OpenAI');
+  }
 
   // Parse the response
   try {
-    const parsed = JSON.parse(response);
+    const parsed = JSON.parse(aiResponse);
     return parsed;
   } catch (error) {
     console.error('Failed to parse AI response:', error);
-    console.error('Response was:', response);
+    console.error('Response was:', aiResponse);
     throw new Error('Failed to parse AI-enhanced transaction data');
   }
 }
@@ -185,7 +209,7 @@ export const processCSVTransactions = functions.https.onCall(
     }
 
     const userId = context.auth.uid;
-    const { fileUrl, fileName, storagePath } = data;
+    const { fileName, storagePath } = data;
 
     try {
       console.log(`Processing CSV for user ${userId}: ${fileName}`);

@@ -3,12 +3,19 @@
  * Tests visual feedback when creating follow-up tasks in Focus Mode
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { render, waitFor } from '@testing-library/react';
 
 describe('Follow-up Task Feedback (#37)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Mock console methods to suppress expected error messages in tests
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe('State Management', () => {
