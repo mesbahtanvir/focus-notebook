@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, LayoutDashboard, Settings, User, Wrench, Menu, X, Shield, ChevronDown, ChevronRight, Target, Heart, Wallet, Plane } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { toolGroups } from '@/shared/toolSpecs';
+import { toolGroups } from '../../shared/toolSpecs';
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
