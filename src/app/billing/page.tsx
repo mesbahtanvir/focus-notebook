@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { httpsCallable } from 'firebase/functions';
 import { functionsClient } from '@/lib/firebaseClient';
@@ -42,11 +42,12 @@ export default function BillingPage() {
   const [showReactivateDialog, setShowReactivateDialog] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
 
-  // Redirect if not logged in
-  if (!user && !subscriptionLoading) {
-    router.push('/profile');
-    return null;
-  }
+  // Redirect if not logged in (client-side only)
+  useEffect(() => {
+    if (!user && !subscriptionLoading) {
+      router.push('/profile');
+    }
+  }, [user, subscriptionLoading, router]);
 
   const handleManageBilling = async () => {
     try {
