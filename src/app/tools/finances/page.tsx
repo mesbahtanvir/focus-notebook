@@ -7,12 +7,41 @@ import { useInvestments } from "@/store/useInvestments";
 import { useSubscriptions } from "@/store/useSubscriptions";
 import { ToolHeader, ToolPageLayout, ToolGroupNav } from "@/components/tools";
 import { toolThemes } from "@/components/tools/themes";
-import { DollarSign, TrendingUp, Repeat, LineChart, ArrowRight, AlertCircle } from "lucide-react";
+import {
+  DollarSign,
+  TrendingUp,
+  Repeat,
+  LineChart,
+  ArrowRight,
+  ShoppingCart,
+  Utensils,
+  Car,
+  Film,
+  ShoppingBag,
+  Zap,
+  Heart,
+  Plane,
+  Package
+} from "lucide-react";
 import Link from "next/link";
+
+// Category icons and colors mapping
+const categoryConfig: Record<string, { icon: any; color: string; label: string }> = {
+  groceries: { icon: ShoppingCart, color: "text-green-600", label: "Groceries" },
+  dining: { icon: Utensils, color: "text-orange-600", label: "Dining" },
+  transportation: { icon: Car, color: "text-blue-600", label: "Transportation" },
+  entertainment: { icon: Film, color: "text-purple-600", label: "Entertainment" },
+  shopping: { icon: ShoppingBag, color: "text-pink-600", label: "Shopping" },
+  utilities: { icon: Zap, color: "text-yellow-600", label: "Utilities" },
+  health: { icon: Heart, color: "text-red-600", label: "Health" },
+  travel: { icon: Plane, color: "text-cyan-600", label: "Travel" },
+  subscriptions: { icon: Repeat, color: "text-indigo-600", label: "Subscriptions" },
+  other: { icon: Package, color: "text-gray-600", label: "Other" },
+};
 
 export default function FinancesPage() {
   const { user } = useAuth();
-  const { transactions, subscribe: subscribeSpending, getTotalSpentByMonth } = useSpending();
+  const { transactions, subscribe: subscribeSpending, getTotalSpentByMonth, getCategoryBreakdown } = useSpending();
   const { portfolios, subscribe: subscribeInvestments } = useInvestments();
   const { subscriptions, subscribe: subscribeSubscriptions } = useSubscriptions();
 
@@ -30,6 +59,16 @@ export default function FinancesPage() {
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     const monthlySpending = getTotalSpentByMonth(currentMonth);
 
+    // Calculate start and end dates for current month
+    const startOfMonth = `${currentMonth}-01`;
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endOfMonth = `${currentMonth}-${String(lastDay).padStart(2, "0")}`;
+
+    // Get category breakdown for current month
+    const categoryBreakdown = getCategoryBreakdown(startOfMonth, endOfMonth);
+
     // Total portfolio value
     const totalPortfolio = portfolios.reduce((sum, p) => {
       const portfolioValue = p.investments.reduce((invSum, inv) => {
@@ -46,29 +85,14 @@ export default function FinancesPage() {
       return sum;
     }, 0);
 
-    // Upcoming renewals (next 7 days)
-    const upcomingRenewals = activeSubscriptions.filter((s) => {
-      if (!s.nextBillingDate) return false;
-      const nextDate = new Date(s.nextBillingDate);
-      const weekFromNow = new Date();
-      weekFromNow.setDate(weekFromNow.getDate() + 7);
-      return nextDate <= weekFromNow && nextDate >= now;
-    });
-
     return {
       monthlySpending,
       totalPortfolio,
       activeSubscriptions: activeSubscriptions.length,
       monthlySubscriptionCost,
-      upcomingRenewals: upcomingRenewals.length,
+      categoryBreakdown,
     };
-  }, [portfolios, subscriptions, getTotalSpentByMonth]);
-
-  const recentTransactions = useMemo(() => {
-    return [...transactions]
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 5);
-  }, [transactions]);
+  }, [portfolios, subscriptions, getTotalSpentByMonth, getCategoryBreakdown]);
 
   const theme = toolThemes.purple;
 
@@ -133,18 +157,18 @@ export default function FinancesPage() {
         </Link>
       </div>
 
-      {/* Spending Overview */}
+      {/* Spending by Category */}
       <div className="card p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-green-500" />
-            Spending Overview
+            Spending by Category
           </h3>
           <Link href="/tools/spending" className="text-sm text-purple-600 dark:text-purple-400 hover:underline">
             View Details →
           </Link>
         </div>
-        {recentTransactions.length === 0 ? (
+        {stats.monthlySpending === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500 dark:text-gray-400 mb-4">No transactions yet</p>
             <Link
@@ -156,78 +180,45 @@ export default function FinancesPage() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-2">
-            <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              Recent Transactions
-            </div>
-            {recentTransactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm truncate">{transaction.description}</div>
-                  <div className="text-xs text-gray-500">
-                    {new Date(transaction.date).toLocaleDateString()}
+          <div className="space-y-3">
+            {Object.entries(stats.categoryBreakdown)
+              .sort(([, a], [, b]) => b - a)
+              .filter(([, amount]) => amount > 0)
+              .map(([category, amount]) => {
+                const config = categoryConfig[category] || categoryConfig.other;
+                const Icon = config.icon;
+                const percentage = (amount / stats.monthlySpending) * 100;
+
+                return (
+                  <div
+                    key={category}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  >
+                    <div className={`${config.color}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm">{config.label}</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                          <div
+                            className={`h-full ${config.color.replace('text-', 'bg-')}`}
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 w-12 text-right">
+                          {percentage.toFixed(0)}%
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
+                      ${amount.toFixed(0)}
+                    </div>
                   </div>
-                </div>
-                <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                  ${Math.abs(transaction.amount).toFixed(2)}
-                </div>
-              </div>
-            ))}
+                );
+              })}
           </div>
         )}
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-6 mb-6">
-        {/* Investments */}
-        <Link href="/tools/investments" className="card p-6 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-blue-500" />
-              Investments
-            </h3>
-            <ArrowRight className="h-5 w-5 text-gray-400" />
-          </div>
-          {portfolios.length === 0 ? (
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              No portfolios yet. Start tracking your investments!
-            </p>
-          ) : (
-            <div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                ${(stats.totalPortfolio / 1000).toFixed(1)}K
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Across {portfolios.length} portfolio{portfolios.length !== 1 ? "s" : ""}
-              </p>
-            </div>
-          )}
-        </Link>
-
-        {/* Subscriptions */}
-        <Link href="/tools/subscriptions" className="card p-6 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <Repeat className="h-5 w-5 text-purple-500" />
-              Subscriptions
-            </h3>
-            <ArrowRight className="h-5 w-5 text-gray-400" />
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            {stats.activeSubscriptions}
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-            Active subscriptions • ${stats.monthlySubscriptionCost.toFixed(0)}/mo
-          </p>
-          {stats.upcomingRenewals > 0 && (
-            <div className="flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400">
-              <AlertCircle className="h-4 w-4" />
-              {stats.upcomingRenewals} renewal{stats.upcomingRenewals !== 1 ? "s" : ""} in next 7 days
-            </div>
-          )}
-        </Link>
       </div>
 
       {/* Asset Horizon */}

@@ -1,0 +1,203 @@
+name: Enhance Transaction Data
+description: Processes and enhances raw transaction data from CSV files by cleaning merchant names, assigning categories, and extracting structured information
+
+model: openai/gpt-4o
+
+modelParameters:
+  temperature: 0.3
+  max_tokens: 2000
+
+messages:
+  - role: system
+    content: |
+      You are a transaction data processor for a personal finance tracking app.
+
+      Your role is to take raw transaction data from bank statements and enhance it by:
+      1. Cleaning and standardizing merchant names
+      2. Assigning appropriate categories
+      3. Extracting structured information
+      4. Detecting potential duplicates
+      5. Identifying subscription/recurring payments
+
+      Available Categories:
+      - groceries: Food and grocery stores (Whole Foods, Trader Joe's, Safeway, etc.)
+      - dining: Restaurants, cafes, fast food, food delivery
+      - transportation: Gas, parking, public transit, rideshare, car maintenance
+      - entertainment: Movies, concerts, streaming services, games, events
+      - shopping: Clothing, electronics, home goods, online marketplaces
+      - utilities: Electric, gas, water, internet, phone bills
+      - health: Medical, dental, pharmacy, fitness, health insurance
+      - travel: Hotels, flights, travel booking, vacation expenses
+      - subscriptions: Recurring services (Netflix, Spotify, software subscriptions)
+      - other: Anything that doesn't fit the above categories
+
+      Rules for Merchant Name Cleaning:
+      - Remove transaction IDs, reference numbers, and codes
+      - Remove unnecessary prefixes like "SQ *", "TST*", "PAYPAL *"
+      - Standardize common merchant names (e.g., "AMZ*" → "Amazon", "AMZN" → "Amazon")
+      - Remove location codes and store numbers unless they're part of the brand
+      - Capitalize properly (e.g., "WHOLE FOODS" → "Whole Foods")
+      - Keep it concise but recognizable
+
+      Rules for Categorization:
+      - Be consistent: Same merchant should always get the same category
+      - Use context clues from merchant name and description
+      - Default to 'other' if genuinely unclear
+      - Consider common patterns (e.g., anything ending in "SUBSCR" is likely a subscription)
+
+      Subscription Detection:
+      - Flag transactions that appear to be recurring/subscription-based
+      - Look for keywords: subscription, monthly, recurring, membership
+      - Common subscription merchants: Netflix, Spotify, Adobe, Microsoft 365, etc.
+
+  - role: user
+    content: |
+      Process the following transaction data and return enhanced results.
+
+      Raw Transactions:
+      {{transactions}}
+
+      For each transaction, provide:
+      1. Cleaned merchant name
+      2. Appropriate category from the list above
+      3. Whether it appears to be a subscription (true/false)
+      4. Brief note if there's anything unusual or important
+
+      Respond ONLY with valid JSON (no markdown, no code blocks):
+      {
+        "transactions": [
+          {
+            "originalDescription": "SQ *BLUE BOTTLE COFFE Oakland CA",
+            "merchantName": "Blue Bottle Coffee",
+            "category": "dining",
+            "isSubscription": false,
+            "notes": "Coffee shop purchase"
+          },
+          {
+            "originalDescription": "NETFLIX.COM Netflix Los Gatos CA",
+            "merchantName": "Netflix",
+            "category": "subscriptions",
+            "isSubscription": true,
+            "notes": "Monthly streaming subscription"
+          }
+        ],
+        "summary": {
+          "totalProcessed": 2,
+          "categoriesUsed": ["dining", "subscriptions"],
+          "subscriptionsDetected": 1
+        }
+      }
+
+      Important:
+      - Maintain the same order as the input
+      - If a description is unclear, make your best guess and note it
+      - Be consistent with merchant name cleaning across similar merchants
+      - Flag anything that looks suspicious or unusual
+
+testData:
+  - transactions: |
+      [
+        {
+          "date": "2025-11-01",
+          "description": "SQ *BLUE BOTTLE COFFE Oakland CA",
+          "amount": 8.75
+        },
+        {
+          "date": "2025-11-01",
+          "description": "NETFLIX.COM Netflix Los Gatos CA",
+          "amount": 15.99
+        },
+        {
+          "date": "2025-11-02",
+          "description": "AMZN Mktp US*2X4Y8Z Seattle WA",
+          "amount": 45.32
+        },
+        {
+          "date": "2025-11-03",
+          "description": "SHELL OIL 57452935 San Francisco CA",
+          "amount": 52.00
+        },
+        {
+          "date": "2025-11-04",
+          "description": "WHOLE FOODS MKT #10250 San Francisco CA",
+          "amount": 87.64
+        }
+      ]
+    expected: |
+      {
+        "transactions": [
+          {
+            "originalDescription": "SQ *BLUE BOTTLE COFFE Oakland CA",
+            "merchantName": "Blue Bottle Coffee",
+            "category": "dining",
+            "isSubscription": false,
+            "notes": "Coffee shop purchase"
+          },
+          {
+            "originalDescription": "NETFLIX.COM Netflix Los Gatos CA",
+            "merchantName": "Netflix",
+            "category": "subscriptions",
+            "isSubscription": true,
+            "notes": "Monthly streaming subscription"
+          },
+          {
+            "originalDescription": "AMZN Mktp US*2X4Y8Z Seattle WA",
+            "merchantName": "Amazon",
+            "category": "shopping",
+            "isSubscription": false,
+            "notes": "Online marketplace purchase"
+          },
+          {
+            "originalDescription": "SHELL OIL 57452935 San Francisco CA",
+            "merchantName": "Shell",
+            "category": "transportation",
+            "isSubscription": false,
+            "notes": "Gas station purchase"
+          },
+          {
+            "originalDescription": "WHOLE FOODS MKT #10250 San Francisco CA",
+            "merchantName": "Whole Foods",
+            "category": "groceries",
+            "isSubscription": false,
+            "notes": "Grocery store purchase"
+          }
+        ],
+        "summary": {
+          "totalProcessed": 5,
+          "categoriesUsed": ["dining", "subscriptions", "shopping", "transportation", "groceries"],
+          "subscriptionsDetected": 1
+        }
+      }
+
+evaluators:
+  - name: Response is valid JSON
+    string:
+      matchesRegex: '^\{.*\}$'
+
+  - name: Contains transactions array
+    string:
+      contains: '"transactions":'
+
+  - name: Contains summary
+    string:
+      contains: '"summary":'
+
+  - name: Has merchantName field
+    string:
+      contains: '"merchantName":'
+
+  - name: Has category field
+    string:
+      contains: '"category":'
+
+  - name: Has isSubscription field
+    string:
+      contains: '"isSubscription":'
+
+  - name: Categories are from allowed list
+    string:
+      matchesRegex: '"category":\s*"(groceries|dining|transportation|entertainment|shopping|utilities|health|travel|subscriptions|other)"'
+
+  - name: isSubscription is boolean
+    string:
+      matchesRegex: '"isSubscription":\s*(true|false)'

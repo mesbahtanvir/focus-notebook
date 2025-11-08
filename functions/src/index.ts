@@ -36,6 +36,7 @@ import {
   triggerSync,
 } from './plaidFunctions';
 import { plaidWebhook } from './plaidWebhooks';
+import { processCSVTransactions } from './processCSVTransactions';
 
 // Export cloud functions
 export {
@@ -63,4 +64,6 @@ export {
   markRelinking,
   triggerSync,
   plaidWebhook,
+  // CSV Processing
+  processCSVTransactions,
 };

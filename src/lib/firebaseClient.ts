@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth, GoogleAuthProvider, EmailAuthProvider } from "firebase/auth";
 import { getFunctions } from "firebase/functions";
+import { getStorage } from "firebase/storage";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache } from "firebase/firestore";
 import { initializeAppCheck, ReCaptchaV3Provider, getToken as getAppCheckToken, AppCheck } from "firebase/app-check";
 import { isSafariBrowser, getBrowserName } from "@/lib/utils/browserDetection";
@@ -48,6 +49,8 @@ try {
 }
 
 export const db = firestoreDb;
+
+export const storage = getStorage(app);
 
 export const functionsClient = getFunctions(app);
 
