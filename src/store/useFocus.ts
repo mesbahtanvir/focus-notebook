@@ -5,6 +5,7 @@ import { db, auth } from '@/lib/firebaseClient'
 import { createAt, updateAt, deleteAt } from '@/lib/data/gateway'
 import { subscribeCol } from '@/lib/data/subscribe'
 import { TimeTrackingService } from '@/services/TimeTrackingService'
+import { EndSessionStep } from '@/components/EndSessionProgress'
 
 export interface FocusTask {
   task: Task
@@ -42,6 +43,14 @@ export interface FocusSession {
   version?: number
 }
 
+export type EndSessionProgressCallback = (
+  step: EndSessionStep,
+  status: 'pending' | 'in-progress' | 'completed' | 'error',
+  current?: number,
+  total?: number,
+  error?: string
+) => void
+
 type State = {
   currentSession: FocusSession | null
   completedSession: FocusSession | null
@@ -52,7 +61,11 @@ type State = {
   unsubscribe: (() => void) | null
   subscribe: (userId: string) => void
   startSession: (tasks: Task[], duration: number) => Promise<void>
-  endSession: (feedback?: string, rating?: number) => Promise<void>
+  endSession: (
+    feedback?: string,
+    rating?: number,
+    onProgress?: EndSessionProgressCallback
+  ) => Promise<{ success: boolean; failedTasks?: string[] }>
   saveSessionFeedback: (feedback: string, rating: number) => Promise<void>
   deleteSession: (sessionId: string) => Promise<void>
   clearCompletedSession: () => void
@@ -257,9 +270,9 @@ export const useFocus = create<State>((set, get) => ({
     }
   },
   
-  endSession: async (feedback, rating) => {
+  endSession: async (feedback, rating, onProgress) => {
     const current = get().currentSession
-    if (!current) return
+    if (!current) return { success: false }
 
     const userId = auth.currentUser?.uid
     if (!userId) throw new Error('Not authenticated')
@@ -274,7 +287,15 @@ export const useFocus = create<State>((set, get) => ({
       rating,
     }
 
-    // Update Firestore - mark as completed
+    const failedTasks: string[] = []
+
+    // Step 1: Save notes (already auto-saved, mark as complete)
+    onProgress?.('saving-notes', 'in-progress')
+    await new Promise(resolve => setTimeout(resolve, 300)) // Brief delay for UX
+    onProgress?.('saving-notes', 'completed')
+
+    // Step 2: Update Firestore - mark session as completed
+    onProgress?.('updating-session', 'in-progress')
     try {
       await updateAt(`users/${userId}/focusSessions/${completedSession.id}`, {
         endTime: completedSession.endTime,
@@ -285,30 +306,62 @@ export const useFocus = create<State>((set, get) => ({
         feedback,
         rating,
       })
+      onProgress?.('updating-session', 'completed')
     } catch (error) {
       console.error('Failed to save focus session:', error)
+      onProgress?.('updating-session', 'error', undefined, undefined, 'Failed to save session')
+      throw error // This is critical, don't continue
     }
 
-    // Update actual time for each task worked on
-    try {
-      for (const focusTask of completedSession.tasks) {
-        if (focusTask.timeSpent > 0) {
-          await TimeTrackingService.updateTaskActualTime(
-            focusTask.task.id,
-            focusTask.timeSpent
-          )
-        }
+    // Step 3: Update actual time for each task worked on
+    onProgress?.('updating-tasks', 'in-progress')
+    const tasksToUpdate = completedSession.tasks.filter(t => t.timeSpent > 0)
+
+    for (let i = 0; i < tasksToUpdate.length; i++) {
+      const focusTask = tasksToUpdate[i]
+      onProgress?.('updating-tasks', 'in-progress', i + 1, tasksToUpdate.length)
+
+      try {
+        await TimeTrackingService.updateTaskActualTime(
+          focusTask.task.id,
+          focusTask.timeSpent
+        )
+      } catch (error) {
+        console.error(`Failed to update task time for ${focusTask.task.title}:`, error)
+        failedTasks.push(focusTask.task.title)
       }
-    } catch (error) {
-      console.error('Failed to update task actual times:', error)
-      // Don't throw - session is already completed
     }
 
-    // Set completed session for display
+    if (failedTasks.length > 0) {
+      onProgress?.(
+        'updating-tasks',
+        'error',
+        tasksToUpdate.length,
+        tasksToUpdate.length,
+        `Failed to update ${failedTasks.length} task(s)`
+      )
+    } else {
+      onProgress?.('updating-tasks', 'completed', tasksToUpdate.length, tasksToUpdate.length)
+    }
+
+    // Step 4: Calculate stats and prepare summary
+    onProgress?.('calculating-stats', 'in-progress')
+    await new Promise(resolve => setTimeout(resolve, 300)) // Brief processing time
+    onProgress?.('calculating-stats', 'completed')
+
+    // Step 5: Set completed session for display
     set({
       currentSession: null,
       completedSession,
     })
+
+    // Step 6: Complete
+    onProgress?.('complete', 'completed')
+
+    return {
+      success: failedTasks.length === 0,
+      failedTasks: failedTasks.length > 0 ? failedTasks : undefined,
+    }
   },
   
   saveSessionFeedback: async (feedback, rating) => {

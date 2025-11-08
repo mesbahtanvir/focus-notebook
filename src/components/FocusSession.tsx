@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useFocus } from '@/store/useFocus';
+import { useFocus, FocusSession as FocusSessionType } from '@/store/useFocus';
 import { useTasks } from '@/store/useTasks';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -20,6 +20,7 @@ import { ConfirmModal } from "./ConfirmModal";
 import { formatTimeGentle } from '@/lib/utils/date';
 import { TimeTrackingService } from '@/services/TimeTrackingService';
 import * as EntityService from '@/services/entityService';
+import { UnifiedEndSession } from './UnifiedEndSession';
 
 export function FocusSession() {
   const router = useRouter();
@@ -42,6 +43,8 @@ export function FocusSession() {
   const [localNotes, setLocalNotes] = useState("");
   const [autoSaving, setAutoSaving] = useState(false);
   const [isEndingSession, setIsEndingSession] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [completedSessionData, setCompletedSessionData] = useState<FocusSessionType | null>(null);
   const [followUpCreated, setFollowUpCreated] = useState(false);
   const [createdTaskTitle, setCreatedTaskTitle] = useState("");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -122,18 +125,16 @@ export function FocusSession() {
   // Auto-end session when all tasks completed
   useEffect(() => {
     if (currentSession && currentSession.tasks.filter(t => t.completed).length === currentSession.tasks.length && currentSession.tasks.length > 0) {
-      setIsEndingSession(true);
       const timer = setTimeout(async () => {
-        await endSession();
-        // Redirect to summary page
-        router.push(`/tools/focus/summary?sessionId=${currentSession.id}`);
+        await performEndSession();
       }, 1500);
       return () => {
         clearTimeout(timer);
         setIsEndingSession(false);
       };
     }
-  }, [currentSession, endSession, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSession?.tasks]);
 
   // Load notes for current task (only when task index changes, not on every session update)
   useEffect(() => {
@@ -257,41 +258,77 @@ export function FocusSession() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentSession, switchToTask]);
 
+  const performEndSession = async () => {
+    if (!currentSession) return;
+
+    // Store the current session data before it's cleared
+    const sessionToComplete = { ...currentSession };
+
+    setIsEndingSession(true);
+
+    // Wait for any pending auto-save to complete
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+      if (hasPendingChangesRef.current) {
+        try {
+          await updateTaskNotes(pendingNotesTaskIndexRef.current, localNotes);
+          hasPendingChangesRef.current = false;
+        } catch (error) {
+          console.error('Failed to save final notes:', error);
+        }
+      }
+    }
+
+    try {
+      // End session and save all data in background
+      await endSession();
+
+      // Show summary directly
+      setCompletedSessionData({
+        ...sessionToComplete,
+        endTime: new Date().toISOString(),
+        isActive: false,
+      });
+      setIsEndingSession(false);
+      setShowSummary(true);
+    } catch (error) {
+      console.error('Failed to end session:', error);
+      // On critical error, reset state
+      setIsEndingSession(false);
+    }
+  };
+
+  const handleStartNewSession = () => {
+    setShowSummary(false);
+    setCompletedSessionData(null);
+    router.push('/tools/focus');
+  };
+
+  const handleViewHistory = () => {
+    setShowSummary(false);
+    setCompletedSessionData(null);
+    router.push('/tools/focus?tab=history');
+  };
+
+  // Show unified end session flow (loading → summary) in a single seamless view
+  if (isEndingSession || (showSummary && completedSessionData)) {
+    return (
+      <UnifiedEndSession
+        isLoading={isEndingSession && !showSummary}
+        showSummary={showSummary}
+        completedSession={completedSessionData}
+        onStartNewSession={handleStartNewSession}
+        onViewHistory={handleViewHistory}
+      />
+    );
+  }
+
   if (!currentSession) return null;
 
   const currentTaskIndex = currentSession.currentTaskIndex;
   const currentFocusTask = currentSession.tasks[currentTaskIndex];
   const totalTasks = currentSession.tasks.length;
   const completedTasks = currentSession.tasks.filter(t => t.completed).length;
-
-  // Show completion screen while ending session
-  if (isEndingSession) {
-    return (
-      <div className="fixed inset-0 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950 dark:to-indigo-950 z-50 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center space-y-6"
-        >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="w-20 h-20 mx-auto"
-          >
-            <div className="w-full h-full rounded-full border-4 border-purple-200 dark:border-purple-800 border-t-purple-600 dark:border-t-purple-400" />
-          </motion.div>
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 bg-clip-text text-transparent">
-              Session Complete!
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Preparing your summary...
-            </p>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
 
   const handlePause = async () => {
     if (currentSession.isActive) {
@@ -327,12 +364,7 @@ export function FocusSession() {
 
   const confirmEndSession = async () => {
     setShowExitConfirm(false);
-    // Notes are auto-saved, just end session
-    if (currentSession) {
-      await endSession();
-      // Redirect to summary page
-      router.push(`/tools/focus/summary?sessionId=${currentSession.id}`);
-    }
+    await performEndSession();
   };
 
   const handleCreateFollowUp = async () => {
