@@ -4,7 +4,6 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart, DollarSign } from "lucide-react";
-import { toolGroups, isToolInGroup, getToolGroupForTool } from "../../../shared/toolSpecs";
 
 const TOOLS = [
   {
@@ -202,18 +201,8 @@ export default function ToolsPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredTools = useMemo(() => {
-    // Filter out non-primary tools from groups
-    let visible = TOOLS.filter(tool => {
-      const toolGroup = getToolGroupForTool(tool.key);
-      if (toolGroup) {
-        // Only show if this is the primary tool of the group
-        return tool.key === toolGroup.primaryToolId;
-      }
-      return true;
-    });
-
-    // Apply search filter
-    return visible.filter(tool =>
+    // Apply search filter to all tools
+    return TOOLS.filter(tool =>
       tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tool.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -271,16 +260,11 @@ export default function ToolsPage() {
           <div className="grid gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredTools.map((tool) => {
               const Icon = tool.icon;
-              const toolGroup = getToolGroupForTool(tool.key);
-              const isGroupPrimary = toolGroup && tool.key === toolGroup.primaryToolId;
-              const displayTitle = isGroupPrimary ? toolGroup.title : tool.title;
-              const displayDescription = isGroupPrimary ? toolGroup.tagline : tool.description;
-              const href = isGroupPrimary ? toolGroup.hubPath : `/tools/${tool.key}`;
 
               return (
                 <Link
                   key={tool.key}
-                  href={href}
+                  href={`/tools/${tool.key}`}
                   className={`group relative overflow-hidden rounded-xl bg-gradient-to-br ${tool.bgGradient} border-2 ${tool.borderColor} p-4 transition-all duration-300 hover:shadow-xl hover:scale-105`}
                 >
                   {/* Icon Circle */}
@@ -296,10 +280,10 @@ export default function ToolsPage() {
                 {/* Content */}
                 <div className="space-y-1">
                   <h3 className="text-lg font-bold text-gray-800 group-hover:text-gray-900">
-                    {displayTitle}
+                    {tool.title}
                   </h3>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    {displayDescription}
+                    {tool.description}
                   </p>
                 </div>
 
