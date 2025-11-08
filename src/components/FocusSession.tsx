@@ -20,7 +20,6 @@ import { ConfirmModal } from "./ConfirmModal";
 import { formatTimeGentle } from '@/lib/utils/date';
 import { TimeTrackingService } from '@/services/TimeTrackingService';
 import * as EntityService from '@/services/entityService';
-import { EndSessionStep, EndSessionStepStatus } from './EndSessionProgress';
 import { UnifiedEndSession } from './UnifiedEndSession';
 
 export function FocusSession() {
@@ -48,8 +47,6 @@ export function FocusSession() {
   const [completedSessionData, setCompletedSessionData] = useState<FocusSessionType | null>(null);
   const [followUpCreated, setFollowUpCreated] = useState(false);
   const [createdTaskTitle, setCreatedTaskTitle] = useState("");
-  const [progressSteps, setProgressSteps] = useState<EndSessionStepStatus[]>([]);
-  const [currentProgressStep, setCurrentProgressStep] = useState<EndSessionStep>('saving-notes');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
@@ -261,35 +258,6 @@ export function FocusSession() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentSession, switchToTask]);
 
-  // Initialize progress steps
-  const initializeProgressSteps = (): EndSessionStepStatus[] => {
-    return [
-      { step: 'saving-notes', status: 'pending' },
-      { step: 'updating-session', status: 'pending' },
-      { step: 'updating-tasks', status: 'pending' },
-      { step: 'calculating-stats', status: 'pending' },
-      { step: 'complete', status: 'pending' },
-    ];
-  };
-
-  const handleProgressUpdate = (
-    step: EndSessionStep,
-    status: 'pending' | 'in-progress' | 'completed' | 'error',
-    current?: number,
-    total?: number,
-    error?: string
-  ) => {
-    setCurrentProgressStep(step);
-    setProgressSteps(prev => {
-      const newSteps = [...prev];
-      const stepIndex = newSteps.findIndex(s => s.step === step);
-      if (stepIndex !== -1) {
-        newSteps[stepIndex] = { step, status, current, total, error };
-      }
-      return newSteps;
-    });
-  };
-
   const performEndSession = async () => {
     if (!currentSession) return;
 
@@ -297,7 +265,6 @@ export function FocusSession() {
     const sessionToComplete = { ...currentSession };
 
     setIsEndingSession(true);
-    setProgressSteps(initializeProgressSteps());
 
     // Wait for any pending auto-save to complete
     if (autoSaveTimeoutRef.current) {
@@ -313,12 +280,10 @@ export function FocusSession() {
     }
 
     try {
-      const result = await endSession(undefined, undefined, handleProgressUpdate);
+      // End session and save all data in background
+      await endSession();
 
-      // Brief delay to show completion state before transitioning
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Show summary instead of redirecting
+      // Show summary directly
       setCompletedSessionData({
         ...sessionToComplete,
         endTime: new Date().toISOString(),
@@ -330,25 +295,6 @@ export function FocusSession() {
       console.error('Failed to end session:', error);
       // On critical error, reset state
       setIsEndingSession(false);
-    }
-  };
-
-  const handleRetryEndSession = async () => {
-    // Retry only the failed parts
-    await performEndSession();
-  };
-
-  const handleContinueAnyway = () => {
-    // Continue to summary even with errors
-    if (currentSession) {
-      const sessionToComplete = { ...currentSession };
-      setCompletedSessionData({
-        ...sessionToComplete,
-        endTime: new Date().toISOString(),
-        isActive: false,
-      });
-      setIsEndingSession(false);
-      setShowSummary(true);
     }
   };
 
@@ -364,15 +310,11 @@ export function FocusSession() {
     router.push('/tools/focus?tab=history');
   };
 
-  // Show unified end session flow (progress → summary) in a single seamless view
+  // Show unified end session flow (loading → summary) in a single seamless view
   if (isEndingSession || (showSummary && completedSessionData)) {
     return (
       <UnifiedEndSession
-        showProgress={isEndingSession && !showSummary}
-        currentStep={currentProgressStep}
-        stepStatuses={progressSteps}
-        onRetry={handleRetryEndSession}
-        onContinueAnyway={handleContinueAnyway}
+        isLoading={isEndingSession && !showSummary}
         showSummary={showSummary}
         completedSession={completedSessionData}
         onStartNewSession={handleStartNewSession}
