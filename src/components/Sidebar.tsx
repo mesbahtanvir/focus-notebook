@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, LayoutDashboard, Settings, User, Wrench, Menu, X, Shield, ChevronDown, ChevronRight, Target, Heart, Wallet, Plane } from 'lucide-react';
+import { Home, LayoutDashboard, Settings, User, Wrench, Menu, X, Shield, ChevronDown, ChevronRight, Target, Heart, Wallet, Plane, Grid3x3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toolGroups } from '../../shared/toolSpecs';
 
@@ -259,7 +259,7 @@ export default function Sidebar() {
                     }
                   `}
                 >
-                  <Wrench className="h-4 w-4 text-gray-600" />
+                  <Grid3x3 className="h-4 w-4 text-gray-600" />
                   <span className={`text-sm font-medium ${pathname === '/tools' ? 'text-gray-900' : 'text-gray-700'}`}>
                     All Tools
                   </span>
