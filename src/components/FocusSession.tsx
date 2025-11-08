@@ -20,6 +20,7 @@ import { ConfirmModal } from "./ConfirmModal";
 import { formatTimeGentle } from '@/lib/utils/date';
 import { TimeTrackingService } from '@/services/TimeTrackingService';
 import * as EntityService from '@/services/entityService';
+import { EndSessionProgress, EndSessionStep, EndSessionStepStatus } from './EndSessionProgress';
 
 export function FocusSession() {
   const router = useRouter();
@@ -44,6 +45,8 @@ export function FocusSession() {
   const [isEndingSession, setIsEndingSession] = useState(false);
   const [followUpCreated, setFollowUpCreated] = useState(false);
   const [createdTaskTitle, setCreatedTaskTitle] = useState("");
+  const [progressSteps, setProgressSteps] = useState<EndSessionStepStatus[]>([]);
+  const [currentProgressStep, setCurrentProgressStep] = useState<EndSessionStep>('saving-notes');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
@@ -122,18 +125,16 @@ export function FocusSession() {
   // Auto-end session when all tasks completed
   useEffect(() => {
     if (currentSession && currentSession.tasks.filter(t => t.completed).length === currentSession.tasks.length && currentSession.tasks.length > 0) {
-      setIsEndingSession(true);
       const timer = setTimeout(async () => {
-        await endSession();
-        // Redirect to summary page
-        router.push(`/tools/focus/summary?sessionId=${currentSession.id}`);
+        await performEndSession();
       }, 1500);
       return () => {
         clearTimeout(timer);
         setIsEndingSession(false);
       };
     }
-  }, [currentSession, endSession, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSession?.tasks]);
 
   // Load notes for current task (only when task index changes, not on every session update)
   useEffect(() => {
@@ -257,6 +258,81 @@ export function FocusSession() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentSession, switchToTask]);
 
+  // Initialize progress steps
+  const initializeProgressSteps = (): EndSessionStepStatus[] => {
+    return [
+      { step: 'saving-notes', status: 'pending' },
+      { step: 'updating-session', status: 'pending' },
+      { step: 'updating-tasks', status: 'pending' },
+      { step: 'calculating-stats', status: 'pending' },
+      { step: 'complete', status: 'pending' },
+    ];
+  };
+
+  const handleProgressUpdate = (
+    step: EndSessionStep,
+    status: 'pending' | 'in-progress' | 'completed' | 'error',
+    current?: number,
+    total?: number,
+    error?: string
+  ) => {
+    setCurrentProgressStep(step);
+    setProgressSteps(prev => {
+      const newSteps = [...prev];
+      const stepIndex = newSteps.findIndex(s => s.step === step);
+      if (stepIndex !== -1) {
+        newSteps[stepIndex] = { step, status, current, total, error };
+      }
+      return newSteps;
+    });
+  };
+
+  const performEndSession = async () => {
+    if (!currentSession) return;
+
+    setIsEndingSession(true);
+    setProgressSteps(initializeProgressSteps());
+
+    // Wait for any pending auto-save to complete
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+      if (hasPendingChangesRef.current) {
+        try {
+          await updateTaskNotes(pendingNotesTaskIndexRef.current, localNotes);
+          hasPendingChangesRef.current = false;
+        } catch (error) {
+          console.error('Failed to save final notes:', error);
+        }
+      }
+    }
+
+    try {
+      const result = await endSession(undefined, undefined, handleProgressUpdate);
+
+      // Brief delay to show completion state
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Redirect to summary
+      router.push(`/tools/focus/summary?sessionId=${currentSession.id}`);
+    } catch (error) {
+      console.error('Failed to end session:', error);
+      // On critical error, reset state
+      setIsEndingSession(false);
+    }
+  };
+
+  const handleRetryEndSession = async () => {
+    // Retry only the failed parts
+    await performEndSession();
+  };
+
+  const handleContinueAnyway = () => {
+    // Continue to summary even with errors
+    if (currentSession) {
+      router.push(`/tools/focus/summary?sessionId=${currentSession.id}`);
+    }
+  };
+
   if (!currentSession) return null;
 
   const currentTaskIndex = currentSession.currentTaskIndex;
@@ -264,32 +340,15 @@ export function FocusSession() {
   const totalTasks = currentSession.tasks.length;
   const completedTasks = currentSession.tasks.filter(t => t.completed).length;
 
-  // Show completion screen while ending session
+  // Show progress screen while ending session
   if (isEndingSession) {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950 dark:to-indigo-950 z-50 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center space-y-6"
-        >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="w-20 h-20 mx-auto"
-          >
-            <div className="w-full h-full rounded-full border-4 border-purple-200 dark:border-purple-800 border-t-purple-600 dark:border-t-purple-400" />
-          </motion.div>
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 bg-clip-text text-transparent">
-              Session Complete!
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Preparing your summary...
-            </p>
-          </div>
-        </motion.div>
-      </div>
+      <EndSessionProgress
+        currentStep={currentProgressStep}
+        stepStatuses={progressSteps}
+        onRetry={handleRetryEndSession}
+        onContinue={handleContinueAnyway}
+      />
     );
   }
 
@@ -327,12 +386,7 @@ export function FocusSession() {
 
   const confirmEndSession = async () => {
     setShowExitConfirm(false);
-    // Notes are auto-saved, just end session
-    if (currentSession) {
-      await endSession();
-      // Redirect to summary page
-      router.push(`/tools/focus/summary?sessionId=${currentSession.id}`);
-    }
+    await performEndSession();
   };
 
   const handleCreateFollowUp = async () => {
