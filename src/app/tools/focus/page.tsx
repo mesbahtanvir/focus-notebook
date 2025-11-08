@@ -6,7 +6,7 @@ import { useTasks } from "@/store/useTasks";
 import type { Task } from "@/store/useTasks";
 import { useFocus, selectBalancedTasks } from "@/store/useFocus";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Zap, Clock, Target, History, Star, TrendingUp, Brain, Rocket, Heart, Briefcase, X, Trash2, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Play, Zap, Clock, Target, History, Star, TrendingUp, Brain, Rocket, Heart, Briefcase, X, Trash2, ArrowLeft, Eye, EyeOff, Search } from "lucide-react";
 import { FocusSession } from "@/components/FocusSession";
 import { FocusStatistics } from "@/components/FocusStatistics";
 import { FocusSessionDetailModal } from "@/components/FocusSessionDetailModal";
@@ -44,6 +44,7 @@ function FocusPageContent() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [focusMode, setFocusMode] = useState<'regular' | 'philosopher' | 'beast' | 'selfcare'>('regular');
   const [showAlreadySelected, setShowAlreadySelected] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Filter active tasks - ALL active tasks are candidates for focus selection
   const today = getDateString(new Date());
@@ -147,7 +148,14 @@ function FocusPageContent() {
   const sortedVisibleTasks = useMemo(() => {
     const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
 
-    return [...visibleActiveTasks].sort((a, b) => {
+    // Filter by search query
+    const searchFiltered = searchQuery.trim()
+      ? visibleActiveTasks.filter(task =>
+          task.title.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : visibleActiveTasks;
+
+    return [...searchFiltered].sort((a, b) => {
       const aSelected = selectedTaskIds.includes(a.id);
       const bSelected = selectedTaskIds.includes(b.id);
 
@@ -163,7 +171,7 @@ function FocusPageContent() {
       // Finally alphabetically by title
       return a.title.localeCompare(b.title);
     });
-  }, [visibleActiveTasks, selectedTaskIds]);
+  }, [visibleActiveTasks, selectedTaskIds, searchQuery]);
 
   const handleStartSession = async () => {
     if (selectedTasks.length === 0) return;
@@ -447,6 +455,28 @@ function FocusPageContent() {
                   </div>
                 </div>
 
+                {/* Search Input */}
+                <div className="mb-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search tasks..."
+                      className="w-full pl-9 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900/50 outline-none transition-colors"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                      >
+                        <X className="h-3 w-3 text-gray-500" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 {activeTasks.length === 0 ? (
                   <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
                     <div className="text-4xl mb-2">📝</div>
@@ -455,13 +485,25 @@ function FocusPageContent() {
                     </p>
                     <p className="text-xs text-gray-500">Create some tasks first!</p>
                   </div>
-                ) : visibleActiveTasks.length === 0 ? (
+                ) : sortedVisibleTasks.length === 0 ? (
                   <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
-                    <div className="text-4xl mb-2">✅</div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      All tasks for today are completed or not needed!
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Use the toggle above to show other tasks.</p>
+                    {searchQuery ? (
+                      <>
+                        <div className="text-4xl mb-2">🔍</div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          No tasks found for &quot;{searchQuery}&quot;
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Try a different search term</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-4xl mb-2">✅</div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          All tasks for today are completed or not needed!
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Use the toggle above to show other tasks.</p>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="max-h-[500px] lg:max-h-[600px] overflow-y-auto space-y-1.5 pr-1">
