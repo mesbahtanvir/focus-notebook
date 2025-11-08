@@ -238,7 +238,7 @@ export const toolSpecs: Record<string, ToolSpec> = {
   },
   focus: {
     id: 'focus',
-    title: 'Focus Sessions',
+    title: 'Focus',
     tagline: 'Plan deep work sprints with timers and rituals.',
     category: 'Execution',
     benefits: [

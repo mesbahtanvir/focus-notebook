@@ -205,25 +205,6 @@ export default function Page() {
         </motion.div>
       )}
 
-      <section className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-4 border-purple-200 dark:border-purple-800 shadow-xl overflow-hidden">
-        <div className="p-6">
-          <form onSubmit={handleSubmit(onSubmit)} className="flex gap-2">
-            <input
-              aria-label="Thought"
-              className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 outline-none transition-all bg-white dark:bg-gray-800 text-sm"
-              placeholder="What's on your mind?"
-              {...register('text', { required: true })}
-            />
-            <button 
-              className="px-6 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold shadow-lg transition-all transform hover:scale-105 active:scale-95" 
-              type="submit"
-            >
-              Add
-            </button>
-          </form>
-        </div>
-      </section>
-
       {liveTripPreview.length > 0 && (
         <section className="rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-950/20 dark:to-emerald-950/20 border-4 border-teal-200 dark:border-teal-800 shadow-xl overflow-hidden">
           <div className="px-6 py-4 bg-gradient-to-r from-teal-100 via-emerald-100 to-cyan-100 dark:from-teal-900 dark:via-emerald-900 dark:to-cyan-900 border-b-4 border-teal-200 dark:border-teal-800 flex items-center justify-between">
@@ -334,6 +315,23 @@ export default function Page() {
           )}
         </div>
         <div className="p-6">
+          {/* Add Thought Form */}
+          <form onSubmit={handleSubmit(onSubmit)} className="flex gap-2 mb-4">
+            <input
+              aria-label="Thought"
+              className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none transition-all bg-white dark:bg-gray-800 text-sm"
+              placeholder="What's on your mind?"
+              {...register('text', { required: true })}
+            />
+            <button
+              className="px-6 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold shadow-lg transition-all transform hover:scale-105 active:scale-95"
+              type="submit"
+            >
+              Add
+            </button>
+          </form>
+
+          {/* Thoughts List */}
           <ul className="space-y-2">
             {recentThoughts.length === 0 && (
               <li className="text-center py-8 text-sm text-gray-400">
