@@ -430,24 +430,29 @@ function FocusPageContent() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setShowAlreadySelected(!showAlreadySelected)}
-                      className="text-xs text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 font-medium flex items-center gap-1"
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-all border ${
+                        showAlreadySelected
+                          ? 'bg-purple-600 text-white border-purple-600 hover:bg-purple-700'
+                          : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-500'
+                      }`}
                       title={showAlreadySelected
-                        ? "Hide tasks not needed today"
-                        : `Show ${hiddenTaskCount} tasks not needed today (future due dates, already completed)`
+                        ? "Show only today's tasks"
+                        : `Show all tasks (${hiddenTaskCount} hidden)`
                       }
                     >
-                      {showAlreadySelected ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                      {showAlreadySelected ? 'Hide' : 'Show'} later tasks
+                      {showAlreadySelected ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      <span className="hidden sm:inline">{showAlreadySelected ? 'All Tasks' : "Today's Tasks"}</span>
+                      <span className="sm:hidden">{showAlreadySelected ? 'All' : 'Today'}</span>
                       {!showAlreadySelected && hiddenTaskCount > 0 && (
-                        <span className="hidden md:inline ml-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-full text-xs font-semibold">
-                          {hiddenTaskCount}
+                        <span className="ml-1 px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-full text-xs font-semibold">
+                          +{hiddenTaskCount}
                         </span>
                       )}
                     </button>
                     {selectedTasks.length > 0 && (
                       <button
                         onClick={() => setSelectedTaskIds([])}
-                        className="text-xs text-purple-600 hover:text-purple-700 dark:text-purple-400 font-medium"
+                        className="text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400 font-medium px-2"
                       >
                         Clear all
                       </button>
@@ -501,7 +506,9 @@ function FocusPageContent() {
                         <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                           All tasks for today are completed or not needed!
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Use the toggle above to show other tasks.</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Click <span className="font-semibold text-purple-600 dark:text-purple-400">&quot;All Tasks&quot;</span> button above to show all tasks.
+                        </p>
                       </>
                     )}
                   </div>
