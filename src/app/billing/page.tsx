@@ -55,8 +55,12 @@ export default function BillingPage() {
         'createStripePortalSession'
       );
 
-      const result = await createPortal({ origin: window.location.origin });
-      window.location.href = result.data.url;
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const result = await createPortal({ origin });
+
+      if (typeof window !== 'undefined') {
+        window.location.href = result.data.url;
+      }
     } catch (error) {
       console.error('Failed to open billing portal:', error);
       toast({
