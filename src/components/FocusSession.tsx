@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useFocus } from '@/store/useFocus';
+import { useFocus, FocusSession as FocusSessionType } from '@/store/useFocus';
 import { useTasks } from '@/store/useTasks';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -21,6 +21,7 @@ import { formatTimeGentle } from '@/lib/utils/date';
 import { TimeTrackingService } from '@/services/TimeTrackingService';
 import * as EntityService from '@/services/entityService';
 import { EndSessionProgress, EndSessionStep, EndSessionStepStatus } from './EndSessionProgress';
+import { SessionSummary } from './SessionSummary';
 
 export function FocusSession() {
   const router = useRouter();
@@ -43,6 +44,8 @@ export function FocusSession() {
   const [localNotes, setLocalNotes] = useState("");
   const [autoSaving, setAutoSaving] = useState(false);
   const [isEndingSession, setIsEndingSession] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [completedSessionData, setCompletedSessionData] = useState<FocusSessionType | null>(null);
   const [followUpCreated, setFollowUpCreated] = useState(false);
   const [createdTaskTitle, setCreatedTaskTitle] = useState("");
   const [progressSteps, setProgressSteps] = useState<EndSessionStepStatus[]>([]);
@@ -290,6 +293,9 @@ export function FocusSession() {
   const performEndSession = async () => {
     if (!currentSession) return;
 
+    // Store the current session data before it's cleared
+    const sessionToComplete = { ...currentSession };
+
     setIsEndingSession(true);
     setProgressSteps(initializeProgressSteps());
 
@@ -312,8 +318,14 @@ export function FocusSession() {
       // Brief delay to show completion state
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Redirect to summary
-      router.push(`/tools/focus/summary?sessionId=${currentSession.id}`);
+      // Show summary instead of redirecting
+      setCompletedSessionData({
+        ...sessionToComplete,
+        endTime: new Date().toISOString(),
+        isActive: false,
+      });
+      setIsEndingSession(false);
+      setShowSummary(true);
     } catch (error) {
       console.error('Failed to end session:', error);
       // On critical error, reset state
@@ -329,16 +341,39 @@ export function FocusSession() {
   const handleContinueAnyway = () => {
     // Continue to summary even with errors
     if (currentSession) {
-      router.push(`/tools/focus/summary?sessionId=${currentSession.id}`);
+      const sessionToComplete = { ...currentSession };
+      setCompletedSessionData({
+        ...sessionToComplete,
+        endTime: new Date().toISOString(),
+        isActive: false,
+      });
+      setIsEndingSession(false);
+      setShowSummary(true);
     }
   };
 
-  if (!currentSession) return null;
+  const handleStartNewSession = () => {
+    setShowSummary(false);
+    setCompletedSessionData(null);
+    router.push('/tools/focus');
+  };
 
-  const currentTaskIndex = currentSession.currentTaskIndex;
-  const currentFocusTask = currentSession.tasks[currentTaskIndex];
-  const totalTasks = currentSession.tasks.length;
-  const completedTasks = currentSession.tasks.filter(t => t.completed).length;
+  const handleViewHistory = () => {
+    setShowSummary(false);
+    setCompletedSessionData(null);
+    router.push('/tools/focus?tab=history');
+  };
+
+  // Show summary if session is completed
+  if (showSummary && completedSessionData) {
+    return (
+      <SessionSummary
+        session={completedSessionData}
+        onStartNewSession={handleStartNewSession}
+        onViewHistory={handleViewHistory}
+      />
+    );
+  }
 
   // Show progress screen while ending session
   if (isEndingSession) {
@@ -351,6 +386,13 @@ export function FocusSession() {
       />
     );
   }
+
+  if (!currentSession) return null;
+
+  const currentTaskIndex = currentSession.currentTaskIndex;
+  const currentFocusTask = currentSession.tasks[currentTaskIndex];
+  const totalTasks = currentSession.tasks.length;
+  const completedTasks = currentSession.tasks.filter(t => t.completed).length;
 
   const handlePause = async () => {
     if (currentSession.isActive) {
