@@ -20,8 +20,8 @@ import { ConfirmModal } from "./ConfirmModal";
 import { formatTimeGentle } from '@/lib/utils/date';
 import { TimeTrackingService } from '@/services/TimeTrackingService';
 import * as EntityService from '@/services/entityService';
-import { EndSessionProgress, EndSessionStep, EndSessionStepStatus } from './EndSessionProgress';
-import { SessionSummary } from './SessionSummary';
+import { EndSessionStep, EndSessionStepStatus } from './EndSessionProgress';
+import { UnifiedEndSession } from './UnifiedEndSession';
 
 export function FocusSession() {
   const router = useRouter();
@@ -364,39 +364,20 @@ export function FocusSession() {
     router.push('/tools/focus?tab=history');
   };
 
-  // Show end session flow (progress → summary) in a single seamless view
+  // Show unified end session flow (progress → summary) in a single seamless view
   if (isEndingSession || (showSummary && completedSessionData)) {
     return (
-      <AnimatePresence mode="wait">
-        {!showSummary ? (
-          <motion.div
-            key="progress"
-            initial={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.4, ease: "easeInOut" }}
-          >
-            <EndSessionProgress
-              currentStep={currentProgressStep}
-              stepStatuses={progressSteps}
-              onRetry={handleRetryEndSession}
-              onContinue={handleContinueAnyway}
-            />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="summary"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-          >
-            <SessionSummary
-              session={completedSessionData!}
-              onStartNewSession={handleStartNewSession}
-              onViewHistory={handleViewHistory}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <UnifiedEndSession
+        showProgress={isEndingSession && !showSummary}
+        currentStep={currentProgressStep}
+        stepStatuses={progressSteps}
+        onRetry={handleRetryEndSession}
+        onContinueAnyway={handleContinueAnyway}
+        showSummary={showSummary}
+        completedSession={completedSessionData}
+        onStartNewSession={handleStartNewSession}
+        onViewHistory={handleViewHistory}
+      />
     );
   }
 
