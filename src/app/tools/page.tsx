@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart } from "lucide-react";
+import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart, DollarSign } from "lucide-react";
 import { toolGroups, isToolInGroup, getToolGroupForTool } from "../../../shared/toolSpecs";
 
 const TOOLS = [
@@ -182,6 +182,17 @@ const TOOLS = [
     bgGradient: "from-sky-50 to-blue-50",
     borderColor: "border-sky-300",
     priority: "low" as const,
+  },
+  {
+    key: "spending-unified",
+    title: "Spending Tracker",
+    description: "Track expenses and analyze spending patterns with AI-powered insights.",
+    icon: DollarSign,
+    emoji: "💸",
+    gradient: "from-green-400 to-emerald-500",
+    bgGradient: "from-green-50 to-emerald-50",
+    borderColor: "border-green-300",
+    priority: "high" as const,
   },
 ];
 
