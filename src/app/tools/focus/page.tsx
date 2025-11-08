@@ -310,22 +310,6 @@ function FocusPageContent() {
               {/* Left Column: Setup (1/3 width on desktop) */}
               <div className="lg:col-span-1 space-y-4">
 
-                {/* Session Summary Card */}
-                {selectedTasks.length > 0 && (
-                  <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 rounded-lg border-2 border-purple-200 dark:border-purple-800 p-4 shadow-md">
-                    <div className="text-center space-y-2">
-                      <div className="text-sm font-medium text-purple-600 dark:text-purple-400">Ready to Start</div>
-                      <div className="text-3xl font-bold text-purple-700 dark:text-purple-300">{selectedTasks.length}</div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">
-                        {selectedTasks.length === 1 ? 'task selected' : 'tasks selected'}
-                      </div>
-                      <div className="pt-2 border-t border-purple-200 dark:border-purple-800">
-                        <div className="text-xs text-gray-600 dark:text-gray-400">{duration} min session</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Duration Selection */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
                   <label className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
