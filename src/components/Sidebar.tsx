@@ -43,8 +43,8 @@ export default function Sidebar() {
   ];
 
   const toolGroupItems = [
-    { id: 'work-goals', icon: Target, label: 'Productivity', color: 'text-purple-600' },
-    { id: 'inner-life', icon: Heart, label: 'Soulful', color: 'text-pink-600' },
+    { id: 'productivity', icon: Target, label: 'Productivity', color: 'text-purple-600' },
+    { id: 'soulful', icon: Heart, label: 'Soulful', color: 'text-pink-600' },
     { id: 'finances', icon: Wallet, label: 'Finances', color: 'text-green-600' },
     { id: 'trips', icon: Plane, label: 'Trips', color: 'text-blue-600' },
   ];
