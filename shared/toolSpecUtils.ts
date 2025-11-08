@@ -31,23 +31,17 @@ type ThoughtLike = {
 };
 
 interface ResolveOptions {
-  enrolledToolIds?: string[];
   fallbackToThoughts?: boolean;
 }
 
 /**
  * Resolve the most relevant tool specs for a given thought.
- * Only returns tools the user has enrolled in (when provided).
  */
 export function resolveToolSpecIds(
   thought: ThoughtLike | null | undefined,
   options: ResolveOptions = {}
 ): ToolSpecId[] {
-  const { enrolledToolIds, fallbackToThoughts = true } = options;
-  const allowedIds = Array.isArray(enrolledToolIds)
-    ? enrolledToolIds.filter((id): id is ToolSpecId => isToolSpecId(id))
-    : null;
-  const allowedSet = allowedIds ? new Set<ToolSpecId>(allowedIds) : null;
+  const { fallbackToThoughts = true } = options;
 
   const candidates = new Set<ToolSpecId>();
   if (thought?.sourceToolId && isToolSpecId(thought.sourceToolId)) {
@@ -87,23 +81,13 @@ export function resolveToolSpecIds(
     }
   }
 
-  // Always consider baseline thought processing unless filtered out later
+  // Always consider baseline thought processing
   candidates.add('thoughts');
 
-  const filtered = Array.from(candidates).filter((id) => {
-    if (!allowedSet) return true;
-    return allowedSet.has(id);
-  });
+  const filtered = Array.from(candidates);
 
   if (filtered.length > 0) {
     return filtered;
-  }
-
-  if (allowedSet) {
-    if (allowedSet.has('thoughts') && fallbackToThoughts) {
-      return ['thoughts'];
-    }
-    return [];
   }
 
   return fallbackToThoughts ? ['thoughts'] : [];

@@ -3,9 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart } from "lucide-react";
-import { useToolEnrollment } from "@/store/useToolEnrollment";
-import { CORE_TOOL_IDS, toolGroups, isToolInGroup, getToolGroupForTool } from "../../../shared/toolSpecs";
+import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart, DollarSign } from "lucide-react";
 
 const TOOLS = [
   {
@@ -184,45 +182,35 @@ const TOOLS = [
     borderColor: "border-sky-300",
     priority: "low" as const,
   },
+  {
+    key: "spending-unified",
+    title: "Spending Tracker",
+    description: "Track expenses and analyze spending patterns with AI-powered insights.",
+    icon: DollarSign,
+    emoji: "💸",
+    gradient: "from-green-400 to-emerald-500",
+    bgGradient: "from-green-50 to-emerald-50",
+    borderColor: "border-green-300",
+    priority: "high" as const,
+  },
 ];
 
 type ToolPriority = 'high' | 'medium' | 'low';
 
 export default function ToolsPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const { enrolledToolIds, isLoading } = useToolEnrollment((state) => ({
-    enrolledToolIds: state.enrolledToolIds,
-    isLoading: state.isLoading,
-  }));
-
-  const enrolledSet = useMemo(() => new Set(enrolledToolIds), [enrolledToolIds]);
 
   const filteredTools = useMemo(() => {
-    // First, filter to only show enrolled tools
-    let visible = TOOLS.filter(tool => enrolledSet.has(tool.key));
-
-    // Then, filter out non-primary tools from groups
-    visible = visible.filter(tool => {
-      const toolGroup = getToolGroupForTool(tool.key);
-      if (toolGroup) {
-        // Only show if this is the primary tool of the group
-        return tool.key === toolGroup.primaryToolId;
-      }
-      return true;
-    });
-
-    // Finally, apply search filter
-    return visible.filter(tool =>
+    // Apply search filter to all tools
+    return TOOLS.filter(tool =>
       tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tool.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [searchQuery, enrolledSet]);
+  }, [searchQuery]);
 
-  const enrolledCount = enrolledSet.size;
-  const totalDisplayTools = CORE_TOOL_IDS.length;
   const headingLabel = searchQuery
     ? `Search Results (${filteredTools.length})`
-    : `Your Tools (${Math.min(enrolledCount, totalDisplayTools)}/${totalDisplayTools})`;
+    : `All Tools (${filteredTools.length})`;
 
   return (
     <div className="container mx-auto py-4 md:py-6 lg:py-8 space-y-4 md:space-y-6 px-4 md:px-6 lg:px-8">
@@ -262,37 +250,21 @@ export default function ToolsPage() {
         <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
           {headingLabel}
         </h2>
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-t-purple-600"></div>
-          </div>
-        ) : filteredTools.length === 0 ? (
+        {filteredTools.length === 0 ? (
           <div className="text-center py-16 border-2 border-dashed border-purple-200 dark:border-purple-800 rounded-2xl bg-white dark:bg-gray-900">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              You haven&apos;t enrolled in any tools yet. Visit the marketplace to activate the workflows you need.
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              No tools found matching your search.
             </p>
-            <Link
-              href="/tools/marketplace"
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
-            >
-              Browse Tool Marketplace
-              <ArrowRight className="h-4 w-4" />
-            </Link>
           </div>
         ) : (
           <div className="grid gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredTools.map((tool) => {
               const Icon = tool.icon;
-              const toolGroup = getToolGroupForTool(tool.key);
-              const isGroupPrimary = toolGroup && tool.key === toolGroup.primaryToolId;
-              const displayTitle = isGroupPrimary ? toolGroup.title : tool.title;
-              const displayDescription = isGroupPrimary ? toolGroup.tagline : tool.description;
-              const href = isGroupPrimary ? toolGroup.hubPath : `/tools/${tool.key}`;
 
               return (
                 <Link
                   key={tool.key}
-                  href={href}
+                  href={`/tools/${tool.key}`}
                   className={`group relative overflow-hidden rounded-xl bg-gradient-to-br ${tool.bgGradient} border-2 ${tool.borderColor} p-4 transition-all duration-300 hover:shadow-xl hover:scale-105`}
                 >
                   {/* Icon Circle */}
@@ -308,10 +280,10 @@ export default function ToolsPage() {
                 {/* Content */}
                 <div className="space-y-1">
                   <h3 className="text-lg font-bold text-gray-800 group-hover:text-gray-900">
-                    {displayTitle}
+                    {tool.title}
                   </h3>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    {displayDescription}
+                    {tool.description}
                   </p>
                 </div>
 
@@ -349,17 +321,9 @@ export default function ToolsPage() {
                 Keep your AI transparent
               </h3>
               <p className="text-gray-600">
-                Review the exact prompts and responses sent to the LLM, and enroll in new tools whenever you need more capabilities.
+                Review the exact prompts and responses sent to the LLM for complete transparency.
               </p>
             </div>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Link
-              href="/tools/marketplace"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-purple-300 text-purple-700 text-sm font-semibold hover:bg-purple-50 transition-all"
-            >
-              Manage Tools
-            </Link>
           </div>
         </CardContent>
       </Card>

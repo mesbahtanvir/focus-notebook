@@ -809,15 +809,15 @@ export const CORE_TOOL_IDS: ToolSpecId[] = [
 export const ALL_TOOL_IDS = Object.keys(toolSpecs) as ToolSpecId[];
 
 export const toolGroups: Record<string, ToolGroup> = {
-  'work-goals': {
-    id: 'work-goals',
+  'productivity': {
+    id: 'productivity',
     title: 'Productivity',
     tagline: 'Manage tasks, projects, and goals with focused execution.',
     description: 'A comprehensive productivity suite for managing your daily tasks, multi-step projects, long-term goals, and focused work sessions. Includes brainstorming for ideation, notes for knowledge capture, and errands for life admin.',
     category: 'Productivity',
     toolIds: ['tasks', 'projects', 'goals', 'focus', 'brainstorming', 'notes', 'errands'],
     primaryToolId: 'tasks',
-    hubPath: '/tools/work-goals',
+    hubPath: '/tools/productivity',
     benefits: [
       'Organize tasks, projects, and goals in one place',
       'Run focused work sessions with timers',
@@ -825,15 +825,15 @@ export const toolGroups: Record<string, ToolGroup> = {
       'Manage both work and life errands',
     ],
   },
-  'inner-life': {
-    id: 'inner-life',
+  'soulful': {
+    id: 'soulful',
     title: 'Soulful',
     tagline: 'Process thoughts, track emotions, and nurture connections.',
     description: 'A complete wellbeing suite for processing everyday thoughts, tracking mood patterns, managing relationships, working through negative thinking with CBT, and exploring deeper philosophical questions.',
     category: 'Wellbeing',
     toolIds: ['thoughts', 'moodtracker', 'relationships', 'cbt', 'deepreflect'],
     primaryToolId: 'thoughts',
-    hubPath: '/tools/inner-life',
+    hubPath: '/tools/soulful',
     benefits: [
       'Process and enhance daily thoughts',
       'Track mood patterns over time',

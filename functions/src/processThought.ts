@@ -181,32 +181,19 @@ async function enqueueProcessingJob(
     return { jobId: existing.docs[0].id, status: 'alreadyQueued' };
   }
 
-  const enrolledToolIds = await getUserEnrolledToolIds(userId);
-
-  if (enrolledToolIds.length === 0) {
-    throw new functions.https.HttpsError('failed-precondition', 'No tool enrollments found for user.');
-  }
-
   const specIds =
     options.toolSpecIds && options.toolSpecIds.length > 0
-      ? options.toolSpecIds.filter((id) => enrolledToolIds.includes(id))
-      : resolveToolSpecIds(thought, { enrolledToolIds });
+      ? options.toolSpecIds
+      : resolveToolSpecIds(thought);
 
   if (!specIds || specIds.length === 0) {
     throw new functions.https.HttpsError(
       'failed-precondition',
-      'No enrolled tools available for this thought.'
+      'No tools available for this thought.'
     );
   }
 
-  const normalizedSpecIds = Array.from(new Set(specIds)).filter((id) => enrolledToolIds.includes(id));
-
-  if (normalizedSpecIds.length === 0) {
-    throw new functions.https.HttpsError(
-      'failed-precondition',
-      'No enrolled tools available after filtering.'
-    );
-  }
+  const normalizedSpecIds = Array.from(new Set(specIds));
 
   const jobRef = queueRef.doc();
   const jobData: Partial<ThoughtProcessingJob> = {
@@ -228,24 +215,6 @@ async function enqueueProcessingJob(
   ]);
 
   return { jobId: jobRef.id, status: 'queued' };
-}
-
-async function getUserEnrolledToolIds(userId: string): Promise<string[]> {
-  const snapshot = await admin
-    .firestore()
-    .collection(`users/${userId}/toolEnrollments`)
-    .get();
-
-  if (snapshot.empty) {
-    return [];
-  }
-
-  return snapshot.docs
-    .filter((doc) => {
-      const status = (doc.data().status || 'active') as string;
-      return status !== 'inactive';
-    })
-    .map((doc) => doc.id);
 }
 
 async function logLLMInteraction(params: {

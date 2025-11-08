@@ -6,7 +6,6 @@ import { useTasks } from '@/store/useTasks';
 import { useThoughts } from '@/store/useThoughts';
 import { useMoods } from '@/store/useMoods';
 import { useFocus } from '@/store/useFocus';
-import { useToolEnrollment } from '@/store/useToolEnrollment';
 import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
 
 /**
@@ -19,7 +18,6 @@ export function FirestoreSubscriber() {
   const subscribeThoughts = useThoughts((state) => state.subscribe);
   const subscribeMoods = useMoods((state) => state.subscribe);
   const subscribeFocus = useFocus((state) => state.subscribe);
-  const subscribeToolEnrollment = useToolEnrollment((state) => state.subscribe);
   const loadActiveSession = useFocus((state) => state.loadActiveSession);
   const subscribeSubscriptionStatus = useSubscriptionStatus((state) => state.subscribe);
   const clearSubscriptionStatus = useSubscriptionStatus((state) => state.clear);
@@ -32,7 +30,6 @@ export function FirestoreSubscriber() {
         subscribeThoughts(userId);
         subscribeMoods(userId);
         subscribeFocus(userId);
-        subscribeToolEnrollment(userId);
         subscribeSubscriptionStatus(userId);
 
         // Load any active focus session
@@ -56,7 +53,6 @@ export function FirestoreSubscriber() {
     subscribeThoughts,
     subscribeMoods,
     subscribeFocus,
-    subscribeToolEnrollment,
     subscribeSubscriptionStatus,
     loadActiveSession,
     clearSubscriptionStatus,

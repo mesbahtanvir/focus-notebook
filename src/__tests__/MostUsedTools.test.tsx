@@ -2,11 +2,6 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MostUsedTools } from '@/components/MostUsedTools';
 
-const mockSubscribeEnrollment = jest.fn();
-const mockEnroll = jest.fn();
-const mockUnenroll = jest.fn();
-let mockEnrollmentState: any;
-
 // Define the ToolUsageRecord type for tests
 type ToolUsageRecord = {
   toolName: string;
@@ -35,13 +30,6 @@ jest.mock('@/store/useToolUsage', () => ({
   }),
 }));
 
-jest.mock('@/store/useToolEnrollment', () => ({
-  useToolEnrollment: jest.fn((selector) => {
-    const state = mockEnrollmentState;
-    return selector ? selector(state) : state;
-  }),
-}));
-
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(() => ({
     user: { uid: 'test-user-123' },
@@ -55,42 +43,17 @@ describe('MostUsedTools Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetMostUsedTools.mockReturnValue([]);
-    mockEnrollmentState = {
-      enrollments: [],
-      enrolledToolIds: [
-        'tasks',
-        'thoughts',
-        'goals',
-        'projects',
-        'focus',
-        'brainstorming',
-        'notes',
-        'relationships',
-        'moodtracker',
-        'cbt',
-        'deepreflect',
-        'errands',
-        'packing-list',
-        'trips',
-        'investments',
-      ],
-      isLoading: false,
-      enroll: mockEnroll,
-      unenroll: mockUnenroll,
-      subscribe: mockSubscribeEnrollment,
-      isToolEnrolled: jest.fn(() => true),
-    };
   });
 
-  it('renders marketplace call-to-action when no tools have been used', () => {
+  it('renders call-to-action when no tools have been used', () => {
     mockGetMostUsedTools.mockReturnValue([]);
 
     render(<MostUsedTools />);
 
     expect(screen.getByText('Your Tools')).toBeInTheDocument();
-    expect(screen.getByText('Enroll in tools from the marketplace to start tracking your most-used workflows.')).toBeInTheDocument();
-    const cta = screen.getByRole('link', { name: /Browse Tool Marketplace/i });
-    expect(cta).toHaveAttribute('href', '/tools/marketplace');
+    expect(screen.getByText('Start using tools to see your most-used workflows.')).toBeInTheDocument();
+    const cta = screen.getByRole('link', { name: /Browse All Tools/i });
+    expect(cta).toHaveAttribute('href', '/tools');
   });
 
   it('renders most used tools when data is available', () => {
