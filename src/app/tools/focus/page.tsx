@@ -6,7 +6,7 @@ import { useTasks } from "@/store/useTasks";
 import type { Task } from "@/store/useTasks";
 import { useFocus, selectBalancedTasks } from "@/store/useFocus";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Zap, Clock, Target, History, Star, TrendingUp, Brain, Rocket, Heart, Briefcase, X, Trash2, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Play, Zap, Clock, Target, History, Star, TrendingUp, Brain, Rocket, Heart, Briefcase, X, Trash2, ArrowLeft, Eye, EyeOff, Search } from "lucide-react";
 import { FocusSession } from "@/components/FocusSession";
 import { FocusStatistics } from "@/components/FocusStatistics";
 import { FocusSessionDetailModal } from "@/components/FocusSessionDetailModal";
@@ -44,6 +44,7 @@ function FocusPageContent() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [focusMode, setFocusMode] = useState<'regular' | 'philosopher' | 'beast' | 'selfcare'>('regular');
   const [showAlreadySelected, setShowAlreadySelected] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Filter active tasks - ALL active tasks are candidates for focus selection
   const today = getDateString(new Date());
@@ -147,7 +148,14 @@ function FocusPageContent() {
   const sortedVisibleTasks = useMemo(() => {
     const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
 
-    return [...visibleActiveTasks].sort((a, b) => {
+    // Filter by search query
+    const searchFiltered = searchQuery.trim()
+      ? visibleActiveTasks.filter(task =>
+          task.title.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : visibleActiveTasks;
+
+    return [...searchFiltered].sort((a, b) => {
       const aSelected = selectedTaskIds.includes(a.id);
       const bSelected = selectedTaskIds.includes(b.id);
 
@@ -163,7 +171,7 @@ function FocusPageContent() {
       // Finally alphabetically by title
       return a.title.localeCompare(b.title);
     });
-  }, [visibleActiveTasks, selectedTaskIds]);
+  }, [visibleActiveTasks, selectedTaskIds, searchQuery]);
 
   const handleStartSession = async () => {
     if (selectedTasks.length === 0) return;
@@ -252,7 +260,7 @@ function FocusPageContent() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl">
+    <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl pb-24">
       <AnimatePresence mode="wait">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -309,22 +317,6 @@ function FocusPageContent() {
               
               {/* Left Column: Setup (1/3 width on desktop) */}
               <div className="lg:col-span-1 space-y-4">
-
-                {/* Session Summary Card */}
-                {selectedTasks.length > 0 && (
-                  <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 rounded-lg border-2 border-purple-200 dark:border-purple-800 p-4 shadow-md">
-                    <div className="text-center space-y-2">
-                      <div className="text-sm font-medium text-purple-600 dark:text-purple-400">Ready to Start</div>
-                      <div className="text-3xl font-bold text-purple-700 dark:text-purple-300">{selectedTasks.length}</div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">
-                        {selectedTasks.length === 1 ? 'task selected' : 'tasks selected'}
-                      </div>
-                      <div className="pt-2 border-t border-purple-200 dark:border-purple-800">
-                        <div className="text-xs text-gray-600 dark:text-gray-400">{duration} min session</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {/* Duration Selection */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
@@ -463,6 +455,28 @@ function FocusPageContent() {
                   </div>
                 </div>
 
+                {/* Search Input */}
+                <div className="mb-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search tasks..."
+                      className="w-full pl-9 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900/50 outline-none transition-colors"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                      >
+                        <X className="h-3 w-3 text-gray-500" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 {activeTasks.length === 0 ? (
                   <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
                     <div className="text-4xl mb-2">📝</div>
@@ -471,13 +485,25 @@ function FocusPageContent() {
                     </p>
                     <p className="text-xs text-gray-500">Create some tasks first!</p>
                   </div>
-                ) : visibleActiveTasks.length === 0 ? (
+                ) : sortedVisibleTasks.length === 0 ? (
                   <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
-                    <div className="text-4xl mb-2">✅</div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      All tasks for today are completed or not needed!
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Use the toggle above to show other tasks.</p>
+                    {searchQuery ? (
+                      <>
+                        <div className="text-4xl mb-2">🔍</div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          No tasks found for &quot;{searchQuery}&quot;
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Try a different search term</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-4xl mb-2">✅</div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          All tasks for today are completed or not needed!
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Use the toggle above to show other tasks.</p>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="max-h-[500px] lg:max-h-[600px] overflow-y-auto space-y-1.5 pr-1">
@@ -766,18 +792,25 @@ function FocusPageContent() {
       )}
 
       {!currentSession && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <FloatingActionButton
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
+          <button
             onClick={handleStartSession}
-            title={selectedTasks.length > 0 ? `Start Focus Session (${selectedTasks.length} tasks)` : "Select tasks to start"}
-            icon={<Play className="h-6 w-6" />}
             disabled={selectedTasks.length === 0}
-          />
-          {selectedTasks.length > 0 && (
-            <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold rounded-full h-7 w-7 flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-900">
-              {selectedTasks.length}
-            </div>
-          )}
+            className={`w-full py-3 px-5 rounded-xl font-semibold text-base shadow-lg transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2 ${
+              selectedTasks.length === 0
+                ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'
+                : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-700 hover:via-indigo-700 hover:to-purple-700 text-white'
+            }`}
+            title={selectedTasks.length > 0 ? `Start Focus Session with ${selectedTasks.length} task${selectedTasks.length === 1 ? '' : 's'}` : "Select tasks to start"}
+          >
+            <Play className="h-5 w-5" />
+            <span>
+              {selectedTasks.length === 0
+                ? 'Select Tasks to Start'
+                : `Start Focus (${selectedTasks.length} task${selectedTasks.length === 1 ? '' : 's'})`
+              }
+            </span>
+          </button>
         </div>
       )}
     </div>
