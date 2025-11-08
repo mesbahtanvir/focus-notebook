@@ -20,10 +20,19 @@ describe('Export/Import Registry System (#39)', () => {
     testSources.push(source.id);
   };
 
+  // Mock console methods to suppress expected error/warning messages in tests
+  beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
   afterEach(() => {
     // Clean up all test sources
     testSources.forEach(id => exportRegistry.unregister(id));
     testSources.length = 0;
+    // Restore console methods
+    jest.restoreAllMocks();
   });
 
   describe('ExportRegistry - Basic Operations', () => {
