@@ -33,10 +33,6 @@ jest.mock('@/store/useMoods', () => ({
   useMoods: jest.fn(),
 }));
 
-jest.mock('@/store/useToolEnrollment', () => ({
-  useToolEnrollment: jest.fn(),
-}));
-
 // Mock toolSpecs
 jest.mock('../../../shared/toolSpecs', () => ({
   getToolSpecById: jest.fn((id: string) => ({

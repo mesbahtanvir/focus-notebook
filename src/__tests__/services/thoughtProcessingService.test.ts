@@ -5,7 +5,6 @@ import { useProjects } from '@/store/useProjects';
 import { useGoals } from '@/store/useGoals';
 import { useMoods } from '@/store/useMoods';
 import { useAnonymousSession } from '@/store/useAnonymousSession';
-import { useToolEnrollment } from '@/store/useToolEnrollment';
 import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
 import { Thought, AISuggestion } from '@/store/useThoughts';
 import { httpsCallable } from 'firebase/functions';
@@ -17,7 +16,6 @@ jest.mock('@/store/useProjects');
 jest.mock('@/store/useGoals');
 jest.mock('@/store/useMoods');
 jest.mock('@/store/useAnonymousSession');
-jest.mock('@/store/useToolEnrollment');
 jest.mock('@/store/useSubscriptionStatus');
 jest.mock('firebase/functions', () => ({
   httpsCallable: jest.fn(),
@@ -66,11 +64,6 @@ describe('ThoughtProcessingService', () => {
 
     (useAnonymousSession as any).getState = jest.fn(() => ({
       allowAi: true,
-    }));
-
-    (useToolEnrollment as any).getState = jest.fn(() => ({
-      enrolledToolIds: ['thoughts', 'cbt'],
-      isToolEnrolled: (id: string) => ['thoughts', 'cbt'].includes(id),
     }));
 
     (useSubscriptionStatus as any).getState = jest.fn(() => ({

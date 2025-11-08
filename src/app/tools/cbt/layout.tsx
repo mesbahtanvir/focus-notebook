@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
-import { ToolAccessGate } from "@/components/tools";
 
-export default function CBTToolLayout({ children }: { children: ReactNode }) {
-  return <ToolAccessGate toolId="cbt">{children}</ToolAccessGate>;
+export default function CbtToolLayout({ children }: { children: ReactNode }) {
+  return <>{children}</>;
 }

@@ -26,7 +26,6 @@ import {
   DollarSign
 } from "lucide-react";
 import Link from "next/link";
-import { useToolEnrollment } from "@/store/useToolEnrollment";
 
 const toolIcons: Record<ToolName, any> = {
   tasks: CheckSquare,
@@ -98,7 +97,6 @@ export function MostUsedTools() {
   const { user } = useAuth();
   const subscribe = useToolUsage((s) => s.subscribe);
   const getMostUsedTools = useToolUsage((s) => s.getMostUsedTools);
-  const enrolledToolIds = useToolEnrollment((s) => s.enrolledToolIds);
 
   useEffect(() => {
     if (user?.uid) {
@@ -106,8 +104,7 @@ export function MostUsedTools() {
     }
   }, [user?.uid, subscribe]);
 
-  const enrolledSet = new Set(enrolledToolIds);
-  const mostUsed = getMostUsedTools(5).filter((tool) => enrolledSet.has(tool.toolName));
+  const mostUsed = getMostUsedTools(5);
 
   if (mostUsed.length === 0) {
     return (
@@ -117,13 +114,13 @@ export function MostUsedTools() {
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Your Tools</h2>
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Enroll in tools from the marketplace to start tracking your most-used workflows.
+          Start using tools to see your most-used workflows.
         </p>
         <Link
-          href="/tools/marketplace"
+          href="/tools"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all"
         >
-          Browse Tool Marketplace
+          Browse All Tools
         </Link>
       </div>
     );

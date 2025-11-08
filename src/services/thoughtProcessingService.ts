@@ -8,7 +8,6 @@ import { useAnonymousSession } from '@/store/useAnonymousSession';
 import { httpsCallable } from 'firebase/functions';
 import { functionsClient } from '@/lib/firebaseClient';
 import { resolveToolSpecIds } from '../../shared/toolSpecUtils';
-import { useToolEnrollment } from '@/store/useToolEnrollment';
 import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
 import { type AiEntitlementCode } from '../../shared/subscription';
 import * as EntityService from './entityService';
@@ -83,16 +82,10 @@ export class ThoughtProcessingService {
       return { success: false, error: 'Thought already queued for processing' };
     }
 
-    const { enrolledToolIds } = useToolEnrollment.getState();
-
-    if (!enrolledToolIds || enrolledToolIds.length === 0) {
-      return { success: false, error: 'Enroll in a tool from the marketplace before processing thoughts.' };
-    }
-
-    const toolSpecIds = resolveToolSpecIds(thought, { enrolledToolIds });
+    const toolSpecIds = resolveToolSpecIds(thought);
 
     if (toolSpecIds.length === 0) {
-      return { success: false, error: 'No enrolled tools are applicable to this thought yet.' };
+      return { success: false, error: 'No tools are applicable to this thought yet.' };
     }
     const manualProcess = httpsCallable(functionsClient, 'manualProcessThought');
 
