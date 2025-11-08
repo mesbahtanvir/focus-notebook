@@ -78,92 +78,92 @@ export default function WorkGoalsPage() {
       <ToolGroupNav currentToolId="tasks" />
 
       {/* Quick Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <Link
           href="/tools/tasks"
-          className="card p-6 hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer"
+          className="card p-3 sm:p-6 hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer"
         >
-          <div className="flex items-center justify-between mb-2">
-            <CheckSquare className="h-8 w-8 text-green-500" />
-            <ArrowRight className="h-4 w-4 text-gray-400" />
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <CheckSquare className="h-5 w-5 sm:h-8 sm:w-8 text-green-500" />
+            <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
           </div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white">{stats.activeTasks}</div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Active Tasks</div>
+          <div className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">{stats.activeTasks}</div>
+          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Active Tasks</div>
         </Link>
 
         <Link
           href="/tools/projects"
-          className="card p-6 hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer"
+          className="card p-3 sm:p-6 hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer"
         >
-          <div className="flex items-center justify-between mb-2">
-            <Folder className="h-8 w-8 text-blue-500" />
-            <ArrowRight className="h-4 w-4 text-gray-400" />
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <Folder className="h-5 w-5 sm:h-8 sm:w-8 text-blue-500" />
+            <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
           </div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white">{stats.activeProjects}</div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Projects</div>
+          <div className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">{stats.activeProjects}</div>
+          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Projects</div>
         </Link>
 
         <Link
           href="/tools/goals"
-          className="card p-6 hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer"
+          className="card p-3 sm:p-6 hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer"
         >
-          <div className="flex items-center justify-between mb-2">
-            <Target className="h-8 w-8 text-purple-500" />
-            <ArrowRight className="h-4 w-4 text-gray-400" />
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <Target className="h-5 w-5 sm:h-8 sm:w-8 text-purple-500" />
+            <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
           </div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white">{stats.activeGoals}</div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Goals</div>
+          <div className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">{stats.activeGoals}</div>
+          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Goals</div>
         </Link>
 
         <Link
           href="/tools/focus"
-          className="card p-6 hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer"
+          className="card p-3 sm:p-6 hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer"
         >
-          <div className="flex items-center justify-between mb-2">
-            <Clock className="h-8 w-8 text-orange-500" />
-            <ArrowRight className="h-4 w-4 text-gray-400" />
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <Clock className="h-5 w-5 sm:h-8 sm:w-8 text-orange-500" />
+            <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
           </div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white">{stats.recentFocus}</div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Focus Today</div>
+          <div className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">{stats.recentFocus}</div>
+          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Focus Today</div>
         </Link>
       </div>
 
       {/* Quick Actions */}
-      <div className="card p-6 mb-6">
-        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <Zap className="h-5 w-5 text-yellow-500" />
+      <div className="card p-3 sm:p-6 mb-4 sm:mb-6">
+        <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 flex items-center gap-2">
+          <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
           Quick Actions
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3">
           <Link
             href="/tools/tasks"
-            className="flex items-center gap-3 p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600 transition-all"
+            className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600 transition-all"
           >
-            <Plus className="h-5 w-5 text-purple-500" />
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
             <div>
-              <div className="font-semibold">Add Task</div>
+              <div className="font-semibold text-sm sm:text-base">Add Task</div>
               <div className="text-xs text-gray-500">Quick capture</div>
             </div>
           </Link>
 
           <Link
             href="/tools/focus"
-            className="flex items-center gap-3 p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-orange-400 dark:hover:border-orange-600 transition-all"
+            className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-orange-400 dark:hover:border-orange-600 transition-all"
           >
-            <Clock className="h-5 w-5 text-orange-500" />
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
             <div>
-              <div className="font-semibold">Start Focus</div>
+              <div className="font-semibold text-sm sm:text-base">Start Focus</div>
               <div className="text-xs text-gray-500">Deep work session</div>
             </div>
           </Link>
 
           <Link
             href="/tools/notes"
-            className="flex items-center gap-3 p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600 transition-all"
+            className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600 transition-all"
           >
-            <Plus className="h-5 w-5 text-blue-500" />
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
             <div>
-              <div className="font-semibold">New Note</div>
+              <div className="font-semibold text-sm sm:text-base">New Note</div>
               <div className="text-xs text-gray-500">Capture knowledge</div>
             </div>
           </Link>
@@ -171,10 +171,10 @@ export default function WorkGoalsPage() {
       </div>
 
       {/* Today's Priorities */}
-      <div className="card p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">📋 Today&apos;s Priorities</h3>
-          <Link href="/tools/tasks" className="text-sm text-purple-600 dark:text-purple-400 hover:underline">
+      <div className="card p-3 sm:p-6 mb-4 sm:mb-6">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <h3 className="text-base sm:text-lg font-bold">📋 Today&apos;s Priorities</h3>
+          <Link href="/tools/tasks" className="text-xs sm:text-sm text-purple-600 dark:text-purple-400 hover:underline">
             View All →
           </Link>
         </div>
@@ -186,10 +186,10 @@ export default function WorkGoalsPage() {
               <Link
                 key={task.id}
                 href={`/tools/tasks?id=${task.id}`}
-                className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+                className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
               >
                 <div
-                  className={`h-2 w-2 rounded-full ${
+                  className={`h-2 w-2 rounded-full flex-shrink-0 ${
                     task.priority === "urgent"
                       ? "bg-red-500"
                       : task.priority === "high"
@@ -200,14 +200,14 @@ export default function WorkGoalsPage() {
                   }`}
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm truncate">{task.title}</div>
+                  <div className="font-medium text-xs sm:text-sm truncate">{task.title}</div>
                   {task.dueDate && (
                     <div className="text-xs text-gray-500">
                       Due: {new Date(task.dueDate).toLocaleDateString()}
                     </div>
                   )}
                 </div>
-                <ArrowRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 flex-shrink-0" />
               </Link>
             ))}
           </div>
@@ -215,29 +215,29 @@ export default function WorkGoalsPage() {
       </div>
 
       {/* Active Projects */}
-      <div className="card p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">📊 Active Projects</h3>
-          <Link href="/tools/projects" className="text-sm text-purple-600 dark:text-purple-400 hover:underline">
+      <div className="card p-3 sm:p-6">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <h3 className="text-base sm:text-lg font-bold">📊 Active Projects</h3>
+          <Link href="/tools/projects" className="text-xs sm:text-sm text-purple-600 dark:text-purple-400 hover:underline">
             View All →
           </Link>
         </div>
         {activeProjectsList.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400 text-sm">No active projects. Start something new!</p>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {activeProjectsList.map((project) => (
               <Link
                 key={project.id}
                 href={`/tools/projects/${project.id}`}
-                className="block p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+                className="block p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="font-semibold">{project.title}</div>
-                  <ArrowRight className="h-4 w-4 text-gray-400" />
+                <div className="flex items-center justify-between mb-1 sm:mb-2">
+                  <div className="font-semibold text-sm sm:text-base">{project.title}</div>
+                  <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 flex-shrink-0" />
                 </div>
                 {project.description && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{project.description}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1 sm:mb-2">{project.description}</p>
                 )}
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <span>{project.status}</span>
