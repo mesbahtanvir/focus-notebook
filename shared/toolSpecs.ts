@@ -811,7 +811,7 @@ export const ALL_TOOL_IDS = Object.keys(toolSpecs) as ToolSpecId[];
 export const toolGroups: Record<string, ToolGroup> = {
   'work-goals': {
     id: 'work-goals',
-    title: 'Work & Goals',
+    title: 'Productivity',
     tagline: 'Manage tasks, projects, and goals with focused execution.',
     description: 'A comprehensive productivity suite for managing your daily tasks, multi-step projects, long-term goals, and focused work sessions. Includes brainstorming for ideation, notes for knowledge capture, and errands for life admin.',
     category: 'Productivity',
@@ -827,7 +827,7 @@ export const toolGroups: Record<string, ToolGroup> = {
   },
   'inner-life': {
     id: 'inner-life',
-    title: 'Inner Life',
+    title: 'Soulful',
     tagline: 'Process thoughts, track emotions, and nurture connections.',
     description: 'A complete wellbeing suite for processing everyday thoughts, tracking mood patterns, managing relationships, working through negative thinking with CBT, and exploring deeper philosophical questions.',
     category: 'Wellbeing',
