@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic';
 type FormValues = { text: string };
 
 export default function Page() {
-  const { user, isAnonymous } = useAuth();
+  const { user, isAnonymous, loading: authLoading } = useAuth();
   const { register, handleSubmit, reset } = useForm<FormValues>();
   // Thoughts store
   const thoughts = useThoughts((s) => s.thoughts);
@@ -46,7 +46,8 @@ export default function Page() {
   const tasksSubscribed = useTasks((s) => s.isSubscribed);
 
   // Only show loading if subscriptions are active and still loading (without cache data yet)
-  const isInitialLoading = (thoughtsLoading && !thoughtsFromCache) || (tasksLoading && !tasksFromCache);
+  // AND auth has finished loading and user exists
+  const isInitialLoading = !authLoading && user && ((thoughtsLoading && !thoughtsFromCache) || (tasksLoading && !tasksFromCache));
   const hasSyncError = thoughtsSyncError || tasksSyncError;
   const subscriptionsActive = thoughtsSubscribed || tasksSubscribed;
 
