@@ -252,7 +252,7 @@ function FocusPageContent() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl">
+    <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl pb-24">
       <AnimatePresence mode="wait">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -766,22 +766,22 @@ function FocusPageContent() {
       )}
 
       {!currentSession && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
           <button
             onClick={handleStartSession}
             disabled={selectedTasks.length === 0}
-            className={`w-full py-4 px-6 rounded-2xl font-bold text-lg shadow-2xl transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-3 ${
+            className={`w-full py-3 px-5 rounded-xl font-semibold text-base shadow-lg transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2 ${
               selectedTasks.length === 0
                 ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'
                 : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-700 hover:via-indigo-700 hover:to-purple-700 text-white'
             }`}
             title={selectedTasks.length > 0 ? `Start Focus Session with ${selectedTasks.length} task${selectedTasks.length === 1 ? '' : 's'}` : "Select tasks to start"}
           >
-            <Play className="h-6 w-6" />
+            <Play className="h-5 w-5" />
             <span>
               {selectedTasks.length === 0
                 ? 'Select Tasks to Start'
-                : `Start Focus Session (${selectedTasks.length} task${selectedTasks.length === 1 ? '' : 's'})`
+                : `Start Focus (${selectedTasks.length} task${selectedTasks.length === 1 ? '' : 's'})`
               }
             </span>
           </button>
