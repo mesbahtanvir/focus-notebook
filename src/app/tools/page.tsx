@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart, DollarSign } from "lucide-react";
+import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart, DollarSign, MapPin } from "lucide-react";
 
 const TOOLS = [
   {
@@ -192,6 +192,28 @@ const TOOLS = [
     bgGradient: "from-green-50 to-emerald-50",
     borderColor: "border-green-300",
     priority: "high" as const,
+  },
+  {
+    key: "admired-people",
+    title: "People I Admire",
+    description: "Track inspiring people and learn from their perspectives on life.",
+    icon: Sparkles,
+    emoji: "✨",
+    gradient: "from-purple-400 to-indigo-500",
+    bgGradient: "from-purple-50 to-indigo-50",
+    borderColor: "border-purple-300",
+    priority: "medium" as const,
+  },
+  {
+    key: "places",
+    title: "Places",
+    description: "Track and compare places to live, visit, or stay short-term.",
+    icon: MapPin,
+    emoji: "🗺️",
+    gradient: "from-blue-400 to-cyan-500",
+    bgGradient: "from-blue-50 to-cyan-50",
+    borderColor: "border-blue-300",
+    priority: "medium" as const,
   },
 ];
 

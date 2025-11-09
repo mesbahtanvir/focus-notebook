@@ -23,7 +23,9 @@ export type ToolName =
   | 'spending-unified'
   | 'investments'
   | 'subscriptions'
-  | 'asset-horizon';
+  | 'asset-horizon'
+  | 'admired-people'
+  | 'places';
 
 type FirestoreToolName = ToolName | 'vacation-packing';
 
