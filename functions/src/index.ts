@@ -38,6 +38,7 @@ import {
 import { plaidWebhook } from './plaidWebhooks';
 import { processCSVTransactions } from './processCSVTransactions';
 import { onCSVUpload } from './csvStorageTrigger';
+import { deleteCSVStatement } from './deleteCSVStatement';
 
 // Export cloud functions
 export {
@@ -68,4 +69,5 @@ export {
   // CSV Processing
   processCSVTransactions,
   onCSVUpload,
+  deleteCSVStatement,
 };

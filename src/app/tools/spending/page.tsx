@@ -32,6 +32,7 @@ import SpendingTrends from '@/components/spending/SpendingTrends';
 import ConnectionsManager from '@/components/spending/ConnectionsManager';
 import CSVUploadSection from '@/components/spending/CSVUploadSection';
 import { CSVDashboardSummary, CSVSpendingTrends, CSVTransactionsList } from '@/components/spending/CSVDashboard';
+import CSVFileManager from '@/components/spending/CSVFileManager';
 
 export default function SpendingPage() {
   useTrackToolUsage('spending');
@@ -313,10 +314,16 @@ export default function SpendingPage() {
                     CSV Upload Connection
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    You're currently using CSV uploads to track your spending. Upload more CSV files below.
+                    You're currently using CSV uploads to track your spending. Manage your uploaded files below.
                   </p>
                 </div>
-                <CSVUploadSection />
+                <CSVFileManager />
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                    Upload More Files
+                  </h3>
+                  <CSVUploadSection />
+                </div>
               </div>
             ) : (
               <ConnectionsManager />

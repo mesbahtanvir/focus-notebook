@@ -28,6 +28,8 @@ export interface Transaction {
   notes?: string;
   createdAt: string;
   updatedAt?: number;
+  source?: string; // 'csv-upload' or 'plaid'
+  csvFileName?: string; // For CSV uploads, track which file this came from
 }
 
 export interface SpendingInsight {

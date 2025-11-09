@@ -32,6 +32,7 @@ interface EnhancedTransaction {
 interface ProcessingStatus {
   status: 'processing' | 'completed' | 'error';
   fileName: string;
+  storagePath?: string;
   processedCount?: number;
   error?: string;
   createdAt: string;
@@ -198,6 +199,7 @@ async function enhanceTransactions(
  */
 async function saveTransactions(
   userId: string,
+  fileName: string,
   transactions: CSVTransaction[],
   enhanced: EnhancedTransaction[]
 ): Promise<number> {
@@ -217,6 +219,7 @@ async function saveTransactions(
     batch.set(docRef, {
       id: transactionId,
       accountId: 'csv-upload', // Mark as CSV upload
+      csvFileName: fileName, // Track which CSV file this came from
       date: raw.date,
       description: raw.description,
       merchant: enh.merchantName,
@@ -289,6 +292,7 @@ export const onCSVUpload = functions.storage.object().onFinalize(async (object) 
     await updateProcessingStatus(userId, fileName, {
       status: 'processing',
       fileName,
+      storagePath: filePath,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -318,7 +322,7 @@ export const onCSVUpload = functions.storage.object().onFinalize(async (object) 
     }
 
     // Save to Firestore
-    const savedCount = await saveTransactions(userId, transactions, allEnhanced);
+    const savedCount = await saveTransactions(userId, fileName, transactions, allEnhanced);
 
     console.log(`Successfully processed ${savedCount} transactions`);
 
@@ -326,6 +330,7 @@ export const onCSVUpload = functions.storage.object().onFinalize(async (object) 
     await updateProcessingStatus(userId, fileName, {
       status: 'completed',
       fileName,
+      storagePath: filePath,
       processedCount: savedCount,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -337,6 +342,7 @@ export const onCSVUpload = functions.storage.object().onFinalize(async (object) 
     await updateProcessingStatus(userId, fileName, {
       status: 'error',
       fileName,
+      storagePath: filePath,
       error: error.message || 'Unknown error',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
