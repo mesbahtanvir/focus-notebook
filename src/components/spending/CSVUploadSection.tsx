@@ -1,28 +1,80 @@
 /**
  * CSV Upload Section Component
- * Handles bank statement CSV uploads with AI-powered data enhancement
+ * Handles bank statement CSV uploads with auto-triggered AI processing
  */
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, X } from 'lucide-react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebaseClient';
+import { ref, uploadBytes } from 'firebase/storage';
+import { storage, db as firestore } from '@/lib/firebaseClient';
+import { collection, query, onSnapshot, orderBy, limit } from 'firebase/firestore';
 
 interface UploadedFile {
   file: File;
-  status: 'pending' | 'uploading' | 'processing' | 'completed' | 'error';
+  status: 'uploading' | 'processing' | 'completed' | 'error';
   error?: string;
-  downloadURL?: string;
   processedCount?: number;
+  uploadedAt?: string;
+}
+
+interface ProcessingStatus {
+  status: 'processing' | 'completed' | 'error';
+  fileName: string;
+  processedCount?: number;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function CSVUploadSection() {
   const { user } = useAuth();
   const [uploadedFiles, setUploadedFiles] = useState<Map<string, UploadedFile>>(new Map());
   const [isDragging, setIsDragging] = useState(false);
+
+  // Subscribe to processing status updates
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const statusRef = collection(firestore, `users/${user.uid}/csvProcessingStatus`);
+    const q = query(statusRef, orderBy('updatedAt', 'desc'), limit(10));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        const status = change.doc.data() as ProcessingStatus;
+        const fileName = change.doc.id;
+
+        setUploadedFiles((prev) => {
+          const newMap = new Map(prev);
+          const existing = Array.from(prev.values()).find(
+            (f) => f.file.name === status.fileName
+          );
+
+          if (existing) {
+            // Update existing file status
+            const fileId = Array.from(prev.entries()).find(
+              ([_, f]) => f.file.name === status.fileName
+            )?.[0];
+
+            if (fileId) {
+              newMap.set(fileId, {
+                ...existing,
+                status: status.status,
+                error: status.error,
+                processedCount: status.processedCount,
+              });
+            }
+          }
+
+          return newMap;
+        });
+      });
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -55,19 +107,20 @@ export default function CSVUploadSection() {
         newMap.set(fileId, {
           file,
           status: 'uploading',
+          uploadedAt: new Date().toISOString(),
         });
         return newMap;
       });
 
       try {
         // Upload to Firebase Storage
+        // The onCSVUpload Cloud Function will auto-trigger when file is uploaded
         const storagePath = `users/${user.uid}/statements/${Date.now()}_${file.name}`;
         const storageRef = ref(storage, storagePath);
 
         await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(storageRef);
 
-        // Update status to processing
+        // Update status to processing (Cloud Function will take over from here)
         setUploadedFiles((prev) => {
           const newMap = new Map(prev);
           const existing = newMap.get(fileId);
@@ -75,46 +128,14 @@ export default function CSVUploadSection() {
             newMap.set(fileId, {
               ...existing,
               status: 'processing',
-              downloadURL,
             });
           }
           return newMap;
         });
 
-        // Call cloud function to process CSV
-        const response = await fetch('/api/spending/process-csv', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            fileUrl: downloadURL,
-            fileName: file.name,
-            storagePath,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to process CSV: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-
-        // Update status to completed
-        setUploadedFiles((prev) => {
-          const newMap = new Map(prev);
-          const existing = newMap.get(fileId);
-          if (existing) {
-            newMap.set(fileId, {
-              ...existing,
-              status: 'completed',
-              processedCount: result.processedCount || 0,
-            });
-          }
-          return newMap;
-        });
+        console.log(`File uploaded: ${storagePath}. Cloud Function will process it automatically.`);
       } catch (error) {
-        console.error('Error processing file:', error);
+        console.error('Error uploading file:', error);
         setUploadedFiles((prev) => {
           const newMap = new Map(prev);
           const existing = newMap.get(fileId);
@@ -122,7 +143,7 @@ export default function CSVUploadSection() {
             newMap.set(fileId, {
               ...existing,
               status: 'error',
-              error: error instanceof Error ? error.message : 'Unknown error',
+              error: error instanceof Error ? error.message : 'Upload failed',
             });
           }
           return newMap;
@@ -194,7 +215,7 @@ export default function CSVUploadSection() {
         </label>
         <div className="mt-6 text-xs text-gray-500 dark:text-gray-400">
           <p>Supported format: CSV files from your bank statement</p>
-          <p className="mt-1">Your data will be processed with AI to extract and categorize transactions</p>
+          <p className="mt-1">Files are auto-processed with AI to extract and categorize transactions</p>
         </div>
       </div>
 
@@ -226,7 +247,7 @@ export default function CSVUploadSection() {
                 {fileData.status === 'processing' && (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Processing...</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Processing with AI...</span>
                   </>
                 )}
                 {fileData.status === 'completed' && (
@@ -264,28 +285,28 @@ export default function CSVUploadSection() {
         <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 rounded-full bg-purple-500" />
-            <span className="font-semibold text-sm">AI-Powered Processing</span>
+            <span className="font-semibold text-sm">Auto-Processing</span>
           </div>
           <p className="text-xs text-gray-600 dark:text-gray-400">
-            Transactions are automatically categorized and enhanced using GPT-4
+            Upload triggers automatic AI processing - no manual action needed
           </p>
         </div>
         <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 rounded-full bg-blue-500" />
-            <span className="font-semibold text-sm">Smart Merchant Detection</span>
+            <span className="font-semibold text-sm">AI-Powered Enhancement</span>
           </div>
           <p className="text-xs text-gray-600 dark:text-gray-400">
-            Merchant names are cleaned up and standardized automatically
+            Transactions categorized and enhanced with GPT-4 automatically
           </p>
         </div>
         <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="font-semibold text-sm">Secure Storage</span>
+            <span className="font-semibold text-sm">Real-time Updates</span>
           </div>
           <p className="text-xs text-gray-600 dark:text-gray-400">
-            CSV files are encrypted and stored securely in Firebase Storage
+            Watch processing status update live as AI analyzes your data
           </p>
         </div>
       </div>

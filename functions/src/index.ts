@@ -37,6 +37,7 @@ import {
 } from './plaidFunctions';
 import { plaidWebhook } from './plaidWebhooks';
 import { processCSVTransactions } from './processCSVTransactions';
+import { onCSVUpload } from './csvStorageTrigger';
 
 // Export cloud functions
 export {
@@ -66,4 +67,5 @@ export {
   plaidWebhook,
   // CSV Processing
   processCSVTransactions,
+  onCSVUpload,
 };

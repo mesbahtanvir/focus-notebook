@@ -31,6 +31,7 @@ import SubscriptionsList from '@/components/spending/SubscriptionsList';
 import SpendingTrends from '@/components/spending/SpendingTrends';
 import ConnectionsManager from '@/components/spending/ConnectionsManager';
 import CSVUploadSection from '@/components/spending/CSVUploadSection';
+import { CSVDashboardSummary, CSVSpendingTrends, CSVTransactionsList } from '@/components/spending/CSVDashboard';
 
 export default function SpendingPage() {
   useTrackToolUsage('spending');
@@ -57,12 +58,18 @@ export default function SpendingPage() {
   const connections = getConnectionStatuses();
   const hasPlaidConnections = connections.length > 0;
 
+  // Check for CSV-uploaded transactions
+  const { transactions: csvTransactions } = useSpending();
+  const hasCSVData = csvTransactions.length > 0;
+
   // Determine which data source is active
   useEffect(() => {
     if (hasPlaidConnections) {
       setDataSource('plaid');
+    } else if (hasCSVData) {
+      setDataSource('csv');
     }
-  }, [hasPlaidConnections]);
+  }, [hasPlaidConnections, hasCSVData]);
 
   if (plaidLoading) {
     return (
@@ -221,8 +228,8 @@ export default function SpendingPage() {
         </div>
       )}
 
-      {/* Main Content with Plaid */}
-      {hasPlaidConnections && (
+      {/* Main Content with Plaid or CSV */}
+      {(hasPlaidConnections || (dataSource === 'csv' && hasCSVData)) && (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
@@ -248,37 +255,72 @@ export default function SpendingPage() {
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
-            <DashboardSummary />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-                  Recent Transactions
-                </h2>
-                <TransactionsList />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-                  Active Subscriptions
-                </h2>
-                <SubscriptionsList />
-              </div>
-            </div>
+            {dataSource === 'csv' ? (
+              <>
+                <CSVDashboardSummary />
+                <div className="mt-6">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                    Recent Transactions
+                  </h2>
+                  <CSVTransactionsList />
+                </div>
+              </>
+            ) : (
+              <>
+                <DashboardSummary />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                      Recent Transactions
+                    </h2>
+                    <TransactionsList />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                      Active Subscriptions
+                    </h2>
+                    <SubscriptionsList />
+                  </div>
+                </div>
+              </>
+            )}
           </TabsContent>
 
           <TabsContent value="transactions">
-            <TransactionsList />
+            {dataSource === 'csv' ? <CSVTransactionsList /> : <TransactionsList />}
           </TabsContent>
 
           <TabsContent value="subscriptions">
-            <SubscriptionsList />
+            {dataSource === 'csv' ? (
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                <p>Subscription detection is available when using Plaid connections.</p>
+                <p className="mt-2 text-sm">CSV uploads can include subscription tags manually.</p>
+              </div>
+            ) : (
+              <SubscriptionsList />
+            )}
           </TabsContent>
 
           <TabsContent value="trends">
-            <SpendingTrends />
+            {dataSource === 'csv' ? <CSVSpendingTrends /> : <SpendingTrends />}
           </TabsContent>
 
           <TabsContent value="connections">
-            <ConnectionsManager />
+            {dataSource === 'csv' ? (
+              <div className="space-y-6">
+                <div className="p-6 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                    CSV Upload Connection
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    You're currently using CSV uploads to track your spending. Upload more CSV files below.
+                  </p>
+                </div>
+                <CSVUploadSection />
+              </div>
+            ) : (
+              <ConnectionsManager />
+            )}
           </TabsContent>
         </Tabs>
       )}
