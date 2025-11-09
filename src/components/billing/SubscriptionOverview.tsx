@@ -44,7 +44,7 @@ export function SubscriptionOverview({ subscription, onManageBilling }: Subscrip
     const currency = subscription.currency || 'usd';
     const interval = subscription.interval || 'month';
 
-    if (!amount) return '$9.99/month'; // Fallback
+    if (!amount) return '$2/month'; // Fallback
 
     const price = (amount / 100).toFixed(2);
     const currencySymbol = currency === 'usd' ? '$' : currency.toUpperCase();
