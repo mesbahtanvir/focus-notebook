@@ -842,15 +842,15 @@ export const toolGroups: Record<string, ToolGroup> = {
       'Explore deeper philosophical questions',
     ],
   },
-  trips: {
-    id: 'trips',
-    title: 'Trips',
+  travel: {
+    id: 'travel',
+    title: 'Travel',
     tagline: 'Plan itineraries, budgets, and travel logistics with smart packing lists.',
     description: 'Manage trip budgets, itineraries, packing lists, and shared tasks across your travel plans. Packing lists are automatically generated based on your destination, duration, and activities.',
     category: 'Logistics',
     toolIds: ['trips', 'packing-list'],
     primaryToolId: 'trips',
-    hubPath: '/tools/trips',
+    hubPath: '/tools/travel',
     benefits: [
       'Track travel budgets and spending',
       'Manage itineraries and reservations',

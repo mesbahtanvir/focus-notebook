@@ -18,7 +18,7 @@ import { useFocus } from '@/store/useFocus';
 import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
 import { EnhancedDataManagement } from '@/components/EnhancedDataManagement';
 import { TokenUsageDashboard } from '@/components/TokenUsageDashboard';
-import { Crown, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
+import { Crown, Database, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
 
 const PRO_BENEFITS = [
   {
@@ -208,7 +208,54 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <EnhancedDataManagement onDataChanged={refreshAllStores} />
+      {/* Data Management Card - Link to Dedicated Page */}
+      <Card className="border-4 border-green-200 dark:border-green-700 shadow-xl bg-gradient-to-br from-white to-green-50 dark:from-gray-900 dark:to-green-900/20">
+        <CardHeader className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/40 dark:to-emerald-900/40 border-b-4 border-green-200 dark:border-green-700">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full shadow-lg">
+              <Database className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                Data Management
+              </CardTitle>
+              <CardDescription className="text-gray-600 dark:text-gray-300 font-medium">
+                Import, export, and manage your data
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-6 sm:p-8">
+          <div className="space-y-4">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              Access advanced data management tools including import/export, preview, conflict resolution, and progress tracking.
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                ✓ Preview before import
+              </Badge>
+              <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                ✓ Conflict detection
+              </Badge>
+              <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                ✓ Progress tracking
+              </Badge>
+              <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                ✓ Selective import/export
+              </Badge>
+            </div>
+
+            <Link href="/settings/data-management" className="block">
+              <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium">
+                <Database className="h-4 w-4 mr-2" />
+                Open Data Management
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
 
       <TokenUsageDashboard />
     </div>
