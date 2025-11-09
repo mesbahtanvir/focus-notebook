@@ -47,6 +47,8 @@ const toolIcons: Record<ToolName, any> = {
   investments: LineChart,
   subscriptions: CreditCard,
   'asset-horizon': BarChart3,
+  'admired-people': Sparkles,
+  places: MapPin,
 };
 
 const toolColors: Record<ToolName, string> = {
@@ -69,6 +71,8 @@ const toolColors: Record<ToolName, string> = {
   investments: "from-emerald-500 to-teal-500",
   subscriptions: "from-indigo-500 to-blue-500",
   'asset-horizon': "from-purple-500 to-indigo-500",
+  'admired-people': "from-purple-400 to-indigo-500",
+  places: "from-blue-400 to-cyan-500",
 };
 
 const toolLabels: Record<ToolName, string> = {
@@ -91,6 +95,8 @@ const toolLabels: Record<ToolName, string> = {
   investments: "Investments",
   subscriptions: "Subscriptions",
   'asset-horizon': "Asset Horizon",
+  'admired-people': "People I Admire",
+  places: "Places",
 };
 
 export function MostUsedTools() {

@@ -2,12 +2,14 @@ import { motion } from "framer-motion";
 import { Place } from "@/store/usePlaces";
 import { MapPin, Edit3, Trash2, Sparkles, ExternalLink, Tag, DollarSign, Cloud, Shield, Heart } from "lucide-react";
 
+type ColorType = 'green' | 'blue' | 'orange';
+
 export function PlaceCard({ place, onEdit, onDelete }: {
   place: Place;
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const typeConfig = {
+  const typeConfig: Record<string, { emoji: string; label: string; color: ColorType }> = {
     live: { emoji: '🏡', label: 'Want to Live', color: 'green' },
     visit: { emoji: '✈️', label: 'Want to Visit', color: 'blue' },
     'short-term': { emoji: '🏨', label: 'Short-term Stay', color: 'orange' }
@@ -15,13 +17,13 @@ export function PlaceCard({ place, onEdit, onDelete }: {
 
   const config = typeConfig[place.type];
 
-  const typeColors = {
+  const typeColors: Record<ColorType, string> = {
     green: 'border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800',
     blue: 'border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800',
     orange: 'border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-800',
   };
 
-  const badgeColors = {
+  const badgeColors: Record<ColorType, string> = {
     green: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
     blue: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
     orange: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
