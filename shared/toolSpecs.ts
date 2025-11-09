@@ -798,6 +798,106 @@ export const toolSpecs: Record<string, ToolSpec> = {
       },
     ],
   },
+  'admired-people': {
+    id: 'admired-people',
+    title: 'People I Admire',
+    tagline: 'Learn from inspiring people and their perspectives.',
+    category: 'Inspiration',
+    benefits: [
+      'Track people who inspire you',
+      'Learn from their life lessons and philosophies',
+      'Get AI-enriched insights about their work and impact',
+    ],
+    description:
+      'Keep track of people you admire and want to learn from. AI can help enrich entries with biographical info, key lessons, and resources.',
+    primaryTags: ['tool-admired-people'],
+    expectedCapabilities: ['createsEntries', 'enhancesContent', 'addsTags'],
+    guidance: [
+      ...baseGuidance,
+      'Create entries when the user mentions someone they admire or want to learn from.',
+      'Offer to enrich entries with biographical details, achievements, and key philosophies.',
+      'Link to relevant resources like books, interviews, or articles.',
+    ],
+    positiveExamples: [
+      {
+        thought: 'Really inspired by how Naval Ravikant thinks about wealth and happiness.',
+        rationale: 'Named person with specific inspiration context.',
+        recommendedActions: [
+          { type: 'addTag', dataSummary: 'tool-admired-people' },
+          {
+            type: 'createEntry',
+            confidence: 80,
+            dataSummary: 'Add Naval Ravikant with notes on wealth and happiness philosophy',
+          },
+        ],
+      },
+    ],
+    negativeExamples: [
+      {
+        thought: 'My friend Alex is cool.',
+        rationale: 'Personal relationship rather than inspirational figure.',
+        recommendedActions: [
+          { type: 'addTag', dataSummary: 'tool-relationships' },
+        ],
+      },
+    ],
+  },
+  places: {
+    id: 'places',
+    title: 'Places',
+    tagline: 'Track and compare places to live, visit, or stay.',
+    category: 'Travel & Living',
+    benefits: [
+      'Organize places by purpose: live, visit, or short-term stay',
+      'Compare destinations across multiple dimensions',
+      'Get AI-enriched details on climate, cost, culture, and more',
+    ],
+    description:
+      'Manage your wishlist of places to explore. Track places you want to live in, visit, or stay short-term, with comparison features and AI-enriched details.',
+    primaryTags: ['tool-places'],
+    expectedCapabilities: ['createsEntries', 'enhancesContent', 'addsTags', 'collectsMetrics'],
+    guidance: [
+      ...baseGuidance,
+      'Create place entries when the user mentions destinations they want to explore or move to.',
+      'Offer to enrich with details like climate, cost of living, safety, culture, and best time to visit.',
+      'Help compare places across relevant dimensions.',
+    ],
+    positiveExamples: [
+      {
+        thought: 'Thinking about spending a few months in Lisbon next year for a change of scenery.',
+        rationale: 'Specific place with intent to stay, ideal for places tool.',
+        recommendedActions: [
+          { type: 'addTag', dataSummary: 'tool-places' },
+          {
+            type: 'createEntry',
+            confidence: 85,
+            dataSummary: 'Add Lisbon as short-term stay destination',
+          },
+        ],
+      },
+      {
+        thought: 'Been dreaming about visiting Kyoto and Bali.',
+        rationale: 'Multiple travel destinations mentioned.',
+        recommendedActions: [
+          { type: 'addTag', dataSummary: 'tool-places' },
+          {
+            type: 'createEntry',
+            confidence: 78,
+            dataSummary: 'Add Kyoto and Bali as places to visit',
+          },
+        ],
+      },
+    ],
+    negativeExamples: [
+      {
+        thought: 'Planning a weekend trip to Portland next month.',
+        rationale: 'Near-term trip with specific dates - better suited for trips tool.',
+        recommendedActions: [
+          { type: 'addTag', dataSummary: 'tool-trips' },
+        ],
+      },
+    ],
+  },
 };
 
 export type ToolSpecId = keyof typeof toolSpecs;
