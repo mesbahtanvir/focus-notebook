@@ -38,15 +38,13 @@ export default function Sidebar() {
     badge?: string | number;
   }> = [
     { href: '/', icon: Home, label: 'Home', color: 'from-purple-500 to-pink-500' },
-    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: 'from-blue-500 to-cyan-500' },
-    { href: '/settings', icon: Settings, label: 'Settings', color: 'from-orange-500 to-yellow-500' },
   ];
 
   const toolGroupItems = [
     { id: 'productivity', icon: Target, label: 'Productivity', color: 'text-purple-600' },
     { id: 'soulful', icon: Heart, label: 'Soulful', color: 'text-pink-600' },
     { id: 'finances', icon: Wallet, label: 'Finances', color: 'text-green-600' },
-    { id: 'trips', icon: Plane, label: 'Trips', color: 'text-blue-600' },
+    { id: 'travel', icon: Plane, label: 'Travel', color: 'text-blue-600' },
   ];
 
   const closeSidebar = () => setIsOpen(false);
@@ -268,6 +266,60 @@ export default function Sidebar() {
             )}
           </div>
 
+          {/* Dashboard Link */}
+          <Link
+            href="/dashboard"
+            onClick={closeSidebar}
+            aria-current={pathname === '/dashboard' ? 'page' : undefined}
+            className={`
+              group relative flex items-center gap-3 p-4 min-h-[44px] rounded-xl
+              transition-all duration-200 transform
+              focus:outline-none focus:ring-4 focus:ring-blue-300
+              touch-manipulation
+              ${pathname === '/dashboard'
+                ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md scale-105'
+                : 'text-gray-700 hover:bg-gradient-to-r hover:from-blue-100 hover:to-cyan-100 hover:scale-105'
+              }
+              lg:justify-center xl:justify-start
+            `}
+            title="Dashboard"
+          >
+            <LayoutDashboard className={`h-5 w-5 ${pathname === '/dashboard' ? 'text-white' : 'text-gray-600'}`} />
+            <span className="font-medium lg:hidden xl:inline">Dashboard</span>
+
+            {/* Tooltip for tablet view */}
+            <span className="hidden lg:block xl:hidden absolute left-full ml-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+              Dashboard
+            </span>
+          </Link>
+
+          {/* Settings Link */}
+          <Link
+            href="/settings"
+            onClick={closeSidebar}
+            aria-current={pathname === '/settings' ? 'page' : undefined}
+            className={`
+              group relative flex items-center gap-3 p-4 min-h-[44px] rounded-xl
+              transition-all duration-200 transform
+              focus:outline-none focus:ring-4 focus:ring-orange-300
+              touch-manipulation
+              ${pathname === '/settings'
+                ? 'bg-gradient-to-r from-orange-500 to-yellow-500 text-white shadow-md scale-105'
+                : 'text-gray-700 hover:bg-gradient-to-r hover:from-orange-100 hover:to-yellow-100 hover:scale-105'
+              }
+              lg:justify-center xl:justify-start
+            `}
+            title="Settings"
+          >
+            <Settings className={`h-5 w-5 ${pathname === '/settings' ? 'text-white' : 'text-gray-600'}`} />
+            <span className="font-medium lg:hidden xl:inline">Settings</span>
+
+            {/* Tooltip for tablet view */}
+            <span className="hidden lg:block xl:hidden absolute left-full ml-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+              Settings
+            </span>
+          </Link>
+
           {/* Debug Link - Visible for all users */}
           <Link
             href="/admin"
@@ -276,17 +328,17 @@ export default function Sidebar() {
             className={`
               group relative flex items-center gap-3 p-4 min-h-[44px] rounded-xl
               transition-all duration-200 transform
-              focus:outline-none focus:ring-4 focus:ring-blue-300
+              focus:outline-none focus:ring-4 focus:ring-red-300
               touch-manipulation
               ${pathname === '/admin'
-                ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md scale-105'
-                : 'text-gray-700 hover:bg-gradient-to-r hover:from-blue-100 hover:to-cyan-100 hover:scale-105'
+                ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-md scale-105'
+                : 'text-gray-700 hover:bg-gradient-to-r hover:from-red-100 hover:to-pink-100 hover:scale-105'
               }
               lg:justify-center xl:justify-start
             `}
             title="Debug"
           >
-            <Shield className={`h-5 w-5 ${pathname === '/admin' ? 'text-white' : 'text-blue-600'}`} />
+            <Shield className={`h-5 w-5 ${pathname === '/admin' ? 'text-white' : 'text-red-600'}`} />
             <span className="font-medium lg:hidden xl:inline">Debug</span>
 
             {/* Tooltip for tablet view */}

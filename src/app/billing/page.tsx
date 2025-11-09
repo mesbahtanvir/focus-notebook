@@ -111,13 +111,13 @@ export default function BillingPage() {
 
   // Format price for display
   const formatPrice = (): string => {
-    if (!subscription) return '$9.99/month';
+    if (!subscription) return '$2/month';
 
     const amount = subscription.amount;
     const currency = subscription.currency || 'usd';
     const interval = subscription.interval || 'month';
 
-    if (!amount) return '$9.99/month'; // Fallback
+    if (!amount) return '$2/month'; // Fallback
 
     const price = (amount / 100).toFixed(2);
     const currencySymbol = currency === 'usd' ? '$' : currency.toUpperCase();

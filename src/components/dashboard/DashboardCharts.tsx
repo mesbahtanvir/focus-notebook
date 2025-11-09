@@ -20,7 +20,7 @@ const DashboardChartsComponent = ({ focusData, taskData }: DashboardChartsProps)
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-green-500" />
-          Task Completion Trend
+          Task Type Distribution
         </CardTitle>
         <CardDescription>Daily tasks completed (Mastery vs Pleasure)</CardDescription>
       </CardHeader>

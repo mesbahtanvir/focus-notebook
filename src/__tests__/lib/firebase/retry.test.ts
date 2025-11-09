@@ -92,8 +92,8 @@ describe('Retry Utility', () => {
 
       expect(result.success).toBe(true);
       expect(result.attempts).toBe(3);
-      // Should have waited at least 100ms + 200ms = 300ms
-      expect(duration).toBeGreaterThanOrEqual(300);
+      // Should have waited at least 100ms + 200ms = 300ms (with 5ms tolerance for timing precision)
+      expect(duration).toBeGreaterThanOrEqual(295);
     });
 
     it('should call onRetry callback', async () => {

@@ -12,6 +12,7 @@ import { Sparkles, Lock, MessageSquare, Lightbulb, Trash2, Timer, Play, Coffee, 
 import { ThoughtDetailModal } from "@/components/ThoughtDetailModal";
 import { MostUsedTools } from "@/components/MostUsedTools";
 import { useTrips } from "@/store/useTrips";
+import { LandingPage } from "@/components/LandingPage";
 
 // Disable static generation for now
 export const dynamic = 'force-dynamic';
@@ -21,6 +22,7 @@ type FormValues = { text: string };
 export default function Page() {
   const { user, isAnonymous, loading: authLoading } = useAuth();
   const { register, handleSubmit, reset } = useForm<FormValues>();
+
   // Thoughts store
   const thoughts = useThoughts((s) => s.thoughts);
   const thoughtsLoading = useThoughts((s) => s.isLoading);
@@ -113,6 +115,10 @@ export default function Page() {
       day: 'numeric',
     });
 
+  // Show landing page for non-authenticated users
+  if (!authLoading && !user) {
+    return <LandingPage />;
+  }
 
   // Show loading indicator if initial load is in progress (with timeout protection)
   if (isInitialLoading && !loadingTimeout) {
@@ -163,29 +169,6 @@ export default function Page() {
         </motion.div>
       )}
 
-      {/* Authentication Status */}
-      {!user && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-2 border-purple-200 dark:border-purple-800"
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🔒</span>
-            <div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Sign up to sync across devices</p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Your data stays local until you sign in</p>
-            </div>
-          </div>
-          <Link
-            href="/login"
-            className="text-sm font-medium px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors shadow-md"
-          >
-            Sign Up
-          </Link>
-        </motion.div>
-      )}
-      
       {isAnonymous && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -204,25 +187,6 @@ export default function Page() {
           </span>
         </motion.div>
       )}
-
-      <section className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-4 border-purple-200 dark:border-purple-800 shadow-xl overflow-hidden">
-        <div className="p-6">
-          <form onSubmit={handleSubmit(onSubmit)} className="flex gap-2">
-            <input
-              aria-label="Thought"
-              className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 outline-none transition-all bg-white dark:bg-gray-800 text-sm"
-              placeholder="What's on your mind?"
-              {...register('text', { required: true })}
-            />
-            <button 
-              className="px-6 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold shadow-lg transition-all transform hover:scale-105 active:scale-95" 
-              type="submit"
-            >
-              Add
-            </button>
-          </form>
-        </div>
-      </section>
 
       {liveTripPreview.length > 0 && (
         <section className="rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-950/20 dark:to-emerald-950/20 border-4 border-teal-200 dark:border-teal-800 shadow-xl overflow-hidden">
@@ -334,6 +298,23 @@ export default function Page() {
           )}
         </div>
         <div className="p-6">
+          {/* Add Thought Form */}
+          <form onSubmit={handleSubmit(onSubmit)} className="flex gap-2 mb-4">
+            <input
+              aria-label="Thought"
+              className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none transition-all bg-white dark:bg-gray-800 text-sm"
+              placeholder="What's on your mind?"
+              {...register('text', { required: true })}
+            />
+            <button
+              className="px-6 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold shadow-lg transition-all transform hover:scale-105 active:scale-95"
+              type="submit"
+            >
+              Add
+            </button>
+          </form>
+
+          {/* Thoughts List */}
           <ul className="space-y-2">
             {recentThoughts.length === 0 && (
               <li className="text-center py-8 text-sm text-gray-400">

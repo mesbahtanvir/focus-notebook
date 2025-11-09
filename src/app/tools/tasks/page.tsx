@@ -309,9 +309,6 @@ function TasksPageContent() {
         theme={theme}
       />
 
-      {/* Tool Group Navigation */}
-      <ToolGroupNav currentToolId="tasks" />
-
       {/* Task List - Grouped by Frequency */}
       <div className="space-y-6">
         {filteredAndSortedTasks.length === 0 && (

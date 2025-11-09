@@ -1,25 +1,39 @@
 "use client";
 
 import Link from "next/link";
-import { getToolGroupForTool, getToolSpecById } from "../../../shared/toolSpecs";
+import { getToolGroupForTool, getToolSpecById, toolGroups } from "../../../shared/toolSpecs";
 import { Card } from "@/components/ui/card";
 import { ArrowRight, Package } from "lucide-react";
 
 interface ToolGroupNavProps {
   currentToolId: string;
+  showAllTools?: boolean; // New prop for hub pages
 }
 
-export function ToolGroupNav({ currentToolId }: ToolGroupNavProps) {
+export function ToolGroupNav({ currentToolId, showAllTools = false }: ToolGroupNavProps) {
   const toolGroup = getToolGroupForTool(currentToolId);
 
+  // Check if currentToolId is actually a group ID (for hub pages)
+  const isGroupHub = Object.keys(toolGroups).includes(currentToolId);
+
   // If tool is not part of a group, don't show navigation
-  if (!toolGroup) {
+  if (!toolGroup && !isGroupHub) {
     return null;
   }
 
-  // Get all tools in the group except the current one
-  const relatedTools = toolGroup.toolIds
-    .filter((id) => id !== currentToolId)
+  // Use the correct group
+  const activeGroup = isGroupHub ? toolGroups[currentToolId as keyof typeof toolGroups] : toolGroup;
+
+  if (!activeGroup) {
+    return null;
+  }
+
+  // Get all tools in the group
+  // For hub pages or when showAllTools is true, show ALL tools
+  // For individual tool pages, filter out the current tool
+  const shouldShowAll = showAllTools || isGroupHub;
+  const relatedTools = activeGroup.toolIds
+    .filter((id) => shouldShowAll || id !== currentToolId)
     .map((id) => {
       try {
         const spec = getToolSpecById(id as any);
@@ -48,10 +62,10 @@ export function ToolGroupNav({ currentToolId }: ToolGroupNavProps) {
           </div>
           <div className="min-w-0">
             <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
-              {toolGroup.title}
+              {activeGroup.title}
             </h3>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-              {toolGroup.tagline}
+              {activeGroup.tagline}
             </p>
           </div>
         </div>

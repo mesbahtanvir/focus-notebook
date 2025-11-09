@@ -75,7 +75,7 @@ export default function WorkGoalsPage() {
         theme={theme}
       />
 
-      <ToolGroupNav currentToolId="tasks" />
+      <ToolGroupNav currentToolId="productivity" />
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">

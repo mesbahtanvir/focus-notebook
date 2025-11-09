@@ -7,7 +7,7 @@ import { useMoods } from "@/store/useMoods";
 import { useFriends } from "@/store/useFriends";
 import { ToolHeader, ToolPageLayout, ToolGroupNav } from "@/components/tools";
 import { toolThemes } from "@/components/tools/themes";
-import { Brain, Smile, Users, Heart, Sparkles, ArrowRight, Plus, TrendingUp } from "lucide-react";
+import { Brain, Smile, Users, Heart, Sparkles, ArrowRight, Plus, TrendingUp, Zap } from "lucide-react";
 import Link from "next/link";
 
 export default function InnerLifePage() {
@@ -92,7 +92,49 @@ export default function InnerLifePage() {
         theme={theme}
       />
 
-      <ToolGroupNav currentToolId="thoughts" />
+      <ToolGroupNav currentToolId="soulful" />
+
+      {/* Quick Actions */}
+      <div className="card p-3 sm:p-6 mb-4 sm:mb-6">
+        <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 flex items-center gap-2">
+          <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+          Quick Actions
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3">
+          <Link
+            href="/tools/thoughts"
+            className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600 transition-all"
+          >
+            <Brain className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
+            <div>
+              <div className="font-semibold text-sm sm:text-base">Capture Thought</div>
+              <div className="text-xs text-gray-500">Quick mental note</div>
+            </div>
+          </Link>
+
+          <Link
+            href="/tools/moodtracker"
+            className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-yellow-400 dark:hover:border-yellow-600 transition-all"
+          >
+            <Smile className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+            <div>
+              <div className="font-semibold text-sm sm:text-base">Log Mood</div>
+              <div className="text-xs text-gray-500">How are you feeling?</div>
+            </div>
+          </Link>
+
+          <Link
+            href="/tools/cbt"
+            className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-pink-400 dark:hover:border-pink-600 transition-all"
+          >
+            <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-pink-500" />
+            <div>
+              <div className="font-semibold text-sm sm:text-base">CBT Session</div>
+              <div className="text-xs text-gray-500">Reframe thoughts</div>
+            </div>
+          </Link>
+        </div>
+      </div>
 
       {/* Mood This Week */}
       <div className="card p-6 mb-6">

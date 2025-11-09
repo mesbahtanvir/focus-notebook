@@ -260,9 +260,6 @@ function ThoughtsPageContent() {
         theme={theme}
       />
 
-      {/* Tool Group Navigation */}
-      <ToolGroupNav currentToolId="thoughts" />
-
       {/* Popular Tags Filter */}
       {popularTags.length > 0 && (
         <div className="mb-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">

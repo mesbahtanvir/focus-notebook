@@ -21,7 +21,9 @@ import {
   Zap,
   Heart,
   Plane,
-  Package
+  Package,
+  Upload,
+  Plus
 } from "lucide-react";
 import Link from "next/link";
 
@@ -110,7 +112,49 @@ export default function FinancesPage() {
         theme={theme}
       />
 
-      <ToolGroupNav currentToolId="spending" />
+      <ToolGroupNav currentToolId="finances" />
+
+      {/* Quick Actions */}
+      <div className="card p-3 sm:p-6 mb-4 sm:mb-6">
+        <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 flex items-center gap-2">
+          <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+          Quick Actions
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3">
+          <Link
+            href="/tools/spending"
+            className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-600 transition-all"
+          >
+            <Upload className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+            <div>
+              <div className="font-semibold text-sm sm:text-base">Upload Statement</div>
+              <div className="text-xs text-gray-500">Import transactions</div>
+            </div>
+          </Link>
+
+          <Link
+            href="/tools/subscriptions"
+            className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600 transition-all"
+          >
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
+            <div>
+              <div className="font-semibold text-sm sm:text-base">Add Subscription</div>
+              <div className="text-xs text-gray-500">Track recurring cost</div>
+            </div>
+          </Link>
+
+          <Link
+            href="/tools/investments"
+            className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600 transition-all"
+          >
+            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
+            <div>
+              <div className="font-semibold text-sm sm:text-base">Log Investment</div>
+              <div className="text-xs text-gray-500">Update portfolio</div>
+            </div>
+          </Link>
+        </div>
+      </div>
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">

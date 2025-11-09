@@ -114,12 +114,29 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-900 dark:to-purple-900/20 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300/20 dark:bg-purple-600/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-300/20 dark:bg-pink-600/10 rounded-full blur-3xl"></div>
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full space-y-6 md:space-y-8"
+        className="max-w-md w-full space-y-6 md:space-y-8 relative z-10"
       >
+        {/* Back to Home Link */}
+        <div className="flex justify-start">
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Home
+          </a>
+        </div>
+
         {/* Logo/Header */}
         <div className="text-center space-y-3 md:space-y-4">
           <motion.div
@@ -131,10 +148,10 @@ export default function LoginPage() {
             <Zap className="h-8 w-8 md:h-10 md:w-10" />
           </motion.div>
           <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
-            ✨ Focus Notebook
+            Focus Notebook
           </h1>
-          <p className="text-gray-600 text-base md:text-lg px-4">
-            Your personal companion for growth and productivity
+          <p className="text-gray-600 dark:text-gray-400 text-base md:text-lg px-4">
+            Sign in to access your workspace
           </p>
         </div>
 
@@ -143,7 +160,7 @@ export default function LoginPage() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 }}
-          className="bg-white backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 space-y-6 border-4 border-purple-200"
+          className="bg-white dark:bg-gray-800 backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 space-y-6 border-2 border-purple-200 dark:border-purple-800"
         >
           <AnimatePresence mode="wait">
             {authMode === 'select' && (
@@ -155,11 +172,11 @@ export default function LoginPage() {
                 className="space-y-4"
               >
                 <div className="space-y-3 text-center">
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-                    👋 Welcome Back!
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+                    Welcome Back! 👋
                   </h2>
-                  <p className="text-gray-600 text-sm md:text-base">
-                    Choose how you&apos;d like to sign in
+                  <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+                    Choose how you&apos;d like to continue
                   </p>
                 </div>
 
@@ -236,17 +253,17 @@ export default function LoginPage() {
                     setError(null);
                     setSuccessMessage(null);
                   }}
-                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+                  className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back
                 </button>
 
                 <div className="space-y-3">
-                  <h2 className="text-xl font-bold text-gray-900">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                     {isSignUp ? 'Create Account' : 'Sign In'}
                   </h2>
-                  <p className="text-gray-600 text-sm">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
                     {isSignUp ? 'Sign up to sync your data across devices' : 'Sign in to access your account'}
                   </p>
                 </div>
@@ -278,17 +295,17 @@ export default function LoginPage() {
 
                 {/* Email Input */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Email
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="your@email.com"
-                      className="w-full pl-10 pr-4 py-2.5 rounded-lg border-2 border-gray-300 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 outline-none transition-all"
                       required
                     />
                   </div>
@@ -296,7 +313,7 @@ export default function LoginPage() {
 
                 {/* Password Input */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Password
                   </label>
                   <div className="relative">
@@ -305,13 +322,13 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder={isSignUp ? "At least 6 characters" : "Your password"}
-                      className="w-full pl-4 pr-10 py-2.5 rounded-lg border-2 border-gray-300 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                      className="w-full pl-4 pr-10 py-2.5 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 outline-none transition-all"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                     >
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
@@ -348,49 +365,34 @@ export default function LoginPage() {
                       setError(null);
                       setSuccessMessage(null);
                     }}
-                    className="text-sm text-gray-600 hover:text-gray-900"
+                    className="text-sm text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
                   >
-                    {isSignUp ? 'Already have an account? Sign in' : "Don&apos;t have an account? Sign up"}
+                    {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
                   </button>
                 </div>
               </motion.form>
             )}
           </AnimatePresence>
-
-          {/* Features */}
-          {authMode === 'select' && (
-            <div className="pt-6 border-t-2 border-purple-100 space-y-3">
-              <p className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                <span className="text-lg">🎁</span>
-                What you&apos;ll get:
-              </p>
-              <ul className="space-y-3 text-sm text-gray-700">
-                <li className="flex items-center gap-3 p-2 rounded-lg bg-green-50 border border-green-200">
-                  <span className="text-green-600 font-bold text-lg">✓</span>
-                  <span className="font-medium">Sync across all your devices</span>
-                </li>
-                <li className="flex items-center gap-3 p-2 rounded-lg bg-blue-50 border border-blue-200">
-                  <span className="text-blue-600 font-bold text-lg">✓</span>
-                  <span className="font-medium">Secure cloud backup</span>
-                </li>
-                <li className="flex items-center gap-3 p-2 rounded-lg bg-purple-50 border border-purple-200">
-                  <span className="text-purple-600 font-bold text-lg">✓</span>
-                  <span className="font-medium">Access from anywhere</span>
-                </li>
-                <li className="flex items-center gap-3 p-2 rounded-lg bg-pink-50 border border-pink-200">
-                  <span className="text-pink-600 font-bold text-lg">✓</span>
-                  <span className="font-medium">Never lose your data</span>
-                </li>
-              </ul>
-            </div>
-          )}
         </motion.div>
 
-        {/* Privacy Note */}
-        <div className="text-center space-y-2">
-          <p className="text-sm text-gray-600 flex items-center justify-center gap-2">
-            <span className="text-lg">🔐</span>
-            We respect your privacy. Your data is encrypted and secure.
+        {/* Privacy & Trust Indicators */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-center gap-6 text-xs text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-1">
+              <span>🔐</span>
+              <span>Encrypted</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span>🛡️</span>
+              <span>Secure</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span>🔒</span>
+              <span>Private</span>
+            </div>
+          </div>
+          <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+            Your data is encrypted and secure. We never sell your information.
           </p>
         </div>
       </motion.div>
