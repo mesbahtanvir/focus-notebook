@@ -39,6 +39,7 @@ import { plaidWebhook } from './plaidWebhooks';
 import { processCSVTransactions } from './processCSVTransactions';
 import { onCSVUpload } from './csvStorageTrigger';
 import { deleteCSVStatement } from './deleteCSVStatement';
+import { onDexaScanUpload } from './dexaScanStorageTrigger';
 
 // Export cloud functions
 export {
@@ -70,4 +71,6 @@ export {
   processCSVTransactions,
   onCSVUpload,
   deleteCSVStatement,
+  // Dexa Scan Processing
+  onDexaScanUpload,
 };

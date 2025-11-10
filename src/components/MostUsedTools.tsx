@@ -23,7 +23,8 @@ import {
   LineChart,
   CreditCard,
   BarChart3,
-  DollarSign
+  DollarSign,
+  Activity
 } from "lucide-react";
 import Link from "next/link";
 
@@ -49,6 +50,7 @@ const toolIcons: Record<ToolName, any> = {
   'asset-horizon': BarChart3,
   'admired-people': Sparkles,
   places: MapPin,
+  'body-progress': Activity,
 };
 
 const toolColors: Record<ToolName, string> = {
@@ -73,6 +75,7 @@ const toolColors: Record<ToolName, string> = {
   'asset-horizon': "from-purple-500 to-indigo-500",
   'admired-people': "from-purple-400 to-indigo-500",
   places: "from-blue-400 to-cyan-500",
+  'body-progress': "from-blue-500 to-cyan-500",
 };
 
 const toolLabels: Record<ToolName, string> = {
@@ -97,6 +100,7 @@ const toolLabels: Record<ToolName, string> = {
   'asset-horizon': "Asset Horizon",
   'admired-people': "People I Admire",
   places: "Places",
+  'body-progress': "Body Progress",
 };
 
 export function MostUsedTools() {

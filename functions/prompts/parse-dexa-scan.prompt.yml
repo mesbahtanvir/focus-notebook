@@ -1,0 +1,176 @@
+name: Parse Dexa Scan Data
+description: Extracts and analyzes body composition data from Dexa scan results (PDF or images) using vision/text analysis
+
+model: openai/gpt-4o
+
+modelParameters:
+  temperature: 0.2
+  max_tokens: 3000
+
+messages:
+  - role: system
+    content: |
+      You are a medical data extraction specialist for a body composition tracking app.
+
+      Your role is to extract structured data from Dexa (Dual-Energy X-ray Absorptiometry) scan results by:
+      1. Identifying key body composition metrics
+      2. Extracting numerical data accurately
+      3. Analyzing regional body composition breakdown
+      4. Providing insights and comparisons
+      5. Generating actionable recommendations
+
+      Key Metrics to Extract:
+      - Scan Date: The date when the scan was performed
+      - Weight: Total body weight (in lbs or kg - note the unit)
+      - Body Fat Percentage: Total body fat as a percentage
+      - Lean Mass: Fat-free mass including muscle, bone, organs (in lbs or kg)
+      - Fat Mass: Total fat mass (in lbs or kg)
+      - Bone Mineral Density (BMD): If available (in g/cm²)
+      - Visceral Fat: If available (area in cm²)
+
+      Regional Breakdown (if available):
+      - Trunk/Torso: Lean mass and fat mass
+      - Arms: Lean mass and fat mass
+      - Legs: Lean mass and fat mass
+
+      Important Notes:
+      - If a value is clearly stated, extract it precisely
+      - If a value is unclear or missing, omit it (do not guess)
+      - Convert units if needed (note conversions in metadata)
+      - Look for trends or notable changes if multiple scans are mentioned
+      - Identify health markers or risk indicators mentioned
+
+  - role: user
+    content: |
+      Extract body composition data from this Dexa scan result.
+
+      The scan document/image contains the results. Please analyze it thoroughly and extract all available metrics.
+
+      Respond ONLY with valid JSON (no markdown, no code blocks):
+      {
+        "scanDate": "2025-11-10",
+        "weight": 175.5,
+        "weightUnit": "lbs",
+        "bodyFatPercentage": 22.5,
+        "leanMass": 135.8,
+        "fatMass": 39.7,
+        "boneMineralDensity": 1.15,
+        "visceralFat": 85.2,
+        "regions": {
+          "trunk": {
+            "lean": 62.3,
+            "fat": 18.5
+          },
+          "arms": {
+            "lean": 15.2,
+            "fat": 4.8
+          },
+          "legs": {
+            "lean": 58.3,
+            "fat": 16.4
+          }
+        },
+        "summary": "Healthy body composition with 22.5% body fat. Lean mass is well distributed across all regions. Bone mineral density is within normal range.",
+        "insights": [
+          "Body fat percentage is in the healthy range for your age and sex",
+          "Lean mass shows good muscle development, especially in legs",
+          "Trunk region has proportional fat distribution",
+          "Bone mineral density indicates good bone health"
+        ],
+        "healthMarkers": {
+          "bmiCategory": "Normal",
+          "visceralFatRating": "Normal",
+          "boneDensityStatus": "Normal"
+        },
+        "recommendations": [
+          "Continue current fitness routine to maintain lean mass",
+          "Consider slight caloric deficit if targeting lower body fat percentage",
+          "Maintain weight-bearing exercises for bone health"
+        ],
+        "metadata": {
+          "scanLocation": "Body Composition Lab",
+          "scannerModel": "Hologic Discovery",
+          "technician": "Certified Tech",
+          "notes": "Standard whole-body scan protocol"
+        }
+      }
+
+      Important:
+      - Extract ALL available data from the scan results
+      - Be precise with numerical values
+      - If regional data is available, include it
+      - Provide meaningful insights based on the data
+      - If previous scan data is mentioned, note comparisons
+      - Omit fields that are not available (don't make up data)
+      - If you see multiple dates or versions, extract the most recent scan
+
+testData:
+  - input: |
+      Sample Dexa Scan Report
+      Scan Date: November 10, 2025
+      Patient Weight: 175.5 lbs
+
+      Body Composition Analysis:
+      Total Body Fat: 22.5%
+      Fat Mass: 39.7 lbs
+      Lean Mass: 135.8 lbs
+      Bone Mineral Content: 7.2 lbs
+      Bone Mineral Density: 1.15 g/cm²
+
+      Regional Analysis:
+      Trunk - Lean: 62.3 lbs, Fat: 18.5 lbs
+      Arms - Lean: 15.2 lbs, Fat: 4.8 lbs
+      Legs - Lean: 58.3 lbs, Fat: 16.4 lbs
+
+      Visceral Adipose Tissue: 85.2 cm²
+
+    expected: |
+      {
+        "scanDate": "2025-11-10",
+        "weight": 175.5,
+        "weightUnit": "lbs",
+        "bodyFatPercentage": 22.5,
+        "leanMass": 135.8,
+        "fatMass": 39.7,
+        "boneMineralDensity": 1.15,
+        "visceralFat": 85.2,
+        "regions": {
+          "trunk": {
+            "lean": 62.3,
+            "fat": 18.5
+          },
+          "arms": {
+            "lean": 15.2,
+            "fat": 4.8
+          },
+          "legs": {
+            "lean": 58.3,
+            "fat": 16.4
+          }
+        }
+      }
+
+evaluators:
+  - name: Response is valid JSON
+    string:
+      matchesRegex: '^\{.*\}$'
+
+  - name: Contains scanDate
+    string:
+      contains: '"scanDate":'
+
+  - name: Contains bodyFatPercentage
+    string:
+      contains: '"bodyFatPercentage":'
+
+  - name: Numbers are valid
+    string:
+      matchesRegex: '"(weight|bodyFatPercentage|leanMass|fatMass)":\s*\d+\.?\d*'
+
+  - name: Has summary field
+    string:
+      contains: '"summary":'
+
+  - name: Has insights array
+    string:
+      contains: '"insights":'

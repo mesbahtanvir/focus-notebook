@@ -6,14 +6,32 @@
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import * as fs from 'fs/promises';
+import * as fsSync from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
 import { CONFIG } from './config';
 
-const ENHANCE_TRANSACTIONS_PROMPT_PATH = path.join(
-  __dirname,
-  '../prompts/enhance-transactions.prompt.yml'
-);
+const PROMPT_FILE_NAME = 'enhance-transactions.prompt.yml';
+
+function resolvePromptPath(): string {
+  const candidatePaths = [
+    path.join(__dirname, '../../../prompts', PROMPT_FILE_NAME),
+    path.join(__dirname, '../../prompts', PROMPT_FILE_NAME),
+    path.join(__dirname, '../../../../functions/prompts', PROMPT_FILE_NAME),
+    path.join(process.cwd(), 'functions', 'prompts', PROMPT_FILE_NAME),
+    path.join(process.cwd(), 'prompts', PROMPT_FILE_NAME),
+  ];
+
+  for (const candidate of candidatePaths) {
+    if (fsSync.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    `Prompt file "${PROMPT_FILE_NAME}" not found. Checked: ${candidatePaths.join(', ')}`
+  );
+}
 
 interface CSVTransaction {
   date: string;
@@ -44,7 +62,8 @@ interface ProcessingStatus {
  */
 async function loadPrompt(): Promise<any> {
   try {
-    const promptContent = await fs.readFile(ENHANCE_TRANSACTIONS_PROMPT_PATH, 'utf8');
+    const promptPath = resolvePromptPath();
+    const promptContent = await fs.readFile(promptPath, 'utf8');
     return yaml.parse(promptContent);
   } catch (error) {
     console.error('Failed to load prompt:', error);
@@ -272,7 +291,6 @@ async function updateProcessingStatus(
  */
 export const onCSVUpload = functions.storage.object().onFinalize(async (object) => {
   const filePath = object.name;
-  const contentType = object.contentType;
 
   // Only process CSV files in the statements directory
   if (!filePath || !filePath.includes('/statements/') || !filePath.endsWith('.csv')) {
