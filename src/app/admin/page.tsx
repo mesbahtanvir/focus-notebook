@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Suspense, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRequestLog } from "@/store/useRequestLog";
 import { useLLMLogs } from "@/store/useLLMLogs";
@@ -20,6 +20,20 @@ import { db as firestore } from "@/lib/firebaseClient";
 import { collection, getDocs } from "firebase/firestore";
 
 export default function AdminPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          Loading admin dashboard...
+        </div>
+      }
+    >
+      <AdminPageContent />
+    </Suspense>
+  );
+}
+
+function AdminPageContent() {
   const { user, loading } = useAuth();
   const searchParams = useSearchParams();
   const { logs, getPendingRequests, getInProgressRequests } = useRequestLog();
