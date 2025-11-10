@@ -4,7 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { callFirebaseFunction } from '../_lib/callFirebaseFunction';
+import {
+  callFirebaseCallable,
+  handleCallableError,
+} from '../_lib/callFirebaseFunction';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,18 +21,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await callFirebaseFunction(
-      request,
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Missing Authorization header' },
+        { status: 401 }
+      );
+    }
+
+    const idToken = authHeader.replace('Bearer', '').trim();
+    const appCheckToken = request.headers.get('x-firebase-appcheck');
+    const instanceIdToken = request.headers.get('firebase-instance-id-token');
+
+    const result = await callFirebaseCallable(
       'deleteCSVStatement',
-      { fileName, storagePath }
+      { fileName, storagePath },
+      idToken,
+      appCheckToken,
+      instanceIdToken
     );
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Error in delete-csv route:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleCallableError(error);
   }
 }

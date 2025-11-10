@@ -204,8 +204,9 @@ async function saveTransactions(
   enhanced: EnhancedTransaction[]
 ): Promise<number> {
   const db = admin.firestore();
-  const batch = db.batch();
+  let batch = db.batch();
   let count = 0;
+  let batchCount = 0;
 
   for (let i = 0; i < transactions.length; i++) {
     const raw = transactions[i];
@@ -223,7 +224,7 @@ async function saveTransactions(
       date: raw.date,
       description: raw.description,
       merchant: enh.merchantName,
-      amount: Math.abs(raw.amount),
+      amount: raw.amount, // Keep original sign: negative = income, positive = expense
       category: enh.category,
       tags: enh.isSubscription ? ['subscription'] : [],
       notes: enh.notes,
@@ -233,14 +234,18 @@ async function saveTransactions(
     });
 
     count++;
+    batchCount++;
 
-    // Firestore batch limit is 500
-    if (count % 450 === 0) {
+    // Firestore batch limit is 500 - commit at 450 and create new batch
+    if (batchCount >= 450) {
       await batch.commit();
+      batch = db.batch(); // Create new batch for next set of operations
+      batchCount = 0;
     }
   }
 
-  if (count % 450 !== 0) {
+  // Commit remaining operations
+  if (batchCount > 0) {
     await batch.commit();
   }
 

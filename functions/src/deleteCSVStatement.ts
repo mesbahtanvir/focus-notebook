@@ -48,22 +48,22 @@ export const deleteCSVStatement = functions.https.onCall(
       // Delete transactions in batches (Firestore limit is 500 operations per batch)
       const batchSize = 450;
       let batch = db.batch();
-      let operationCount = 0;
+      let batchCount = 0;
 
       for (const doc of transactionsSnapshot.docs) {
         batch.delete(doc.ref);
-        operationCount++;
+        batchCount++;
         deletedCount++;
 
-        if (operationCount >= batchSize) {
+        if (batchCount >= batchSize) {
           await batch.commit();
-          batch = db.batch();
-          operationCount = 0;
+          batch = db.batch(); // Create new batch for next set of operations
+          batchCount = 0;
         }
       }
 
       // Commit remaining operations
-      if (operationCount > 0) {
+      if (batchCount > 0) {
         await batch.commit();
       }
 
