@@ -43,7 +43,7 @@ export default function BodyProgressPage() {
     if (scans.length > 0 && activeTab === 'upload') {
       setActiveTab('progress');
     }
-  }, [scans.length]);
+  }, [scans.length, activeTab]);
 
   const handleDownload = async (storagePath: string, fileName: string) => {
     try {

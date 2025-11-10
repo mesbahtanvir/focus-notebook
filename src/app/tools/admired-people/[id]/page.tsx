@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useAdmiredPeople, AdmiredPerson, Quote, Resource, TimelineEvent, JournalEntry } from "@/store/useAdmiredPeople";
 import { useAuth } from "@/contexts/AuthContext";
@@ -118,10 +119,13 @@ export default function PersonDetailPage() {
             {/* Profile Image */}
             <div className="flex-shrink-0">
               {person.imageUrl ? (
-                <img
+                <Image
                   src={person.imageUrl}
                   alt={person.name}
+                  width={128}
+                  height={128}
                   className="w-32 h-32 rounded-2xl object-cover border-4 border-white/20"
+                  priority
                 />
               ) : (
                 <div className="w-32 h-32 rounded-2xl bg-white/10 flex items-center justify-center border-4 border-white/20">

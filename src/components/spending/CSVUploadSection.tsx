@@ -86,7 +86,7 @@ export default function CSVUploadSection() {
     setIsDragging(false);
   }, []);
 
-  const processFiles = async (files: FileList | null) => {
+  const processFiles = useCallback(async (files: FileList | null) => {
     if (!files || !user) return;
 
     const csvFiles = Array.from(files).filter(
@@ -150,7 +150,7 @@ export default function CSVUploadSection() {
         });
       }
     }
-  };
+  }, [user]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {

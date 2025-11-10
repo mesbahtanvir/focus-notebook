@@ -86,7 +86,7 @@ export default function DexaScanUpload() {
     setIsDragging(false);
   }, []);
 
-  const processFiles = async (files: FileList | null) => {
+  const processFiles = useCallback(async (files: FileList | null) => {
     if (!files || !user) return;
 
     const validFiles = Array.from(files).filter(
@@ -153,7 +153,7 @@ export default function DexaScanUpload() {
         });
       }
     }
-  };
+  }, [user]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
