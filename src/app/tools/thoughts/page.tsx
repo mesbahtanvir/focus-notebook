@@ -36,6 +36,7 @@ import {
   ToolGroupNav
 } from "@/components/tools";
 import { toolThemes } from "@/components/tools/themes";
+import { formatDate } from "@/lib/cbtUtils";
 
 function ThoughtsPageContent() {
   useTrackToolUsage('thoughts');
@@ -51,28 +52,6 @@ function ThoughtsPageContent() {
   const [filterType, setFilterType] = useState<'all' | 'processed' | 'unprocessed'>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-
-  // Date formatting function
-  const formatDate = (date: any): string => {
-    if (!date) return 'N/A';
-    try {
-      // Handle Firebase Timestamp
-      if (typeof date === 'object' && 'toDate' in date) {
-        return date.toDate().toLocaleDateString();
-      }
-      // Handle ISO string
-      if (typeof date === 'string') {
-        return new Date(date).toLocaleDateString();
-      }
-      // Handle timestamp in seconds
-      if (typeof date === 'object' && 'seconds' in date) {
-        return new Date(date.seconds * 1000).toLocaleDateString();
-      }
-      return new Date(date).toLocaleDateString();
-    } catch (error) {
-      return 'Invalid date';
-    }
-  };
 
   // Auto-open thought detail if navigating from tasks page
   useEffect(() => {

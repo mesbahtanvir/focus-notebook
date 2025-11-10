@@ -178,7 +178,7 @@ describe('useTrips store', () => {
     });
   });
 
-  it('prevents adding expenses while trip is in planning state', async () => {
+  it('allows adding expenses while trip is still in planning state', async () => {
     const tripId = 'trip-planning';
     act(() => {
       useTrips.setState({
@@ -202,15 +202,28 @@ describe('useTrips store', () => {
 
     const { result } = renderHook(() => useTrips());
 
-    await expect(
-      result.current.addExpense(tripId, {
+    await act(async () => {
+      await result.current.addExpense(tripId, {
         category: 'food',
         amount: 50,
         currency: 'USD',
         date: new Date().toISOString(),
         description: 'Dinner',
+      });
+    });
+
+    expect(mockUpdateAt).toHaveBeenCalledWith(
+      expect.stringContaining(`/trips/${tripId}`),
+      expect.objectContaining({
+        expenses: expect.arrayContaining([
+          expect.objectContaining({
+            description: 'Dinner',
+            amount: 50,
+            category: 'food',
+          }),
+        ]),
       })
-    ).rejects.toThrow('Cannot add expenses to a planning trip');
+    );
   });
 
   it('normalizes trips received from subscription', () => {

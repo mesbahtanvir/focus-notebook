@@ -9,6 +9,7 @@ import { ToolHeader, ToolPageLayout, ToolGroupNav } from "@/components/tools";
 import { toolThemes } from "@/components/tools/themes";
 import { Brain, Smile, Users, Heart, Sparkles, ArrowRight, Plus, TrendingUp, Zap } from "lucide-react";
 import Link from "next/link";
+import { formatDate } from "@/lib/cbtUtils";
 
 export default function InnerLifePage() {
   const { user } = useAuth();
@@ -300,7 +301,7 @@ export default function InnerLifePage() {
               >
                 <p className="text-sm text-gray-900 dark:text-white mb-2">{thought.text}</p>
                 <div className="text-xs text-gray-500">
-                  {new Date(thought.createdAt).toLocaleString()}
+                  {formatDate(thought.createdAt)}
                 </div>
               </Link>
             ))}

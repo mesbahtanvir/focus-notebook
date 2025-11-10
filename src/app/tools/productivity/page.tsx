@@ -11,6 +11,8 @@ import { toolThemes } from "@/components/tools/themes";
 import { CheckSquare, Target, Folder, Clock, Plus, ArrowRight, Zap } from "lucide-react";
 import Link from "next/link";
 
+const PRIORITY_ORDER = { urgent: 0, high: 1, medium: 2, low: 3 } as const;
+
 export default function WorkGoalsPage() {
   const { user } = useAuth();
   const tasks = useTasks((s) => s.tasks);
@@ -48,11 +50,19 @@ export default function WorkGoalsPage() {
   const todayTasks = useMemo(() => {
     return tasks
       .filter((t) => t.status === "active")
-      .sort((a, b) => {
-        const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
-      })
+      .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
       .slice(0, 5);
+  }, [tasks]);
+
+  const dailyStaples = useMemo(() => {
+    return tasks
+      .filter(
+        (task) =>
+          task.status === "active" &&
+          task.recurrence?.type === "daily"
+      )
+      .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
+      .slice(0, 4);
   }, [tasks]);
 
   const activeProjectsList = useMemo(() => {
@@ -76,6 +86,48 @@ export default function WorkGoalsPage() {
       />
 
       <ToolGroupNav currentToolId="productivity" />
+
+      {/* Quick Actions */}
+      <div className="card p-3 sm:p-6 mb-4 sm:mb-6">
+        <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 flex items-center gap-2">
+          <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+          Quick Actions
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3">
+          <Link
+            href="/tools/tasks"
+            className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600 transition-all"
+          >
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
+            <div>
+              <div className="font-semibold text-sm sm:text-base">Add Task</div>
+              <div className="text-xs text-gray-500">Quick capture</div>
+            </div>
+          </Link>
+
+          <Link
+            href="/tools/focus"
+            className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-orange-400 dark:hover:border-orange-600 transition-all"
+          >
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
+            <div>
+              <div className="font-semibold text-sm sm:text-base">Start Focus</div>
+              <div className="text-xs text-gray-500">Deep work session</div>
+            </div>
+          </Link>
+
+          <Link
+            href="/tools/notes"
+            className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600 transition-all"
+          >
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
+            <div>
+              <div className="font-semibold text-sm sm:text-base">New Note</div>
+              <div className="text-xs text-gray-500">Capture knowledge</div>
+            </div>
+          </Link>
+      </div>
+    </div>
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
@@ -128,47 +180,35 @@ export default function WorkGoalsPage() {
         </Link>
       </div>
 
-      {/* Quick Actions */}
-      <div className="card p-3 sm:p-6 mb-4 sm:mb-6">
-        <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 flex items-center gap-2">
-          <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
-          Quick Actions
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3">
-          <Link
-            href="/tools/tasks"
-            className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600 transition-all"
-          >
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
-            <div>
-              <div className="font-semibold text-sm sm:text-base">Add Task</div>
-              <div className="text-xs text-gray-500">Quick capture</div>
-            </div>
-          </Link>
-
-          <Link
-            href="/tools/focus"
-            className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-orange-400 dark:hover:border-orange-600 transition-all"
-          >
-            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
-            <div>
-              <div className="font-semibold text-sm sm:text-base">Start Focus</div>
-              <div className="text-xs text-gray-500">Deep work session</div>
-            </div>
-          </Link>
-
-          <Link
-            href="/tools/notes"
-            className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600 transition-all"
-          >
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
-            <div>
-              <div className="font-semibold text-sm sm:text-base">New Note</div>
-              <div className="text-xs text-gray-500">Capture knowledge</div>
-            </div>
-          </Link>
+      {dailyStaples.length > 0 && (
+        <div className="card p-3 sm:p-5 mb-4 sm:mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-base sm:text-lg font-bold">🔁 Daily Staples</h3>
+            <Link href="/tools/tasks" className="text-xs sm:text-sm text-purple-600 dark:text-purple-400 hover:underline">
+              Manage Tasks →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {dailyStaples.map((task) => (
+              <Link
+                key={task.id}
+                href={`/tools/tasks?id=${task.id}`}
+                className="flex flex-col gap-1 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+              >
+                <div className="font-semibold text-sm text-gray-900 dark:text-white">{task.title}</div>
+                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-semibold">
+                    Daily
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 capitalize">
+                    {task.priority}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Today's Priorities */}
       <div className="card p-3 sm:p-6 mb-4 sm:mb-6">

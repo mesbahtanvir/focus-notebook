@@ -1,107 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { useToolUsage, ToolName } from "@/store/useToolUsage";
+import { useToolUsage } from "@/store/useToolUsage";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
-import {
-  CheckSquare,
-  Brain,
-  Target,
-  FolderKanban,
-  Zap,
-  Lightbulb,
-  StickyNote,
-  Users,
-  Smile,
-  Heart,
-  ShoppingCart,
-  Sparkles,
-  TrendingUp,
-  Compass,
-  MapPin,
-  LineChart,
-  CreditCard,
-  BarChart3,
-  DollarSign,
-  Activity
-} from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import Link from "next/link";
-
-const toolIcons: Record<ToolName, any> = {
-  tasks: CheckSquare,
-  thoughts: Brain,
-  goals: Target,
-  projects: FolderKanban,
-  focus: Zap,
-  brainstorming: Lightbulb,
-  notes: StickyNote,
-  relationships: Users,
-  moodtracker: Smile,
-  cbt: Heart,
-  errands: ShoppingCart,
-  deepreflect: Sparkles,
-  'packing-list': Compass,
-  trips: MapPin,
-  spending: DollarSign,
-  'spending-unified': TrendingUp,
-  investments: LineChart,
-  subscriptions: CreditCard,
-  'asset-horizon': BarChart3,
-  'admired-people': Sparkles,
-  places: MapPin,
-  'body-progress': Activity,
-};
-
-const toolColors: Record<ToolName, string> = {
-  tasks: "from-blue-500 to-cyan-500",
-  thoughts: "from-purple-500 to-pink-500",
-  goals: "from-green-500 to-emerald-500",
-  projects: "from-orange-500 to-amber-500",
-  focus: "from-indigo-500 to-purple-500",
-  brainstorming: "from-yellow-500 to-orange-500",
-  notes: "from-teal-500 to-green-500",
-  relationships: "from-pink-500 to-rose-500",
-  moodtracker: "from-amber-500 to-yellow-500",
-  cbt: "from-red-500 to-pink-500",
-  errands: "from-cyan-500 to-blue-500",
-  deepreflect: "from-violet-500 to-purple-500",
-  'packing-list': "from-blue-500 to-sky-500",
-  trips: "from-rose-500 to-pink-500",
-  spending: "from-green-500 to-emerald-500",
-  'spending-unified': "from-green-600 to-emerald-600",
-  investments: "from-emerald-500 to-teal-500",
-  subscriptions: "from-indigo-500 to-blue-500",
-  'asset-horizon': "from-purple-500 to-indigo-500",
-  'admired-people': "from-purple-400 to-indigo-500",
-  places: "from-blue-400 to-cyan-500",
-  'body-progress': "from-blue-500 to-cyan-500",
-};
-
-const toolLabels: Record<ToolName, string> = {
-  tasks: "Tasks",
-  thoughts: "Thoughts",
-  goals: "Goals",
-  projects: "Projects",
-  focus: "Focus",
-  brainstorming: "Brainstorming",
-  notes: "Notes",
-  relationships: "People",
-  moodtracker: "Mood",
-  cbt: "CBT",
-  errands: "Errands",
-  deepreflect: "Deep Reflect",
-  'packing-list': "Packing Planner",
-  trips: "Trips",
-  spending: "Spending",
-  'spending-unified': "Spending+",
-  investments: "Investments",
-  subscriptions: "Subscriptions",
-  'asset-horizon': "Asset Horizon",
-  'admired-people': "People I Admire",
-  places: "Places",
-  'body-progress': "Body Progress",
-};
+import { toolVisuals } from "./tools/toolVisuals";
 
 export function MostUsedTools() {
   const { user } = useAuth();
@@ -147,9 +52,10 @@ export function MostUsedTools() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         {mostUsed.map((tool, index) => {
-          const Icon = toolIcons[tool.toolName];
-          const gradient = toolColors[tool.toolName];
-          const label = toolLabels[tool.toolName];
+          const visual = toolVisuals[tool.toolName];
+          const Icon = visual?.icon || TrendingUp;
+          const gradient = visual?.gradient || "from-gray-500 to-gray-700";
+          const label = visual?.label || tool.toolName;
 
           return (
             <Link

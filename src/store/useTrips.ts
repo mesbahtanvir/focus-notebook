@@ -197,9 +197,6 @@ export const useTrips = create<TripsState>((set, get) => ({
   addExpense: async (tripId, expense) => {
     const trip = get().getTrip(tripId);
     if (!trip) throw new Error('Trip not found');
-    if (trip.status === 'planning') {
-      throw new Error('Cannot add expenses to a planning trip');
-    }
 
     const id = crypto.randomUUID();
     const now = new Date().toISOString();

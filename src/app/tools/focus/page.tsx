@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useTasks } from "@/store/useTasks";
-import type { Task } from "@/store/useTasks";
+import type { Task, TaskPriority } from "@/store/useTasks";
+import { useProjects } from "@/store/useProjects";
+import { useGoals } from "@/store/useGoals";
 import { useFocus, selectBalancedTasks } from "@/store/useFocus";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Zap, Clock, Target, History, Star, TrendingUp, Brain, Rocket, Heart, Briefcase, X, Trash2, ArrowLeft, Eye, EyeOff, Search } from "lucide-react";
@@ -13,10 +15,16 @@ import { FocusSessionDetailModal } from "@/components/FocusSessionDetailModal";
 import { FocusSession as FocusSessionType } from "@/store/useFocus";
 import { formatDateTime } from "@/lib/formatDateTime";
 import { useAuth } from "@/contexts/AuthContext";
-import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { isWorkday, getDateString, isTaskCompletedToday } from "@/lib/utils/date";
 import { isTaskRelevantForToday as determineTaskRelevanceForToday } from "./isTaskRelevantForToday";
+
+const PRIORITY_WEIGHTS: Record<TaskPriority, number> = {
+  urgent: 4,
+  high: 3,
+  medium: 2,
+  low: 1,
+};
 
 function FocusPageContent() {
   useTrackToolUsage('focus');
@@ -25,11 +33,15 @@ function FocusPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tasks = useTasks((s) => s.tasks);
+  const projects = useProjects((s) => s.projects);
+  const goals = useGoals((s) => s.goals);
   const currentSession = useFocus((s) => s.currentSession);
   const completedSession = useFocus((s) => s.completedSession);
   const sessions = useFocus((s) => s.sessions);
   const startSession = useFocus((s) => s.startSession);
   const subscribe = useFocus((s) => s.subscribe);
+  const subscribeProjects = useProjects((s) => s.subscribe);
+  const subscribeGoals = useGoals((s) => s.subscribe);
   const loadActiveSession = useFocus((s) => s.loadActiveSession);
   const clearCompletedSession = useFocus((s) => s.clearCompletedSession);
   const deleteSession = useFocus((s) => s.deleteSession);
@@ -70,9 +82,52 @@ function FocusPageContent() {
 
   const autoSuggestedTasks = selectBalancedTasks(tasks, duration);
 
+  const projectMap = useMemo(() => {
+    return new Map(projects.map(project => [project.id, project]));
+  }, [projects]);
+
+  const goalMap = useMemo(() => {
+    return new Map(goals.map(goal => [goal.id, goal]));
+  }, [goals]);
+
   const checkTaskRelevanceForToday = useCallback((task: Task) => {
     return determineTaskRelevanceForToday(task, today);
   }, [today]);
+
+  const getDueDateScore = useCallback((dueDate?: string) => {
+    if (!dueDate) return 0;
+    const due = new Date(dueDate);
+    if (Number.isNaN(due.getTime())) return 0;
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const dueStart = new Date(due);
+    dueStart.setHours(0, 0, 0, 0);
+
+    const diffDays = Math.round((dueStart.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) return 5;
+    if (diffDays === 0) return 4;
+    if (diffDays <= 2) return 3;
+    if (diffDays <= 5) return 2;
+    if (diffDays <= 7) return 1;
+    return 0;
+  }, []);
+
+  const computeImportanceScore = useCallback((task: Task) => {
+    const project = task.projectId ? projectMap.get(task.projectId) : undefined;
+    const goalId = project?.goalId;
+    const goal = goalId ? goalMap.get(goalId) : undefined;
+
+    const taskPriorityScore = PRIORITY_WEIGHTS[task.priority] ?? 0;
+    const projectPriorityScore = project ? (PRIORITY_WEIGHTS[project.priority] ?? 0) : 0;
+    const goalPriorityScore = goal ? (PRIORITY_WEIGHTS[goal.priority] ?? 0) : 0;
+
+    const dueDateScore = getDueDateScore(task.dueDate);
+
+    return taskPriorityScore * 3 + projectPriorityScore * 2 + goalPriorityScore * 1.5 + dueDateScore;
+  }, [goalMap, projectMap, getDueDateScore]);
 
   const shouldShowActiveTask = useCallback((task: Task) => {
     const isSelected = selectedTaskIds.includes(task.id);
@@ -118,6 +173,13 @@ function FocusPageContent() {
     checkForActiveSession();
   }, [user?.uid, subscribe, checkForActiveSession]);
 
+  useEffect(() => {
+    if (user?.uid) {
+      subscribeProjects(user.uid);
+      subscribeGoals(user.uid);
+    }
+  }, [user?.uid, subscribeProjects, subscribeGoals]);
+
   const handleResumeSession = async () => {
     await loadActiveSession();
   };
@@ -134,6 +196,20 @@ function FocusPageContent() {
 
   const visibleActiveTasks = activeTasks.filter(shouldShowActiveTask);
 
+  const importanceScores = useMemo(() => {
+    const scoreMap = new Map<string, number>();
+    visibleActiveTasks.forEach(task => {
+      scoreMap.set(task.id, computeImportanceScore(task));
+    });
+    return scoreMap;
+  }, [visibleActiveTasks, computeImportanceScore]);
+
+  const dailyStapleTasks = useMemo(() => {
+    return activeTasks.filter(task =>
+      task.recurrence?.type === 'daily' && checkTaskRelevanceForToday(task)
+    );
+  }, [activeTasks, checkTaskRelevanceForToday]);
+
   // Calculate hidden task count (tasks not relevant for today and not selected)
   const hiddenTaskCount = useMemo(() => {
     if (showAlreadySelected) return 0;
@@ -146,8 +222,6 @@ function FocusPageContent() {
 
   // Sort tasks: selected first, then by priority (urgent → high → medium → low), then alphabetically
   const sortedVisibleTasks = useMemo(() => {
-    const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
-
     // Filter by search query
     const searchFiltered = searchQuery.trim()
       ? visibleActiveTasks.filter(task =>
@@ -163,15 +237,14 @@ function FocusPageContent() {
       if (aSelected && !bSelected) return -1;
       if (!aSelected && bSelected) return 1;
 
-      // Then by priority
-      const aPriority = priorityOrder[a.priority];
-      const bPriority = priorityOrder[b.priority];
-      if (aPriority !== bPriority) return aPriority - bPriority;
+      const aImportance = importanceScores.get(a.id) ?? 0;
+      const bImportance = importanceScores.get(b.id) ?? 0;
+      if (aImportance !== bImportance) return bImportance - aImportance;
 
       // Finally alphabetically by title
       return a.title.localeCompare(b.title);
     });
-  }, [visibleActiveTasks, selectedTaskIds, searchQuery]);
+  }, [importanceScores, visibleActiveTasks, selectedTaskIds, searchQuery]);
 
   const handleStartSession = async () => {
     if (selectedTasks.length === 0) return;
@@ -260,7 +333,7 @@ function FocusPageContent() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl pb-24">
+    <div className="w-full max-w-none px-4 py-4 md:py-8 pb-28">
       <AnimatePresence mode="wait">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -313,7 +386,7 @@ function FocusPageContent() {
             )}
 
             {/* Two-Column Layout: Desktop | Stacked: Mobile/Tablet */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[420px_minmax(0,1fr)] gap-4">
               
               {/* Left Column: Setup (1/3 width on desktop) */}
               <div className="lg:col-span-1 space-y-4">
@@ -482,6 +555,33 @@ function FocusPageContent() {
                   </div>
                 </div>
 
+                {dailyStapleTasks.length > 0 && (
+                  <div className="mb-4">
+                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-2">
+                      <Star className="h-3.5 w-3.5 text-yellow-500" />
+                      Daily staples
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {dailyStapleTasks.map((task) => {
+                        const isSelected = selectedTaskIds.includes(task.id);
+                        return (
+                          <button
+                            key={task.id}
+                            onClick={() => toggleTaskSelection(task.id)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                              isSelected
+                                ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                                : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-purple-400'
+                            }`}
+                          >
+                            {task.title}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {activeTasks.length === 0 ? (
                   <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
                     <div className="text-4xl mb-2">📝</div>
@@ -513,68 +613,75 @@ function FocusPageContent() {
                     )}
                   </div>
                 ) : (
-                  <div className="max-h-[500px] lg:max-h-[600px] overflow-y-auto space-y-1.5 pr-1">
-                    <AnimatePresence mode="popLayout">
-                      {sortedVisibleTasks.map((task) => {
-                        const isSelected = selectedTaskIds.includes(task.id);
-                        return (
-                          <motion.button
-                            key={task.id}
-                            layout
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{
-                              layout: { type: "spring", stiffness: 300, damping: 30 },
-                              opacity: { duration: 0.2 },
-                              y: { duration: 0.2 }
-                            }}
-                            type="button"
-                            onClick={() => toggleTaskSelection(task.id)}
-                            className={`w-full flex items-center gap-2 p-2.5 rounded-lg transition-colors text-left ${
-                              isSelected
-                                ? 'bg-purple-600 text-white border border-purple-600'
-                                : 'bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white hover:border-purple-300 dark:hover:border-purple-600 border border-gray-200 dark:border-gray-700'
-                            }`}
-                          >
-                          <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${
-                            isSelected 
-                              ? 'bg-white' 
-                              : 'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600'
-                          }`}>
-                            {isSelected && (
-                              <svg className="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className={`text-sm font-medium truncate ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
-                              {task.title}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-0.5 ${
+                  <div className="max-h-[55vh] lg:max-h-[60vh] xl:max-h-[70vh] overflow-y-auto pr-1">
+                    <div className="grid gap-1.5 sm:grid-cols-2 2xl:grid-cols-3 auto-rows-fr">
+                      <AnimatePresence mode="popLayout">
+                        {sortedVisibleTasks.map((task) => {
+                          const isSelected = selectedTaskIds.includes(task.id);
+                          return (
+                            <motion.button
+                              key={task.id}
+                              layout
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -20 }}
+                              transition={{
+                                layout: { type: "spring", stiffness: 300, damping: 30 },
+                                opacity: { duration: 0.2 },
+                                y: { duration: 0.2 }
+                              }}
+                              type="button"
+                              onClick={() => toggleTaskSelection(task.id)}
+                              className={`w-full h-full flex items-start gap-2 p-3 rounded-lg transition-colors text-left ${
                                 isSelected
-                                  ? 'bg-white/20 text-white'
-                                  : task.category === 'mastery'
-                                  ? 'bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
-                                  : 'bg-pink-100 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300'
+                                  ? 'bg-purple-600 text-white border border-purple-600 shadow-md'
+                                  : 'bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white hover:border-purple-300 dark:hover:border-purple-600 border border-gray-200 dark:border-gray-700'
                               }`}
                             >
-                              {task.category === 'mastery' ?  '🧠': '💝'} <span className="hidden sm:inline">{task.category || 'pleasure'}</span>
-                            </span>
-                            {task.estimatedMinutes && (
-                              <span className={`text-[10px] font-medium ${isSelected ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
-                                {task.estimatedMinutes}m
+                            <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                              isSelected 
+                                ? 'bg-white' 
+                                : 'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600'
+                            }`}>
+                              {isSelected && (
+                                <svg className="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className={`text-sm font-semibold leading-snug ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                                {task.title}
+                              </div>
+                              {task.dueDate && (
+                                <div className={`text-[11px] ${isSelected ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                                  Due {new Date(task.dueDate).toLocaleDateString()}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-0.5 ${
+                                  isSelected
+                                    ? 'bg-white/20 text-white'
+                                    : task.category === 'mastery'
+                                    ? 'bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
+                                    : 'bg-pink-100 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300'
+                                }`}
+                              >
+                                {task.category === 'mastery' ?  '🧠': '💝'} <span className="hidden sm:inline">{task.category || 'pleasure'}</span>
                               </span>
-                            )}
-                          </div>
-                          </motion.button>
-                        );
-                      })}
-                    </AnimatePresence>
+                              {task.estimatedMinutes && (
+                                <span className={`text-[10px] font-medium ${isSelected ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                                  {task.estimatedMinutes}m
+                                </span>
+                              )}
+                            </div>
+                            </motion.button>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </div>
                   </div>
                 )}
               </div>

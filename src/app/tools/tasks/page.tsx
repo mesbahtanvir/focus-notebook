@@ -6,31 +6,23 @@ import { useThoughts } from '@/store/useThoughts';
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus,
-  Filter,
   SortAsc,
   Calendar,
   CheckCircle2,
   Circle,
   AlertCircle,
   Repeat,
-  Trash2,
   ChevronDown,
   MessageCircle,
-  Search,
   Loader2,
-  FileText,
-  ArrowLeft
-} from "lucide-react";
-import { getNotesPreview } from "@/lib/formatNotes";
+  FileText} from "lucide-react";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { TaskInput } from "@/components/TaskInput";
-import { SourceBadge } from "@/components/SourceBadge";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import Link from "next/link";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
-import { toolThemes, ToolHeader, SearchAndFilters, ToolPageLayout, ToolGroupNav } from "@/components/tools";
+import { toolThemes, ToolHeader, SearchAndFilters, ToolPageLayout } from "@/components/tools";
 import { isTaskCompletedToday } from "@/lib/utils/date";
 
 type SortOption = 'priority' | 'dueDate' | 'createdAt' | 'title';

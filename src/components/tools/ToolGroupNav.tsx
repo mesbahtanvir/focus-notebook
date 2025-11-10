@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { getToolGroupForTool, getToolSpecById, toolGroups } from "../../../shared/toolSpecs";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, Package } from "lucide-react";
+import { Package } from "lucide-react";
+import { getToolIcon } from "./toolVisuals";
 
 interface ToolGroupNavProps {
   currentToolId: string;
@@ -74,24 +75,24 @@ export function ToolGroupNav({ currentToolId, showAllTools = false }: ToolGroupN
           <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
             Related Tools
           </p>
-          <div className="grid gap-1.5 sm:gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {relatedTools.map((tool) => (
-              <Link
-                key={tool.id}
-                href={`/tools/${tool.id}`}
-                className="group flex items-center gap-2 p-2 sm:p-3 rounded-lg border-2 border-purple-200 dark:border-purple-700 bg-white dark:bg-gray-800 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-md transition-all"
-              >
-                <div className="flex-1 min-w-0">
+          <div className="grid gap-1.5 sm:gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {relatedTools.map((tool) => {
+              const Icon = getToolIcon(tool.id) || Package;
+              return (
+                <Link
+                  key={tool.id}
+                  href={`/tools/${tool.id}`}
+                  className="group flex items-center gap-2 p-2 rounded-lg border-2 border-purple-200 dark:border-purple-700 bg-white dark:bg-gray-800 hover:border-purple-400 dark:hover:border-purple-500 transition-all"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 flex items-center justify-center text-purple-600 dark:text-purple-300 group-hover:scale-105 transition-transform">
+                    <Icon className="h-4 w-4" />
+                  </div>
                   <div className="font-semibold text-xs sm:text-sm text-gray-900 dark:text-gray-100 group-hover:text-purple-700 dark:group-hover:text-purple-400 transition-colors">
                     {tool.title}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {tool.tagline}
-                  </div>
-                </div>
-                <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-purple-400 group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors flex-shrink-0" />
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>

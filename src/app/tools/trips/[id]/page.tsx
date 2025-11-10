@@ -57,7 +57,7 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
   const isOverBudget = budgetPercent > 100;
   const avgDaily = getAverageDailySpend(trip.id);
   const isPlanning = trip.status === 'planning';
-  const canAddExpenses = trip.status !== 'planning';
+  const canAddExpenses = true;
   const hasBudgetBreakdown = !!(trip.budgetBreakdown && Object.keys(trip.budgetBreakdown).length > 0);
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {

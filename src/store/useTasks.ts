@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { collection, query, orderBy } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebaseClient'
-import { createAt, setAt, updateAt, deleteAt } from '@/lib/data/gateway'
+import { createAt, updateAt, deleteAt } from '@/lib/data/gateway'
 import { subscribeCol } from '@/lib/data/subscribe'
 import { isWorkday, getDateString } from '@/lib/utils/date'
 import { AIActionMetadata } from '@/types/aiMetadata'

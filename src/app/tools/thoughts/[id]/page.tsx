@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useThoughts, Thought } from "@/store/useThoughts";
 import { ThoughtProcessingService } from "@/services/thoughtProcessingService";
 import { motion } from "framer-motion";
+import { formatDate } from "@/lib/cbtUtils";
 import {
   ArrowLeft,
   Brain,
@@ -56,27 +57,6 @@ export default function ThoughtDetailPage({ params }: { params: Promise<{ id: st
       console.error("Error processing thought:", error);
     } finally {
       setIsProcessing(false);
-    }
-  };
-
-  const formatDate = (date: any): string => {
-    if (!date) return 'N/A';
-    try {
-      // Handle Firebase Timestamp
-      if (typeof date === 'object' && 'toDate' in date) {
-        return date.toDate().toLocaleDateString();
-      }
-      // Handle ISO string
-      if (typeof date === 'string') {
-        return new Date(date).toLocaleDateString();
-      }
-      // Handle timestamp in seconds
-      if (typeof date === 'object' && 'seconds' in date) {
-        return new Date(date.seconds * 1000).toLocaleDateString();
-      }
-      return 'Invalid date';
-    } catch (error) {
-      return 'Invalid date';
     }
   };
 
