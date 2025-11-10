@@ -4,15 +4,83 @@ import { db, auth } from '@/lib/firebaseClient';
 import { createAt, updateAt, deleteAt } from '@/lib/data/gateway';
 import { subscribeCol } from '@/lib/data/subscribe';
 
+export interface TimelineEvent {
+  date: string;
+  event: string;
+  type: 'milestone' | 'failure' | 'pivot' | 'personal';
+  description?: string;
+}
+
+export interface Quote {
+  text: string;
+  context?: string;
+  source?: string;
+  favorite?: boolean;
+}
+
+export interface Resource {
+  type: 'book' | 'video' | 'podcast' | 'article' | 'interview' | 'other';
+  title: string;
+  url: string;
+  notes?: string;
+  favorite?: boolean;
+}
+
+export interface JournalEntry {
+  date: string;
+  content: string;
+}
+
 export interface AdmiredPerson {
   id: string;
   name: string;
   category?: string; // e.g., entrepreneur, artist, scientist, athlete
+
+  // Basic info
   bio?: string;
+  imageUrl?: string;
+  birthYear?: number;
+  birthPlace?: string;
+  currentLocation?: string;
+
+  // Personal life & drive (FOCUS AREA)
+  earlyLife?: string; // childhood, upbringing, family background
+  personalStory?: string; // their personal journey and struggles
+  whatDrivesThem?: string; // core motivations and what pushes them
+  struggles?: string[]; // challenges they faced and overcame
+  failures?: string[]; // major failures and what they learned
+  personalPhilosophy?: string; // their life philosophy and mindset
+  coreValues?: string[]; // what they stand for
+  dailyHabits?: string[]; // routines and practices
+
+  // Why you admire them
   whyAdmire?: string;
+  personalConnection?: string; // how they resonate with you
+
+  // Lessons & insights
   keyLessons?: string;
-  links?: string[]; // websites, social media, books, interviews
+  mentalModels?: string[]; // frameworks they use
+  adviceTheyGive?: string[]; // common advice they share
+
+  // Journey & timeline
+  timeline?: TimelineEvent[];
+  careerJourney?: string; // their professional path
+  pivotalMoments?: string[]; // key turning points
+
+  // Content & resources
+  quotes?: Quote[];
+  resources?: Resource[];
+  links?: string[]; // websites, social media
+
+  // Network
+  mentors?: string[]; // who influenced them
+  influences?: string[]; // people/books/ideas that shaped them
+
+  // Your notes
   notes?: string;
+  journalEntries?: JournalEntry[];
+
+  // Meta
   tags?: string[];
   aiEnriched?: boolean; // flag to indicate if AI has enriched this entry
   createdAt: string;
