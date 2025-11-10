@@ -3,18 +3,10 @@ name: Screenshot Tests
 # Visual regression testing with Firebase Local Emulator Suite
 # - Installs Java for Firebase emulators (real Firebase SDK behavior)
 # - Falls back to mocked Firebase if Java unavailable (still works!)
-# - Runs on PRs with relevant file changes only
+# - Only runs on release tags (v*) and manual workflow dispatch
+# - Disabled for PRs and regular pushes to reduce CI time
 
 on:
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - 'src/**'
-      - 'app/**'
-      - 'components/**'
-      - 'e2e/**'
-      - 'package*.json'
-      - 'playwright.config.ts'
   push:
     tags:
       - 'v*'
