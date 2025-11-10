@@ -21,6 +21,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import DexaScanUpload from '@/components/body-progress/DexaScanUpload';
 import BodyProgressChart from '@/components/body-progress/BodyProgressChart';
+import { ref, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/lib/firebaseClient';
 
 export default function BodyProgressPage() {
   useTrackToolUsage('body-progress');
@@ -42,6 +44,25 @@ export default function BodyProgressPage() {
       setActiveTab('progress');
     }
   }, [scans.length]);
+
+  const handleDownload = async (storagePath: string, fileName: string) => {
+    try {
+      const storageRef = ref(storage, storagePath);
+      const url = await getDownloadURL(storageRef);
+
+      // Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      alert('Failed to download file. Please try again.');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -148,7 +169,7 @@ export default function BodyProgressPage() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 max-w-xl">
+        <TabsList className="grid w-full grid-cols-4 max-w-2xl">
           <TabsTrigger value="upload" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Upload Scan
@@ -160,6 +181,10 @@ export default function BodyProgressPage() {
           <TabsTrigger value="history" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             Scan History
+          </TabsTrigger>
+          <TabsTrigger value="files" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Files
           </TabsTrigger>
         </TabsList>
 
@@ -274,6 +299,66 @@ export default function BodyProgressPage() {
                         )}
                       </div>
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Files Tab */}
+        <TabsContent value="files" className="space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Uploaded Dexa Scan Files
+            </h3>
+            {scans.length === 0 ? (
+              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                No files uploaded yet. Upload your first Dexa scan to get started.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {scans.map((scan) => (
+                  <div
+                    key={scan.id}
+                    className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                        <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                          {scan.fileName}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          Uploaded: {new Date(scan.createdAt).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500">
+                          Scan Date: {new Date(scan.scanDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => scan.storagePath && handleDownload(scan.storagePath, scan.fileName)}
+                      disabled={!scan.storagePath}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download
+                    </button>
                   </div>
                 ))}
               </div>

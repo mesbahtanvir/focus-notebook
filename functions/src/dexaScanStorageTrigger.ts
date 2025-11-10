@@ -9,6 +9,7 @@ import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
+const pdfParse = require('pdf-parse');
 import { CONFIG } from './config';
 
 const PROMPT_FILE_NAME = 'parse-dexa-scan.prompt.yml';
@@ -104,12 +105,21 @@ async function parseDexaScan(fileBuffer: Buffer, contentType: string): Promise<D
   // Prepare the message content based on file type
   let messageContent: any[];
 
-  if (contentType === 'application/pdf' || contentType.startsWith('image/')) {
-    // For images and PDFs, use vision API
+  if (contentType === 'application/pdf') {
+    // For PDFs, extract text first
+    const pdfData = await pdfParse(fileBuffer);
+    const textContent = pdfData.text;
+
+    messageContent = [
+      {
+        type: 'text',
+        text: `${userMessage}\n\nDexa Scan Document Text:\n${textContent}`,
+      },
+    ];
+  } else if (contentType.startsWith('image/')) {
+    // For images, use vision API
     const base64Data = fileBuffer.toString('base64');
-    const dataUrl = contentType === 'application/pdf'
-      ? `data:application/pdf;base64,${base64Data}`
-      : `data:${contentType};base64,${base64Data}`;
+    const dataUrl = `data:${contentType};base64,${base64Data}`;
 
     messageContent = [
       {

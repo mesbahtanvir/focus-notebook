@@ -291,7 +291,6 @@ async function updateProcessingStatus(
  */
 export const onCSVUpload = functions.storage.object().onFinalize(async (object) => {
   const filePath = object.name;
-  const contentType = object.contentType;
 
   // Only process CSV files in the statements directory
   if (!filePath || !filePath.includes('/statements/') || !filePath.endsWith('.csv')) {
