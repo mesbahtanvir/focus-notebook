@@ -211,6 +211,7 @@ async function syncTransactionsForItem(
         pending: txn.pending || false,
         amount: txn.amount,
         isoCurrency: txn.iso_currency_code || 'USD',
+        location: mapPlaidLocation(txn.location),
         merchant: {
           name: txn.merchant_name || txn.name,
           normalized: normalizeMerchantName(txn.merchant_name || txn.name),
@@ -224,6 +225,8 @@ async function syncTransactionsForItem(
         ingestedAt: Date.now(),
         updatedAt: Date.now(),
         source: 'plaid',
+        tripLinkStatus: 'pending',
+        tripLinkUpdatedAt: Date.now(),
       }, { merge: true });
 
       batchCount++;
@@ -308,4 +311,23 @@ function normalizeMerchantName(name: string): string {
     .replace(/\s+#\d+/g, '')
     .replace(/\*+/g, '')
     .trim();
+}
+
+function mapPlaidLocation(location?: any) {
+  if (!location) {
+    return null;
+  }
+
+  const mapped = {
+    address: location.address || location.street || null,
+    city: location.city || null,
+    region: location.region || null,
+    postalCode: location.postal_code || null,
+    country: location.country || null,
+    latitude: typeof location.lat === 'number' ? location.lat : location.latitude ?? null,
+    longitude: typeof location.lon === 'number' ? location.lon : location.longitude ?? null,
+  };
+
+  const hasValue = Object.values(mapped).some((value) => value !== null && value !== undefined);
+  return hasValue ? mapped : null;
 }

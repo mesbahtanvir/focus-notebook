@@ -4,6 +4,7 @@ import { db, auth } from '@/lib/firebaseClient';
 import { createAt, updateAt, deleteAt } from '@/lib/data/gateway';
 import { subscribeCol } from '@/lib/data/subscribe';
 import type { TransactionCategory } from '@/types/transactions';
+import type { TripLinkInfo, TripLinkSuggestion } from '@/types/spending-tool';
 
 export interface BankAccount {
   id: string;
@@ -30,6 +31,10 @@ export interface Transaction {
   updatedAt?: number;
   source?: string; // 'csv-upload' or 'plaid'
   csvFileName?: string; // For CSV uploads, track which file this came from
+  tripLinkStatus?: 'pending' | 'processing' | 'linked' | 'suggested' | 'skipped' | 'error';
+  tripLinkError?: string;
+  tripLink?: TripLinkInfo;
+  tripLinkSuggestion?: TripLinkSuggestion;
 }
 
 export interface SpendingInsight {

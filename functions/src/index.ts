@@ -40,6 +40,11 @@ import { processCSVTransactions } from './processCSVTransactions';
 import { onCSVUpload } from './csvStorageTrigger';
 import { deleteCSVStatement } from './deleteCSVStatement';
 import { onDexaScanUpload } from './dexaScanStorageTrigger';
+import {
+  processTransactionTripLinks,
+  linkTransactionToTrip,
+  dismissTransactionTripSuggestion,
+} from './tripLinking';
 
 // Export cloud functions
 export {
@@ -73,4 +78,8 @@ export {
   deleteCSVStatement,
   // Dexa Scan Processing
   onDexaScanUpload,
+  // Trip tagging
+  processTransactionTripLinks,
+  linkTransactionToTrip,
+  dismissTransactionTripSuggestion,
 };

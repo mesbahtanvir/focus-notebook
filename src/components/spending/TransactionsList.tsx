@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Filter, Search, Download, ArrowUpDown } from 'lucide-react';
+import { Search, ArrowUpDown } from 'lucide-react';
 import { useSpendingTool } from '@/store/useSpendingTool';
 import type { PlaidTransaction } from '@/types/spending-tool';
 
@@ -162,10 +162,44 @@ export default function TransactionsList() {
 }
 
 function TransactionRow({ transaction }: { transaction: PlaidTransaction }) {
+  const linkTransactionToTrip = useSpendingTool((s) => s.linkTransactionToTrip);
+  const dismissTripSuggestion = useSpendingTool((s) => s.dismissTripSuggestion);
+  const [actionState, setActionState] = useState<'link' | 'dismiss' | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
   const merchant = transaction.merchant?.normalized || transaction.merchant?.name || 'Unknown';
   const category = transaction.category_premium?.[0] || transaction.category_base?.[0] || 'Other';
   const isIncome = transaction.amount < 0;
   const amount = Math.abs(transaction.amount);
+  const suggestion = transaction.tripLinkSuggestion;
+  const hasPendingSuggestion = suggestion && suggestion.status === 'pending';
+  const tripLink = transaction.tripLink;
+
+  const handleAcceptSuggestion = async () => {
+    if (!transaction.id || !suggestion) return;
+    setActionState('link');
+    setActionError(null);
+    try {
+      await linkTransactionToTrip(transaction.id, suggestion.tripId);
+    } catch (error: any) {
+      setActionError(error?.message || 'Failed to link trip');
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const handleDismissSuggestion = async () => {
+    if (!transaction.id) return;
+    setActionState('dismiss');
+    setActionError(null);
+    try {
+      await dismissTripSuggestion(transaction.id);
+    } catch (error: any) {
+      setActionError(error?.message || 'Failed to dismiss suggestion');
+    } finally {
+      setActionState(null);
+    }
+  };
 
   return (
     <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md transition-shadow">
@@ -200,6 +234,51 @@ function TransactionRow({ transaction }: { transaction: PlaidTransaction }) {
           <div className="text-xs text-gray-500 mt-1">{transaction.isoCurrency}</div>
         </div>
       </div>
+
+      {tripLink && (
+        <div className="mt-3 inline-flex flex-wrap items-center gap-2 rounded-md bg-green-50 dark:bg-emerald-950/40 px-3 py-2 text-xs text-green-800 dark:text-emerald-200">
+          <span className="font-semibold">Linked Trip:</span>
+          <span>{tripLink.tripName}</span>
+          {tripLink.tripDestination && <span className="text-green-600/70">({tripLink.tripDestination})</span>}
+          <span className="text-[11px] text-green-600/70">
+            {Math.round((tripLink.confidence ?? 0) * 100)}% {tripLink.method === 'ai-auto' ? 'AI match' : 'manual'}
+          </span>
+        </div>
+      )}
+
+      {!tripLink && hasPendingSuggestion && suggestion && (
+        <div className="mt-3 rounded-lg border border-purple-200 bg-purple-50/60 dark:border-purple-800 dark:bg-purple-900/20 p-3 text-sm">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="font-semibold text-purple-900 dark:text-purple-100">
+                Suggested Trip: {suggestion.tripName}
+              </p>
+              <p className="text-xs text-purple-700 dark:text-purple-200">
+                Confidence {Math.round((suggestion.confidence ?? 0) * 100)}% • {suggestion.reasoning || 'AI detected a possible match'}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleAcceptSuggestion}
+                disabled={actionState === 'link'}
+                className="rounded-md bg-purple-600 px-3 py-1 text-xs font-semibold text-white shadow hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-purple-400"
+              >
+                {actionState === 'link' ? 'Linking…' : 'Link Trip'}
+              </button>
+              <button
+                onClick={handleDismissSuggestion}
+                disabled={actionState === 'dismiss'}
+                className="rounded-md border border-purple-300 px-3 py-1 text-xs font-semibold text-purple-700 dark:text-purple-200 hover:bg-purple-100 dark:hover:bg-purple-900/20 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {actionState === 'dismiss' ? 'Dismissing…' : 'Dismiss'}
+              </button>
+            </div>
+          </div>
+          {actionError && (
+            <p className="mt-2 text-xs text-red-600 dark:text-red-300">{actionError}</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

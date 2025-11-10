@@ -148,6 +148,10 @@ interface SpendingToolState {
   // Filters
   setSelectedAccount: (accountId: string | null) => void;
   setDateRange: (start: string, end: string) => void;
+
+  // Trip linking actions
+  linkTransactionToTrip: (transactionId: string, tripId: string) => Promise<void>;
+  dismissTripSuggestion: (transactionId: string) => Promise<void>;
 }
 
 // ============================================================================
@@ -513,5 +517,13 @@ export const useSpendingTool = create<SpendingToolState>((set, get) => ({
 
   setDateRange: (start, end) => {
     set({ dateRange: { start, end } });
+  },
+
+  linkTransactionToTrip: async (transactionId, tripId) => {
+    await callSpendingApi('link-transaction-trip', { transactionId, tripId });
+  },
+
+  dismissTripSuggestion: async (transactionId) => {
+    await callSpendingApi('dismiss-trip-suggestion', { transactionId });
   },
 }));

@@ -161,6 +161,36 @@ export interface MerchantInfo {
   logo?: string;            // URL to merchant logo
 }
 
+export interface TransactionLocation {
+  address?: string;
+  city?: string;
+  region?: string;
+  postalCode?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface TripLinkInfo {
+  tripId: string;
+  tripName: string;
+  tripDestination?: string;
+  confidence: number;       // 0-1 confidence value
+  method: 'ai-auto' | 'manual';
+  reasoning?: string;
+  linkedAt: number;         // Timestamp (ms)
+}
+
+export interface TripLinkSuggestion {
+  tripId: string;
+  tripName: string;
+  tripDestination?: string;
+  confidence: number;
+  reasoning?: string;
+  suggestedAt: number;
+  status: 'pending' | 'dismissed';
+}
+
 export interface PlaidTransaction {
   id?: string;              // Document ID (optional, added by Firestore)
   uid: string;              // User ID
@@ -174,6 +204,7 @@ export interface PlaidTransaction {
   pending: boolean;         // True if transaction is pending
   amount: number;           // Positive for debit, negative for credit
   isoCurrency: string;      // Currency code
+  location?: TransactionLocation;
 
   // Merchant & description
   merchant?: MerchantInfo;
@@ -196,6 +227,13 @@ export interface PlaidTransaction {
 
   // Pending transaction tracking
   pendingTransactionId?: string; // Links pending to posted transaction
+
+  // Trip linking metadata
+  tripLinkStatus?: 'pending' | 'processing' | 'linked' | 'suggested' | 'skipped' | 'error';
+  tripLinkUpdatedAt?: number;
+  tripLinkError?: string;
+  tripLink?: TripLinkInfo;
+  tripLinkSuggestion?: TripLinkSuggestion;
 }
 
 // ============================================================================

@@ -11,6 +11,8 @@ const FUNCTION_MAP: Record<string, string> = {
   'mark-relinking': 'markRelinking',
   'trigger-sync': 'triggerSync',
   'process-csv': 'processCSVTransactions',
+  'link-transaction-trip': 'linkTransactionToTrip',
+  'dismiss-trip-suggestion': 'dismissTransactionTripSuggestion',
 };
 
 async function parseRequestBody(req: NextRequest) {
