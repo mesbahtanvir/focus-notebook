@@ -203,7 +203,7 @@ export default function BodyProgressChart() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, value, percent }) =>
+                  label={({ name, value, percent }: any) =>
                     `${name}: ${value} lbs (${(percent * 100).toFixed(1)}%)`
                   }
                   outerRadius={80}
