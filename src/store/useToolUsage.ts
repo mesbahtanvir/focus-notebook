@@ -7,6 +7,7 @@ import { subscribeCol } from '@/lib/data/subscribe';
 export type ToolName =
   | 'tasks'
   | 'thoughts'
+  | 'thoughts-swipe'
   | 'goals'
   | 'projects'
   | 'focus'

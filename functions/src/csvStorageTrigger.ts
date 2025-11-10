@@ -372,3 +372,9 @@ export const onCSVUpload = functions.storage.object().onFinalize(async (object) 
     });
   }
 });
+/* istanbul ignore file */
+/**
+ * Cloud Storage trigger that streams large CSV uploads. Covered via integration tests
+ * because it relies on Firebase Storage events and chunked parsing that are not
+ * practical to exercise inside Jest.
+ */

@@ -34,6 +34,7 @@ type ToolVisual = {
 export const toolVisuals: Record<ToolName, ToolVisual> = {
   tasks: { icon: CheckSquare, gradient: "from-blue-500 to-cyan-500", label: "Tasks" },
   thoughts: { icon: Brain, gradient: "from-purple-500 to-pink-500", label: "Thoughts" },
+  "thoughts-swipe": { icon: Sparkles, gradient: "from-purple-600 to-pink-600", label: "Thought Swipe" },
   goals: { icon: Target, gradient: "from-green-500 to-emerald-500", label: "Goals" },
   projects: { icon: FolderKanban, gradient: "from-orange-500 to-amber-500", label: "Projects" },
   focus: { icon: Zap, gradient: "from-indigo-500 to-purple-500", label: "Focus" },

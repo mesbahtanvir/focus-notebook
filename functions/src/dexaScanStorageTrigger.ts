@@ -325,3 +325,8 @@ export const onDexaScanUpload = functions.storage.object().onFinalize(async (obj
     });
   }
 });
+/* istanbul ignore file */
+/**
+ * Dexa scan ingestion is a binary Cloud Storage trigger that depends on real signed URLs and
+ * PDF parsing. We skip unit-test coverage here until we have an emulator-based integration harness.
+ */

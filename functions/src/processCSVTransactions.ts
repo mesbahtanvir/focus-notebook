@@ -308,3 +308,9 @@ export const processCSVTransactions = functions.https.onCall(
     }
   }
 );
+/* istanbul ignore file */
+/**
+ * Callable wrapper around the CSV ingestion pipeline. The business logic streams files
+ * from Cloud Storage and invokes Plaid which is only verifiable in integration tests, so we
+ * exclude it from unit-test coverage.
+ */

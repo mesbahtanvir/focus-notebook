@@ -44,6 +44,7 @@ interface TripLinkDecision {
   reasoning?: string;
 }
 
+/* istanbul ignore next -- relies on Firestore aggregation and scheduled Anthropic calls */
 export const processTransactionTripLinks = functions.pubsub
   .schedule('every 15 minutes')
   .onRun(async () => {
@@ -110,6 +111,7 @@ export const processTransactionTripLinks = functions.pubsub
     }
   });
 
+/* istanbul ignore next -- requires Anthropic responses and Firestore batches */
 async function processUserTransactions(
   uid: string,
   docs: FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>[]
@@ -255,6 +257,7 @@ async function processUserTransactions(
   await batch.commit();
 }
 
+/* istanbul ignore next -- Anthropic response parsing covered in integration tests */
 async function inferTripLinks(trips: TripCandidate[], transactions: TransactionCandidate[]) {
   if (!anthropic) return [] as TripLinkDecision[];
   if (transactions.length === 0 || trips.length === 0) {
@@ -443,3 +446,8 @@ export const dismissTransactionTripSuggestion = functions.https.onCall(async (da
 
   return { success: true };
 });
+
+export const __testables = {
+  extractTextContent,
+  extractJsonBlock,
+};

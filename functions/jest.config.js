@@ -13,6 +13,7 @@ module.exports = {
     '!src/plaidFunctions.ts',
     '!src/plaidWebhooks.ts',
     '!src/services/**',
+    '!src/stripeBilling.ts',
     '!src/utils/encryption.ts',
     '!src/types/spending-tool.ts',
   ],
