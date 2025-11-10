@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useSpendingTool } from '@/store/useSpendingTool';
@@ -33,6 +33,18 @@ import ConnectionsManager from '@/components/spending/ConnectionsManager';
 import CSVUploadSection from '@/components/spending/CSVUploadSection';
 import { CSVDashboardSummary, CSVSpendingTrends, CSVTransactionsList } from '@/components/spending/CSVDashboard';
 import CSVFileManager from '@/components/spending/CSVFileManager';
+import { EnhancedSpendingDashboard, DateRange, NormalizedSpendingTransaction } from '@/components/spending/EnhancedSpendingDashboard';
+
+const getDefaultDateRange = (): DateRange => {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - 29);
+  return {
+    start: start.toISOString().split('T')[0],
+    end: end.toISOString().split('T')[0],
+  };
+};
+import { EnhancedSpendingDashboard, DateRange, NormalizedSpendingTransaction } from '@/components/spending/EnhancedSpendingDashboard';
 
 export default function SpendingPage() {
   useTrackToolUsage('spending');
@@ -40,9 +52,16 @@ export default function SpendingPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { initialize: initializePlaid, cleanup: cleanupPlaid, loading: plaidLoading, error: plaidError, getConnectionStatuses } = useSpendingTool();
-  const { subscribe: subscribeSpending } = useSpending();
+  const plaidTransactions = useSpendingTool((state) => state.transactions);
+  const plaidAccounts = useSpendingTool((state) => state.accounts);
+  const plaidSubscriptions = useSpendingTool((state) => state.subscriptions);
+
+  const subscribeSpending = useSpending((state) => state.subscribe);
+  const csvTransactions = useSpending((state) => state.transactions);
+  const csvAccounts = useSpending((state) => state.accounts);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [dataSource, setDataSource] = useState<'plaid' | 'csv' | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange);
 
   useEffect(() => {
     if (user?.uid) {
@@ -60,16 +79,65 @@ export default function SpendingPage() {
   const hasPlaidConnections = connections.length > 0;
 
   // Check for CSV-uploaded transactions
-  const { transactions: csvTransactions } = useSpending();
   const hasCSVData = csvTransactions.length > 0;
+
+  const normalizedPlaidTransactions = useMemo<NormalizedSpendingTransaction[]>(() => {
+    return plaidTransactions.map((txn) => {
+      const account = plaidAccounts[txn.accountId];
+      const signedAmount = txn.amount;
+      return {
+        id: txn.id ?? txn.plaidTransactionId,
+        date: txn.postedAt,
+        signedAmount,
+        amount: Math.abs(signedAmount),
+        isIncome: signedAmount < 0,
+        category: txn.category_premium?.[0] || txn.category_base?.[0] || 'Other',
+        accountId: txn.accountId,
+        accountName: account?.name || 'Connected Account',
+        accountMask: account?.mask,
+        merchant: txn.merchant?.normalized || txn.merchant?.name || 'Unknown',
+        description: txn.originalDescription,
+        subscription: txn.isSubscription,
+        source: 'plaid',
+      } satisfies NormalizedSpendingTransaction;
+    });
+  }, [plaidTransactions, plaidAccounts]);
+
+  const normalizedCsvTransactions = useMemo<NormalizedSpendingTransaction[]>(() => {
+    return csvTransactions.map((txn) => {
+      const account = csvAccounts.find((acc) => acc.id === txn.accountId);
+      const signedAmount = txn.amount;
+      return {
+        id: txn.id,
+        date: txn.date,
+        signedAmount,
+        amount: Math.abs(signedAmount),
+        isIncome: signedAmount < 0,
+        category: txn.category || 'Other',
+        accountId: txn.accountId,
+        accountName: account?.name || 'Manual Account',
+        accountMask: account?.lastFourDigits,
+        merchant: txn.merchant || txn.description || 'Unknown',
+        description: txn.description,
+        subscription: txn.tags?.includes('subscription'),
+        source: 'csv',
+      } satisfies NormalizedSpendingTransaction;
+    });
+  }, [csvTransactions, csvAccounts]);
 
   // Determine which data source is active
   useEffect(() => {
-    if (hasPlaidConnections) {
-      setDataSource('plaid');
-    } else if (hasCSVData) {
-      setDataSource('csv');
-    }
+    setDataSource((prev) => {
+      if (hasPlaidConnections) {
+        if (prev === 'plaid') return prev;
+        if (prev === 'csv' && hasCSVData) return prev;
+        return 'plaid';
+      }
+      if (hasCSVData) {
+        return 'csv';
+      }
+      return null;
+    });
   }, [hasPlaidConnections, hasCSVData]);
 
   if (plaidLoading) {
