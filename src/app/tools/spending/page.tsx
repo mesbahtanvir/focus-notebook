@@ -314,7 +314,7 @@ export default function SpendingPage() {
                     CSV Upload Connection
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    You're currently using CSV uploads to track your spending. Manage your uploaded files below.
+                    You&apos;re currently using CSV uploads to track your spending. Manage your uploaded files below.
                   </p>
                 </div>
                 <CSVFileManager />

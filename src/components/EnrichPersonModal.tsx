@@ -19,7 +19,7 @@ export function EnrichPersonModal({ person, onClose, onSave }: EnrichPersonModal
   const [formData, setFormData] = useState({
     // Basic info
     imageUrl: person.imageUrl || '',
-    birthYear: person.birthYear || '',
+    birthYear: person.birthYear,
     birthPlace: person.birthPlace || '',
     currentLocation: person.currentLocation || '',
     bio: person.bio || '',
@@ -165,8 +165,8 @@ export function EnrichPersonModal({ person, onClose, onSave }: EnrichPersonModal
                 <FormField label="Birth Year">
                   <input
                     type="number"
-                    value={formData.birthYear}
-                    onChange={(e) => setFormData({ ...formData, birthYear: parseInt(e.target.value) || '' as any })}
+                    value={formData.birthYear || ''}
+                    onChange={(e) => setFormData({ ...formData, birthYear: e.target.value ? parseInt(e.target.value) : undefined })}
                     className="input w-full"
                     placeholder="1971"
                   />
@@ -398,7 +398,7 @@ export function EnrichPersonModal({ person, onClose, onSave }: EnrichPersonModal
                     {formData.quotes.map((quote, idx) => (
                       <div key={idx} className="p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg flex justify-between items-start">
                         <div className="flex-1">
-                          <p className="text-sm italic">"{quote.text}"</p>
+                          <p className="text-sm italic">&ldquo;{quote.text}&rdquo;</p>
                           {quote.source && <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">— {quote.source}</p>}
                         </div>
                         <button
