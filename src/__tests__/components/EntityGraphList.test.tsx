@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { RelationshipsList } from '@/components/relationships/RelationshipsList';
-import type { Relationship } from '@/types/relationship';
+import { EntityGraphList } from '@/components/entity-graph/EntityGraphList';
+import type { Relationship } from '@/types/entityGraph';
 
 // Mock Next.js Link
 jest.mock('next/link', () => {
@@ -13,8 +13,8 @@ jest.mock('next/link', () => {
 });
 
 // Mock stores
-jest.mock('@/store/useEntityRelationships', () => ({
-  useEntityRelationships: jest.fn(),
+jest.mock('@/store/useEntityGraph', () => ({
+  useEntityGraph: jest.fn(),
 }));
 
 jest.mock('@/store/useTasks', () => ({
@@ -42,21 +42,19 @@ jest.mock('../../../shared/toolSpecs', () => ({
   })),
 }));
 
-import { useEntityRelationships } from '@/store/useEntityRelationships';
+import { useEntityGraph } from '@/store/useEntityGraph';
 import { useTasks } from '@/store/useTasks';
 import { useProjects } from '@/store/useProjects';
 import { useGoals } from '@/store/useGoals';
 import { useMoods } from '@/store/useMoods';
 
-const mockUseEntityRelationships = useEntityRelationships as jest.MockedFunction<
-  typeof useEntityRelationships
->;
+const mockUseEntityGraph = useEntityGraph as jest.MockedFunction<typeof useEntityGraph>;
 const mockUseTasks = useTasks as jest.MockedFunction<typeof useTasks>;
 const mockUseProjects = useProjects as jest.MockedFunction<typeof useProjects>;
 const mockUseGoals = useGoals as jest.MockedFunction<typeof useGoals>;
 const mockUseMoods = useMoods as jest.MockedFunction<typeof useMoods>;
 
-describe('RelationshipsList Component', () => {
+describe('EntityGraphList Component', () => {
   const createMockRelationship = (overrides: Partial<Relationship> = {}): Relationship => ({
     id: 'rel-1',
     sourceType: 'thought',
@@ -127,13 +125,13 @@ describe('RelationshipsList Component', () => {
 
   describe('Empty State', () => {
     it('should display empty state when no relationships exist', () => {
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText('No relationships yet')).toBeInTheDocument();
     });
@@ -142,13 +140,13 @@ describe('RelationshipsList Component', () => {
   describe('Task Relationships', () => {
     it('should render task relationships', () => {
       const taskRel = createMockRelationship({ targetType: 'task', targetId: 'task-456' });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([taskRel]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText('Tasks (1)')).toBeInTheDocument();
       expect(screen.getByText('Test Task')).toBeInTheDocument();
@@ -160,13 +158,13 @@ describe('RelationshipsList Component', () => {
         targetId: 'task-456',
         relationshipType: 'created-from',
       });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([taskRel]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText('created from')).toBeInTheDocument();
     });
@@ -177,39 +175,39 @@ describe('RelationshipsList Component', () => {
         targetId: 'task-456',
         reasoning: 'This is a test reason',
       });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([taskRel]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText(/This is a test reason/)).toBeInTheDocument();
     });
 
     it('should display created by info', () => {
       const taskRel = createMockRelationship({ createdBy: 'ai' });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([taskRel]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText(/🤖 AI-created/)).toBeInTheDocument();
     });
 
     it('should display user-created info', () => {
       const taskRel = createMockRelationship({ createdBy: 'user' });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([taskRel]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText(/👤 User-created/)).toBeInTheDocument();
     });
@@ -217,26 +215,26 @@ describe('RelationshipsList Component', () => {
 
   describe('Tool Relationships', () => {
     it('should render tool relationships', () => {
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([mockToolRelationship]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText('Tools (1)')).toBeInTheDocument();
       expect(screen.getByText('Cbt')).toBeInTheDocument(); // Tool title from mock
     });
 
     it('should show processed badge for processed tools', () => {
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([mockToolRelationship]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText('Processed')).toBeInTheDocument();
     });
@@ -249,25 +247,25 @@ describe('RelationshipsList Component', () => {
           processingCount: 0,
         },
       };
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([pendingRel]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText('Pending')).toBeInTheDocument();
     });
 
     it('should display processing count and date', () => {
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([mockToolRelationship]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText(/Processed 1 time/)).toBeInTheDocument();
       expect(screen.getByText(/Last processed:/)).toBeInTheDocument();
@@ -281,13 +279,13 @@ describe('RelationshipsList Component', () => {
         targetId: 'proj-789',
         relationshipType: 'part-of',
       });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([projectRel]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText('Projects (1)')).toBeInTheDocument();
       expect(screen.getByText('Test Project')).toBeInTheDocument();
@@ -301,13 +299,13 @@ describe('RelationshipsList Component', () => {
         strength: 85, // Below 95
         reasoning: 'AI suggestion reason',
       });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([suggestion]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText('AI Suggestions (1)')).toBeInTheDocument();
       expect(screen.getByText(/AI Suggestion \(85%\)/)).toBeInTheDocument();
@@ -318,13 +316,13 @@ describe('RelationshipsList Component', () => {
         createdBy: 'ai',
         strength: 95, // 95 or higher
       });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([highConfidence]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       // Should appear in normal Tasks section, not suggestions
       expect(screen.queryByText('AI Suggestions')).not.toBeInTheDocument();
@@ -339,13 +337,13 @@ describe('RelationshipsList Component', () => {
         createMockRelationship({ id: 'rel-2', targetType: 'project', targetId: 'proj-789' }),
         mockToolRelationship,
       ];
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue(relationships),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText('Tools (1)')).toBeInTheDocument();
       expect(screen.getByText('Tasks (1)')).toBeInTheDocument();
@@ -354,13 +352,13 @@ describe('RelationshipsList Component', () => {
 
     it('should not display empty groups', () => {
       const taskRel = createMockRelationship({ targetType: 'task' });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([taskRel]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText('Tasks (1)')).toBeInTheDocument();
       expect(screen.queryByText('Projects')).not.toBeInTheDocument();
@@ -372,7 +370,7 @@ describe('RelationshipsList Component', () => {
   describe('Actions', () => {
     it('should show delete button when showActions is true', () => {
       const taskRel = createMockRelationship();
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([taskRel]),
         } as any)
@@ -380,7 +378,7 @@ describe('RelationshipsList Component', () => {
       const onDelete = jest.fn();
 
       render(
-        <RelationshipsList
+        <EntityGraphList
           entityType="thought"
           entityId="thought-123"
           onDelete={onDelete}
@@ -394,14 +392,14 @@ describe('RelationshipsList Component', () => {
 
     it('should not show actions when showActions is false', () => {
       const taskRel = createMockRelationship();
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([taskRel]),
         } as any)
       );
 
       render(
-        <RelationshipsList
+        <EntityGraphList
           entityType="thought"
           entityId="thought-123"
           showActions={false}
@@ -416,7 +414,7 @@ describe('RelationshipsList Component', () => {
         createdBy: 'ai',
         strength: 85,
       });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([suggestion]),
         } as any)
@@ -425,7 +423,7 @@ describe('RelationshipsList Component', () => {
       const onReject = jest.fn();
 
       render(
-        <RelationshipsList
+        <EntityGraphList
           entityType="thought"
           entityId="thought-123"
           onAccept={onAccept}
@@ -442,26 +440,26 @@ describe('RelationshipsList Component', () => {
   describe('Links', () => {
     it('should render clickable links for entities', () => {
       const taskRel = createMockRelationship({ targetType: 'task', targetId: 'task-456' });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([taskRel]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       const link = screen.getByRole('link', { name: /Test Task/ });
       expect(link).toHaveAttribute('href', '/tools/tasks?taskId=task-456');
     });
 
     it('should render clickable links for tools', () => {
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([mockToolRelationship]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       const link = screen.getByRole('link', { name: /Cbt/ });
       expect(link).toBeInTheDocument();
@@ -475,13 +473,13 @@ describe('RelationshipsList Component', () => {
           createdByTool: 'cbt',
         },
       });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([taskRel]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText(/via cbt/)).toBeInTheDocument();
     });
@@ -490,13 +488,13 @@ describe('RelationshipsList Component', () => {
       const taskRel = createMockRelationship({
         createdAt: '2025-01-15T12:00:00Z', // Use noon UTC to avoid timezone boundary issues
       });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([taskRel]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText(/1\/15\/2025/)).toBeInTheDocument();
     });
@@ -505,14 +503,14 @@ describe('RelationshipsList Component', () => {
   describe('Edge Cases', () => {
     it('should handle relationships with missing entity data', () => {
       const taskRel = createMockRelationship({ targetId: 'non-existent-task' });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([taskRel]),
         } as any)
       );
       mockUseTasks.mockImplementation((selector) => selector({ tasks: [] } as any));
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       // Should still render with the ID as fallback
       expect(screen.getByText('non-existent-task')).toBeInTheDocument();
@@ -520,13 +518,13 @@ describe('RelationshipsList Component', () => {
 
     it('should handle relationships without reasoning', () => {
       const taskRel = createMockRelationship({ reasoning: undefined });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([taskRel]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       // Should render without errors
       expect(screen.getByText('Test Task')).toBeInTheDocument();
@@ -537,13 +535,13 @@ describe('RelationshipsList Component', () => {
         ...mockToolRelationship,
         toolProcessingData: undefined,
       };
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([toolRel]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText('Cbt')).toBeInTheDocument();
       expect(screen.queryByText('Processed')).not.toBeInTheDocument();
@@ -551,13 +549,13 @@ describe('RelationshipsList Component', () => {
 
     it('should filter out archived relationships', () => {
       const archivedRel = createMockRelationship({ status: 'archived' });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([archivedRel]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       // Only active relationships should be shown
       expect(screen.getByText('No relationships yet')).toBeInTheDocument();
@@ -565,13 +563,13 @@ describe('RelationshipsList Component', () => {
 
     it('should filter out rejected relationships', () => {
       const rejectedRel = createMockRelationship({ status: 'rejected' });
-      mockUseEntityRelationships.mockImplementation((selector) =>
+      mockUseEntityGraph.mockImplementation((selector) =>
         selector({
           getRelationshipsFor: jest.fn().mockReturnValue([rejectedRel]),
         } as any)
       );
 
-      render(<RelationshipsList entityType="thought" entityId="thought-123" />);
+      render(<EntityGraphList entityType="thought" entityId="thought-123" />);
 
       expect(screen.getByText('No relationships yet')).toBeInTheDocument();
     });

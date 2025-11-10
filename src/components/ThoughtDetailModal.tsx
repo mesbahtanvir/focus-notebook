@@ -8,7 +8,7 @@ import { useProjects } from "@/store/useProjects";
 import { useMoods } from "@/store/useMoods";
 import { useFriends } from "@/store/useFriends";
 import { useGoals } from "@/store/useGoals";
-import { useEntityRelationships } from "@/store/useEntityRelationships";
+import { useEntityGraph } from "@/store/useEntityGraph";
 import { ThoughtProcessingService } from "@/services/thoughtProcessingService";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import Link from "next/link";
@@ -69,7 +69,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const deleteMood = useMoods((s) => s.delete);
   const friends = useFriends((s) => s.friends);
   const goals = useGoals((s) => s.goals);
-  const relationships = useEntityRelationships((s) => s.relationships);
+  const relationships = useEntityGraph((s) => s.relationships);
   const { isAnonymous, isAnonymousAiAllowed } = useAuth();
   
   const isProcessed = Array.isArray(thought.tags) && thought.tags.includes('processed');
@@ -80,36 +80,12 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
     thought.aiProcessingStatus !== 'processing' &&
     thought.aiProcessingStatus !== 'completed';
 
-  // Helper function to get shortname from full name
-  const getShortName = (name: string): string => {
-    const firstName = name.split(' ')[0];
-    return firstName.toLowerCase().trim();
-  };
-
-  // Render tag component - makes person tags clickable and shows person name
-  const renderTag = (tag: string) => {
-    if (tag.startsWith('person-')) {
-      const shortNameFromTag = tag.replace('person-', '');
-      const taggedFriend = friends.find(f => getShortName(f.name) === shortNameFromTag);
-      
-      if (taggedFriend) {
-        return (
-          <Link
-            key={tag}
-            href={`/tools/relationships/${taggedFriend.id}`}
-            className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 text-sm rounded-full hover:bg-purple-200 dark:hover:bg-purple-800 hover:underline transition-colors"
-          >
-            {taggedFriend.name}
-          </Link>
-        );
-      }
-    }
-    return (
-      <span key={tag} className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 text-sm rounded-full">
-        {tag}
-      </span>
-    );
-  };
+  // Render tag component without special linking behavior
+  const renderTag = (tag: string) => (
+    <span key={tag} className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 text-sm rounded-full">
+      {tag}
+    </span>
+  );
 
   // Find all items linked to this thought via relationships
   const linkedItems = useMemo(() => {

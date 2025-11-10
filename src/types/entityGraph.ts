@@ -1,11 +1,11 @@
 /**
- * Unified Relationship System
+ * Unified Entity Graph System
  *
  * This system provides a consistent way to connect thoughts to:
  * - Other entities (tasks, projects, goals, moods, people)
  * - Tools (for processing and analysis)
  *
- * Relationships replace the previous tag-based and array-based linking systems,
+ * The entity graph replaces the previous tag-based and array-based linking systems,
  * providing rich metadata, bidirectional queries, and clear semantics.
  */
 

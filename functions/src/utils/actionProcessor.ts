@@ -43,11 +43,16 @@ export function processActions(
   };
 
   for (const action of actions) {
-    // Auto-apply high confidence actions
-    if (action.confidence >= CONFIG.CONFIDENCE_THRESHOLDS.AUTO_APPLY) {
+    const isLinkToPerson = action.type === 'linkToPerson';
+
+    // Auto-apply high confidence actions (except person linking which now requires approval)
+    if (
+      action.confidence >= CONFIG.CONFIDENCE_THRESHOLDS.AUTO_APPLY &&
+      !isLinkToPerson
+    ) {
       applyHighConfidenceAction(action, result, currentThought);
     }
-    // Store medium confidence as suggestions
+    // Store medium confidence (and skipped high-confidence person links) as suggestions
     else if (action.confidence >= CONFIG.CONFIDENCE_THRESHOLDS.SUGGEST) {
       result.suggestions.push({
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -81,6 +86,13 @@ function applyHighConfidenceAction(
 
     case 'addTag':
       const tag = action.data.tag;
+      const normalizedTag = typeof tag === 'string' ? tag.toLowerCase() : '';
+
+      // Skip deprecated person tags
+      if (normalizedTag.startsWith('person-')) {
+        break;
+      }
+
       // Don't add duplicate tags
       if (!currentThought.tags?.includes(tag) && !result.autoApply.tagsToAdd.includes(tag)) {
         result.autoApply.tagsToAdd.push(tag);
@@ -99,13 +111,6 @@ function applyHighConfidenceAction(
       const projectTag = `project-${action.data.projectId}`;
       if (!currentThought.tags?.includes(projectTag) && !result.autoApply.tagsToAdd.includes(projectTag)) {
         result.autoApply.tagsToAdd.push(projectTag);
-      }
-      break;
-
-    case 'linkToPerson':
-      const personTag = `person-${action.data.shortName}`;
-      if (!currentThought.tags?.includes(personTag) && !result.autoApply.tagsToAdd.includes(personTag)) {
-        result.autoApply.tagsToAdd.push(personTag);
       }
       break;
 

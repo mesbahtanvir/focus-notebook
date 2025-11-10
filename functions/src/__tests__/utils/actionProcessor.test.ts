@@ -23,8 +23,8 @@ describe('Action Processor', () => {
         {
           type: 'addTag',
           confidence: 98,
-          data: { tag: 'person-sarah' },
-          reasoning: 'Mentions Sarah'
+          data: { tag: 'tool-cbt' },
+          reasoning: 'Negative tone'
         }
       ];
 
@@ -36,7 +36,7 @@ describe('Action Processor', () => {
       const result = processActions(actions, currentThought);
 
       expect(result.autoApply.text).toBe('Had coffee with Sarah');
-      expect(result.autoApply.tagsToAdd).toContain('person-sarah');
+      expect(result.autoApply.tagsToAdd).toContain('tool-cbt');
       expect(result.suggestions).toHaveLength(0);
     });
 
@@ -101,7 +101,7 @@ describe('Action Processor', () => {
       expect(result.autoApply.tagsToAdd).toHaveLength(0);
     });
 
-    it('should handle entity tag linking (goal, project, person)', () => {
+    it('should handle entity tag linking for goals/projects and queue person links', () => {
       const actions = [
         {
           type: 'linkToGoal',
@@ -128,7 +128,8 @@ describe('Action Processor', () => {
 
       expect(result.autoApply.tagsToAdd).toContain('goal-goal123');
       expect(result.autoApply.tagsToAdd).toContain('project-proj456');
-      expect(result.autoApply.tagsToAdd).toContain('person-sarah');
+      expect(result.autoApply.tagsToAdd).not.toContain('person-sarah');
+      expect(result.suggestions.map((s) => s.type)).toContain('linkToPerson');
     });
   });
 
@@ -140,7 +141,7 @@ describe('Action Processor', () => {
           textChanges: [
             { type: 'grammar', from: 'test', to: 'Test' }
           ],
-          tagsToAdd: ['tool-cbt', 'person-sarah']
+          tagsToAdd: ['tool-cbt', 'goal-goal123']
         },
         suggestions: [
           {
@@ -170,7 +171,7 @@ describe('Action Processor', () => {
 
       expect(update.text).toBe('Enhanced text');
       expect(update.tags).toContain('tool-cbt');
-      expect(update.tags).toContain('person-sarah');
+      expect(update.tags).toContain('goal-goal123');
       expect(update.tags).toContain('processed');
       expect(update.aiAppliedChanges).toBeDefined();
       expect(update.aiAppliedChanges.textEnhanced).toBe(true);

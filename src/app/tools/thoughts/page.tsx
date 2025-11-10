@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useThoughts, Thought } from "@/store/useThoughts";
-import { useFriends } from "@/store/useFriends";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -42,7 +41,6 @@ function ThoughtsPageContent() {
   useTrackToolUsage('thoughts');
 
   const thoughts = useThoughts((s) => s.thoughts);
-  const friends = useFriends((s) => s.friends);
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -71,8 +69,7 @@ function ThoughtsPageContent() {
     const tagCounts = new Map<string, number>();
     thoughts.forEach(thought => {
       thought.tags?.forEach(tag => {
-        // Exclude processed tag and person tags from popular tags
-        if (tag !== 'processed' && !tag.startsWith('person-')) {
+        if (tag !== 'processed') {
           tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
         }
       });
@@ -166,33 +163,7 @@ function ThoughtsPageContent() {
     );
   }, [thoughts]);
 
-  // Helper function to get shortname from full name
-  const getShortName = (name: string): string => {
-    const firstName = name.split(' ')[0];
-    return firstName.toLowerCase().trim();
-  };
-
-  // Render tag component - makes person tags clickable
-  const renderTag = (tag: string) => {
-    if (tag.startsWith('person-')) {
-      const shortName = tag.replace('person-', '');
-      const friend = friends.find(f => getShortName(f.name) === shortName);
-      
-      if (friend) {
-        return (
-          <Link
-            key={tag}
-            href={`/tools/relationships/${friend.id}`}
-            className="hover:underline"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {friend.name}
-          </Link>
-        );
-      }
-    }
-    return <span key={tag}>{tag}</span>;
-  };
+  const renderTag = (tag: string) => <span key={tag}>{tag}</span>;
 
 
   // Approval is no longer needed - actions are executed instantly

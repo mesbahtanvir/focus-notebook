@@ -18,7 +18,6 @@ export type ToolTag = typeof TOOL_TAGS[keyof typeof TOOL_TAGS];
 export const ENTITY_TAG_PREFIXES = {
   GOAL: 'goal-',      // goal-{goalId}
   PROJECT: 'project-', // project-{projectId}
-  PERSON: 'person-',   // person-{shortname} - requires name match
 } as const;
 
 export type EntityTagPrefix = typeof ENTITY_TAG_PREFIXES[keyof typeof ENTITY_TAG_PREFIXES];
@@ -66,10 +65,9 @@ export function isToolTag(tag: string): tag is ToolTag {
   return Object.values(TOOL_TAGS).includes(tag as ToolTag);
 }
 
-export function getEntityType(tag: string): 'goal' | 'project' | 'person' | null {
+export function getEntityType(tag: string): 'goal' | 'project' | null {
   if (tag.startsWith(ENTITY_TAG_PREFIXES.GOAL)) return 'goal';
   if (tag.startsWith(ENTITY_TAG_PREFIXES.PROJECT)) return 'project';
-  if (tag.startsWith(ENTITY_TAG_PREFIXES.PERSON)) return 'person';
   return null;
 }
 
@@ -81,7 +79,7 @@ export function getEntityId(tag: string): string | null {
   return tag.replace(prefix, '');
 }
 
-export function createEntityTag(type: 'goal' | 'project' | 'person', id: string): string {
+export function createEntityTag(type: 'goal' | 'project', id: string): string {
   const prefix = ENTITY_TAG_PREFIXES[type.toUpperCase() as keyof typeof ENTITY_TAG_PREFIXES];
   return `${prefix}${id}`;
 }

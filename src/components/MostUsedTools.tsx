@@ -8,6 +8,10 @@ import { TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { toolVisuals } from "./tools/toolVisuals";
 
+const TOOL_LABEL_OVERRIDES: Record<string, string> = {
+  moodtracker: "Mood",
+};
+
 export function MostUsedTools() {
   const { user } = useAuth();
   const subscribe = useToolUsage((s) => s.subscribe);
@@ -55,7 +59,7 @@ export function MostUsedTools() {
           const visual = toolVisuals[tool.toolName];
           const Icon = visual?.icon || TrendingUp;
           const gradient = visual?.gradient || "from-gray-500 to-gray-700";
-          const label = visual?.label || tool.toolName;
+          const label = TOOL_LABEL_OVERRIDES[tool.toolName] ?? visual?.label ?? tool.toolName;
 
           return (
             <Link

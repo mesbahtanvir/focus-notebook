@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useFriends, Friend } from "@/store/useFriends";
-import { useThoughts } from "@/store/useThoughts";
+import { useThoughts, Thought } from "@/store/useThoughts";
+import { useEntityGraph } from "@/store/useEntityGraph";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 import {
@@ -49,55 +50,42 @@ export default function FriendDetailPage() {
 
   const friend = friends.find((f) => f.id === friendId);
 
-  // Helper function to get shortname from full name (first name, lowercase, no spaces)
-  const getShortName = (name: string): string => {
-    const firstName = name.split(' ')[0];
-    return firstName.toLowerCase().trim();
-  };
+  const createRelationship = useEntityGraph((s) => s.createRelationship);
+  const personThoughtRelationships = useEntityGraph((s) =>
+    s
+      .getRelationshipsFor('person', friendId)
+      .filter(
+        (rel) =>
+          rel.status === 'active' &&
+          (rel.sourceType === 'thought' || rel.targetType === 'thought')
+      )
+  );
 
-  const shortName = friend ? getShortName(friend.name) : '';
-  const personTag = friend ? `person-${shortName}` : '';
+  const relatedThoughts = useMemo(() => {
+    if (!friend || !personThoughtRelationships.length) return [];
+    const thoughtMap = new Map(thoughts.map((t) => [t.id, t] as const));
 
-  // Filter thoughts that mention this person's name or have person tag
-  const relatedThoughts = thoughts.filter((t) => {
-    if (!friend) return false;
-    return t.tags?.some(tag => 
-      tag === personTag || 
-      tag === friend.name ||
-      tag.includes(personTag)
-    ) || t.text.toLowerCase().includes((friend?.name || '').toLowerCase());
-  });
+    return personThoughtRelationships
+      .map((rel) => {
+        const thoughtId =
+          rel.sourceType === 'thought'
+            ? rel.sourceId
+            : rel.targetType === 'thought'
+              ? rel.targetId
+              : null;
+        return thoughtId ? thoughtMap.get(thoughtId) : undefined;
+      })
+      .filter((thought): thought is Thought => Boolean(thought));
+  }, [friend, personThoughtRelationships, thoughts]);
 
-  // Helper function to render tags - makes person tags clickable
-  const getShortNameForTag = (name: string): string => {
-    const firstName = name.split(' ')[0];
-    return firstName.toLowerCase().trim();
-  };
-
-  const renderTag = (tag: string) => {
-    if (tag.startsWith('person-')) {
-      const shortNameFromTag = tag.replace('person-', '');
-      const taggedFriend = friends.find(f => getShortNameForTag(f.name) === shortNameFromTag);
-      
-      if (taggedFriend) {
-        return (
-          <Link
-            key={tag}
-            href={`/tools/relationships/${taggedFriend.id}`}
-            className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800/40 hover:underline transition-colors"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {taggedFriend.name}
-          </Link>
-        );
-      }
-    }
-    return (
-      <span key={tag} className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
-        {tag}
-      </span>
-    );
-  };
+  const renderTag = (tag: string) => (
+    <span
+      key={tag}
+      className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300"
+    >
+      {tag}
+    </span>
+  );
 
   const handleAddThought = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,10 +93,23 @@ export default function FriendDetailPage() {
 
     setIsAddingThought(true);
     try {
-      await addThought({
+      const createdThoughtId = await addThought({
         text: newThoughtText.trim(),
-        tags: [personTag],
+        tags: [],
       });
+
+      if (createdThoughtId) {
+        await createRelationship({
+          sourceType: 'thought',
+          sourceId: createdThoughtId,
+          targetType: 'person',
+          targetId: friend.id,
+          relationshipType: 'mentions',
+          strength: 100,
+          createdBy: 'user',
+          reasoning: `Linked from ${friend.name}'s profile`,
+        });
+      }
       setNewThoughtText("");
     } finally {
       setIsAddingThought(false);
@@ -319,7 +320,7 @@ export default function FriendDetailPage() {
                 {isAddingThought ? 'Adding...' : 'Add Thought'}
               </button>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                This thought will be automatically tagged with {personTag}
+                This thought will be automatically linked to {friend.name}
               </p>
             </form>
           </div>

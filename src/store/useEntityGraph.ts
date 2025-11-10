@@ -12,14 +12,14 @@ import type {
   RelationshipType,
   RelationshipStatus,
   ToolProcessingData,
-} from '@/types/relationship';
+} from '@/types/entityGraph';
 import {
   isToolRelationship,
   isToolProcessed,
   isPendingProcessing,
   isValidStrength,
   canTransitionStatus,
-} from '@/types/relationship';
+} from '@/types/entityGraph';
 import type { ToolSpecId } from '../../shared/toolSpecs';
 
 // ============================================================================
@@ -66,7 +66,7 @@ type State = {
   getProcessedTools: (thoughtId: string) => Relationship[];
   getToolProcessingData: (thoughtId: string, toolId: ToolSpecId) => ToolProcessingData | null;
 
-  // Entity relationship queries
+  // Entity graph queries
   getLinkedTasks: (entityType: EntityType, entityId: string) => Relationship[];
   getLinkedProjects: (entityType: EntityType, entityId: string) => Relationship[];
   getLinkedGoals: (entityType: EntityType, entityId: string) => Relationship[];
@@ -190,7 +190,7 @@ function applyFilters(relationships: Relationship[], filter: RelationshipQuery):
 // Zustand Store
 // ============================================================================
 
-export const useEntityRelationships = create<State>((set, get) => ({
+export const useEntityGraph = create<State>((set, get) => ({
   // ----- Initial State -----
   relationships: [],
   isLoading: false,
@@ -398,7 +398,7 @@ export const useEntityRelationships = create<State>((set, get) => ({
     return relationship?.toolProcessingData ?? null;
   },
 
-  // ----- Entity Relationship Queries -----
+  // ----- Entity Graph Queries -----
   getLinkedTasks: (entityType: EntityType, entityId: string): Relationship[] => {
     return get().relationships.filter(
       (r) =>

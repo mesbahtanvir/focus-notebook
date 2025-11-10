@@ -12,7 +12,7 @@ import {
   type Relationship,
   type RelationshipType,
   type RelationshipStatus,
-} from '@/types/relationship';
+} from '@/types/entityGraph';
 
 describe('Relationship Type Helpers', () => {
   // Mock relationships for testing

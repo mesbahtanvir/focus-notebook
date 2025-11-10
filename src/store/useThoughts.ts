@@ -119,7 +119,7 @@ export interface Thought {
   aiSuggestions?: AISuggestion[]
   confidenceScore?: number
 
-  // NOTE: All linking is now handled via useEntityRelationships store
+  // NOTE: All linking is now handled via useEntityGraph store
   // No more linkedXIds arrays!
 }
 
@@ -132,7 +132,7 @@ type State = {
   isSubscribed: boolean
   unsubscribe: (() => void) | null
   subscribe: (userId: string) => void
-  add: (data: Omit<Thought, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>) => Promise<void>
+  add: (data: Omit<Thought, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>) => Promise<string>
   updateThought: (id: string, updates: Partial<Omit<Thought, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>>) => Promise<void>
   deleteThought: (id: string) => Promise<void>
 }
@@ -210,6 +210,7 @@ export const useThoughts = create<State>((set, get) => ({
     }
 
     await createAt(`users/${userId}/thoughts/${id}`, newThought)
+    return id
   },
 
 

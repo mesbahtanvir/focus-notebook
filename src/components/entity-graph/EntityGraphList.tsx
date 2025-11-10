@@ -1,20 +1,20 @@
 "use client";
 
 import { useMemo } from 'react';
-import { useEntityRelationships } from '@/store/useEntityRelationships';
+import { useEntityGraph } from '@/store/useEntityGraph';
 import { useTasks } from '@/store/useTasks';
 import { useProjects } from '@/store/useProjects';
 import { useGoals } from '@/store/useGoals';
 import { useMoods } from '@/store/useMoods';
 import { getToolSpecById } from '../../../shared/toolSpecs';
-import type { Relationship, EntityType } from '@/types/relationship';
+import type { Relationship, EntityType } from '@/types/entityGraph';
 import {
   isToolRelationship,
   isToolProcessed,
   isPendingProcessing,
   getRelationshipDescription,
   getToolId,
-} from '@/types/relationship';
+} from '@/types/entityGraph';
 import {
   Wrench,
   CheckCircle2,
@@ -35,7 +35,7 @@ import Link from 'next/link';
 // Props
 // ============================================================================
 
-interface RelationshipsListProps {
+interface EntityGraphListProps {
   entityType: EntityType;
   entityId: string;
   onDelete?: (relationshipId: string) => void;
@@ -312,15 +312,15 @@ function RelationshipCard({
 // Main Component
 // ============================================================================
 
-export function RelationshipsList({
+export function EntityGraphList({
   entityType,
   entityId,
   onDelete,
   onAccept,
   onReject,
   showActions = true,
-}: RelationshipsListProps) {
-  const relationships = useEntityRelationships((s) =>
+}: EntityGraphListProps) {
+  const relationships = useEntityGraph((s) =>
     s.getRelationshipsFor(entityType, entityId).filter((r) => r.status === 'active')
   );
 

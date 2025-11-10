@@ -2,7 +2,7 @@
  * Centralized Entity Service
  *
  * All entity creation, updates, and linking MUST go through this service.
- * This ensures data consistency, proper relationship management, and centralized validation.
+ * This ensures data consistency, proper entity graph management, and centralized validation.
  *
  * DO NOT directly call store methods (useX.getState().add) from UI or other code.
  */
@@ -12,8 +12,8 @@ import { useMoods, MoodEntry } from '@/store/useMoods';
 import { useGoals, Goal } from '@/store/useGoals';
 import { useProjects, Project } from '@/store/useProjects';
 import { useFriends, Friend } from '@/store/useFriends';
-import { useEntityRelationships } from '@/store/useEntityRelationships';
-import type { EntityType, RelationshipType } from '@/types/relationship';
+import { useEntityGraph } from '@/store/useEntityGraph';
+import type { EntityType, RelationshipType } from '@/types/entityGraph';
 
 // ============================================================================
 // Types
@@ -124,7 +124,7 @@ export async function createTask(
 
     // Create relationship if source entity provided
     if (options.sourceEntity) {
-      await useEntityRelationships.getState().createRelationship({
+      await useEntityGraph.getState().createRelationship({
         sourceType: options.sourceEntity.type,
         sourceId: options.sourceEntity.id,
         targetType: 'task',
@@ -156,7 +156,7 @@ export async function linkTaskToEntity(
   options: LinkingOptions = {}
 ): Promise<EntityServiceResult<void>> {
   try {
-    await useEntityRelationships.getState().createRelationship({
+    await useEntityGraph.getState().createRelationship({
       sourceType: entityType,
       sourceId: entityId,
       targetType: 'task',
@@ -202,7 +202,7 @@ export async function createMood(
 
     // Create relationship if source entity provided
     if (options.sourceEntity) {
-      await useEntityRelationships.getState().createRelationship({
+      await useEntityGraph.getState().createRelationship({
         sourceType: options.sourceEntity.type,
         sourceId: options.sourceEntity.id,
         targetType: 'mood',
@@ -234,7 +234,7 @@ export async function linkMoodToEntity(
   options: LinkingOptions = {}
 ): Promise<EntityServiceResult<void>> {
   try {
-    await useEntityRelationships.getState().createRelationship({
+    await useEntityGraph.getState().createRelationship({
       sourceType: entityType,
       sourceId: entityId,
       targetType: 'mood',
@@ -287,7 +287,7 @@ export async function createGoal(
 
     // Create relationship if source entity provided
     if (options.sourceEntity) {
-      await useEntityRelationships.getState().createRelationship({
+      await useEntityGraph.getState().createRelationship({
         sourceType: options.sourceEntity.type,
         sourceId: options.sourceEntity.id,
         targetType: 'goal',
@@ -319,7 +319,7 @@ export async function linkGoalToEntity(
   options: LinkingOptions = {}
 ): Promise<EntityServiceResult<void>> {
   try {
-    await useEntityRelationships.getState().createRelationship({
+    await useEntityGraph.getState().createRelationship({
       sourceType: entityType,
       sourceId: entityId,
       targetType: 'goal',
@@ -371,7 +371,7 @@ export async function createProject(
 
     // Create relationship if source entity provided
     if (options.sourceEntity) {
-      await useEntityRelationships.getState().createRelationship({
+      await useEntityGraph.getState().createRelationship({
         sourceType: options.sourceEntity.type,
         sourceId: options.sourceEntity.id,
         targetType: 'project',
@@ -403,7 +403,7 @@ export async function linkProjectToEntity(
   options: LinkingOptions = {}
 ): Promise<EntityServiceResult<void>> {
   try {
-    await useEntityRelationships.getState().createRelationship({
+    await useEntityGraph.getState().createRelationship({
       sourceType: entityType,
       sourceId: entityId,
       targetType: 'project',
@@ -438,7 +438,7 @@ export async function linkPersonToEntity(
   options: LinkingOptions = {}
 ): Promise<EntityServiceResult<void>> {
   try {
-    await useEntityRelationships.getState().createRelationship({
+    await useEntityGraph.getState().createRelationship({
       sourceType: entityType,
       sourceId: entityId,
       targetType: 'person',
@@ -474,7 +474,7 @@ export async function linkEntities(
   options: LinkingOptions = {}
 ): Promise<EntityServiceResult<void>> {
   try {
-    await useEntityRelationships.getState().createRelationship({
+    await useEntityGraph.getState().createRelationship({
       sourceType,
       sourceId,
       targetType,
@@ -505,7 +505,7 @@ export async function unlinkEntities(
   targetId: string
 ): Promise<EntityServiceResult<void>> {
   try {
-    const relationships = useEntityRelationships.getState().relationships;
+    const relationships = useEntityGraph.getState().relationships;
     const relationship = relationships.find(
       r => r.sourceType === sourceType &&
            r.sourceId === sourceId &&
@@ -514,7 +514,7 @@ export async function unlinkEntities(
     );
 
     if (relationship) {
-      await useEntityRelationships.getState().deleteRelationship(relationship.id);
+      await useEntityGraph.getState().deleteRelationship(relationship.id);
     }
 
     return { success: true };
