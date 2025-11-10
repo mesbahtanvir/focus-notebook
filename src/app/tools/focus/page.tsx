@@ -8,7 +8,7 @@ import { useProjects } from "@/store/useProjects";
 import { useGoals } from "@/store/useGoals";
 import { useFocus, selectBalancedTasks } from "@/store/useFocus";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Zap, Clock, Target, History, Star, TrendingUp, Brain, Rocket, Heart, Briefcase, X, Trash2, ArrowLeft, Eye, EyeOff, Search } from "lucide-react";
+import { Play, Zap, Clock, Target, History, Star, TrendingUp, Brain, Rocket, Heart, Briefcase, X, Trash2, ArrowLeft, Eye, EyeOff, Search, Edit3 } from "lucide-react";
 import { FocusSession } from "@/components/FocusSession";
 import { FocusStatistics } from "@/components/FocusStatistics";
 import { FocusSessionDetailModal } from "@/components/FocusSessionDetailModal";
@@ -48,7 +48,10 @@ function FocusPageContent() {
 
   // Get duration from URL or default to 60 minutes
   const urlDuration = searchParams.get('duration');
-  const [duration, setDuration] = useState(urlDuration ? parseInt(urlDuration) : 60);
+  const initialDuration = urlDuration ? parseInt(urlDuration) || 60 : 60;
+  const [duration, setDuration] = useState(initialDuration);
+  const [customDurationValue, setCustomDurationValue] = useState(String(initialDuration));
+  const [isCustomDurationOpen, setIsCustomDurationOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [selectedSession, setSelectedSession] = useState<FocusSessionType | null>(null);
@@ -93,6 +96,21 @@ function FocusPageContent() {
   const checkTaskRelevanceForToday = useCallback((task: Task) => {
     return determineTaskRelevanceForToday(task, today);
   }, [today]);
+
+  const openCustomDuration = () => {
+    setCustomDurationValue(String(duration));
+    setIsCustomDurationOpen(true);
+  };
+
+  const parsedCustomDuration = parseInt(customDurationValue, 10);
+  const isCustomDurationValid =
+    !Number.isNaN(parsedCustomDuration) && parsedCustomDuration >= 15 && parsedCustomDuration <= 240;
+
+  const applyCustomDuration = () => {
+    if (!isCustomDurationValid) return;
+    setDuration(parsedCustomDuration);
+    setIsCustomDurationOpen(false);
+  };
 
   const getDueDateScore = useCallback((dueDate?: string) => {
     if (!dueDate) return 0;
@@ -386,109 +404,103 @@ function FocusPageContent() {
             )}
 
             {/* Two-Column Layout: Desktop | Stacked: Mobile/Tablet */}
-            <div className="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[420px_minmax(0,1fr)] gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)] gap-4">
               
               {/* Left Column: Setup (1/3 width on desktop) */}
               <div className="lg:col-span-1 space-y-4">
+                {/* Focus Controls */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide flex items-center gap-2">
+                      <Clock className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                      Duration
+                    </label>
+                    <button
+                      onClick={openCustomDuration}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" />
+                      Custom
+                    </button>
+                  </div>
 
-                {/* Duration Selection */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
-                  <label className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                    Duration
-                  </label>
-
-                  <div className="grid grid-cols-2 gap-2 mt-3">
+                  <div className="grid grid-cols-2 gap-2">
                     {[25, 50, 90, 120].map((min) => (
                       <button
                         key={min}
                         onClick={() => setDuration(min)}
-                        className={`p-2.5 rounded-lg border text-center transition-all hover:scale-105 ${
+                        className={`p-2 rounded-lg border text-center text-sm font-semibold transition-all ${
                           duration === min
-                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/30 shadow-sm'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600'
+                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 shadow-sm'
+                            : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-purple-300 dark:hover:border-purple-600'
                         }`}
                       >
-                        <div className="text-lg font-bold text-gray-900 dark:text-white">{min}</div>
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400">min</div>
+                        {min}m
                       </button>
                     ))}
                   </div>
 
-                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">Custom Duration</label>
-                    <input
-                      type="number"
-                      value={duration}
-                      onChange={(e) => setDuration(parseInt(e.target.value) || 30)}
-                      min="15"
-                      max="240"
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900/50 outline-none transition-colors"
-                      placeholder="Enter minutes (15-240)"
-                    />
-                  </div>
-                </div>
+                  <div className="h-px bg-gray-100 dark:bg-gray-700" />
 
-                {/* Focus Mode Selection */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
-                  <label className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                    <Target className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                    Focus Mode
-                  </label>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide flex items-center gap-2 mb-2">
+                      <Target className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                      Focus Mode
+                    </label>
 
-                  <div className="grid grid-cols-2 gap-2 mt-3">
-                    <button
-                      onClick={() => selectModeTask('regular')}
-                      className={`p-2.5 rounded-lg border text-left transition-all hover:scale-105 ${
-                        focusMode === 'regular'
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 shadow-sm'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
-                      }`}
-                    >
-                      <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400 mb-1" />
-                      <div className="text-xs font-bold text-gray-900 dark:text-white">Regular</div>
-                      <div className="text-[9px] text-gray-500 dark:text-gray-400">Balanced</div>
-                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => selectModeTask('regular')}
+                        className={`p-2 rounded-lg border text-left transition-all ${
+                          focusMode === 'regular'
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 shadow-sm'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
+                        }`}
+                      >
+                        <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400 mb-1" />
+                        <div className="text-xs font-bold text-gray-900 dark:text-white">Regular</div>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400">Balanced</div>
+                      </button>
 
-                    <button
-                      onClick={() => selectModeTask('philosopher')}
-                      className={`p-2.5 rounded-lg border text-left transition-all hover:scale-105 ${
-                        focusMode === 'philosopher'
-                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 shadow-sm'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600'
-                      }`}
-                    >
-                      <Brain className="h-4 w-4 text-indigo-600 dark:text-indigo-400 mb-1" />
-                      <div className="text-xs font-bold text-gray-900 dark:text-white">Philosopher</div>
-                      <div className="text-[9px] text-gray-500 dark:text-gray-400">Deep work</div>
-                    </button>
+                      <button
+                        onClick={() => selectModeTask('philosopher')}
+                        className={`p-2 rounded-lg border text-left transition-all ${
+                          focusMode === 'philosopher'
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 shadow-sm'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600'
+                        }`}
+                      >
+                        <Brain className="h-4 w-4 text-indigo-600 dark:text-indigo-400 mb-1" />
+                        <div className="text-xs font-bold text-gray-900 dark:text-white">Philosopher</div>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400">Deep work</div>
+                      </button>
 
-                    <button
-                      onClick={() => selectModeTask('beast')}
-                      className={`p-2.5 rounded-lg border text-left transition-all hover:scale-105 ${
-                        focusMode === 'beast'
-                          ? 'border-red-500 bg-red-50 dark:bg-red-950/30 shadow-sm'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-600'
-                      }`}
-                    >
-                      <Rocket className="h-4 w-4 text-red-600 dark:text-red-400 mb-1" />
-                      <div className="text-xs font-bold text-gray-900 dark:text-white">Beast</div>
-                      <div className="text-[9px] text-gray-500 dark:text-gray-400">High output</div>
-                    </button>
+                      <button
+                        onClick={() => selectModeTask('beast')}
+                        className={`p-2 rounded-lg border text-left transition-all ${
+                          focusMode === 'beast'
+                            ? 'border-red-500 bg-red-50 dark:bg-red-950/30 shadow-sm'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-600'
+                        }`}
+                      >
+                        <Rocket className="h-4 w-4 text-red-600 dark:text-red-400 mb-1" />
+                        <div className="text-xs font-bold text-gray-900 dark:text-white">Beast</div>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400">High output</div>
+                      </button>
 
-                    <button
-                      onClick={() => selectModeTask('selfcare')}
-                      className={`p-2.5 rounded-lg border text-left transition-all hover:scale-105 ${
-                        focusMode === 'selfcare'
-                          ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/30 shadow-sm'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-pink-300 dark:hover:border-pink-600'
-                      }`}
-                    >
-                      <Heart className="h-4 w-4 text-pink-600 dark:text-pink-400 mb-1" />
-                      <div className="text-xs font-bold text-gray-900 dark:text-white">Self Care</div>
-                      <div className="
-                       text-gray-500 dark:text-gray-400">Wellness</div>
-                    </button>
+                      <button
+                        onClick={() => selectModeTask('selfcare')}
+                        className={`p-2 rounded-lg border text-left transition-all ${
+                          focusMode === 'selfcare'
+                            ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/30 shadow-sm'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-pink-300 dark:hover:border-pink-600'
+                        }`}
+                      >
+                        <Heart className="h-4 w-4 text-pink-600 dark:text-pink-400 mb-1" />
+                        <div className="text-xs font-bold text-gray-900 dark:text-white">Self Care</div>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400">Wellness</div>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -927,7 +939,96 @@ function FocusPageContent() {
           </button>
         </div>
       )}
+
+      <CustomDurationModal
+        isOpen={isCustomDurationOpen}
+        onClose={() => setIsCustomDurationOpen(false)}
+        value={customDurationValue}
+        onChange={setCustomDurationValue}
+        onApply={applyCustomDuration}
+        isValid={isCustomDurationValid}
+      />
     </div>
+  );
+}
+
+
+function CustomDurationModal({
+  isOpen,
+  onClose,
+  value,
+  onChange,
+  onApply,
+  isValid,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  value: string;
+  onChange: (value: string) => void;
+  onApply: () => void;
+  isValid: boolean;
+}) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+        >
+          <motion.div
+            className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-gray-200 dark:border-gray-700"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Clock className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                Custom Duration
+              </h2>
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                aria-label="Close custom duration modal"
+              >
+                <X className="h-4 w-4 text-gray-500" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Enter a duration between 15 and 240 minutes.
+            </p>
+            <input
+              type="number"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              min={15}
+              max={240}
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900/50 outline-none transition-colors"
+              placeholder="Minutes"
+            />
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onApply}
+                disabled={!isValid}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Apply
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
