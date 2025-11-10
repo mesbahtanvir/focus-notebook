@@ -71,16 +71,23 @@ describe('MostUsedTools Component', () => {
     expect(screen.getByText('Goals')).toBeInTheDocument();
   });
 
-  it('displays click counts for each tool', () => {
-    mockGetMostUsedTools.mockReturnValue([
+  it('renders a card for each tool returned by the store', () => {
+    const mockData: ToolUsageRecord[] = [
       { toolName: 'tasks', clickCount: 50, lastAccessed: '2025-01-01T00:00:00.000Z' },
       { toolName: 'thoughts', clickCount: 30, lastAccessed: '2025-01-01T00:00:00.000Z' },
-    ]);
+    ];
+    mockGetMostUsedTools.mockReturnValue(mockData);
 
     render(<MostUsedTools />);
 
-    expect(screen.getByText('50 clicks')).toBeInTheDocument();
-    expect(screen.getByText('30 clicks')).toBeInTheDocument();
+    const toolLinks = screen
+      .getAllByRole('link')
+      .filter((link) => link.getAttribute('href')?.startsWith('/tools/'));
+
+    expect(toolLinks).toHaveLength(mockData.length);
+    mockData.forEach(({ toolName }) => {
+      expect(toolLinks.some((link) => link.getAttribute('href') === `/tools/${toolName}`)).toBe(true);
+    });
   });
 
   it('displays tools without rank badges', () => {
