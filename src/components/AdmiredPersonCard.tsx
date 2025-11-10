@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { AdmiredPerson } from "@/store/useAdmiredPeople";
 import { Sparkles, Edit3, Trash2, ExternalLink, Tag } from "lucide-react";
 
@@ -7,13 +8,16 @@ export function AdmiredPersonCard({ person, onEdit, onDelete }: {
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const router = useRouter();
+
   return (
     <motion.div
       layout
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      className="card p-5 border-2 border-purple-200 bg-purple-50 dark:bg-purple-950/20 dark:border-purple-800 hover:shadow-lg transition-all"
+      onClick={() => router.push(`/tools/admired-people/${person.id}`)}
+      className="card p-5 border-2 border-purple-200 bg-purple-50 dark:bg-purple-950/20 dark:border-purple-800 hover:shadow-lg transition-all cursor-pointer"
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
@@ -33,6 +37,7 @@ export function AdmiredPersonCard({ person, onEdit, onDelete }: {
           )}
           <button
             onClick={(e) => {
+              e.stopPropagation();
               e.preventDefault();
               onEdit();
             }}
@@ -42,6 +47,7 @@ export function AdmiredPersonCard({ person, onEdit, onDelete }: {
           </button>
           <button
             onClick={(e) => {
+              e.stopPropagation();
               e.preventDefault();
               onDelete();
             }}
