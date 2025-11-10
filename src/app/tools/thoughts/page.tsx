@@ -183,6 +183,14 @@ function ThoughtsPageContent() {
           { label: 'unprocessed', value: thoughtStats.unprocessed, variant: 'warning' },
           { label: 'analyzed', value: thoughtStats.analyzed, variant: 'success' },
         ]}
+        actionElement={(
+          <Link
+            href="/tools/thoughts/swipe"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-semibold shadow-lg hover:from-purple-600 hover:to-indigo-600 transition-all"
+          >
+            Review Suggestions
+          </Link>
+        )}
         theme={theme}
       />
 

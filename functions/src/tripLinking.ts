@@ -340,13 +340,13 @@ Rules:
 }
 
 function extractTextContent(message: any): string {
-  if (!message.content || !Array.isArray(message.content)) {
+  if (!message?.content || !Array.isArray(message.content)) {
     return '';
   }
 
   return message.content
-    .filter((part) => part.type === 'text' && typeof part.text === 'string')
-    .map((part: any) => part.text)
+    .filter((part: any) => part?.type === 'text' && typeof part?.text === 'string')
+    .map((part: any) => String(part.text))
     .join('\n');
 }
 

@@ -271,11 +271,11 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const handleAcceptSuggestion = async (suggestionId: string) => {
     setIsProcessingSuggestion(true);
     try {
-      await ThoughtProcessingService.applySuggestion(thought.id, suggestionId);
+      await ThoughtProcessingService.applySuggestion(thought.id, suggestionId, {
+        source: 'modal',
+      });
       const updatedThought = useThoughts.getState().thoughts.find(t => t.id === thought.id);
       if (updatedThought) {
-        onClose();
-        // Show success message
         setSuccessMessage('Suggestion applied successfully');
         setShowSuccessModal(true);
       }
@@ -290,12 +290,9 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const handleRejectSuggestion = async (suggestionId: string) => {
     setIsProcessingSuggestion(true);
     try {
-      await ThoughtProcessingService.rejectSuggestion(thought.id, suggestionId);
-      const updatedThought = useThoughts.getState().thoughts.find(t => t.id === thought.id);
-      if (updatedThought) {
-        // Refresh the modal with updated thought
-        onClose();
-      }
+      await ThoughtProcessingService.rejectSuggestion(thought.id, suggestionId, {
+        source: 'modal',
+      });
     } catch (error) {
       setErrorMessage('Failed to reject suggestion');
       setShowErrorModal(true);

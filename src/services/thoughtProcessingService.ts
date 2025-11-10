@@ -1,9 +1,10 @@
-import { useThoughts, AISuggestion } from '@/store/useThoughts';
+import { useThoughts, AISuggestion, Thought } from '@/store/useThoughts';
 import { useTasks } from '@/store/useTasks';
 import { useProjects } from '@/store/useProjects';
 import { useGoals } from '@/store/useGoals';
 import { useMoods } from '@/store/useMoods';
 import { auth } from '@/lib/firebaseClient';
+import { createAt } from '@/lib/data/gateway';
 import { useAnonymousSession } from '@/store/useAnonymousSession';
 import { httpsCallable } from 'firebase/functions';
 import { functionsClient } from '@/lib/firebaseClient';
@@ -370,7 +371,11 @@ export class ThoughtProcessingService {
     console.log(`Ignored ${ignoredActions.length} low-confidence actions`);
   }
 
-  static async applySuggestion(thoughtId: string, suggestionId: string) {
+  static async applySuggestion(
+    thoughtId: string,
+    suggestionId: string,
+    options?: { source?: 'modal' | 'swipe' | string }
+  ) {
     const thought = useThoughts.getState().thoughts.find(t => t.id === thoughtId);
     if (!thought || !thought.aiSuggestions) return;
 
@@ -393,9 +398,20 @@ export class ThoughtProcessingService {
     );
 
     await useThoughts.getState().updateThought(thoughtId, { aiSuggestions: updatedSuggestions });
+
+    await this.recordSuggestionFeedback({
+      action: 'accepted',
+      source: options?.source,
+      thought,
+      suggestion,
+    });
   }
 
-  static async rejectSuggestion(thoughtId: string, suggestionId: string) {
+  static async rejectSuggestion(
+    thoughtId: string,
+    suggestionId: string,
+    options?: { source?: 'modal' | 'swipe' | string }
+  ) {
     const thought = useThoughts.getState().thoughts.find(t => t.id === thoughtId);
     if (!thought || !thought.aiSuggestions) return;
 
@@ -405,6 +421,45 @@ export class ThoughtProcessingService {
     );
 
     await useThoughts.getState().updateThought(thoughtId, { aiSuggestions: updatedSuggestions });
+
+    const suggestion = thought.aiSuggestions.find(s => s.id === suggestionId);
+    if (suggestion) {
+      await this.recordSuggestionFeedback({
+        action: 'rejected',
+        source: options?.source,
+        thought,
+        suggestion,
+      });
+    }
+  }
+
+  private static async recordSuggestionFeedback(params: {
+    action: 'accepted' | 'rejected';
+    source?: string;
+    thought: Thought;
+    suggestion: AISuggestion;
+  }) {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    const feedbackId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    const payload = {
+      action: params.action,
+      source: params.source || 'unknown',
+      thoughtId: params.thought.id,
+      thoughtPreview: params.thought.text?.slice(0, 280) || '',
+      suggestionId: params.suggestion.id,
+      suggestionType: params.suggestion.type,
+      suggestionConfidence: params.suggestion.confidence,
+      suggestionReasoning: params.suggestion.reasoning,
+      recordedAt: new Date().toISOString(),
+    };
+
+    try {
+      await createAt(`users/${userId}/aiSuggestionFeedback/${feedbackId}`, payload);
+    } catch (error) {
+      console.warn('Failed to record suggestion feedback', error);
+    }
   }
 
   static async processMultipleThoughts(thoughtIds: string[]): Promise<ThoughtProcessingResult[]> {

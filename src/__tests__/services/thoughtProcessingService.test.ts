@@ -8,6 +8,7 @@ import { useAnonymousSession } from '@/store/useAnonymousSession';
 import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
 import { Thought, AISuggestion } from '@/store/useThoughts';
 import { httpsCallable } from 'firebase/functions';
+import { createAt } from '@/lib/data/gateway';
 
 // Mock the stores
 jest.mock('@/store/useThoughts');
@@ -19,6 +20,11 @@ jest.mock('@/store/useAnonymousSession');
 jest.mock('@/store/useSubscriptionStatus');
 jest.mock('firebase/functions', () => ({
   httpsCallable: jest.fn(),
+}));
+jest.mock('@/lib/data/gateway', () => ({
+  createAt: jest.fn(),
+  updateAt: jest.fn(),
+  deleteAt: jest.fn(),
 }));
 jest.mock('@/lib/firebaseClient', () => ({
   auth: { currentUser: { uid: 'user-123', isAnonymous: false } },
@@ -33,9 +39,11 @@ describe('ThoughtProcessingService', () => {
     createdAt: new Date().toISOString(),
     tags: [],
   };
+  const createAtMock = createAt as jest.MockedFunction<typeof createAt>;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    createAtMock.mockClear();
 
     // Setup default mock implementations
     (useThoughts as any).getState = jest.fn(() => ({
@@ -357,6 +365,14 @@ describe('ThoughtProcessingService', () => {
           ]),
         })
       );
+
+      expect(createAtMock).toHaveBeenCalledWith(
+        expect.stringContaining('aiSuggestionFeedback'),
+        expect.objectContaining({
+          action: 'accepted',
+          suggestionId: 'suggestion-1',
+        })
+      );
     });
 
     it('should reject suggestion and update status', async () => {
@@ -394,6 +410,14 @@ describe('ThoughtProcessingService', () => {
               status: 'rejected',
             }),
           ]),
+        })
+      );
+
+      expect(createAtMock).toHaveBeenCalledWith(
+        expect.stringContaining('aiSuggestionFeedback'),
+        expect.objectContaining({
+          action: 'rejected',
+          suggestionId: 'suggestion-1',
         })
       );
     });
