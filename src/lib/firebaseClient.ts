@@ -6,11 +6,36 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { initializeAppCheck, ReCaptchaV3Provider, getToken as getAppCheckToken, AppCheck } from "firebase/app-check";
 import { isSafariBrowser, getBrowserName } from "@/lib/utils/browserDetection";
 
+function normalizeStorageBucket(rawBucket?: string): string {
+  if (!rawBucket) {
+    throw new Error('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET is not configured');
+  }
+
+  let bucket = rawBucket.trim();
+
+  if (!bucket) {
+    throw new Error('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET cannot be empty');
+  }
+
+  bucket = bucket.replace(/^gs:\/\//, '');
+
+  if (bucket.endsWith('.firebasestorage.app')) {
+    console.warn('[Firebase] Storage bucket should use the ".appspot.com" domain. Automatically normalizing value.');
+    bucket = bucket.replace(/\.firebasestorage\.app$/, '.appspot.com');
+  }
+
+  if (!bucket.includes('.')) {
+    bucket = `${bucket}.appspot.com`;
+  }
+
+  return bucket;
+}
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+  storageBucket: normalizeStorageBucket(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET),
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
 };

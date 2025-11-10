@@ -2,21 +2,21 @@
 
 ## Storage Bucket Configuration
 
-The correct storage bucket name is **without** the `.firebasestorage.app` suffix:
+The correct storage bucket name must use the Firebase default `.appspot.com` domain:
 
 ```
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=focus-yourthoughts-ca
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=focus-yourthoughts-ca.appspot.com
 ```
 
 ❌ **Incorrect**: `focus-yourthoughts-ca.firebasestorage.app`
-✅ **Correct**: `focus-yourthoughts-ca`
+✅ **Correct**: `focus-yourthoughts-ca.appspot.com`
 
 ## Apply CORS Rules
 
 Firebase Storage CORS rules need to be applied separately using `gsutil`. Run this command to apply the CORS configuration from `cors.json`:
 
 ```bash
-gsutil cors set cors.json gs://focus-yourthoughts-ca
+gsutil cors set cors.json gs://focus-yourthoughts-ca.appspot.com
 ```
 
 ### If you don't have gsutil installed:
@@ -24,12 +24,12 @@ gsutil cors set cors.json gs://focus-yourthoughts-ca
 1. Install Google Cloud SDK: https://cloud.google.com/sdk/docs/install
 2. Authenticate: `gcloud auth login`
 3. Set project: `gcloud config set project focus-yourthoughts-ca`
-4. Apply CORS: `gsutil cors set cors.json gs://focus-yourthoughts-ca`
+4. Apply CORS: `gsutil cors set cors.json gs://focus-yourthoughts-ca.appspot.com`
 
 ### Verify CORS configuration:
 
 ```bash
-gsutil cors get gs://focus-yourthoughts-ca
+gsutil cors get gs://focus-yourthoughts-ca.appspot.com
 ```
 
 ## Deploy Storage Security Rules
