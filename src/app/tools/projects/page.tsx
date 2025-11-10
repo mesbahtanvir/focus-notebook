@@ -32,8 +32,6 @@ import {
   Filter,
   ChevronDown,
   ArrowLeft,
-  LayoutGrid,
-  LayoutList
 } from "lucide-react";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
@@ -80,7 +78,6 @@ export default function ProjectsPage() {
   const [filterStatus, setFilterStatus] = useState<'all' | ProjectStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('detailed');
 
   const filteredProjects = useMemo(() => {
     return projects.filter(p => {
@@ -200,38 +197,8 @@ export default function ProjectsPage() {
         theme={theme}
       />
 
-      {/* View Mode Toggle */}
-      <div className="flex justify-end mb-4">
-        <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1">
-          <button
-            onClick={() => setViewMode('compact')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              viewMode === 'compact'
-                ? 'bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-300'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-            }`}
-            title="Compact view"
-          >
-            <LayoutGrid className="h-4 w-4" />
-            <span className="hidden sm:inline">Compact</span>
-          </button>
-          <button
-            onClick={() => setViewMode('detailed')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              viewMode === 'detailed'
-                ? 'bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-300'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-            }`}
-            title="Detailed view"
-          >
-            <LayoutList className="h-4 w-4" />
-            <span className="hidden sm:inline">Detailed</span>
-          </button>
-        </div>
-      </div>
-
       {/* Projects List */}
-      <div className={viewMode === 'compact' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
+      <div className={'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'}>
         {filteredProjects.length === 0 && (
           <div className="col-span-full card p-12 text-center">
             <Target className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
@@ -254,160 +221,39 @@ export default function ProjectsPage() {
             const linkedTasks = getProjectTasks(project.id);
             const projectTime = TimeTrackingService.calculateProjectTime(project, tasks);
 
-            if (viewMode === 'compact') {
-              // Compact View
-              return (
-                <motion.div
-                  key={project.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  onClick={() => router.push(`/tools/projects/${project.id}`)}
-                  className="card p-4 hover:shadow-md transition-all cursor-pointer group"
-                >
-                  {/* Header with Progress */}
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Target className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                        <h3 className="text-sm font-bold truncate">{project.title}</h3>
-                      </div>
-                      {project.description && (
-                        <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
-                          {project.description}
-                        </p>
-                      )}
-                    </div>
-                    {typeof project.progress === 'number' && (
-                      <div className="text-right flex-shrink-0">
-                        <div className="text-lg font-bold text-blue-600">{project.progress}%</div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Progress Bar */}
-                  {typeof project.progress === 'number' && (
-                    <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-3">
-                      <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all"
-                        style={{ width: `${project.progress}%` }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Badges */}
-                  <div className="flex flex-wrap gap-1.5 mb-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                      project.status === 'active' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300' :
-                      project.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-300' :
-                      project.status === 'on-hold' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-300' :
-                      'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                    }`}>
-                      {project.status}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                      project.timeframe === 'short-term'
-                        ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-300'
-                        : 'bg-purple-100 text-purple-700 dark:bg-purple-950/30 dark:text-purple-300'
-                    }`}>
-                      {project.timeframe === 'short-term' ? 'Short' : 'Long'}
-                    </span>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <ListChecks className="h-3 w-3" />
-                      {linkedTasks.length}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MessageSquare className="h-3 w-3" />
-                      {linkedThoughts.length}
-                    </div>
-                    {projectTime.totalMinutes > 0 && (
-                      <div className="flex items-center gap-1 font-medium text-blue-600 dark:text-blue-400">
-                        <Clock className="h-3 w-3" />
-                        {TimeTrackingService.formatTime(projectTime.totalMinutes)}
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            }
-
-            // Detailed View (original)
             return (
               <motion.div
                 key={project.id}
                 layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
                 onClick={() => router.push(`/tools/projects/${project.id}`)}
-                className="card p-6 space-y-4 hover:shadow-md transition-shadow cursor-pointer"
+                className="card p-4 hover:shadow-md transition-all cursor-pointer group"
               >
-                {/* Project Header */}
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Target className="h-5 w-5 text-blue-500" />
-                      <h3 className="text-xl font-bold">{project.title}</h3>
+                {/* Header with Progress */}
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Target className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                      <h3 className="text-sm font-bold truncate">{project.title}</h3>
                     </div>
-
                     {project.description && (
-                      <p className="text-gray-600 dark:text-gray-400 mb-3">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
                         {project.description}
                       </p>
                     )}
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        project.timeframe === 'short-term'
-                          ? 'bg-orange-100 text-orange-700'
-                          : 'bg-purple-100 text-purple-700'
-                      }`}>
-                        {project.timeframe === 'short-term' ? '⏱️ Short-term' : '🎯 Long-term'}
-                      </span>
-
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        project.status === 'active' ? 'bg-blue-100 text-blue-700' :
-                        project.status === 'completed' ? 'bg-green-100 text-green-700' :
-                        project.status === 'on-hold' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
-                        {project.status}
-                      </span>
-
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        project.category === 'health' ? 'bg-red-100 text-red-700' :
-                        project.category === 'wealth' ? 'bg-green-100 text-green-700' :
-                        project.category === 'mastery' ? 'bg-blue-100 text-blue-700' :
-                        'bg-pink-100 text-pink-700'
-                      }`}>
-                        {project.category}
-                      </span>
-
-                      {project.targetDate && (
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          Target: {new Date(project.targetDate).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
                   </div>
-
                   {typeof project.progress === 'number' && (
-                    <div className="text-right">
-                      <div className="text-3xl font-bold text-blue-600">{project.progress}%</div>
-                      <div className="text-xs text-muted-foreground">Progress</div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-lg font-bold text-blue-600">{project.progress}%</div>
                     </div>
                   )}
                 </div>
 
                 {/* Progress Bar */}
                 {typeof project.progress === 'number' && (
-                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-3">
                     <div
                       className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all"
                       style={{ width: `${project.progress}%` }}
@@ -415,48 +261,47 @@ export default function ProjectsPage() {
                   </div>
                 )}
 
-                {/* Linked Items */}
-                <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2 border-t">
+                {/* Badges */}
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                    project.status === 'active' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300' :
+                    project.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-300' :
+                    project.status === 'on-hold' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-300' :
+                    'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                  }`}>
+                    {project.status}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                    project.timeframe === 'short-term'
+                      ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-300'
+                      : 'bg-purple-100 text-purple-700 dark:bg-purple-950/30 dark:text-purple-300'
+                  }`}>
+                    {project.timeframe === 'short-term' ? 'Short' : 'Long'}
+                  </span>
+                </div>
+
+                {/* Stats */}
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
-                    <MessageSquare className="h-4 w-4" />
-                    {linkedThoughts.length} thought(s)
+                    <ListChecks className="h-3 w-3" />
+                    {linkedTasks.length}
                   </div>
                   <div className="flex items-center gap-1">
-                    <ListChecks className="h-4 w-4" />
-                    {linkedTasks.length} task(s)
+                    <MessageSquare className="h-3 w-3" />
+                    {linkedThoughts.length}
                   </div>
                   {projectTime.totalMinutes > 0 && (
                     <div className="flex items-center gap-1 font-medium text-blue-600 dark:text-blue-400">
-                      <Clock className="h-4 w-4" />
-                      {TimeTrackingService.formatTime(projectTime.totalMinutes)} tracked
+                      <Clock className="h-3 w-3" />
+                      {TimeTrackingService.formatTime(projectTime.totalMinutes)}
                     </div>
                   )}
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    {(() => {
-                      try {
-                        if (!project.createdAt) return 'N/A';
-                        const dateValue = project.createdAt as any;
-                        if (typeof dateValue === 'object' && dateValue !== null && 'toDate' in dateValue) {
-                          return dateValue.toDate().toLocaleDateString();
-                        }
-                        if (typeof dateValue === 'string') {
-                          return new Date(dateValue).toLocaleDateString();
-                        }
-                        if (typeof dateValue === 'object' && dateValue !== null && 'seconds' in dateValue) {
-                          return new Date(dateValue.seconds * 1000).toLocaleDateString();
-                        }
-                        return new Date(dateValue).toLocaleDateString();
-                      } catch {
-                        return 'Invalid date';
-                      }
-                    })()}
-                  </div>
                 </div>
               </motion.div>
             );
           })}
         </AnimatePresence>
+
 
         {/* Infinite scroll trigger */}
         {hasMore && (

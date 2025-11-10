@@ -403,106 +403,111 @@ function FocusPageContent() {
               </div>
             )}
 
-            {/* Two-Column Layout: Desktop | Stacked: Mobile/Tablet */}
-            <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)] gap-4">
-              
-              {/* Left Column: Setup (1/3 width on desktop) */}
-              <div className="lg:col-span-1 space-y-4">
-                {/* Focus Controls */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide flex items-center gap-2">
-                      <Clock className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
-                      Duration
-                    </label>
-                    <button
-                      onClick={openCustomDuration}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300"
-                    >
-                      <Edit3 className="h-3.5 w-3.5" />
-                      Custom
-                    </button>
-                  </div>
+            {/* Focus Controls */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 lg:p-4 shadow-sm">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                    {/* Duration */}
+                    <div className="space-y-2 w-full lg:max-w-[260px]">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide flex items-center gap-2">
+                          <Clock className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                          Duration
+                        </label>
+                        <button
+                          onClick={openCustomDuration}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
+                          Custom
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-1.5">
+                        {[25, 50, 90, 120].map((min) => (
+                          <button
+                            key={min}
+                            onClick={() => setDuration(min)}
+                            className={`px-3 py-2 rounded-lg border text-center text-sm font-semibold transition-all ${
+                              duration === min
+                                ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 shadow-sm'
+                                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-purple-300 dark:hover:border-purple-600'
+                            }`}
+                          >
+                            {min}m
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    {[25, 50, 90, 120].map((min) => (
-                      <button
-                        key={min}
-                        onClick={() => setDuration(min)}
-                        className={`p-2 rounded-lg border text-center text-sm font-semibold transition-all ${
-                          duration === min
-                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 shadow-sm'
-                            : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-purple-300 dark:hover:border-purple-600'
-                        }`}
-                      >
-                        {min}m
-                      </button>
-                    ))}
-                  </div>
+                    <div className="hidden lg:block h-12 w-px bg-gray-200 dark:bg-gray-700 mx-2" />
 
-                  <div className="h-px bg-gray-100 dark:bg-gray-700" />
+                    {/* Focus Mode */}
+                    <div className="flex-1 space-y-2">
+                      <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide flex items-center gap-2">
+                        <Target className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                        Focus Mode
+                      </label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+                        <button
+                          onClick={() => selectModeTask('regular')}
+                          className={`px-3 py-2 rounded-lg border text-left transition-all ${
+                            focusMode === 'regular'
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 shadow-sm'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
+                          }`}
+                        >
+                          <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400 mb-1" />
+                          <div className="text-xs font-bold text-gray-900 dark:text-white">Regular</div>
+                          <div className="text-[10px] text-gray-500 dark:text-gray-400">Balanced</div>
+                        </button>
 
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide flex items-center gap-2 mb-2">
-                      <Target className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
-                      Focus Mode
-                    </label>
+                        <button
+                          onClick={() => selectModeTask('philosopher')}
+                          className={`px-3 py-2 rounded-lg border text-left transition-all ${
+                            focusMode === 'philosopher'
+                              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 shadow-sm'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600'
+                          }`}
+                        >
+                          <Brain className="h-4 w-4 text-indigo-600 dark:text-indigo-400 mb-1" />
+                          <div className="text-xs font-bold text-gray-900 dark:text-white">Philosopher</div>
+                          <div className="text-[10px] text-gray-500 dark:text-gray-400">Deep work</div>
+                        </button>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => selectModeTask('regular')}
-                        className={`p-2 rounded-lg border text-left transition-all ${
-                          focusMode === 'regular'
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 shadow-sm'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
-                        }`}
-                      >
-                        <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400 mb-1" />
-                        <div className="text-xs font-bold text-gray-900 dark:text-white">Regular</div>
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400">Balanced</div>
-                      </button>
+                        <button
+                          onClick={() => selectModeTask('beast')}
+                          className={`px-3 py-2 rounded-lg border text-left transition-all ${
+                            focusMode === 'beast'
+                              ? 'border-red-500 bg-red-50 dark:bg-red-950/30 shadow-sm'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-600'
+                          }`}
+                        >
+                          <Rocket className="h-4 w-4 text-red-600 dark:text-red-400 mb-1" />
+                          <div className="text-xs font-bold text-gray-900 dark:text-white">Beast</div>
+                          <div className="text-[10px] text-gray-500 dark:text-gray-400">High output</div>
+                        </button>
 
-                      <button
-                        onClick={() => selectModeTask('philosopher')}
-                        className={`p-2 rounded-lg border text-left transition-all ${
-                          focusMode === 'philosopher'
-                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 shadow-sm'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600'
-                        }`}
-                      >
-                        <Brain className="h-4 w-4 text-indigo-600 dark:text-indigo-400 mb-1" />
-                        <div className="text-xs font-bold text-gray-900 dark:text-white">Philosopher</div>
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400">Deep work</div>
-                      </button>
-
-                      <button
-                        onClick={() => selectModeTask('beast')}
-                        className={`p-2 rounded-lg border text-left transition-all ${
-                          focusMode === 'beast'
-                            ? 'border-red-500 bg-red-50 dark:bg-red-950/30 shadow-sm'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-600'
-                        }`}
-                      >
-                        <Rocket className="h-4 w-4 text-red-600 dark:text-red-400 mb-1" />
-                        <div className="text-xs font-bold text-gray-900 dark:text-white">Beast</div>
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400">High output</div>
-                      </button>
-
-                      <button
-                        onClick={() => selectModeTask('selfcare')}
-                        className={`p-2 rounded-lg border text-left transition-all ${
-                          focusMode === 'selfcare'
-                            ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/30 shadow-sm'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-pink-300 dark:hover:border-pink-600'
-                        }`}
-                      >
-                        <Heart className="h-4 w-4 text-pink-600 dark:text-pink-400 mb-1" />
-                        <div className="text-xs font-bold text-gray-900 dark:text-white">Self Care</div>
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400">Wellness</div>
-                      </button>
+                        <button
+                          onClick={() => selectModeTask('selfcare')}
+                          className={`px-3 py-2 rounded-lg border text-left transition-all ${
+                            focusMode === 'selfcare'
+                              ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/30 shadow-sm'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-pink-300 dark:hover:border-pink-600'
+                          }`}
+                        >
+                          <Heart className="h-4 w-4 text-pink-600 dark:text-pink-400 mb-1" />
+                          <div className="text-xs font-bold text-gray-900 dark:text-white">Self Care</div>
+                          <div className="text-[10px] text-gray-500 dark:text-gray-400">Wellness</div>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
+
+            {/* Two-Column Layout: Desktop | Stacked: Mobile/Tablet */}
+            <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)] gap-4">
+
+              {/* Left Column: Setup (1/3 width on desktop) */}
+              <div className="lg:col-span-1 space-y-4">
               </div>
 
               {/* Right Column: Task Selection (2/3 width on desktop) */}
@@ -626,7 +631,7 @@ function FocusPageContent() {
                   </div>
                 ) : (
                   <div className="max-h-[55vh] lg:max-h-[60vh] xl:max-h-[70vh] overflow-y-auto pr-1">
-                    <div className="grid gap-1.5 sm:grid-cols-2 2xl:grid-cols-3 auto-rows-fr">
+                    <div className="grid gap-1 sm:grid-cols-2 2xl:grid-cols-3 auto-rows-fr">
                       <AnimatePresence mode="popLayout">
                         {sortedVisibleTasks.map((task) => {
                           const isSelected = selectedTaskIds.includes(task.id);
@@ -644,15 +649,15 @@ function FocusPageContent() {
                               }}
                               type="button"
                               onClick={() => toggleTaskSelection(task.id)}
-                              className={`w-full h-full flex items-start gap-2 p-3 rounded-lg transition-colors text-left ${
+                              className={`w-full h-full flex items-start gap-1.5 p-2.5 rounded-lg transition-colors text-left ${
                                 isSelected
                                   ? 'bg-purple-600 text-white border border-purple-600 shadow-md'
                                   : 'bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white hover:border-purple-300 dark:hover:border-purple-600 border border-gray-200 dark:border-gray-700'
                               }`}
                             >
                             <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                              isSelected 
-                                ? 'bg-white' 
+                              isSelected
+                                ? 'bg-white'
                                 : 'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600'
                             }`}>
                               {isSelected && (
@@ -662,18 +667,13 @@ function FocusPageContent() {
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className={`text-sm font-semibold leading-snug ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                              <div className={`text-sm font-semibold leading-snug line-clamp-2 ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
                                 {task.title}
                               </div>
-                              {task.dueDate && (
-                                <div className={`text-[11px] ${isSelected ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
-                                  Due {new Date(task.dueDate).toLocaleDateString()}
-                                </div>
-                              )}
                             </div>
-                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                               <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-0.5 ${
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-0.5 ${
                                   isSelected
                                     ? 'bg-white/20 text-white'
                                     : task.category === 'mastery'
@@ -681,7 +681,8 @@ function FocusPageContent() {
                                     : 'bg-pink-100 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300'
                                 }`}
                               >
-                                {task.category === 'mastery' ?  '🧠': '💝'} <span className="hidden sm:inline">{task.category || 'pleasure'}</span>
+                                {task.category === 'mastery' ?  '🧠': '💝'}
+                                <span className="hidden xl:inline capitalize">{task.category || 'pleasure'}</span>
                               </span>
                               {task.estimatedMinutes && (
                                 <span className={`text-[10px] font-medium ${isSelected ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
