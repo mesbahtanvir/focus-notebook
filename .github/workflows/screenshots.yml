@@ -15,6 +15,9 @@ on:
       - 'e2e/**'
       - 'package*.json'
       - 'playwright.config.ts'
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 permissions:
