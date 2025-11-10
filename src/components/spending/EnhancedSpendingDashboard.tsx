@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Wallet,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -233,6 +234,8 @@ export function EnhancedSpendingDashboard({
     return `${start} → ${end}`;
   };
 
+  const accountSummaryLabel = accounts.length > 0 ? `${accounts.length} ${accounts.length === 1 ? 'account' : 'accounts'}` : '';
+
   return (
     <div className="space-y-6">
       <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -241,6 +244,7 @@ export function EnhancedSpendingDashboard({
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <CalendarRange className="h-5 w-5 text-green-600" />
             {formatRangeLabel()} • {sourceLabel}
+            {accountSummaryLabel && <span className="text-sm text-gray-500">• {accountSummaryLabel}</span>}
           </h3>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -403,7 +407,7 @@ function SummaryCard({
   subtitle,
   gradient,
 }: {
-  icon: typeof CalendarRange;
+  icon: LucideIcon;
   title: string;
   value: string;
   subtitle: string;

@@ -44,7 +44,6 @@ const getDefaultDateRange = (): DateRange => {
     end: end.toISOString().split('T')[0],
   };
 };
-import { EnhancedSpendingDashboard, DateRange, NormalizedSpendingTransaction } from '@/components/spending/EnhancedSpendingDashboard';
 
 export default function SpendingPage() {
   useTrackToolUsage('spending');
@@ -54,7 +53,6 @@ export default function SpendingPage() {
   const { initialize: initializePlaid, cleanup: cleanupPlaid, loading: plaidLoading, error: plaidError, getConnectionStatuses } = useSpendingTool();
   const plaidTransactions = useSpendingTool((state) => state.transactions);
   const plaidAccounts = useSpendingTool((state) => state.accounts);
-  const plaidSubscriptions = useSpendingTool((state) => state.subscriptions);
 
   const subscribeSpending = useSpending((state) => state.subscribe);
   const csvTransactions = useSpending((state) => state.transactions);
@@ -113,7 +111,7 @@ export default function SpendingPage() {
         signedAmount,
         amount: Math.abs(signedAmount),
         isIncome: signedAmount < 0,
-        category: txn.category || 'Other',
+        category: txn.category ? String(txn.category) : 'Other',
         accountId: txn.accountId,
         accountName: account?.name || 'Manual Account',
         accountMask: account?.lastFourDigits,
@@ -124,6 +122,22 @@ export default function SpendingPage() {
       } satisfies NormalizedSpendingTransaction;
     });
   }, [csvTransactions, csvAccounts]);
+
+  const plaidAccountList = useMemo(() => {
+    return Object.values(plaidAccounts).map((account) => ({
+      id: account.id ?? account.itemId,
+      name: account.name,
+      mask: account.mask,
+    }));
+  }, [plaidAccounts]);
+
+  const csvAccountList = useMemo(() => {
+    return csvAccounts.map((account) => ({
+      id: account.id,
+      name: account.name,
+      mask: account.lastFourDigits,
+    }));
+  }, [csvAccounts]);
 
   // Determine which data source is active
   useEffect(() => {
@@ -139,6 +153,16 @@ export default function SpendingPage() {
       return null;
     });
   }, [hasPlaidConnections, hasCSVData]);
+
+  const activeTransactions: NormalizedSpendingTransaction[] =
+    dataSource === 'csv'
+      ? normalizedCsvTransactions
+      : dataSource === 'plaid'
+      ? normalizedPlaidTransactions
+      : [];
+
+  const activeAccounts = dataSource === 'csv' ? csvAccountList : plaidAccountList;
+  const activeSourceLabel = dataSource === 'csv' ? 'CSV uploads' : 'Plaid connections';
 
   if (plaidLoading) {
     return (
@@ -173,11 +197,38 @@ export default function SpendingPage() {
               Track spending with automatic bank sync or manual CSV upload
             </p>
           </div>
-        </div>
-        {hasPlaidConnections && (
-          <PlaidLinkButton mode="new" className="hidden md:inline-flex" />
-        )}
       </div>
+      {hasPlaidConnections && (
+        <PlaidLinkButton mode="new" className="hidden md:inline-flex" />
+      )}
+    </div>
+
+      {hasPlaidConnections && hasCSVData && (
+        <div className="mb-6 flex flex-wrap gap-3">
+          <button
+            onClick={() => setDataSource('plaid')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 transition-all ${
+              dataSource !== 'csv'
+                ? 'bg-green-600 text-white border-green-600 shadow'
+                : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700'
+            }`}
+          >
+            <LinkIcon className="h-4 w-4" />
+            Plaid Connections
+          </button>
+          <button
+            onClick={() => setDataSource('csv')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 transition-all ${
+              dataSource === 'csv'
+                ? 'bg-purple-600 text-white border-purple-600 shadow'
+                : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700'
+            }`}
+          >
+            <Upload className="h-4 w-4" />
+            CSV Statements
+          </button>
+        </div>
+      )}
 
       {/* Connection Status Banners */}
       {hasPlaidConnections && (
@@ -324,6 +375,15 @@ export default function SpendingPage() {
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
+            {dataSource && (
+              <EnhancedSpendingDashboard
+                transactions={activeTransactions}
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+                accounts={activeAccounts}
+                sourceLabel={activeSourceLabel}
+              />
+            )}
             {dataSource === 'csv' ? (
               <>
                 <CSVDashboardSummary />
