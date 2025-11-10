@@ -13,6 +13,7 @@ interface GoalThoughtLinksProps {
   allThoughts: Thought[];
   onLinkThoughts: (thoughtIds: string[]) => Promise<void>;
   onCreateThought: (text: string) => Promise<void>;
+  linkedThoughtIds?: string[];
 }
 
 /**
@@ -24,14 +25,20 @@ export function GoalThoughtLinks({
   allThoughts,
   onLinkThoughts,
   onCreateThought,
+  linkedThoughtIds,
 }: GoalThoughtLinksProps) {
   const [showAttachModal, setShowAttachModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedThoughts, setSelectedThoughts] = useState<Set<string>>(new Set());
 
+  const linkedThoughtIdSet = useMemo(() => new Set(linkedThoughtIds ?? []), [linkedThoughtIds]);
+
   const unlinkedThoughts = useMemo(() => {
-    return allThoughts.filter(t => !t.tags?.includes(goalId));
-  }, [allThoughts, goalId]);
+    if (linkedThoughtIds) {
+      return allThoughts.filter((t) => !linkedThoughtIdSet.has(t.id));
+    }
+    return allThoughts.filter((t) => !t.tags?.includes(goalId));
+  }, [allThoughts, goalId, linkedThoughtIdSet, linkedThoughtIds]);
 
   const toggleThoughtSelection = (thoughtId: string) => {
     const newSelected = new Set(selectedThoughts);

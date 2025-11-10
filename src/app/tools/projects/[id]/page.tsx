@@ -5,7 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useProjects, Project } from "@/store/useProjects";
 import { useTasks, Task } from "@/store/useTasks";
 import { useGoals } from "@/store/useGoals";
-import { useThoughts } from "@/store/useThoughts";
+import { useThoughts, Thought } from "@/store/useThoughts";
+import { useEntityGraph } from "@/store/useEntityGraph";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 import {
@@ -74,6 +75,9 @@ export default function ProjectDetailPage() {
 
   const goals = useGoals((s) => s.goals);
   const thoughts = useThoughts((s) => s.thoughts);
+  const subscribeThoughts = useThoughts((s) => s.subscribe);
+  const relationships = useEntityGraph((s) => s.relationships);
+  const subscribeRelationships = useEntityGraph((s) => s.subscribe);
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -103,8 +107,10 @@ export default function ProjectDetailPage() {
     if (user?.uid) {
       subscribe(user.uid);
       subscribeTasks(user.uid);
+      subscribeThoughts(user.uid);
+      subscribeRelationships(user.uid);
     }
-  }, [user?.uid, subscribe, subscribeTasks]);
+  }, [user?.uid, subscribe, subscribeTasks, subscribeThoughts, subscribeRelationships]);
 
   const project = projects.find((p) => p.id === projectId);
 
@@ -137,13 +143,30 @@ export default function ProjectDetailPage() {
     return goals.find((g) => g.id === project.goalId);
   }, [project, goals]);
 
+  const relationshipLinkedThoughts = useMemo(() => {
+    if (!projectId) return [];
+    const thoughtMap = new Map(thoughts.map((t) => [t.id, t]));
+    const relevant = relationships.filter(
+      (rel) =>
+        rel.status === 'active' &&
+        rel.sourceType === 'thought' &&
+        rel.targetType === 'project' &&
+        rel.targetId === projectId
+    );
+    return relevant
+      .map((rel) => thoughtMap.get(rel.sourceId))
+      .filter((thought): thought is Thought => Boolean(thought));
+  }, [relationships, thoughts, projectId]);
+
   const linkedThoughts = useMemo(() => {
+    if (relationshipLinkedThoughts.length > 0) {
+      return relationshipLinkedThoughts;
+    }
     if (!project) return [];
-    // Include thoughts that are either in linkedThoughtIds OR connected via AI processing
+
     return thoughts.filter((t) => {
       if (project.linkedThoughtIds.includes(t.id)) return true;
 
-      // Check if thought created this project (via AI processing)
       try {
         const projectNotes = project.notes ? JSON.parse(project.notes) : null;
         if (projectNotes?.sourceThoughtId === t.id) return true;
@@ -151,7 +174,7 @@ export default function ProjectDetailPage() {
 
       return false;
     });
-  }, [project, thoughts]);
+  }, [relationshipLinkedThoughts, project, thoughts]);
 
   const stats = useMemo(() => {
     const totalTasks = linkedTasks.length;

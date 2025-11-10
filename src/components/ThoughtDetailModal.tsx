@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useThoughts, Thought } from "@/store/useThoughts";
 import { useTasks } from "@/store/useTasks";
@@ -13,6 +13,8 @@ import { ThoughtProcessingService } from "@/services/thoughtProcessingService";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebaseClient";
 import {
   X,
   Trash2,
@@ -38,6 +40,15 @@ interface ThoughtDetailModalProps {
   onClose: () => void;
 }
 
+type ThoughtPromptLog = {
+  id: string;
+  createdAt?: string;
+  trigger?: string;
+  status: 'completed' | 'failed';
+  promptSnippet: string;
+  error?: string | null;
+};
+
 export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(thought.text);
@@ -56,6 +67,9 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const [showAIResources, setShowAIResources] = useState(false);
   const [showRevertConfirm, setShowRevertConfirm] = useState(false);
   const [isProcessingSuggestion, setIsProcessingSuggestion] = useState(false);
+  const [thoughtPromptLogs, setThoughtPromptLogs] = useState<ThoughtPromptLog[]>([]);
+  const [isThoughtPromptLoading, setIsThoughtPromptLoading] = useState(false);
+  const [thoughtPromptError, setThoughtPromptError] = useState<string | null>(null);
   // Manual linking removed - now handled via relationship store
 
   const updateThought = useThoughts((s) => s.updateThought);
@@ -70,7 +84,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
   const friends = useFriends((s) => s.friends);
   const goals = useGoals((s) => s.goals);
   const relationships = useEntityGraph((s) => s.relationships);
-  const { isAnonymous, isAnonymousAiAllowed } = useAuth();
+  const { user, isAnonymous, isAnonymousAiAllowed } = useAuth();
   
   const isProcessed = Array.isArray(thought.tags) && thought.tags.includes('processed');
 
@@ -79,6 +93,21 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
     thought.aiProcessingStatus !== 'pending' &&
     thought.aiProcessingStatus !== 'processing' &&
     thought.aiProcessingStatus !== 'completed';
+
+  const formatPromptTimestamp = (value?: string) => {
+    if (!value) return 'Unknown time';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleString();
+  };
+
+  const getPromptStatusBadge = (status: 'completed' | 'failed') => {
+    return status === 'failed'
+      ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-200'
+      : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-200';
+  };
 
   // Render tag component without special linking behavior
   const renderTag = (tag: string) => (
@@ -402,6 +431,63 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
 
   const pendingSuggestions = thought.aiSuggestions?.filter(s => s.status === 'pending') || [];
 
+  useEffect(() => {
+    let isMounted = true;
+    const loadPromptLogs = async () => {
+      const userId = user?.uid;
+      if (!userId) {
+        setThoughtPromptLogs([]);
+        return;
+      }
+
+      setIsThoughtPromptLoading(true);
+      setThoughtPromptError(null);
+
+      try {
+        const logsQuery = query(
+          collection(db, `users/${userId}/llmLogs`),
+          where('thoughtId', '==', thought.id),
+          orderBy('createdAt', 'desc'),
+          limit(5)
+        );
+        const snapshot = await getDocs(logsQuery);
+        if (!isMounted) return;
+        const entries: ThoughtPromptLog[] = snapshot.docs.map((doc) => {
+          const data = doc.data() as any;
+          const createdAt = data.createdAt?.toDate
+            ? data.createdAt.toDate().toISOString()
+            : data.createdAt;
+          const promptText = typeof data.prompt === 'string' ? data.prompt : '';
+          const snippet = promptText.length > 200 ? `${promptText.slice(0, 200)}…` : promptText;
+          const status: 'completed' | 'failed' = data.error ? 'failed' : data.status ?? 'completed';
+          return {
+            id: doc.id,
+            createdAt,
+            trigger: data.trigger,
+            status,
+            promptSnippet: snippet,
+            error: data.error ?? null,
+          };
+        });
+        setThoughtPromptLogs(entries);
+      } catch (error) {
+        if (isMounted) {
+          setThoughtPromptError('Unable to load recent AI requests');
+        }
+      } finally {
+        if (isMounted) {
+          setIsThoughtPromptLoading(false);
+        }
+      }
+    };
+
+    loadPromptLogs();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [thought.id, user?.uid]);
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" onClick={onClose}>
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" aria-hidden="true" />
@@ -645,6 +731,88 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                   </div>
                 </div>
               )}
+
+              <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="p-5 rounded-xl bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20 border-2 border-purple-200 dark:border-purple-800">
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-200 dark:bg-purple-800 rounded-lg">
+                        <Brain className="h-5 w-5 text-purple-700 dark:text-purple-200" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">AI Processing History</h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">Latest debug logs for this thought</p>
+                      </div>
+                    </div>
+                    <Link
+                      href={`/admin?thoughtId=${thought.id}`}
+                      className="text-xs font-semibold text-purple-700 dark:text-purple-300 hover:underline"
+                    >
+                      Open Debug Console ↗
+                    </Link>
+                  </div>
+
+                  {isThoughtPromptLoading && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading recent AI requests...
+                    </div>
+                  )}
+
+                  {thoughtPromptError && (
+                    <div className="text-sm text-red-600 dark:text-red-300">
+                      {thoughtPromptError}
+                    </div>
+                  )}
+
+                  {!isThoughtPromptLoading && !thoughtPromptError && thoughtPromptLogs.length === 0 && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400">No AI requests recorded yet.</p>
+                  )}
+
+                  <div className="mt-3 space-y-3">
+                    {thoughtPromptLogs.map((log) => (
+                      <div
+                        key={log.id}
+                        className="p-3 rounded-lg border border-purple-200 dark:border-purple-800/60 bg-white dark:bg-gray-900"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <div className="flex flex-wrap items-center gap-2 text-gray-600 dark:text-gray-300">
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">
+                              {formatPromptTimestamp(log.createdAt)}
+                            </span>
+                            {log.trigger && (
+                              <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-200 font-semibold uppercase tracking-wide">
+                                {log.trigger}
+                              </span>
+                            )}
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${getPromptStatusBadge(log.status)}`}>
+                            {log.status === 'failed' ? 'Failed' : 'Completed'}
+                          </span>
+                        </div>
+                        {log.promptSnippet && (
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">
+                            {log.promptSnippet}
+                          </p>
+                        )}
+                        <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
+                          {log.error ? (
+                            <span className="text-red-600 dark:text-red-300 truncate">⚠ {log.error}</span>
+                          ) : (
+                            <span></span>
+                          )}
+                          <Link
+                            href={`/admin?promptId=${log.id}`}
+                            className="text-purple-600 dark:text-purple-300 font-semibold hover:underline"
+                          >
+                            View log ↗
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
               {/* Processing Status Summary */}
               {isProcessed && (

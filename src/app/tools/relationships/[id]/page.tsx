@@ -37,6 +37,7 @@ export default function FriendDetailPage() {
   const thoughts = useThoughts((s) => s.thoughts);
   const subscribeThoughts = useThoughts((s) => s.subscribe);
   const addThought = useThoughts((s) => s.add);
+  const subscribeRelationships = useEntityGraph((s) => s.subscribe);
 
   const [newThoughtText, setNewThoughtText] = useState("");
   const [isAddingThought, setIsAddingThought] = useState(false);
@@ -45,8 +46,9 @@ export default function FriendDetailPage() {
     if (user?.uid) {
       subscribe(user.uid);
       subscribeThoughts(user.uid);
+      subscribeRelationships(user.uid);
     }
-  }, [user?.uid, subscribe, subscribeThoughts]);
+  }, [user?.uid, subscribe, subscribeThoughts, subscribeRelationships]);
 
   const friend = friends.find((f) => f.id === friendId);
 

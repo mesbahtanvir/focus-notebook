@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRequestLog } from "@/store/useRequestLog";
 import { useLLMLogs } from "@/store/useLLMLogs";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Shield,
   RefreshCw,
@@ -19,6 +21,7 @@ import { collection, getDocs } from "firebase/firestore";
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
+  const searchParams = useSearchParams();
   const { logs, getPendingRequests, getInProgressRequests } = useRequestLog();
   const { logs: llmLogs, isLoading: llmLogsLoading, subscribe: subscribeLLMLogs } = useLLMLogs(
     (state) => ({
@@ -50,6 +53,8 @@ export default function AdminPage() {
   const [promptTriggerFilter, setPromptTriggerFilter] = useState<'all' | 'auto' | 'manual' | 'reprocess'>('all');
   const [promptStatusFilter, setPromptStatusFilter] = useState<'all' | 'completed' | 'failed'>('all');
   const [promptSearch, setPromptSearch] = useState('');
+  const promptThoughtAppliedRef = useRef<string | null>(null);
+  const promptIdExpandedRef = useRef<string | null>(null);
   
   const pendingRequests = getPendingRequests();
   const inProgressRequests = getInProgressRequests();
@@ -175,7 +180,7 @@ export default function AdminPage() {
         return false;
       }
       if (search) {
-        const haystack = `${log.prompt ?? ''} ${log.rawResponse ?? ''} ${(log.toolSpecIds ?? []).join(' ')}`.toLowerCase();
+        const haystack = `${log.prompt ?? ''} ${log.rawResponse ?? ''} ${(log.toolSpecIds ?? []).join(' ')} ${log.thoughtId ?? ''}`.toLowerCase();
         return haystack.includes(search);
       }
       return true;
@@ -185,6 +190,27 @@ export default function AdminPage() {
       return bDate - aDate;
     });
   }, [llmLogs, promptStatusFilter, promptTriggerFilter, promptSearch]);
+
+  const thoughtFilterParam = searchParams?.get('thoughtId') ?? '';
+  const promptFocusParam = searchParams?.get('promptId') ?? '';
+
+  useEffect(() => {
+    if (thoughtFilterParam && promptThoughtAppliedRef.current !== thoughtFilterParam) {
+      promptThoughtAppliedRef.current = thoughtFilterParam;
+      setPromptSearch(thoughtFilterParam);
+    }
+  }, [thoughtFilterParam]);
+
+  useEffect(() => {
+    if (!promptFocusParam || promptIdExpandedRef.current === promptFocusParam) {
+      return;
+    }
+    const match = llmLogs.find((log) => log.id === promptFocusParam);
+    if (match) {
+      promptIdExpandedRef.current = promptFocusParam;
+      setExpandedPromptId(promptFocusParam);
+    }
+  }, [promptFocusParam, llmLogs]);
 
   // Note: Force sync removed - real-time Firestore listeners handle all syncing automatically
 
@@ -610,7 +636,14 @@ export default function AdminPage() {
                   <div className="border-t border-purple-100 bg-gray-50 p-4 space-y-4">
                     <div className="flex flex-wrap gap-2 text-xs text-gray-600">
                       <span>ID: {log.id}</span>
-                      {log.thoughtId && <span>Thought: {log.thoughtId}</span>}
+                      {log.thoughtId && (
+                        <Link
+                          href={`/tools/thoughts/${log.thoughtId}`}
+                          className="text-purple-600 hover:underline font-semibold"
+                        >
+                          Thought: {log.thoughtId}
+                        </Link>
+                      )}
                       {log.createdAt && <span>{new Date(log.createdAt).toLocaleString()}</span>}
                     </div>
 
@@ -644,15 +677,6 @@ export default function AdminPage() {
                         {log.rawResponse || '—'}
                       </pre>
                     </div>
-
-                    {log.actions && log.actions.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-bold text-gray-800 mb-1">Actions</h4>
-                        <pre className="text-xs bg-white p-3 rounded-lg border border-gray-200 max-h-64 overflow-auto whitespace-pre-wrap">
-                          {JSON.stringify(log.actions, null, 2)}
-                        </pre>
-                      </div>
-                    )}
 
                     {log.usage && (
                       <div className="text-xs text-gray-500 flex flex-wrap gap-3">

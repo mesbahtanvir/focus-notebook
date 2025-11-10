@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGoals } from "@/store/useGoals";
 import { useProjects } from "@/store/useProjects";
 import { useThoughts } from "@/store/useThoughts";
+import { useEntityGraph } from "@/store/useEntityGraph";
 import { Target } from "lucide-react";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { GoalFormModal } from "@/components/GoalFormModal";
@@ -35,26 +36,46 @@ export default function GoalDetailPage() {
   const thoughts = useThoughts((s) => s.thoughts);
   const subscribeThoughts = useThoughts((s) => s.subscribe);
   const addThought = useThoughts((s) => s.add);
-  const updateThought = useThoughts((s) => s.updateThought);
+  const subscribeRelationships = useEntityGraph((s) => s.subscribe);
+  const createRelationship = useEntityGraph((s) => s.createRelationship);
+  const relationships = useEntityGraph((s) => s.relationships);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const goal = goals.find(g => g.id === goalId);
   const linkedProjects = getProjectsByGoal(goalId);
-  const linkedThoughts = thoughts.filter(thought =>
-    thought.tags?.includes(goalId) ||
-    thought.text.toLowerCase().includes(goal?.title.toLowerCase() || '') ||
-    thought.notes?.toLowerCase().includes(goal?.title.toLowerCase() || '')
-  );
+  const relationshipLinkedThoughts = useMemo(() => {
+    const thoughtMap = new Map(thoughts.map((t) => [t.id, t]));
+    const relevant = relationships.filter(
+      (rel) =>
+        rel.status === 'active' &&
+        rel.sourceType === 'thought' &&
+        rel.targetType === 'goal' &&
+        rel.targetId === goalId
+    );
+    return relevant
+      .map((rel) => thoughtMap.get(rel.sourceId))
+      .filter((thought): thought is typeof thoughts[number] => Boolean(thought));
+  }, [relationships, thoughts, goalId]);
+
+  const linkedThoughts = useMemo(() => {
+    if (relationshipLinkedThoughts.length > 0) {
+      return relationshipLinkedThoughts;
+    }
+    return thoughts.filter((thought) => thought.tags?.includes(goalId));
+  }, [relationshipLinkedThoughts, thoughts, goalId]);
+
+  const linkedThoughtIds = useMemo(() => linkedThoughts.map((t) => t.id), [linkedThoughts]);
 
   useEffect(() => {
     if (user?.uid) {
       subscribe(user.uid);
       subscribeProjects(user.uid);
       subscribeThoughts(user.uid);
+      subscribeRelationships(user.uid);
     }
-  }, [user?.uid, subscribe, subscribeProjects, subscribeThoughts]);
+  }, [user?.uid, subscribe, subscribeProjects, subscribeThoughts, subscribeRelationships]);
 
   const handleEdit = () => {
     setIsEditModalOpen(true);
@@ -103,23 +124,37 @@ export default function GoalDetailPage() {
 
   const handleLinkThoughts = async (thoughtIds: string[]) => {
     for (const thoughtId of thoughtIds) {
-      const thought = thoughts.find(t => t.id === thoughtId);
-      if (thought) {
-        const currentTags = thought.tags || [];
-        if (!currentTags.includes(goalId)) {
-          await updateThought(thoughtId, {
-            tags: [...currentTags, goalId],
-          });
-        }
-      }
+      await createRelationship({
+        sourceType: 'thought',
+        sourceId: thoughtId,
+        targetType: 'goal',
+        targetId: goalId,
+        relationshipType: 'linked-to',
+        strength: 100,
+        createdBy: 'user',
+        reasoning: `Linked via goal detail UI`,
+      });
     }
   };
 
   const handleCreateThought = async (text: string) => {
-    await addThought({
+    const createdThoughtId = await addThought({
       text,
-      tags: [goalId],
+      tags: [],
     });
+
+    if (createdThoughtId) {
+      await createRelationship({
+        sourceType: 'thought',
+        sourceId: createdThoughtId,
+        targetType: 'goal',
+        targetId: goalId,
+        relationshipType: 'linked-to',
+        strength: 100,
+        createdBy: 'user',
+        reasoning: 'Created from goal detail',
+      });
+    }
   };
 
   if (!goal) {
@@ -181,6 +216,7 @@ export default function GoalDetailPage() {
             allThoughts={thoughts}
             onLinkThoughts={handleLinkThoughts}
             onCreateThought={handleCreateThought}
+            linkedThoughtIds={linkedThoughtIds}
           />
 
           <GoalBrainstorming goal={goal} userId={user?.uid} />

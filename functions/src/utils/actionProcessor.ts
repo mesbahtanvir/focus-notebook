@@ -7,6 +7,13 @@
 import { CONFIG } from '../config';
 import { AIAction } from './openaiClient';
 
+export interface PendingLink {
+  targetType: 'goal' | 'project';
+  targetId: string;
+  relationshipType: 'linked-to';
+  confidence?: number;
+}
+
 export interface ProcessedActions {
   autoApply: {
     text?: string;
@@ -26,6 +33,7 @@ export interface ProcessedActions {
     createdAt: string;
     status: 'pending';
   }>;
+  linksToCreate: PendingLink[];
 }
 
 /**
@@ -40,6 +48,7 @@ export function processActions(
       tagsToAdd: [],
     },
     suggestions: [],
+    linksToCreate: [],
   };
 
   for (const action of actions) {
@@ -100,19 +109,31 @@ function applyHighConfidenceAction(
       break;
 
     // These are handled through entity tags
-    case 'linkToGoal':
-      const goalTag = `goal-${action.data.goalId}`;
-      if (!currentThought.tags?.includes(goalTag) && !result.autoApply.tagsToAdd.includes(goalTag)) {
-        result.autoApply.tagsToAdd.push(goalTag);
+    case 'linkToGoal': {
+      const goalId = action.data?.goalId;
+      if (goalId && !result.linksToCreate.find((link) => link.targetType === 'goal' && link.targetId === goalId)) {
+        result.linksToCreate.push({
+          targetType: 'goal',
+          targetId: goalId,
+          relationshipType: 'linked-to',
+          confidence: action.confidence,
+        });
       }
       break;
+    }
 
-    case 'linkToProject':
-      const projectTag = `project-${action.data.projectId}`;
-      if (!currentThought.tags?.includes(projectTag) && !result.autoApply.tagsToAdd.includes(projectTag)) {
-        result.autoApply.tagsToAdd.push(projectTag);
+    case 'linkToProject': {
+      const projectId = action.data?.projectId;
+      if (projectId && !result.linksToCreate.find((link) => link.targetType === 'project' && link.targetId === projectId)) {
+        result.linksToCreate.push({
+          targetType: 'project',
+          targetId: projectId,
+          relationshipType: 'linked-to',
+          confidence: action.confidence,
+        });
       }
       break;
+    }
 
     default:
       // Unknown action type at high confidence, log warning
@@ -129,7 +150,7 @@ export function buildThoughtUpdate(
   tokensUsed: number,
   trigger: 'auto' | 'manual' | 'reprocess'
 ): any {
-  const { autoApply, suggestions } = processedActions;
+  const { autoApply, suggestions, linksToCreate } = processedActions;
 
   // Store original data for revert (only if not already stored)
   const originalText = currentThought.originalText || currentThought.text;
@@ -140,15 +161,18 @@ export function buildThoughtUpdate(
   const newTags = [...currentTags, ...autoApply.tagsToAdd];
 
   // Add 'processed' tag if any changes were made
-  if (!newTags.includes('processed') && (autoApply.text || autoApply.tagsToAdd.length > 0)) {
+  const linkCount = linksToCreate?.length ?? 0;
+  const hasTextChange = !!(autoApply.text && autoApply.text !== currentThought.text);
+  if (!newTags.includes('processed') && (hasTextChange || autoApply.tagsToAdd.length > 0 || linkCount > 0)) {
     newTags.push('processed');
   }
 
   // Build applied changes object
   const aiAppliedChanges: any = {
-    textEnhanced: !!autoApply.text && autoApply.text !== currentThought.text,
+    textEnhanced: hasTextChange,
     textChanges: autoApply.textChanges || [],
     tagsAdded: autoApply.tagsToAdd,
+    linksCreated: linkCount,
     appliedAt: new Date().toISOString(),
     appliedBy: trigger === 'auto' ? 'auto' : 'manual-trigger',
   };
@@ -159,7 +183,7 @@ export function buildThoughtUpdate(
     trigger,
     status: 'completed',
     tokensUsed,
-    changesApplied: (autoApply.text ? 1 : 0) + autoApply.tagsToAdd.length,
+    changesApplied: (hasTextChange ? 1 : 0) + autoApply.tagsToAdd.length + linkCount,
     suggestionsCount: suggestions.length,
   };
 
@@ -189,5 +213,6 @@ export function countChanges(processedActions: ProcessedActions): number {
   let count = 0;
   if (processedActions.autoApply.text) count++;
   count += processedActions.autoApply.tagsToAdd.length;
+  count += processedActions.linksToCreate.length;
   return count;
 }

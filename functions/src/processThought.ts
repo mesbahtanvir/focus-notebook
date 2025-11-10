@@ -13,7 +13,7 @@ import * as admin from 'firebase-admin';
 import { CONFIG } from './config';
 import { getProcessingContext } from './utils/contextGatherer';
 import { callOpenAI } from './utils/openaiClient';
-import { processActions, buildThoughtUpdate } from './utils/actionProcessor';
+import { processActions, buildThoughtUpdate, type PendingLink } from './utils/actionProcessor';
 import { resolveToolSpecIds } from '../../shared/toolSpecUtils';
 import { getToolSpecById, type ToolSpec } from '../../shared/toolSpecs';
 import {
@@ -245,6 +245,64 @@ async function logLLMInteraction(params: {
     error: error || null,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
+}
+
+async function createAutoRelationships(params: {
+  userId: string;
+  thoughtId: string;
+  links: PendingLink[];
+}) {
+  const { userId, thoughtId, links } = params;
+  if (!links || links.length === 0) {
+    return;
+  }
+
+  const relationshipsRef = admin.firestore().collection(`users/${userId}/relationships`);
+
+  for (const link of links) {
+    if (!link.targetId) continue;
+
+    try {
+      const existing = await relationshipsRef
+        .where('sourceId', '==', thoughtId)
+        .where('targetId', '==', link.targetId)
+        .where('relationshipType', '==', link.relationshipType)
+        .limit(1)
+        .get();
+
+      if (!existing.empty) {
+        continue;
+      }
+
+      const id = `rel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const now = new Date().toISOString();
+      const strength = Math.max(0, Math.min(100, Math.round(link.confidence ?? 90)));
+
+      await relationshipsRef.doc(id).set({
+        id,
+        sourceType: 'thought',
+        sourceId: thoughtId,
+        targetType: link.targetType,
+        targetId: link.targetId,
+        relationshipType: link.relationshipType,
+        strength,
+        createdBy: 'ai',
+        createdAt: now,
+        status: 'active',
+        metadata: {
+          autoLinkedBy: 'processThought',
+          autoLinkedAt: now,
+        },
+      });
+    } catch (error) {
+      console.warn('Failed to create auto relationship', {
+        thoughtId,
+        targetId: link.targetId,
+        targetType: link.targetType,
+        error,
+      });
+    }
+  }
 }
 
 async function ensureIntervalLimit(userId: string): Promise<void> {
@@ -687,6 +745,14 @@ async function processThoughtInternal(
 
     // Update thought
     await thoughtRef.update(update);
+
+    if (processedActions.linksToCreate.length > 0) {
+      await createAutoRelationships({
+        userId,
+        thoughtId,
+        links: processedActions.linksToCreate,
+      });
+    }
 
     console.log(`Successfully processed thought ${thoughtId}: ${historyEntry.changesApplied} changes, ${historyEntry.suggestionsCount} suggestions`);
 
