@@ -818,3 +818,8 @@ async function revertThoughtInternal(userId: string, thoughtId: string) {
 
   console.log(`Successfully reverted AI changes for thought ${thoughtId}`);
 }
+
+export const __testables = {
+  getSubscriptionBlockMessage,
+  normalizeSubscriptionSnapshot,
+};
