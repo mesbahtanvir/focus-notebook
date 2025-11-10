@@ -286,7 +286,7 @@ export default function InnerLifePage() {
       {recentThoughts.length > 0 && (
         <div className="card p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold">💭 Thoughts to Process</h3>
+            <h3 className="text-lg font-bold">💭 Thoughts</h3>
             <Link href="/tools/thoughts" className="text-sm text-purple-600 dark:text-purple-400 hover:underline">
               View All →
             </Link>

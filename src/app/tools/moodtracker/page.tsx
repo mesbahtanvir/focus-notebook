@@ -306,6 +306,9 @@ export default function MoodTrackerPage() {
           </motion.div>
         )}
 
+        {/* Emotion Trend Graph */}
+        <EmotionTrendGraph moods={moods} />
+
         <div className="space-y-3">
           <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             📜 Recent Entries
@@ -370,6 +373,116 @@ export default function MoodTrackerPage() {
         icon={<Smile className="h-6 w-6" />}
       />
     </Card>
+  );
+}
+
+// Emotion Trend Graph Component
+function EmotionTrendGraph({ moods }: { moods: MoodEntry[] }) {
+  // Get recent moods with dimensions (last 10 entries)
+  const recentMoodsWithDimensions = useMemo(() => {
+    return moods
+      .filter(m => m.metadata?.dimensions && Object.keys(m.metadata.dimensions).length > 0)
+      .slice(0, 10)
+      .reverse(); // Show oldest to newest
+  }, [moods]);
+
+  // Aggregate emotion data across recent entries
+  const emotionAggregates = useMemo(() => {
+    const aggregates: Record<string, { total: number; count: number; avg: number }> = {};
+
+    recentMoodsWithDimensions.forEach(mood => {
+      if (mood.metadata?.dimensions) {
+        Object.entries(mood.metadata.dimensions).forEach(([emotionId, value]) => {
+          if (!aggregates[emotionId]) {
+            aggregates[emotionId] = { total: 0, count: 0, avg: 0 };
+          }
+          aggregates[emotionId].total += value;
+          aggregates[emotionId].count += 1;
+        });
+      }
+    });
+
+    // Calculate averages
+    Object.keys(aggregates).forEach(emotionId => {
+      aggregates[emotionId].avg = Math.round(aggregates[emotionId].total / aggregates[emotionId].count);
+    });
+
+    return aggregates;
+  }, [recentMoodsWithDimensions]);
+
+  // Sort emotions by average intensity
+  const sortedEmotions = useMemo(() => {
+    return Object.entries(emotionAggregates)
+      .map(([emotionId, data]) => {
+        const emotion = EMOTIONS.find(e => e.id === emotionId);
+        return emotion ? { ...emotion, avgIntensity: data.avg, count: data.count } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => (b?.avgIntensity || 0) - (a?.avgIntensity || 0))
+      .slice(0, 10); // Show top 10 emotions
+  }, [emotionAggregates]);
+
+  if (recentMoodsWithDimensions.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-4 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 p-6 rounded-xl border-2 border-indigo-200 dark:border-indigo-800">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          📊 Recent Emotion Patterns
+        </h3>
+        <span className="text-xs text-gray-600 dark:text-gray-400">
+          Based on last {recentMoodsWithDimensions.length} entries
+        </span>
+      </div>
+
+      <div className="space-y-3">
+        {sortedEmotions.map((emotion, index) => {
+          if (!emotion) return null;
+
+          return (
+            <motion.div
+              key={emotion.id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.05 }}
+              className="space-y-1"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{emotion.emoji}</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {emotion.label}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    ({emotion.count} {emotion.count === 1 ? 'time' : 'times'})
+                  </span>
+                </div>
+                <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                  {emotion.avgIntensity}%
+                </span>
+              </div>
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${emotion.avgIntensity}%` }}
+                  transition={{ duration: 0.5, delay: index * 0.05 }}
+                  className={`h-full bg-gradient-to-r ${emotion.color} shadow-sm`}
+                />
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-indigo-200 dark:border-indigo-800">
+        <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
+          💡 This graph shows the average intensity of emotions you&apos;ve tracked recently.
+          Higher percentages indicate stronger or more frequent feelings.
+        </p>
+      </div>
+    </div>
   );
 }
 
