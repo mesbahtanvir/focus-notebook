@@ -8,7 +8,7 @@ import { useState, useMemo, useEffect } from "react";
 import TaskList from "@/components/TaskList";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { Sparkles, Lock, MessageSquare, Lightbulb, Trash2, Timer, Play, Coffee, ShoppingBag, MapPin, Brain, Rocket, Heart, Zap } from "lucide-react";
+import { Sparkles, Lock, MessageSquare, Lightbulb, Trash2, Timer, Play, Coffee, Brain, Rocket, Heart, Zap } from "lucide-react";
 import { ThoughtDetailModal } from "@/components/ThoughtDetailModal";
 import { MostUsedTools } from "@/components/MostUsedTools";
 import { useTrips } from "@/store/useTrips";
@@ -67,12 +67,6 @@ export default function Page() {
       setLoadingTimeout(false);
     }
   }, [isInitialLoading, subscriptionsActive]);
-  
-  // Get errands count (non-focus-eligible tasks)
-  const activeErrands = useMemo(() => 
-    tasks.filter(t => !t.done && t.status === 'active' && t.focusEligible === false),
-    [tasks]
-  );
 
   // Thoughts are already sorted by createdAt desc from Firestore query
   const recentThoughts = useMemo(() => {
@@ -402,72 +396,6 @@ export default function Page() {
 
       {/* Most Used Tools */}
       {user && <MostUsedTools />}
-
-      {/* Errands Preview Section */}
-      <section className="rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border-4 border-orange-200 dark:border-orange-800 shadow-xl overflow-hidden">
-        <div className="px-6 py-4 bg-gradient-to-r from-orange-100 via-amber-100 to-yellow-100 dark:from-orange-900 dark:via-amber-900 dark:to-yellow-900 border-b-4 border-orange-200 dark:border-orange-800 flex items-center justify-between">
-          <h2 className="text-lg font-bold bg-gradient-to-r from-orange-600 to-amber-600 dark:from-orange-400 dark:to-amber-400 bg-clip-text text-transparent flex items-center gap-2">
-            <ShoppingBag className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-            Errands & Out-of-Office
-          </h2>
-          <Link
-            href="/tools/errands"
-            className="text-sm font-medium px-3 py-1 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-colors shadow-md"
-          >
-            View All
-          </Link>
-        </div>
-        <div className="p-6">
-          {activeErrands.length === 0 ? (
-            <div className="text-center py-6 space-y-2">
-              <div className="text-3xl">✅</div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                No active errands
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-orange-100 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800">
-                  <MapPin className="h-3 w-3 text-orange-600 dark:text-orange-400" />
-                  <span className="text-xs font-semibold text-orange-600 dark:text-orange-400">
-                    {activeErrands.length} to do
-                  </span>
-                </div>
-              </div>
-              {activeErrands.slice(0, 3).map((errand) => (
-                <div
-                  key={errand.id}
-                  className="flex items-center gap-2 p-2 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900"
-                >
-                  <div className="flex-1 text-sm text-gray-700 dark:text-gray-300">
-                    {errand.title}
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      errand.priority === 'urgent'
-                        ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300'
-                        : errand.priority === 'high'
-                        ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300'
-                        : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300'
-                    }`}
-                  >
-                    {errand.priority}
-                  </span>
-                </div>
-              ))}
-              {activeErrands.length > 3 && (
-                <Link
-                  href="/tools/errands"
-                  className="block text-center text-xs text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 py-2"
-                >
-                  +{activeErrands.length - 3} more
-                </Link>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
 
       {/* Thought Detail Modal */}
       {selectedThought && (

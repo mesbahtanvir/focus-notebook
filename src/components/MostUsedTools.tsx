@@ -172,8 +172,7 @@ export function MostUsedTools() {
                 </div>
 
                 {/* Stats */}
-                <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
-                  <span>{tool.clickCount} clicks</span>
+                <div className="flex items-center justify-end text-xs text-gray-600 dark:text-gray-400">
                   <span className="text-purple-600 dark:text-purple-400 font-medium group-hover:translate-x-1 transition-transform">
                     →
                   </span>
