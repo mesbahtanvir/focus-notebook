@@ -697,7 +697,7 @@ function QuoteCard({ quote }: { quote: Quote }) {
       <div className="flex items-start gap-3">
         <QuoteIcon className="h-5 w-5 text-purple-500 flex-shrink-0 mt-1" />
         <div className="flex-1">
-          <p className="text-gray-900 dark:text-gray-100 italic text-lg mb-2">"{quote.text}"</p>
+          <p className="text-gray-900 dark:text-gray-100 italic text-lg mb-2">&ldquo;{quote.text}&rdquo;</p>
           {quote.context && (
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{quote.context}</p>
           )}
