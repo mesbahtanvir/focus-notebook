@@ -23,6 +23,7 @@ import {
   Brain
 } from "lucide-react";
 import Link from "next/link";
+import { getLinkedThoughtsForEntity } from "@/lib/entityGraph/thoughtLinks";
 
 export default function FriendDetailPage() {
   const params = useParams();
@@ -37,6 +38,7 @@ export default function FriendDetailPage() {
   const thoughts = useThoughts((s) => s.thoughts);
   const subscribeThoughts = useThoughts((s) => s.subscribe);
   const addThought = useThoughts((s) => s.add);
+  const relationships = useEntityGraph((s) => s.relationships);
   const subscribeRelationships = useEntityGraph((s) => s.subscribe);
 
   const [newThoughtText, setNewThoughtText] = useState("");
@@ -53,32 +55,16 @@ export default function FriendDetailPage() {
   const friend = friends.find((f) => f.id === friendId);
 
   const createRelationship = useEntityGraph((s) => s.createRelationship);
-  const personThoughtRelationships = useEntityGraph((s) =>
-    s
-      .getRelationshipsFor('person', friendId)
-      .filter(
-        (rel) =>
-          rel.status === 'active' &&
-          (rel.sourceType === 'thought' || rel.targetType === 'thought')
-      )
-  );
 
   const relatedThoughts = useMemo(() => {
-    if (!friend || !personThoughtRelationships.length) return [];
-    const thoughtMap = new Map(thoughts.map((t) => [t.id, t] as const));
-
-    return personThoughtRelationships
-      .map((rel) => {
-        const thoughtId =
-          rel.sourceType === 'thought'
-            ? rel.sourceId
-            : rel.targetType === 'thought'
-              ? rel.targetId
-              : null;
-        return thoughtId ? thoughtMap.get(thoughtId) : undefined;
-      })
-      .filter((thought): thought is Thought => Boolean(thought));
-  }, [friend, personThoughtRelationships, thoughts]);
+    if (!friend) return [];
+    return getLinkedThoughtsForEntity({
+      relationships,
+      thoughts,
+      entityType: 'person',
+      entityId: friend.id,
+    });
+  }, [friend, relationships, thoughts]);
 
   const renderTag = (tag: string) => (
     <span

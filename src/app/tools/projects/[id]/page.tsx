@@ -5,9 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { useProjects, Project } from "@/store/useProjects";
 import { useTasks, Task } from "@/store/useTasks";
 import { useGoals } from "@/store/useGoals";
-import { useThoughts, Thought } from "@/store/useThoughts";
+import { useThoughts } from "@/store/useThoughts";
 import { useEntityGraph } from "@/store/useEntityGraph";
 import { useAuth } from "@/contexts/AuthContext";
+import { getLinkedThoughtsForEntity } from "@/lib/entityGraph/thoughtLinks";
 import { motion } from "framer-motion";
 import {
   Target,
@@ -143,38 +144,29 @@ export default function ProjectDetailPage() {
     return goals.find((g) => g.id === project.goalId);
   }, [project, goals]);
 
-  const relationshipLinkedThoughts = useMemo(() => {
-    if (!projectId) return [];
-    const thoughtMap = new Map(thoughts.map((t) => [t.id, t]));
-    const relevant = relationships.filter(
-      (rel) =>
-        rel.status === 'active' &&
-        rel.sourceType === 'thought' &&
-        rel.targetType === 'project' &&
-        rel.targetId === projectId
-    );
-    return relevant
-      .map((rel) => thoughtMap.get(rel.sourceId))
-      .filter((thought): thought is Thought => Boolean(thought));
-  }, [relationships, thoughts, projectId]);
+  const sourceThoughtId = useMemo(() => {
+    if (!project?.notes) return null;
+    try {
+      const parsed = JSON.parse(project.notes);
+      return parsed?.sourceThoughtId || null;
+    } catch {
+      return null;
+    }
+  }, [project?.notes]);
 
   const linkedThoughts = useMemo(() => {
-    if (relationshipLinkedThoughts.length > 0) {
-      return relationshipLinkedThoughts;
-    }
     if (!project) return [];
+    const additionalThoughtIds = [...(project.linkedThoughtIds || [])];
+    if (sourceThoughtId) additionalThoughtIds.push(sourceThoughtId);
 
-    return thoughts.filter((t) => {
-      if (project.linkedThoughtIds.includes(t.id)) return true;
-
-      try {
-        const projectNotes = project.notes ? JSON.parse(project.notes) : null;
-        if (projectNotes?.sourceThoughtId === t.id) return true;
-      } catch {}
-
-      return false;
+    return getLinkedThoughtsForEntity({
+      relationships,
+      thoughts,
+      entityType: 'project',
+      entityId: project.id,
+      additionalThoughtIds,
     });
-  }, [relationshipLinkedThoughts, project, thoughts]);
+  }, [project, relationships, thoughts, sourceThoughtId]);
 
   const stats = useMemo(() => {
     const totalTasks = linkedTasks.length;

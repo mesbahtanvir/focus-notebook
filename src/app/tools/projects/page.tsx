@@ -4,8 +4,9 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useProjects, Project, ProjectTimeframe, ProjectStatus } from "@/store/useProjects";
 import { useGoals } from "@/store/useGoals";
-import { useThoughts } from "@/store/useThoughts";
+import { useThoughts, Thought } from "@/store/useThoughts";
 import { useTasks } from "@/store/useTasks";
+import { useEntityGraph } from "@/store/useEntityGraph";
 import { useAuth } from "@/contexts/AuthContext";
 import { TimeTrackingService } from "@/services/TimeTrackingService";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,6 +39,17 @@ import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { Loader2 } from "lucide-react";
 import { toolThemes, ToolHeader, SearchAndFilters, ToolPageLayout } from "@/components/tools";
+import { getLinkedThoughtsForEntity } from "@/lib/entityGraph/thoughtLinks";
+
+const getSourceThoughtIdFromNotes = (notes?: string | null) => {
+  if (!notes) return null;
+  try {
+    const parsed = JSON.parse(notes);
+    return parsed?.sourceThoughtId || null;
+  } catch {
+    return null;
+  }
+};
 
 export default function ProjectsPage() {
   useTrackToolUsage('projects');
@@ -51,13 +63,16 @@ export default function ProjectsPage() {
   const deleteProject = useProjects((s) => s.delete);
   const thoughts = useThoughts((s) => s.thoughts);
   const tasks = useTasks((s) => s.tasks);
+  const relationships = useEntityGraph((s) => s.relationships);
+  const subscribeRelationships = useEntityGraph((s) => s.subscribe);
   
   // Subscribe to Firebase projects
   useEffect(() => {
     if (user?.uid) {
       subscribe(user.uid);
+      subscribeRelationships(user.uid);
     }
-  }, [user?.uid, subscribe]);
+  }, [user?.uid, subscribe, subscribeRelationships]);
   
   const [showNewProject, setShowNewProject] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -98,10 +113,28 @@ export default function ProjectsPage() {
     return { total, active, completed, shortTerm, longTerm };
   }, [projects]);
 
+  const projectThoughtMap = useMemo(() => {
+    const map = new Map<string, Thought[]>();
+
+    projects.forEach((project) => {
+      const additionalThoughtIds = [...(project.linkedThoughtIds || [])];
+      const sourceThoughtId = getSourceThoughtIdFromNotes(project.notes);
+      if (sourceThoughtId) additionalThoughtIds.push(sourceThoughtId);
+
+      map.set(project.id, getLinkedThoughtsForEntity({
+        relationships,
+        thoughts,
+        entityType: 'project',
+        entityId: project.id,
+        additionalThoughtIds,
+      }));
+    });
+
+    return map;
+  }, [projects, relationships, thoughts]);
+
   const getProjectThoughts = (projectId: string) => {
-    const project = projects.find(p => p.id === projectId);
-    if (!project) return [];
-    return thoughts.filter(t => project.linkedThoughtIds.includes(t.id));
+    return projectThoughtMap.get(projectId) || [];
   };
 
   const getProjectTasks = (projectId: string) => {
@@ -669,9 +702,22 @@ function ProjectDetailModal({ project, onClose }: { project: Project; onClose: (
   const deleteProject = useProjects((s) => s.delete);
   const thoughts = useThoughts((s) => s.thoughts);
   const tasks = useTasks((s) => s.tasks);
+  const relationships = useEntityGraph((s) => s.relationships);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
-  const linkedThoughts = thoughts.filter(t => project.linkedThoughtIds.includes(t.id));
+
+  const linkedThoughts = useMemo(() => {
+    const additionalThoughtIds = [...(project.linkedThoughtIds || [])];
+    const sourceThoughtId = getSourceThoughtIdFromNotes(project.notes);
+    if (sourceThoughtId) additionalThoughtIds.push(sourceThoughtId);
+
+    return getLinkedThoughtsForEntity({
+      relationships,
+      thoughts,
+      entityType: 'project',
+      entityId: project.id,
+      additionalThoughtIds,
+    });
+  }, [project, relationships, thoughts]);
   const linkedTasks = tasks.filter(t => project.linkedTaskIds.includes(t.id));
 
   const handleDelete = () => {
