@@ -21,12 +21,43 @@ export interface LogLLMInteractionParams {
   status?: 'completed' | 'failed';
 }
 
+function sanitizeForFirestore<T>(value: T): T {
+  if (value === undefined) {
+    return undefined as T;
+  }
+
+  if (value === null) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    const sanitizedArray = value
+      .map((item) => sanitizeForFirestore(item))
+      .filter((item) => item !== undefined);
+    return sanitizedArray as unknown as T;
+  }
+
+  if (typeof value === 'object') {
+    const sanitizedObject: Record<string, any> = {};
+    for (const [key, val] of Object.entries(value as Record<string, any>)) {
+      const sanitizedValue = sanitizeForFirestore(val);
+      if (sanitizedValue !== undefined) {
+        sanitizedObject[key] = sanitizedValue;
+      }
+    }
+    return sanitizedObject as T;
+  }
+
+  return value;
+}
+
 export async function logLLMInteraction(params: LogLLMInteractionParams): Promise<string> {
   const { userId, ...rest } = params;
   const logRef = admin.firestore().collection(`users/${userId}/llmLogs`).doc();
+  const sanitizedPayload = sanitizeForFirestore(rest);
 
   await logRef.set({
-    ...rest,
+    ...sanitizedPayload,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
