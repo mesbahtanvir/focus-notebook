@@ -177,21 +177,18 @@ export default function CSVUploadSection() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Upload Area */}
+    <div className="space-y-3">
+      {/* Compact Upload Area */}
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all ${
+        className={`border-2 border-dashed rounded-lg p-4 text-center transition-all ${
           isDragging
             ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
             : 'border-gray-300 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600'
         }`}
       >
-        <div className="p-4 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center">
-          <Upload className="h-8 w-8 text-white" />
-        </div>
         <input
           type="file"
           id="csv-upload"
@@ -202,70 +199,68 @@ export default function CSVUploadSection() {
         />
         <label
           htmlFor="csv-upload"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold hover:shadow-lg transition-all cursor-pointer"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 transition-colors cursor-pointer"
         >
           <Upload className="h-4 w-4" />
-          Select Files
+          Upload CSV
         </label>
-        <div className="mt-6 text-xs text-gray-500 dark:text-gray-400">
-          <p>Supported format: CSV files from your bank statement</p>
-          <p className="mt-1">Files are auto-processed with AI to extract and categorize transactions</p>
+        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          <p>Drag & drop or click to select</p>
         </div>
       </div>
 
-      {/* Uploaded Files List */}
+      {/* Compact Uploaded Files List */}
       {uploadedFiles.size > 0 && (
-        <div className="space-y-3">
-          <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            Uploaded Files
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+            Processing
           </h4>
           {Array.from(uploadedFiles.entries()).map(([fileId, fileData]) => (
             <div
               key={fileId}
-              className="flex items-center gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+              className="flex items-center gap-3 p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30"
             >
-              <FileText className="h-6 w-6 text-gray-400" />
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm truncate">{fileData.file.name}</div>
+                <div className="font-medium text-xs truncate text-gray-900 dark:text-gray-100">{fileData.file.name}</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {(fileData.file.size / 1024).toFixed(2)} KB
+                  {(fileData.file.size / 1024).toFixed(1)} KB
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 {fileData.status === 'uploading' && (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Uploading...</span>
-                  </>
+                  <div className="flex items-center gap-1">
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                    <span className="text-xs text-gray-600 dark:text-gray-400">Uploading</span>
+                  </div>
                 )}
                 {fileData.status === 'processing' && (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Processing with AI...</span>
-                  </>
+                  <div className="flex items-center gap-1">
+                    <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
+                    <span className="text-xs text-gray-600 dark:text-gray-400">Processing</span>
+                  </div>
                 )}
                 {fileData.status === 'completed' && (
-                  <>
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span className="text-sm text-green-600 dark:text-green-400">
-                      {fileData.processedCount} transactions processed
+                  <div className="flex items-center gap-1">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span className="text-xs text-green-600 dark:text-green-400">
+                      Done
                     </span>
-                  </>
+                  </div>
                 )}
                 {fileData.status === 'error' && (
-                  <>
-                    <AlertCircle className="h-5 w-5 text-red-500" />
-                    <span className="text-sm text-red-600 dark:text-red-400">
-                      {fileData.error || 'Failed to process'}
+                  <div className="flex items-center gap-1">
+                    <AlertCircle className="h-4 w-4 text-red-500" />
+                    <span className="text-xs text-red-600 dark:text-red-400">
+                      Error
                     </span>
-                  </>
+                  </div>
                 )}
                 {(fileData.status === 'completed' || fileData.status === 'error') && (
                   <button
                     onClick={() => removeFile(fileId)}
                     className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-3 w-3" />
                   </button>
                 )}
               </div>

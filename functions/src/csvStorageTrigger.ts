@@ -286,6 +286,36 @@ async function updateProcessingStatus(
 }
 
 /**
+ * Create or update a persistent statement record
+ */
+async function upsertStatement(
+  userId: string,
+  fileName: string,
+  storagePath: string,
+  status: 'processing' | 'completed' | 'error',
+  processedCount?: number,
+  error?: string
+): Promise<void> {
+  const db = admin.firestore();
+  const statementId = fileName; // Use filename as ID for easy lookups
+  const statementRef = db.collection(`users/${userId}/statements`).doc(statementId);
+
+  const statementData = {
+    id: statementId,
+    fileName,
+    storagePath,
+    status,
+    source: 'csv-upload',
+    processedCount: processedCount || 0,
+    error: error || null,
+    uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  await statementRef.set(statementData, { merge: true });
+}
+
+/**
  * Cloud Storage trigger for CSV file uploads
  * Automatically processes CSV files when uploaded to users/{userId}/statements/
  */
@@ -319,6 +349,9 @@ export const onCSVUpload = functions.storage.object().onFinalize(async (object) 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
+
+    // Create persistent statement record
+    await upsertStatement(userId, fileName, filePath, 'processing');
 
     // Download CSV from storage
     const bucket = admin.storage().bucket();
@@ -358,6 +391,9 @@ export const onCSVUpload = functions.storage.object().onFinalize(async (object) 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
+
+    // Update persistent statement record
+    await upsertStatement(userId, fileName, filePath, 'completed', savedCount);
   } catch (error: any) {
     console.error('Error processing CSV:', error);
 
@@ -370,6 +406,9 @@ export const onCSVUpload = functions.storage.object().onFinalize(async (object) 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
+
+    // Update persistent statement record
+    await upsertStatement(userId, fileName, filePath, 'error', 0, error.message || 'Unknown error');
   }
 });
 /* istanbul ignore file */

@@ -9,6 +9,42 @@
 
 export type UserPlan = 'free' | 'premium';
 
+// ============================================================================
+// Data Sources & Statements (Unified Model)
+// ============================================================================
+
+export type DataSourceType = 'plaid' | 'csv-upload';
+export type StatementStatus = 'processing' | 'completed' | 'error';
+
+/**
+ * Unified statement model - represents a bank statement from any source
+ * For Plaid: automatically synced statements (monthly aggregates)
+ * For CSV: manually uploaded bank statement files
+ */
+export interface Statement {
+  id: string;              // Document ID
+  userId: string;          // User ID
+  source: DataSourceType;  // Source type
+  status: StatementStatus; // Processing status
+
+  // Metadata
+  fileName?: string;       // For CSV: original filename
+  storagePath?: string;    // For CSV: Firebase Storage path
+  institutionId?: string;  // For Plaid: Plaid institution ID
+  institutionName?: string;// Human-readable institution name
+  itemId?: string;         // For Plaid: reference to PlaidItem
+
+  // Processing info
+  processedCount: number;  // Number of transactions extracted
+  error?: string;          // Error message if status is 'error'
+
+  // Timestamps
+  uploadedAt?: any;        // Firestore Timestamp for CSV uploads
+  statementDate?: string;  // YYYY-MM for the statement period
+  createdAt?: any;         // Firestore Timestamp
+  updatedAt?: any;         // Firestore Timestamp
+}
+
 export interface User {
   email: string;
   plan: UserPlan;

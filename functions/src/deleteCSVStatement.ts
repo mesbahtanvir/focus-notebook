@@ -91,6 +91,15 @@ export const deleteCSVStatement = functions.https.onCall(
         console.warn(`Could not delete processing status for ${fileName}:`, error.message);
       }
 
+      // Delete the persistent statement document
+      try {
+        const statementRef = db.collection(`users/${userId}/statements`).doc(fileName);
+        await statementRef.delete();
+        console.log(`Deleted statement record for ${fileName}`);
+      } catch (error: any) {
+        console.warn(`Could not delete statement record for ${fileName}:`, error.message);
+      }
+
       return {
         success: true,
         deletedTransactions: deletedCount,

@@ -301,73 +301,92 @@ export default function SpendingPage() {
           </TabsContent>
 
           <TabsContent value="connections">
-            <div className="space-y-8">
-              <div className="grid gap-6">
-                <section className="p-6 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 space-y-4">
-                  <div className="flex items-center justify-between flex-wrap gap-3">
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                        Connected Bank Accounts
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Manage the accounts you sync through Plaid.
-                      </p>
-                    </div>
-                    {hasPlaidConnections && <PlaidLinkButton mode="new" />}
-                  </div>
-                  {hasPlaidConnections ? (
-                    <ConnectionsManager />
-                  ) : (
-                    <div className="p-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-400">
-                      No bank connections yet. Use the Plaid card below to add one.
-                    </div>
-                  )}
-                </section>
+            <div className="space-y-6">
+              {/* Data Sources Overview */}
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 p-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                  Data Sources
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Connect your banks automatically or upload statements manually
+                </p>
 
-                <section className="p-6 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 space-y-4">
-                  <div className="flex items-center justify-between flex-wrap gap-3">
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                        Uploaded CSV Statements
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Review statements you’ve uploaded for AI enrichment.
-                      </p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Plaid Connection Card */}
+                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/20">
+                        <Building className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                          Bank Connections
+                        </h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          {hasPlaidConnections ? `${connections.length} connected` : 'Not connected'}
+                        </p>
+                      </div>
+                      {!hasPlaidConnections && (
+                        <PlaidLinkButton mode="new" className="text-sm py-2 px-4" />
+                      )}
                     </div>
+                    {hasPlaidConnections && (
+                      <div className="space-y-2">
+                        <ConnectionsManager />
+                        <PlaidLinkButton mode="new" className="w-full text-sm" />
+                      </div>
+                    )}
                   </div>
-                  <CSVFileManager enableManualProcessing />
-                </section>
-              </div>
 
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-                  Add more data sources
-                </h3>
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div className="p-6 rounded-xl border-2 border-green-200 dark:border-green-800 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/10 dark:to-emerald-900/10">
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                      Connect a bank account
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      Securely sync transactions, detect subscriptions, and keep everything up-to-date automatically.
-                    </p>
-                    <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300 mb-6">
-                      <li>• OAuth-based connection with Plaid</li>
-                      <li>• Automatic daily syncs</li>
-                      <li>• Subscription detection</li>
-                    </ul>
-                    <PlaidLinkButton mode="new" className="w-full" />
-                  </div>
-                  <div className="p-6 rounded-xl border-2 border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/10 dark:to-indigo-900/10">
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                      Upload a CSV statement
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      Manually upload bank statements for AI cleanup and categorization. Works with any institution.
-                    </p>
+                  {/* CSV Upload Card */}
+                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/20">
+                        <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                          CSV Statements
+                        </h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          {hasCSVData ? `${csvTransactions.length} transactions` : 'No uploads yet'}
+                        </p>
+                      </div>
+                    </div>
                     <CSVUploadSection />
                   </div>
                 </div>
+              </div>
+
+              {/* Statement History - Always show to display processing/failed uploads */}
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                  Statement History
+                </h3>
+
+                {/* CSV Uploads - Always shown, handles empty state internally */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    CSV Uploads
+                  </h4>
+                  <CSVFileManager enableManualProcessing />
+                </div>
+
+                {hasPlaidConnections && (
+                  <>
+                    <div className="my-6 border-t border-gray-200 dark:border-gray-700" />
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        <Building className="h-4 w-4" />
+                        Connected Accounts
+                      </h4>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        <ConnectionsManager />
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </TabsContent>
