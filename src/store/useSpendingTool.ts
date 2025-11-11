@@ -71,7 +71,7 @@ async function callSpendingApi(
   if (appCheckToken) {
     headers['X-Firebase-AppCheck'] = appCheckToken;
   }
-
+  console.log('Calling spending API:', endpoint, payload);
   const response = await fetch(`/api/spending/${endpoint}`, {
     method: 'POST',
     headers,

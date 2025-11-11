@@ -19,13 +19,23 @@ function normalizeStorageBucket(rawBucket?: string): string {
 
   bucket = bucket.replace(/^gs:\/\//, '');
 
-  if (bucket.endsWith('.firebasestorage.app')) {
-    console.warn('[Firebase] Storage bucket should use the ".appspot.com" domain. Automatically normalizing value.');
-    bucket = bucket.replace(/\.firebasestorage\.app$/, '.appspot.com');
+  // Default to the new naming convention when no domain suffix is provided
+  if (!bucket.includes('.')) {
+    console.info(
+      '[Firebase] Storage bucket missing domain suffix; defaulting to ".firebasestorage.app" per Oct 2024 policy.'
+    );
+    bucket = `${bucket}.firebasestorage.app`;
   }
 
-  if (!bucket.includes('.')) {
-    bucket = `${bucket}.appspot.com`;
+  if (bucket.endsWith('.firebasestorage.app')) {
+    return bucket;
+  }
+
+  if (bucket.endsWith('.appspot.com')) {
+    console.warn(
+      '[Firebase] Using legacy ".appspot.com" Storage bucket. Consider migrating to the ".firebasestorage.app" format for new projects.'
+    );
+    return bucket;
   }
 
   return bucket;

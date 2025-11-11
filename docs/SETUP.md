@@ -52,9 +52,12 @@ Create `.env.local` in project root:
 NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key_here
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
 NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abc123
+NEXT_PUBLIC_FIREBASE_APPCHECK_SITE_KEY=your_app_check_site_key
+# Optional: set to `true` or specific token for local debugging
+NEXT_PUBLIC_FIREBASE_APPCHECK_DEBUG_TOKEN=true
 ```
 
 ### 5. Configure Firestore Security Rules
@@ -172,9 +175,11 @@ See [IPAD_GUIDE.md](../IPAD_GUIDE.md) for complete App Store submission guide.
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase API key | `AIzaSyC...` |
 | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Auth domain | `project.firebaseapp.com` |
 | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Project ID | `my-project-123` |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Storage bucket | `project.appspot.com` |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Storage bucket | `project.firebasestorage.app` |
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Sender ID | `123456789` |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | App ID | `1:123:web:abc` |
+| `NEXT_PUBLIC_FIREBASE_APPCHECK_SITE_KEY` | App Check reCAPTCHA v3 site key | Obtained from Firebase App Check |
+| `NEXT_PUBLIC_FIREBASE_APPCHECK_DEBUG_TOKEN` | (Optional) App Check debug token | `true` or custom token for local dev |
 
 ### Optional (For AI Features)
 

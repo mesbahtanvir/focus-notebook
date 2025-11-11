@@ -70,6 +70,7 @@ export interface CreateLinkTokenOptions {
 export async function createLinkToken(
   options: CreateLinkTokenOptions
 ): Promise<{ link_token: string; expiration: string }> {
+  console.log('Creating Plaid link token with options:', options);
   const {
     userId,
     platform = 'web',
@@ -102,7 +103,7 @@ export async function createLinkToken(
       request.android_package_name = androidPackageName;
     }
   }
-
+  console.log('Creating Plaid link token with request:', request);
   try {
     const response = await plaidClient.linkTokenCreate(request);
     return {
