@@ -19,6 +19,8 @@ import { useFocus } from '@/store/useFocus';
 import { useRelationships } from '@/store/useRelationships';
 import { useInvestments } from '@/store/useInvestments';
 import { useSpending } from '@/store/useSpending';
+import { useEntityGraph } from '@/store/useEntityGraph';
+import { useLLMLogs } from '@/store/useLLMLogs';
 import { auth, db } from '@/lib/firebaseClient';
 import { doc, setDoc, Timestamp } from 'firebase/firestore';
 
@@ -280,6 +282,8 @@ export function useImportExport() {
   const relationships = useRelationships();
   const investments = useInvestments();
   const spending = useSpending();
+  const entityGraph = useEntityGraph();
+  const llmLogs = useLLMLogs();
 
   const importedTasksRef = useRef<Map<string, any>>(new Map());
 
@@ -476,6 +480,8 @@ export function useImportExport() {
           portfolios: investments.getPortfoliosForExport
             ? investments.getPortfoliosForExport()
             : investments.portfolios,
+          relationships: entityGraph.relationships,
+          llmLogs: llmLogs.logs,
         };
 
         // Export with filters
@@ -496,7 +502,7 @@ export function useImportExport() {
         setIsExporting(false);
       }
     },
-    [exportService, tasks, projects, goals, thoughts, moods, focus, relationships, investments]
+    [exportService, tasks, projects, goals, thoughts, moods, focus, relationships, investments, entityGraph, llmLogs]
   );
 
   /**
@@ -519,6 +525,8 @@ export function useImportExport() {
         portfolios: investments.getPortfoliosForExport
           ? investments.getPortfoliosForExport()
           : investments.portfolios,
+        relationships: entityGraph.relationships,
+        llmLogs: llmLogs.logs,
       };
 
       const exported = await exportService.exportAll(allData, userId);
@@ -531,7 +539,7 @@ export function useImportExport() {
     } finally {
       setIsExporting(false);
     }
-  }, [exportService, tasks, projects, goals, thoughts, moods, focus, relationships, investments]);
+  }, [exportService, tasks, projects, goals, thoughts, moods, focus, relationships, investments, entityGraph, llmLogs]);
 
   /**
    * Get available entity counts for export
@@ -547,8 +555,10 @@ export function useImportExport() {
       people: relationships.people.length,
       portfolios: investments.portfolios.length,
       spending: spending.transactions.length,
+      relationships: entityGraph.relationships.length,
+      llmLogs: llmLogs.logs.length,
     };
-  }, [tasks, projects, goals, thoughts, moods, focus, relationships, investments, spending]);
+  }, [tasks, projects, goals, thoughts, moods, focus, relationships, investments, spending, entityGraph, llmLogs]);
 
   /**
    * Get detailed data summaries for each entity type

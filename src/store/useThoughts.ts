@@ -119,6 +119,31 @@ export interface Thought {
   aiSuggestions?: AISuggestion[]
   confidenceScore?: number
 
+  // Tool-Specific Processing Status (replaces 'processed' tags)
+  toolProcessing?: {
+    cbt?: {
+      processed: boolean
+      processedAt?: string
+      processedBy?: 'auto' | 'manual'
+      resultStored?: boolean  // Whether cbtAnalysis exists
+    }
+    brainstorm?: {
+      processed: boolean
+      processedAt?: string
+      resultId?: string  // Link to brainstorm result
+    }
+    deepReflection?: {
+      processed: boolean
+      processedAt?: string
+      sessionCount?: number
+    }
+    soulful?: {
+      processed: boolean
+      processedAt?: string
+      promptsGenerated?: number
+    }
+  }
+
   // NOTE: All linking is now handled via useEntityGraph store
   // No more linkedXIds arrays!
 }
