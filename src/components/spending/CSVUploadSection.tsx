@@ -192,12 +192,6 @@ export default function CSVUploadSection() {
         <div className="p-4 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center">
           <Upload className="h-8 w-8 text-white" />
         </div>
-        <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-          Upload Bank Statement CSV
-        </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-          Drag and drop your CSV files here or click to browse
-        </p>
         <input
           type="file"
           id="csv-upload"
@@ -279,37 +273,6 @@ export default function CSVUploadSection() {
           ))}
         </div>
       )}
-
-      {/* Information Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-        <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-purple-500" />
-            <span className="font-semibold text-sm">Auto-Processing</span>
-          </div>
-          <p className="text-xs text-gray-600 dark:text-gray-400">
-            Upload triggers automatic AI processing - no manual action needed
-          </p>
-        </div>
-        <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-blue-500" />
-            <span className="font-semibold text-sm">AI-Powered Enhancement</span>
-          </div>
-          <p className="text-xs text-gray-600 dark:text-gray-400">
-            Transactions categorized and enhanced with GPT-4 automatically
-          </p>
-        </div>
-        <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="font-semibold text-sm">Real-time Updates</span>
-          </div>
-          <p className="text-xs text-gray-600 dark:text-gray-400">
-            Watch processing status update live as AI analyzes your data
-          </p>
-        </div>
-      </div>
     </div>
   );
 }

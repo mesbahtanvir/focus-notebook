@@ -11,6 +11,8 @@ import { useRouter } from 'next/navigation';
 import { useSpendingTool } from '@/store/useSpendingTool';
 import { useSpending } from '@/store/useSpending';
 import { useTrackToolUsage } from '@/hooks/useTrackToolUsage';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db as firestore } from '@/lib/firebaseClient';
 import {
   DollarSign,
   TrendingUp,
@@ -19,8 +21,7 @@ import {
   Building,
   ArrowLeft,
   Loader2,
-  Upload,
-  Link as LinkIcon,
+  FileText,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PlaidLinkButton from '@/components/spending/PlaidLinkButton';
@@ -31,9 +32,10 @@ import SubscriptionsList from '@/components/spending/SubscriptionsList';
 import SpendingTrends from '@/components/spending/SpendingTrends';
 import ConnectionsManager from '@/components/spending/ConnectionsManager';
 import CSVUploadSection from '@/components/spending/CSVUploadSection';
-import { CSVDashboardSummary, CSVSpendingTrends, CSVTransactionsList } from '@/components/spending/CSVDashboard';
+import { CSVTransactionsList } from '@/components/spending/CSVDashboard';
 import CSVFileManager from '@/components/spending/CSVFileManager';
 import { EnhancedSpendingDashboard, DateRange, NormalizedSpendingTransaction } from '@/components/spending/EnhancedSpendingDashboard';
+import { cn } from '@/lib/utils';
 
 const getDefaultDateRange = (): DateRange => {
   const end = new Date();
@@ -58,7 +60,6 @@ export default function SpendingPage() {
   const csvTransactions = useSpending((state) => state.transactions);
   const csvAccounts = useSpending((state) => state.accounts);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [dataSource, setDataSource] = useState<'plaid' | 'csv' | null>(null);
   const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange);
 
   useEffect(() => {
@@ -139,30 +140,39 @@ export default function SpendingPage() {
     }));
   }, [csvAccounts]);
 
-  // Determine which data source is active
   useEffect(() => {
-    setDataSource((prev) => {
-      if (hasPlaidConnections) {
-        if (prev === 'plaid') return prev;
-        if (prev === 'csv' && hasCSVData) return prev;
-        return 'plaid';
-      }
-      if (hasCSVData) {
-        return 'csv';
-      }
-      return null;
+    if (!user?.uid) {
+      setHasCsvUploads(false);
+      return;
+    }
+
+    const statusRef = collection(firestore, `users/${user.uid}/csvProcessingStatus`);
+    const unsubscribe = onSnapshot(statusRef, (snapshot) => {
+      setHasCsvUploads(!snapshot.empty);
     });
-  }, [hasPlaidConnections, hasCSVData]);
 
-  const activeTransactions: NormalizedSpendingTransaction[] =
-    dataSource === 'csv'
-      ? normalizedCsvTransactions
-      : dataSource === 'plaid'
-      ? normalizedPlaidTransactions
-      : [];
+    return () => unsubscribe();
+  }, [user?.uid]);
 
-  const activeAccounts = dataSource === 'csv' ? csvAccountList : plaidAccountList;
-  const activeSourceLabel = dataSource === 'csv' ? 'CSV uploads' : 'Plaid connections';
+  const hasAnyDataSources = hasPlaidConnections || hasCSVData;
+
+  const combinedTransactions = useMemo<NormalizedSpendingTransaction[]>(
+    () => [...normalizedPlaidTransactions, ...normalizedCsvTransactions],
+    [normalizedPlaidTransactions, normalizedCsvTransactions]
+  );
+
+  const combinedAccounts = useMemo(() => {
+    const map = new Map<string, { id?: string; name: string; mask?: string }>();
+    [...plaidAccountList, ...csvAccountList].forEach((account) => {
+      const key = account.id || account.name;
+      if (key && !map.has(key)) {
+        map.set(key, account);
+      }
+    });
+    return Array.from(map.values());
+  }, [plaidAccountList, csvAccountList]);
+
+  const unifiedSourceLabel = 'All sources';
 
   if (plaidLoading) {
     return (
@@ -203,33 +213,6 @@ export default function SpendingPage() {
       )}
     </div>
 
-      {hasPlaidConnections && hasCSVData && (
-        <div className="mb-6 flex flex-wrap gap-3">
-          <button
-            onClick={() => setDataSource('plaid')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 transition-all ${
-              dataSource !== 'csv'
-                ? 'bg-green-600 text-white border-green-600 shadow'
-                : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700'
-            }`}
-          >
-            <LinkIcon className="h-4 w-4" />
-            Plaid Connections
-          </button>
-          <button
-            onClick={() => setDataSource('csv')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 transition-all ${
-              dataSource === 'csv'
-                ? 'bg-purple-600 text-white border-purple-600 shadow'
-                : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700'
-            }`}
-          >
-            <Upload className="h-4 w-4" />
-            CSV Statements
-          </button>
-        </div>
-      )}
-
       {/* Connection Status Banners */}
       {hasPlaidConnections && (
         <div className="mb-6">
@@ -244,112 +227,8 @@ export default function SpendingPage() {
         </div>
       )}
 
-      {/* Empty State - Choose Data Source */}
-      {!hasPlaidConnections && !dataSource && !plaidLoading && (
-        <div className="space-y-6">
-          <div className="text-center py-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
-              Choose How to Track Your Spending
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-              Connect your bank account for automatic syncing or upload CSV statements for manual tracking
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {/* Plaid Option */}
-            <div className="border-2 border-green-200 dark:border-green-800 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/10 dark:to-emerald-900/10 p-8">
-              <div className="p-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center">
-                <LinkIcon className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3 text-center">
-                Connect Bank Account
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 text-center">
-                Automatically sync transactions, detect subscriptions, and get AI-powered insights
-              </p>
-              <div className="space-y-3 mb-6">
-                <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5" />
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Automatic transaction sync</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5" />
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Bank-level security with OAuth</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5" />
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Premium merchant categorization</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5" />
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Subscription detection</p>
-                </div>
-              </div>
-              <PlaidLinkButton mode="new" className="w-full" />
-            </div>
-
-            {/* CSV Upload Option */}
-            <div className="border-2 border-purple-200 dark:border-purple-800 rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/10 dark:to-indigo-900/10 p-8">
-              <div className="p-4 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center">
-                <Upload className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3 text-center">
-                Upload CSV
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 text-center">
-                Upload bank statement CSVs for manual tracking with AI-powered enhancements
-              </p>
-              <div className="space-y-3 mb-6">
-                <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 rounded-full bg-purple-500 mt-1.5" />
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Full control over your data</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 rounded-full bg-purple-500 mt-1.5" />
-                  <p className="text-sm text-gray-700 dark:text-gray-300">AI-powered data cleanup</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 rounded-full bg-purple-500 mt-1.5" />
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Smart categorization</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 rounded-full bg-purple-500 mt-1.5" />
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Works with any bank</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setDataSource('csv')}
-                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold hover:shadow-lg transition-all"
-              >
-                <Upload className="h-4 w-4" />
-                Choose CSV Upload
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CSV Upload Section */}
-      {dataSource === 'csv' && !hasPlaidConnections && (
-        <div className="space-y-6">
-          <CSVUploadSection />
-          <div className="text-center pt-6 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Prefer automatic syncing instead?
-            </p>
-            <button
-              onClick={() => setDataSource(null)}
-              className="text-sm text-purple-600 dark:text-purple-400 hover:underline"
-            >
-              Go back to choose connection method
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Main Content with Plaid or CSV */}
-      {(hasPlaidConnections || (dataSource === 'csv' && hasCSVData)) && (
+      {hasAnyDataSources && (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
@@ -370,93 +249,145 @@ export default function SpendingPage() {
             </TabsTrigger>
             <TabsTrigger value="connections" className="flex items-center gap-2">
               <Building className="h-4 w-4" />
-              <span className="hidden sm:inline">Connections</span>
+              <span className="hidden sm:inline">Data Sources</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
-            {dataSource && (
-              <EnhancedSpendingDashboard
-                transactions={activeTransactions}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-                accounts={activeAccounts}
-                sourceLabel={activeSourceLabel}
-              />
-            )}
-            {dataSource === 'csv' ? (
-              <>
-                <CSVDashboardSummary />
-                <div className="mt-6">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-                    Recent Transactions
-                  </h2>
-                  <CSVTransactionsList />
-                </div>
-              </>
-            ) : (
-              <>
-                <DashboardSummary />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-                      Recent Transactions
-                    </h2>
-                    <TransactionsList />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-                      Active Subscriptions
-                    </h2>
-                    <SubscriptionsList />
-                  </div>
-                </div>
-              </>
-            )}
+            <EnhancedSpendingDashboard
+              transactions={combinedTransactions}
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              accounts={combinedAccounts}
+              sourceLabel={unifiedSourceLabel}
+            />
+            <DashboardSummary />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                  Recent Transactions
+                </h2>
+                <TransactionsList />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                  Active Subscriptions
+                </h2>
+                <SubscriptionsList />
+              </div>
+            </div>
           </TabsContent>
 
-          <TabsContent value="transactions">
-            {dataSource === 'csv' ? <CSVTransactionsList /> : <TransactionsList />}
+          <TabsContent value="transactions" className="space-y-6">
+            {hasPlaidConnections && (
+              <div>
+                {hasCSVData && (
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                    Connected Accounts
+                  </h2>
+                )}
+                <TransactionsList />
+              </div>
+            )}
+
+            {hasCSVData && (
+              <div className={cn(hasPlaidConnections ? 'pt-4 border-t border-gray-200 dark:border-gray-700' : '')}>
+                {hasPlaidConnections && (
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                    Manual CSV Transactions
+                  </h2>
+                )}
+                <CSVTransactionsList />
+              </div>
+            )}
+
+            {!hasPlaidConnections && !hasCSVData && (
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                <p>No transactions found. Connect a bank account or upload a CSV statement to get started.</p>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="subscriptions">
-            {dataSource === 'csv' ? (
-              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                <p>Subscription detection is available when using Plaid connections.</p>
-                <p className="mt-2 text-sm">CSV uploads can include subscription tags manually.</p>
-              </div>
-            ) : (
-              <SubscriptionsList />
-            )}
+            <SubscriptionsList />
           </TabsContent>
 
           <TabsContent value="trends">
-            {dataSource === 'csv' ? <CSVSpendingTrends /> : <SpendingTrends />}
+            <SpendingTrends />
           </TabsContent>
 
           <TabsContent value="connections">
-            {dataSource === 'csv' ? (
-              <div className="space-y-6">
-                <div className="p-6 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-                    CSV Upload Connection
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    You&apos;re currently using CSV uploads to track your spending. Manage your uploaded files below.
-                  </p>
-                </div>
-                <CSVFileManager />
-                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-                    Upload More Files
-                  </h3>
-                  <CSVUploadSection />
+            <div className="space-y-8">
+              <div className="grid gap-6">
+                <section className="p-6 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                        Connected Bank Accounts
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Manage the accounts you sync through Plaid.
+                      </p>
+                    </div>
+                    {hasPlaidConnections && <PlaidLinkButton mode="new" />}
+                  </div>
+                  {hasPlaidConnections ? (
+                    <ConnectionsManager />
+                  ) : (
+                    <div className="p-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-400">
+                      No bank connections yet. Use the Plaid card below to add one.
+                    </div>
+                  )}
+                </section>
+
+                <section className="p-6 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                        Uploaded CSV Statements
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Review statements you’ve uploaded for AI enrichment.
+                      </p>
+                    </div>
+                  </div>
+                  <CSVFileManager enableManualProcessing />
+                </section>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                  Add more data sources
+                </h3>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="p-6 rounded-xl border-2 border-green-200 dark:border-green-800 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/10 dark:to-emerald-900/10">
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                      Connect a bank account
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      Securely sync transactions, detect subscriptions, and keep everything up-to-date automatically.
+                    </p>
+                    <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300 mb-6">
+                      <li>• OAuth-based connection with Plaid</li>
+                      <li>• Automatic daily syncs</li>
+                      <li>• Subscription detection</li>
+                    </ul>
+                    <PlaidLinkButton mode="new" className="w-full" />
+                  </div>
+                  <div className="p-6 rounded-xl border-2 border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/10 dark:to-indigo-900/10">
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                      Upload a CSV statement
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      Manually upload bank statements for AI cleanup and categorization. Works with any institution.
+                    </p>
+                    <CSVUploadSection />
+                  </div>
                 </div>
               </div>
-            ) : (
-              <ConnectionsManager />
-            )}
+            </div>
           </TabsContent>
+
         </Tabs>
       )}
     </div>

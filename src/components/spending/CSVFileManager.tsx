@@ -26,12 +26,17 @@ interface CSVFileInfo extends ProcessingStatus {
   storagePath?: string;
 }
 
-export default function CSVFileManager() {
+type CSVFileManagerProps = {
+  enableManualProcessing?: boolean;
+};
+
+export default function CSVFileManager({ enableManualProcessing = false }: CSVFileManagerProps) {
   const { user } = useAuth();
   const { transactions } = useSpending();
   const [csvFiles, setCSVFiles] = useState<CSVFileInfo[]>([]);
   const [deletingFile, setDeletingFile] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState<CSVFileInfo | null>(null);
+  const [processingFile, setProcessingFile] = useState<string | null>(null);
 
   // Subscribe to CSV processing status
   useEffect(() => {
@@ -91,6 +96,40 @@ export default function CSVFileManager() {
       alert(`Failed to delete file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setDeletingFile(null);
+    }
+  };
+
+  const handleManualProcess = async (file: CSVFileInfo) => {
+    if (!user || !file.storagePath) {
+      alert('Missing storage path for this file.');
+      return;
+    }
+
+    setProcessingFile(file.fileName);
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/spending/process-csv', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          fileName: file.fileName,
+          storagePath: file.storagePath,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.error || 'Failed to process CSV file.');
+      }
+      alert(`Successfully processed ${result.processedCount} transactions from ${file.fileName}.`);
+    } catch (error) {
+      console.error('Error processing CSV file:', error);
+      alert(`Failed to process CSV: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setProcessingFile(null);
     }
   };
 
@@ -162,18 +201,39 @@ export default function CSVFileManager() {
                   </div>
                 )}
               </div>
-              <button
-                onClick={() => setShowConfirmDialog(file)}
-                disabled={deletingFile === file.fileName}
-                className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Delete file and all transactions"
-              >
-                {deletingFile === file.fileName ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Trash2 className="h-5 w-5" />
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                {enableManualProcessing && (
+                  <button
+                    onClick={() => handleManualProcess(file)}
+                    disabled={processingFile === file.fileName}
+                    className="inline-flex items-center gap-2 rounded-lg border border-purple-200 px-3 py-1.5 text-sm font-semibold text-purple-700 dark:border-purple-800 dark:text-purple-200 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {processingFile === file.fileName ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Processing…
+                      </>
+                    ) : (
+                      <>
+                        <Loader2 className="h-4 w-4" />
+                        Process file
+                      </>
+                    )}
+                  </button>
                 )}
-              </button>
+                <button
+                  onClick={() => setShowConfirmDialog(file)}
+                  disabled={deletingFile === file.fileName}
+                  className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Delete file and all transactions"
+                >
+                  {deletingFile === file.fileName ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         ))}
