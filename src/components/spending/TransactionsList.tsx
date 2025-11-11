@@ -5,17 +5,56 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Search, ArrowUpDown } from 'lucide-react';
+import Link from 'next/link';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import {
+  Search,
+  ArrowUpDown,
+  X,
+  Calendar,
+  MapPin,
+  DollarSign,
+  Link2,
+  Tag,
+  CreditCard,
+  Sparkles,
+} from 'lucide-react';
 import { useSpendingTool } from '@/store/useSpendingTool';
-import type { PlaidTransaction } from '@/types/spending-tool';
+import { useTrips } from '@/store/useTrips';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import type { PlaidTransaction, Trip, Account } from '@/types/spending-tool';
 
 export default function TransactionsList() {
-  const { transactions, accounts, selectedAccountId, setSelectedAccount } = useSpendingTool();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { transactions, accounts, selectedAccountId, setSelectedAccount, linkTransactionToTrip } = useSpendingTool();
+  const trips = useTrips((state) => state.trips);
+  const subscribeTrips = useTrips((state) => state.subscribe);
+  const tripsLoading = useTrips((state) => state.isLoading);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [selectedTransaction, setSelectedTransaction] = useState<PlaidTransaction | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
+
+  useEffect(() => {
+    if (user?.uid) {
+      subscribeTrips(user.uid);
+    }
+  }, [user?.uid, subscribeTrips]);
+
+  const handleOpenDetails = useCallback((transaction: PlaidTransaction) => {
+    setSelectedTransaction(transaction);
+    setShowDetails(true);
+  }, []);
+
+  const handleCloseDetails = useCallback(() => {
+    setSelectedTransaction(null);
+    setShowDetails(false);
+  }, []);
 
   // Get unique categories
   const categories = useMemo(() => {
@@ -153,15 +192,37 @@ export default function TransactionsList() {
           </div>
         ) : (
           filteredTransactions.map((txn) => (
-            <TransactionRow key={txn.id} transaction={txn} />
+            <TransactionRow key={txn.id} transaction={txn} onSelect={handleOpenDetails} />
           ))
         )}
       </div>
+
+      <TransactionDetailModal
+        transaction={selectedTransaction}
+        isOpen={showDetails && Boolean(selectedTransaction)}
+        onClose={handleCloseDetails}
+        trips={trips}
+        tripsLoading={tripsLoading}
+        linkTransactionToTrip={linkTransactionToTrip}
+        accounts={accounts}
+        onLinked={() =>
+          toast({
+            title: 'Transaction linked',
+            description: 'This transaction is now connected to your trip.',
+          })
+        }
+      />
     </div>
   );
 }
 
-function TransactionRow({ transaction }: { transaction: PlaidTransaction }) {
+function TransactionRow({
+  transaction,
+  onSelect,
+}: {
+  transaction: PlaidTransaction;
+  onSelect: (txn: PlaidTransaction) => void;
+}) {
   const linkTransactionToTrip = useSpendingTool((s) => s.linkTransactionToTrip);
   const dismissTripSuggestion = useSpendingTool((s) => s.dismissTripSuggestion);
   const [actionState, setActionState] = useState<'link' | 'dismiss' | null>(null);
@@ -201,8 +262,21 @@ function TransactionRow({ transaction }: { transaction: PlaidTransaction }) {
     }
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onSelect(transaction);
+    }
+  };
+
   return (
-    <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md transition-shadow">
+    <div
+      className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md transition-shadow cursor-pointer focus-visible:ring-2 focus-visible:ring-green-500/70 focus:outline-none"
+      role="button"
+      tabIndex={0}
+      onClick={() => onSelect(transaction)}
+      onKeyDown={handleKeyDown}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -259,14 +333,20 @@ function TransactionRow({ transaction }: { transaction: PlaidTransaction }) {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={handleAcceptSuggestion}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleAcceptSuggestion();
+                }}
                 disabled={actionState === 'link'}
                 className="rounded-md bg-purple-600 px-3 py-1 text-xs font-semibold text-white shadow hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-purple-400"
               >
                 {actionState === 'link' ? 'Linking…' : 'Link Trip'}
               </button>
               <button
-                onClick={handleDismissSuggestion}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleDismissSuggestion();
+                }}
                 disabled={actionState === 'dismiss'}
                 className="rounded-md border border-purple-300 px-3 py-1 text-xs font-semibold text-purple-700 dark:text-purple-200 hover:bg-purple-100 dark:hover:bg-purple-900/20 disabled:cursor-not-allowed disabled:opacity-70"
               >
@@ -279,6 +359,320 @@ function TransactionRow({ transaction }: { transaction: PlaidTransaction }) {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+interface TransactionDetailModalProps {
+  transaction: PlaidTransaction | null;
+  isOpen: boolean;
+  onClose: () => void;
+  trips: Trip[];
+  tripsLoading: boolean;
+  linkTransactionToTrip: (transactionId: string, tripId: string) => Promise<void>;
+  accounts: Record<string, Account>;
+  onLinked: () => void;
+}
+
+function TransactionDetailModal({
+  transaction,
+  isOpen,
+  onClose,
+  trips,
+  tripsLoading,
+  linkTransactionToTrip,
+  accounts,
+  onLinked,
+}: TransactionDetailModalProps) {
+  const { toast } = useToast();
+  const [selectedTripId, setSelectedTripId] = useState('');
+  const [isLinking, setIsLinking] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (transaction?.tripLink?.tripId) {
+      setSelectedTripId(transaction.tripLink.tripId);
+    } else if (transaction?.tripLinkSuggestion?.tripId) {
+      setSelectedTripId(transaction.tripLinkSuggestion.tripId);
+    } else {
+      setSelectedTripId('');
+    }
+  }, [transaction]);
+
+  if (!transaction || !isOpen) {
+    return null;
+  }
+
+  const account = accounts[transaction.accountId];
+  const isIncome = transaction.amount < 0;
+  const amount = Math.abs(transaction.amount);
+  const categories = transaction.category_premium ?? transaction.category_base ?? [];
+
+  const formatCurrency = (value: number, currency: string) =>
+    new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currency || 'USD',
+    }).format(value);
+
+  const linkWithTrip = async (tripId?: string) => {
+    if (!transaction.id) {
+      toast({
+        title: 'Unable to link',
+        description: 'Missing transaction identifier.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const targetTripId = tripId ?? selectedTripId;
+    if (!targetTripId) {
+      setLinkError('Select a trip to link this transaction.');
+      return;
+    }
+
+    setIsLinking(true);
+    setLinkError(null);
+    try {
+      await linkTransactionToTrip(transaction.id, targetTripId);
+      onLinked();
+      onClose();
+    } catch (error: any) {
+      const message = error?.message || 'Failed to link transaction to trip.';
+      setLinkError(message);
+      toast({ title: 'Link failed', description: message, variant: 'destructive' });
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-900"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header className="flex items-start justify-between border-b border-gray-200 p-6 dark:border-gray-800">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Transaction Details
+            </p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-50">
+              {transaction.merchant?.normalized || transaction.merchant?.name || 'Unknown merchant'}
+            </h2>
+            <div className="mt-2 text-lg font-semibold">
+              <span className={isIncome ? 'text-emerald-600' : 'text-rose-600'}>
+                {isIncome ? '+' : '-'}
+                {formatCurrency(amount, transaction.isoCurrency)}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-full p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </header>
+
+        <div className="grid gap-6 p-6 lg:grid-cols-3">
+          <section className="space-y-4 lg:col-span-2">
+            <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900/40">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                <Calendar className="h-4 w-4" />
+                <span>Posted {new Date(transaction.postedAt).toLocaleDateString()}</span>
+                {transaction.pending && (
+                  <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-700">
+                    Pending
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                <CreditCard className="h-4 w-4" />
+                <span>
+                  {account?.name || 'Account'}
+                  {account?.mask ? ` ••••${account.mask}` : ''}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                {categories.map((cat) => (
+                  <span
+                    key={cat}
+                    className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                  >
+                    <Tag className="h-3 w-3" />
+                    {cat}
+                  </span>
+                ))}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                <p className="font-semibold text-gray-800 dark:text-gray-100">Original Description</p>
+                <p>{transaction.originalDescription}</p>
+              </div>
+              {transaction.personalNote && (
+                <div className="rounded-xl bg-blue-50 p-3 text-sm text-blue-900 dark:bg-blue-900/20 dark:text-blue-100">
+                  <p className="font-semibold">Personal Note</p>
+                  <p>{transaction.personalNote}</p>
+                </div>
+              )}
+              {transaction.location && (
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                  <MapPin className="h-4 w-4" />
+                  <span>
+                    {[
+                      transaction.location.address,
+                      transaction.location.city,
+                      transaction.location.region,
+                      transaction.location.country,
+                    ]
+                      .filter(Boolean)
+                      .join(', ')}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900/40">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Trip Linking
+                  </p>
+                  {transaction.tripLink ? (
+                    <p className="text-sm text-gray-700 dark:text-gray-200">
+                      Linked to{' '}
+                      <span className="font-semibold text-purple-600 dark:text-purple-300">
+                        {transaction.tripLink.tripName}
+                      </span>{' '}
+                      ({transaction.tripLink.method === 'manual' ? 'Manual' : 'AI'} ·{' '}
+                      {(transaction.tripLink.confidence * 100).toFixed(0)}% confidence)
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-600 dark:text-gray-300">Not linked to any trip yet.</p>
+                  )}
+                </div>
+                {transaction.tripLink && (
+                  <Link
+                    href="/tools/trips"
+                    className="text-xs font-semibold text-purple-600 hover:underline dark:text-purple-300"
+                  >
+                    View trip
+                  </Link>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Link to trip
+                </label>
+                {trips.length === 0 ? (
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    No trips yet.{' '}
+                    <Link href="/tools/trips" className="font-semibold text-purple-600 dark:text-purple-300 underline">
+                      Create one
+                    </Link>{' '}
+                    to start linking expenses.
+                  </p>
+                ) : (
+                  <select
+                    value={selectedTripId}
+                    onChange={(event) => setSelectedTripId(event.target.value)}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+                  >
+                    <option value="">Select a trip…</option>
+                    {trips.map((trip) => (
+                      <option key={trip.id} value={trip.id}>
+                        {trip.name}
+                        {trip.destination ? ` • ${trip.destination}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {linkError && <p className="text-xs text-red-600">{linkError}</p>}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    onClick={() => linkWithTrip()}
+                    disabled={isLinking || trips.length === 0}
+                    className="inline-flex items-center gap-2"
+                  >
+                    <Link2 className="h-4 w-4" />
+                    {isLinking ? 'Linking…' : 'Link Transaction'}
+                  </Button>
+                  <Button variant="secondary" onClick={onClose}>
+                    Close
+                  </Button>
+                </div>
+                {tripsLoading && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Loading trips…</p>
+                )}
+              </div>
+            </div>
+
+            {transaction.tripLinkSuggestion && (
+              <div className="rounded-2xl border border-purple-200 bg-purple-50/80 p-4 dark:border-purple-900/50 dark:bg-purple-950/30">
+                <div className="flex items-center gap-2 text-purple-700 dark:text-purple-200">
+                  <Sparkles className="h-4 w-4" />
+                  <p className="text-sm font-semibold">Suggested trip</p>
+                </div>
+                <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">
+                  {transaction.tripLinkSuggestion.tripName}
+                  {transaction.tripLinkSuggestion.tripDestination
+                    ? ` • ${transaction.tripLinkSuggestion.tripDestination}`
+                    : ''}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Confidence {(transaction.tripLinkSuggestion.confidence * 100).toFixed(0)}%
+                </p>
+                {transaction.tripLinkSuggestion.reasoning && (
+                  <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                    {transaction.tripLinkSuggestion.reasoning}
+                  </p>
+                )}
+                <Button
+                  size="sm"
+                  className="mt-3 bg-purple-600 text-white hover:bg-purple-700"
+                  disabled={isLinking}
+                  onClick={() => linkWithTrip(transaction.tripLinkSuggestion?.tripId)}
+                >
+                  {isLinking ? 'Linking…' : 'Link to suggested trip'}
+                </Button>
+              </div>
+            )}
+          </section>
+
+          <section className="space-y-4">
+            <div className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4 text-sm text-gray-700 dark:border-gray-800 dark:bg-gray-900/40 dark:text-gray-200">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-emerald-500" />
+                <span>{transaction.isoCurrency}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link2 className="h-4 w-4 text-purple-500" />
+                <span>{transaction.plaidTransactionId}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-blue-500" />
+                <span>
+                  Authorized{' '}
+                  {transaction.authorizedAt ? new Date(transaction.authorizedAt).toLocaleDateString() : '—'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Tag className="h-4 w-4 text-rose-500" />
+                <span>{transaction.source === 'plaid' ? 'Synced via Plaid' : 'Manual import'}</span>
+              </div>
+              {transaction.recurringStreamId && (
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                  <span>Subscription detected</span>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }
