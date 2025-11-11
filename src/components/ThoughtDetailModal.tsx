@@ -268,7 +268,15 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
           : 'This thought is already queued for AI processing.'
       );
     } else {
-      setErrorMessage(result.error ? `Failed to process: ${result.error}` : 'Failed to process thought');
+      // Check if it's the known 503 service configuration issue
+      const errorText = result.error || '';
+      if (errorText.includes('503') || errorText.includes('service not configured') || errorText.includes('AI service')) {
+        setErrorMessage(
+          'AI Processing is currently being updated. This feature is temporarily unavailable while we migrate to a new AI service architecture. Please check back soon!'
+        );
+      } else {
+        setErrorMessage(result.error ? `Failed to process: ${result.error}` : 'Failed to process thought');
+      }
       setShowErrorModal(true);
     }
 
@@ -527,12 +535,23 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* AI Processing Temporary Notice */}
+              {shouldShowProcessButton && (
+                <div className="flex-1 mr-2">
+                  <div className="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <span className="text-xs text-amber-700 dark:text-amber-300">
+                      AI Processing temporarily unavailable during service migration
+                    </span>
+                  </div>
+                </div>
+              )}
               {shouldShowProcessButton && (
                 <button
                   onClick={handleProcessNow}
-                  disabled={isProcessing || (isAnonymous && !isAnonymousAiAllowed)}
-                  className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
-                  title="Process this thought with AI"
+                  disabled={true}
+                  className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 text-sm font-semibold opacity-50 cursor-not-allowed"
+                  title="AI Processing temporarily unavailable"
                 >
                   {isProcessing ? (
                     <>

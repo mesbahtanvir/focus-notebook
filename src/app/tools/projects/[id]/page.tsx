@@ -514,9 +514,9 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
-      {/* Split Layout: Project Details (Left) and Tasks (Right) */}
+      {/* Split Layout: Project Details (Left) and Related Content (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Side - Project Details */}
+        {/* Left Side - Project Core Info */}
         <div className="space-y-6">
           {/* Linked Goal */}
           {linkedGoal && (
@@ -574,8 +574,11 @@ export default function ProjectDetailPage() {
               </ol>
             </div>
           )}
+        </div>
 
-          {/* Linked Thoughts */}
+        {/* Right Side - Related Thoughts & Tasks */}
+        <div className="space-y-6">
+          {/* Linked Thoughts - MOVED TO RIGHT SIDE */}
           {linkedThoughts.length > 0 && (
             <div className="rounded-xl p-6 bg-white dark:bg-gray-900 border-2 border-pink-200 dark:border-pink-800 shadow-md">
               <div className="flex items-center gap-2 mb-3">
@@ -601,10 +604,9 @@ export default function ProjectDetailPage() {
               </div>
             </div>
           )}
-        </div>
 
-        {/* Right Side - Tasks List */}
-        <div className="rounded-xl p-6 bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-950/20 dark:to-blue-950/20 border-2 border-cyan-200 dark:border-cyan-800 shadow-md">
+          {/* Tasks List */}
+          <div className="rounded-xl p-6 bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-950/20 dark:to-blue-950/20 border-2 border-cyan-200 dark:border-cyan-800 shadow-md">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <ListChecks className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
@@ -692,6 +694,7 @@ export default function ProjectDetailPage() {
               ))}
             </div>
           )}
+          </div>
         </div>
       </div>
 
