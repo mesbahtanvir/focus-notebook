@@ -3,8 +3,19 @@ import { collection, query, orderBy } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebaseClient';
 import { createAt, updateAt, deleteAt } from '@/lib/data/gateway';
 import { subscribeCol } from '@/lib/data/subscribe';
-import type { TransactionCategory } from '@/types/transactions';
 import type { TripLinkInfo, TripLinkSuggestion } from '@/types/spending-tool';
+
+export type TransactionCategory =
+  | 'groceries'
+  | 'dining'
+  | 'transportation'
+  | 'entertainment'
+  | 'shopping'
+  | 'utilities'
+  | 'health'
+  | 'travel'
+  | 'subscriptions'
+  | 'other';
 
 export interface BankAccount {
   id: string;
