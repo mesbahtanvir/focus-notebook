@@ -24,7 +24,8 @@ import { useTrips } from '@/store/useTrips';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import type { PlaidTransaction, Trip, Account } from '@/types/spending-tool';
+import type { PlaidTransaction, Account } from '@/types/spending-tool';
+import type { Trip } from '@/store/useTrips';
 
 export default function TransactionsList() {
   const { user } = useAuth();
