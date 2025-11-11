@@ -31,7 +31,18 @@ export async function callFirebaseCallable<TData extends object = any>(
     );
   }
 
-  const response = await fetch(`${baseUrl}/${functionName}`, {
+  const url = `${baseUrl}/${functionName}`;
+  console.log('[callFirebaseCallable] Calling:', {
+    functionName,
+    url,
+    hasToken: Boolean(idToken),
+    tokenLength: idToken?.length,
+    tokenPrefix: idToken?.substring(0, 20),
+    hasAppCheck: Boolean(appCheckToken),
+    hasInstanceId: Boolean(instanceIdToken),
+  });
+
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -44,11 +55,23 @@ export async function callFirebaseCallable<TData extends object = any>(
     body: JSON.stringify({ data }),
   });
 
+  console.log('[callFirebaseCallable] Response:', {
+    functionName,
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok,
+  });
+
   const text = await response.text();
   let payload: any;
   try {
     payload = text ? JSON.parse(text) : {};
   } catch {
+    console.error('[callFirebaseCallable] Failed to parse response:', {
+      functionName,
+      textLength: text?.length,
+      textPrefix: text?.substring(0, 200),
+    });
     payload = { error: { message: text || 'Malformed response' } };
   }
 
@@ -57,9 +80,16 @@ export async function callFirebaseCallable<TData extends object = any>(
       payload?.error?.message ||
       payload?.error?.status ||
       `Callable function ${functionName} failed with status ${response.status}`;
+    console.error('[callFirebaseCallable] Function call failed:', {
+      functionName,
+      status: response.status,
+      message,
+      payload,
+    });
     throw new FirebaseCallableError(message, response.status);
   }
 
+  console.log('[callFirebaseCallable] Function call succeeded:', functionName);
   return payload?.result ?? payload?.data ?? payload;
 }
 

@@ -51,11 +51,25 @@ async function callSpendingApi(
 ) {
   const user = auth.currentUser;
   if (!user) {
+    console.error('[callSpendingApi] User not authenticated');
     throw new Error('User must be authenticated before using Plaid.');
   }
 
-  const [idToken, instanceIdToken, appCheckToken] = await Promise.all([
-    user.getIdToken(),
+  console.log('[callSpendingApi] Getting auth tokens for user:', user.uid);
+
+  let idToken: string;
+  try {
+    idToken = await user.getIdToken();
+    console.log('[callSpendingApi] Got ID token:', {
+      length: idToken.length,
+      prefix: idToken.substring(0, 20),
+    });
+  } catch (error) {
+    console.error('[callSpendingApi] Failed to get ID token:', error);
+    throw new Error('Failed to get authentication token. Please try signing in again.');
+  }
+
+  const [instanceIdToken, appCheckToken] = await Promise.all([
     getFirebaseInstanceIdToken(),
     getClientAppCheckToken(),
   ]);
@@ -71,11 +85,25 @@ async function callSpendingApi(
   if (appCheckToken) {
     headers['X-Firebase-AppCheck'] = appCheckToken;
   }
-  console.log('Calling spending API:', endpoint, payload);
+
+  console.log('[callSpendingApi] Calling endpoint:', {
+    endpoint,
+    payload,
+    hasToken: Boolean(idToken),
+    hasInstanceId: Boolean(instanceIdToken),
+    hasAppCheck: Boolean(appCheckToken),
+  });
+
   const response = await fetch(`/api/spending/${endpoint}`, {
     method: 'POST',
     headers,
     body: JSON.stringify(payload),
+  });
+
+  console.log('[callSpendingApi] Response:', {
+    endpoint,
+    status: response.status,
+    ok: response.ok,
   });
 
   const raw = await response.text();
@@ -84,6 +112,7 @@ async function callSpendingApi(
     try {
       data = JSON.parse(raw);
     } catch {
+      console.error('[callSpendingApi] Malformed response:', raw.substring(0, 200));
       throw new Error('Received malformed response from server.');
     }
   }
@@ -93,9 +122,16 @@ async function callSpendingApi(
       data?.error ||
       data?.message ||
       `Request failed with status ${response.status}`;
+    console.error('[callSpendingApi] Request failed:', {
+      endpoint,
+      status: response.status,
+      message,
+      data,
+    });
     throw new Error(message);
   }
 
+  console.log('[callSpendingApi] Request succeeded:', endpoint);
   return data;
 }
 
