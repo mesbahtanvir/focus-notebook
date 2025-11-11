@@ -17,6 +17,7 @@ import {
 import { encrypt } from './utils/encryption';
 
 const db = admin.firestore();
+const CREATE_LINK_TOKEN_LOG_PREFIX = '[createLinkToken]';
 
 // ============================================================================
 // Create Link Token (New Connection)
@@ -29,25 +30,54 @@ export const createLinkToken = functions.https.onCall(async (data, context) => {
 
   const uid = context.auth.uid;
   const { platform = 'web', redirectUri } = data;
+  console.log(`${CREATE_LINK_TOKEN_LOG_PREFIX} Request received`, {
+    uid,
+    platform,
+    hasRedirectUri: Boolean(redirectUri),
+  });
 
   try {
     // Get user email
+    console.log(`${CREATE_LINK_TOKEN_LOG_PREFIX} Fetching Firebase auth user`, { uid });
     const userRecord = await admin.auth().getUser(uid);
     const userEmail = userRecord.email;
+    console.log(`${CREATE_LINK_TOKEN_LOG_PREFIX} User loaded`, {
+      uid,
+      emailPresent: Boolean(userEmail),
+      emailVerified: userRecord.emailVerified,
+    });
 
-    const result = await createPlaidLinkToken({
+    const plaidRequest = {
       userId: uid,
       userEmail,
       platform,
       redirectUri,
+    };
+    console.log(`${CREATE_LINK_TOKEN_LOG_PREFIX} Calling plaidService.createLinkToken`, {
+      ...plaidRequest,
+      userEmail: userEmail ? '[redacted]' : null,
     });
 
+    const result = await createPlaidLinkToken(plaidRequest);
+    console.log(`${CREATE_LINK_TOKEN_LOG_PREFIX} Plaid link token created`, {
+      uid,
+      platform,
+      expiration: result.expiration,
+      linkTokenLength: result.link_token?.length || 0,
+    });
     return {
       link_token: result.link_token,
       expires_at: result.expiration,
     };
   } catch (error: any) {
-    console.error('Error creating link token:', error);
+    console.error(`${CREATE_LINK_TOKEN_LOG_PREFIX} Error creating link token`, {
+      uid,
+      platform,
+      redirectUri,
+      errorMessage: error?.message,
+      errorCode: error?.code,
+      stack: error?.stack,
+    });
     throw new functions.https.HttpsError('internal', error.message);
   }
 });

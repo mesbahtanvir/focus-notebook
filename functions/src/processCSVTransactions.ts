@@ -36,6 +36,43 @@ interface ProcessCSVRequest {
   userId?: string;
 }
 
+function tryParseJson<T = unknown>(input: string): T | null {
+  try {
+    return JSON.parse(input);
+  } catch {
+    return null;
+  }
+}
+
+function parseStructuredAIResponse<T = unknown>(aiResponse: string): T {
+  const candidates: string[] = [];
+  const trimmed = aiResponse.trim();
+  if (trimmed) {
+    candidates.push(trimmed);
+  }
+
+  const fencedMatch = aiResponse.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fencedMatch?.[1]) {
+    candidates.push(fencedMatch[1].trim());
+  }
+
+  const firstBrace = aiResponse.indexOf('{');
+  const lastBrace = aiResponse.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    candidates.push(aiResponse.slice(firstBrace, lastBrace + 1).trim());
+  }
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const parsed = tryParseJson<T>(candidate);
+    if (parsed) {
+      return parsed;
+    }
+  }
+
+  throw new Error('Failed to parse AI-enhanced transaction data');
+}
+
 /**
  * Load and parse the enhance transactions prompt
  */
@@ -151,21 +188,24 @@ async function enhanceTransactions(
     : prompt.model || 'gpt-4o';
 
   // Call OpenAI API directly
+  const requestBody: Record<string, unknown> = {
+    model: modelName,
+    messages: [
+      { role: 'system', content: systemMessage },
+      { role: 'user', content: userMessage },
+    ],
+    temperature: prompt.modelParameters?.temperature || 0.3,
+    max_tokens: prompt.modelParameters?.max_tokens || 2000,
+    response_format: { type: 'json_object' },
+  };
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${CONFIG.OPENAI_API_KEY}`,
     },
-    body: JSON.stringify({
-      model: modelName,
-      messages: [
-        { role: 'system', content: systemMessage },
-        { role: 'user', content: userMessage },
-      ],
-      temperature: prompt.modelParameters?.temperature || 0.3,
-      max_tokens: prompt.modelParameters?.max_tokens || 2000,
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
@@ -182,12 +222,11 @@ async function enhanceTransactions(
 
   // Parse the response
   try {
-    const parsed = JSON.parse(aiResponse);
-    return parsed;
+    return parseStructuredAIResponse(aiResponse);
   } catch (error) {
     console.error('Failed to parse AI response:', error);
     console.error('Response was:', aiResponse);
-    throw new Error('Failed to parse AI-enhanced transaction data');
+    throw error;
   }
 }
 

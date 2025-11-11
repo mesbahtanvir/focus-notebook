@@ -67,10 +67,35 @@ export interface CreateLinkTokenOptions {
   accessToken?: string; // For update mode (relink)
 }
 
+function sanitizeLinkTokenOptions(options: CreateLinkTokenOptions) {
+  const { accessToken, userEmail, ...rest } = options;
+  return {
+    ...rest,
+    userEmailPresent: Boolean(userEmail),
+    hasAccessToken: Boolean(accessToken),
+    accessTokenLength: accessToken?.length || 0,
+  };
+}
+
+function sanitizeLinkTokenRequest(request: LinkTokenCreateRequest) {
+  const { access_token, user, ...rest } = request;
+  return {
+    ...rest,
+    user: {
+      client_user_id: user?.client_user_id || 'unknown',
+    },
+    hasAccessToken: Boolean(access_token),
+  };
+}
+
 export async function createLinkToken(
   options: CreateLinkTokenOptions
 ): Promise<{ link_token: string; expiration: string }> {
-  console.log('Creating Plaid link token with options:', options);
+  const sanitizedOptions = sanitizeLinkTokenOptions(options);
+  console.log('[plaidService.createLinkToken] Starting link token creation', {
+    ...sanitizedOptions,
+    plaidEnv: PLAID_ENV,
+  });
   const {
     userId,
     platform = 'web',
@@ -103,15 +128,31 @@ export async function createLinkToken(
       request.android_package_name = androidPackageName;
     }
   }
-  console.log('Creating Plaid link token with request:', request);
+  const sanitizedRequest = sanitizeLinkTokenRequest(request);
+  console.log('[plaidService.createLinkToken] Prepared Plaid request payload', sanitizedRequest);
+  const startTime = Date.now();
   try {
     const response = await plaidClient.linkTokenCreate(request);
+    const durationMs = Date.now() - startTime;
+    console.log('[plaidService.createLinkToken] Plaid responded successfully', {
+      durationMs,
+      requestId: response.data.request_id,
+      expiration: response.data.expiration,
+      linkTokenLength: response.data.link_token?.length || 0,
+    });
     return {
       link_token: response.data.link_token,
       expiration: response.data.expiration,
     };
   } catch (error: any) {
-    console.error('Error creating link token:', error.response?.data || error);
+    const durationMs = Date.now() - startTime;
+    console.error('[plaidService.createLinkToken] Error creating link token', {
+      durationMs,
+      sanitizedOptions,
+      sanitizedRequest,
+      plaidError: error.response?.data,
+      message: error?.message,
+    });
     throw new Error(`Failed to create link token: ${error.message}`);
   }
 }
