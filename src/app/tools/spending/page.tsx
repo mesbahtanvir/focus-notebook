@@ -11,8 +11,6 @@ import { useRouter } from 'next/navigation';
 import { useSpendingTool } from '@/store/useSpendingTool';
 import { useSpending } from '@/store/useSpending';
 import { useTrackToolUsage } from '@/hooks/useTrackToolUsage';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db as firestore } from '@/lib/firebaseClient';
 import {
   DollarSign,
   TrendingUp,
@@ -140,22 +138,8 @@ export default function SpendingPage() {
     }));
   }, [csvAccounts]);
 
-  useEffect(() => {
-    if (!user?.uid) {
-      setHasCsvUploads(false);
-      return;
-    }
-
-    const statusRef = collection(firestore, `users/${user.uid}/csvProcessingStatus`);
-    const unsubscribe = onSnapshot(statusRef, (snapshot) => {
-      setHasCsvUploads(!snapshot.empty);
-    });
-
-    return () => unsubscribe();
-  }, [user?.uid]);
-
   const hasAnyDataSources = hasPlaidConnections || hasCSVData;
-
+  
   const combinedTransactions = useMemo<NormalizedSpendingTransaction[]>(
     () => [...normalizedPlaidTransactions, ...normalizedCsvTransactions],
     [normalizedPlaidTransactions, normalizedCsvTransactions]
