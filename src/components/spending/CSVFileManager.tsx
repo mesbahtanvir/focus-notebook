@@ -9,21 +9,20 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSpending } from '@/store/useSpending';
 import { FileText, Trash2, AlertTriangle, Loader2, CheckCircle } from 'lucide-react';
-import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, where } from 'firebase/firestore';
 import { db as firestore } from '@/lib/firebaseClient';
+import type { Statement } from '@/types/spending-tool';
 
-interface ProcessingStatus {
-  status: 'processing' | 'completed' | 'error';
+interface CSVFileInfo {
+  id: string;
   fileName: string;
-  processedCount?: number;
+  status: 'processing' | 'completed' | 'error';
+  processedCount: number;
   error?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface CSVFileInfo extends ProcessingStatus {
-  transactionCount: number;
   storagePath?: string;
+  uploadedAt?: any;
+  updatedAt?: any;
+  transactionCount: number;
 }
 
 type CSVFileManagerProps = {
@@ -38,26 +37,36 @@ export default function CSVFileManager({ enableManualProcessing = false }: CSVFi
   const [showConfirmDialog, setShowConfirmDialog] = useState<CSVFileInfo | null>(null);
   const [processingFile, setProcessingFile] = useState<string | null>(null);
 
-  // Subscribe to CSV processing status
+  // Subscribe to CSV statements (persistent collection)
   useEffect(() => {
     if (!user?.uid) return;
 
-    const statusRef = collection(firestore, `users/${user.uid}/csvProcessingStatus`);
-    const q = query(statusRef, orderBy('updatedAt', 'desc'));
+    const statementsRef = collection(firestore, `users/${user.uid}/statements`);
+    const q = query(
+      statementsRef,
+      where('source', '==', 'csv-upload'),
+      orderBy('updatedAt', 'desc')
+    );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const files: ProcessingStatus[] = [];
+      const files: CSVFileInfo[] = [];
       snapshot.forEach((doc) => {
-        files.push(doc.data() as ProcessingStatus);
+        const data = doc.data() as Statement;
+        // Combine statement data with transaction counts
+        files.push({
+          id: doc.id,
+          fileName: data.fileName || doc.id,
+          status: data.status,
+          processedCount: data.processedCount || 0,
+          error: data.error,
+          storagePath: data.storagePath,
+          uploadedAt: data.uploadedAt,
+          updatedAt: data.updatedAt,
+          transactionCount: transactions.filter((t) => t.csvFileName === (data.fileName || doc.id)).length,
+        });
       });
 
-      // Combine with transaction counts
-      const filesWithCounts = files.map((file) => ({
-        ...file,
-        transactionCount: transactions.filter((t) => t.csvFileName === file.fileName).length,
-      }));
-
-      setCSVFiles(filesWithCounts);
+      setCSVFiles(files);
     });
 
     return () => unsubscribe();
@@ -139,84 +148,78 @@ export default function CSVFileManager({ enableManualProcessing = false }: CSVFi
 
   if (csvFiles.length === 0) {
     return (
-      <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-        <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-        <p>No CSV files uploaded yet.</p>
-        <p className="text-sm mt-2">Upload a CSV file to get started.</p>
+      <div className="p-4 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/20 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
+        <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p className="text-sm">No CSV files uploaded yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Summary */}
-      <div className="p-4 rounded-lg bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border border-purple-200 dark:border-purple-800">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Total CSV Files</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{csvFiles.length}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Total Transactions</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalTransactions}</p>
-          </div>
+    <div className="space-y-3">
+      {/* Compact Summary */}
+      <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center gap-1">
+          <span className="font-semibold text-gray-900 dark:text-gray-100">{csvFiles.length}</span>
+          <span>file{csvFiles.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div className="w-px h-4 bg-gray-300 dark:bg-gray-700" />
+        <div className="flex items-center gap-1">
+          <span className="font-semibold text-gray-900 dark:text-gray-100">{totalTransactions}</span>
+          <span>transaction{totalTransactions !== 1 ? 's' : ''}</span>
         </div>
       </div>
 
-      {/* File List */}
-      <div className="space-y-3">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Uploaded Files</h3>
+      {/* Compact File List */}
+      <div className="space-y-2">
         {csvFiles.map((file) => (
           <div
             key={file.fileName}
-            className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md transition-shadow"
+            className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30 hover:bg-white dark:hover:bg-gray-800 transition-colors"
           >
-            <div className="flex items-start gap-4">
-              <FileText className="h-6 w-6 text-purple-500 flex-shrink-0 mt-1" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">
-                    {file.fileName}
-                  </span>
-                  {file.status === 'completed' && (
-                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                  )}
-                  {file.status === 'error' && (
-                    <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                  )}
-                  {file.status === 'processing' && (
-                    <Loader2 className="h-4 w-4 text-blue-500 animate-spin flex-shrink-0" />
-                  )}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  {file.transactionCount} transaction{file.transactionCount !== 1 ? 's' : ''}
-                  {' • '}
-                  <span className="text-xs">
-                    Uploaded {new Date(file.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-                {file.error && (
-                  <div className="mt-2 text-xs text-red-600 dark:text-red-400">
-                    Error: {file.error}
-                  </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                {file.status === 'completed' && (
+                  <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
                 )}
+                {file.status === 'error' && (
+                  <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                )}
+                {file.status === 'processing' && (
+                  <Loader2 className="h-4 w-4 text-blue-500 animate-spin flex-shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
+                    {file.fileName}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    {file.transactionCount} transaction{file.transactionCount !== 1 ? 's' : ''}
+                    {' • '}
+                    {file.uploadedAt ? new Date(file.uploadedAt.toDate()).toLocaleDateString() : 'Unknown'}
+                  </div>
+                  {file.error && (
+                    <div className="mt-1 text-xs text-red-600 dark:text-red-400">
+                      {file.error}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-2">
                 {enableManualProcessing && (
                   <button
                     onClick={() => handleManualProcess(file)}
                     disabled={processingFile === file.fileName}
-                    className="inline-flex items-center gap-2 rounded-lg border border-purple-200 px-3 py-1.5 text-sm font-semibold text-purple-700 dark:border-purple-800 dark:text-purple-200 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-1 rounded-md border border-purple-200 px-2 py-1 text-xs font-medium text-purple-700 dark:border-purple-800 dark:text-purple-200 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {processingFile === file.fileName ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-3 w-3 animate-spin" />
                         Processing…
                       </>
                     ) : (
                       <>
-                        <Loader2 className="h-4 w-4" />
-                        Process file
+                        <Loader2 className="h-3 w-3" />
+                        Process
                       </>
                     )}
                   </button>
@@ -224,13 +227,13 @@ export default function CSVFileManager({ enableManualProcessing = false }: CSVFi
                 <button
                   onClick={() => setShowConfirmDialog(file)}
                   disabled={deletingFile === file.fileName}
-                  className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Delete file and all transactions"
                 >
                   {deletingFile === file.fileName ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Trash2 className="h-5 w-5" />
+                    <Trash2 className="h-4 w-4" />
                   )}
                 </button>
               </div>
