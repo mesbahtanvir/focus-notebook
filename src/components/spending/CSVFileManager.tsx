@@ -37,39 +37,90 @@ export default function CSVFileManager({ enableManualProcessing = false }: CSVFi
   const [showConfirmDialog, setShowConfirmDialog] = useState<CSVFileInfo | null>(null);
   const [processingFile, setProcessingFile] = useState<string | null>(null);
 
-  // Subscribe to CSV statements (persistent collection)
+  // Subscribe to CSV statements (supports both old and new collections during migration)
   useEffect(() => {
     if (!user?.uid) return;
 
+    const filesMap = new Map<string, CSVFileInfo>();
+    const unsubscribers: (() => void)[] = [];
+
+    // Subscribe to NEW persistent statements collection
     const statementsRef = collection(firestore, `users/${user.uid}/statements`);
-    const q = query(
-      statementsRef,
-      where('source', '==', 'csv-upload'),
-      orderBy('updatedAt', 'desc')
-    );
+    const statementsQuery = query(statementsRef, where('source', '==', 'csv-upload'));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const files: CSVFileInfo[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data() as Statement;
-        // Combine statement data with transaction counts
-        files.push({
-          id: doc.id,
-          fileName: data.fileName || doc.id,
-          status: data.status,
-          processedCount: data.processedCount || 0,
-          error: data.error,
-          storagePath: data.storagePath,
-          uploadedAt: data.uploadedAt,
-          updatedAt: data.updatedAt,
-          transactionCount: transactions.filter((t) => t.csvFileName === (data.fileName || doc.id)).length,
+    const unsubStatements = onSnapshot(
+      statementsQuery,
+      (snapshot) => {
+        snapshot.forEach((doc) => {
+          const data = doc.data() as Statement;
+          const fileName = data.fileName || doc.id;
+          filesMap.set(fileName, {
+            id: doc.id,
+            fileName,
+            status: data.status,
+            processedCount: data.processedCount || 0,
+            error: data.error,
+            storagePath: data.storagePath,
+            uploadedAt: data.uploadedAt,
+            updatedAt: data.updatedAt,
+            transactionCount: transactions.filter((t) => t.csvFileName === fileName).length,
+          });
         });
+        updateFilesList();
+      },
+      (error) => {
+        console.warn('Error loading statements collection (might not exist yet):', error);
+      }
+    );
+    unsubscribers.push(unsubStatements);
+
+    // TEMPORARY: Also subscribe to OLD csvProcessingStatus collection for backwards compatibility
+    const statusRef = collection(firestore, `users/${user.uid}/csvProcessingStatus`);
+    const statusQuery = query(statusRef);
+
+    const unsubStatus = onSnapshot(
+      statusQuery,
+      (snapshot) => {
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          const fileName = data.fileName || doc.id;
+          // Only add if not already in the new collection
+          if (!filesMap.has(fileName)) {
+            filesMap.set(fileName, {
+              id: doc.id,
+              fileName,
+              status: data.status || 'completed',
+              processedCount: data.processedCount || 0,
+              error: data.error,
+              storagePath: data.storagePath,
+              uploadedAt: data.createdAt ? { toDate: () => new Date(data.createdAt) } : undefined,
+              updatedAt: data.updatedAt ? { toDate: () => new Date(data.updatedAt) } : undefined,
+              transactionCount: transactions.filter((t) => t.csvFileName === fileName).length,
+            });
+          }
+        });
+        updateFilesList();
+      },
+      (error) => {
+        console.warn('Error loading old csvProcessingStatus collection:', error);
+      }
+    );
+    unsubscribers.push(unsubStatus);
+
+    function updateFilesList() {
+      const files = Array.from(filesMap.values());
+      // Sort by updatedAt in memory (newest first)
+      files.sort((a, b) => {
+        const aTime = a.updatedAt?.toMillis?.() || a.updatedAt?.toDate?.().getTime() || 0;
+        const bTime = b.updatedAt?.toMillis?.() || b.updatedAt?.toDate?.().getTime() || 0;
+        return bTime - aTime;
       });
-
       setCSVFiles(files);
-    });
+    }
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+    };
   }, [user?.uid, transactions]);
 
   const handleDelete = async (file: CSVFileInfo) => {
