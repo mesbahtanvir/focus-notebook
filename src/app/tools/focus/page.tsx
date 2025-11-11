@@ -45,6 +45,8 @@ function FocusPageContent() {
   const loadActiveSession = useFocus((s) => s.loadActiveSession);
   const clearCompletedSession = useFocus((s) => s.clearCompletedSession);
   const deleteSession = useFocus((s) => s.deleteSession);
+  const loadTaskOrderPreferences = useFocus((s) => s.loadTaskOrderPreferences);
+  const applyTaskOrderPreferences = useFocus((s) => s.applyTaskOrderPreferences);
 
   // Get duration from URL or default to 60 minutes
   const urlDuration = searchParams.get('duration');
@@ -57,7 +59,7 @@ function FocusPageContent() {
   const [selectedSession, setSelectedSession] = useState<FocusSessionType | null>(null);
   const [hasActiveSession, setHasActiveSession] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [focusMode, setFocusMode] = useState<'regular' | 'philosopher' | 'beast' | 'selfcare'>('regular');
+  const [focusMode, setFocusMode] = useState<'regular' | 'philosopher' | 'beast' | 'selfcare' | 'startday'>('regular');
   const [showAlreadySelected, setShowAlreadySelected] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -169,9 +171,10 @@ function FocusPageContent() {
   // Initialize selected tasks with auto-suggested tasks
   useEffect(() => {
     if (autoSuggestedTasks.length > 0 && selectedTaskIds.length === 0) {
-      setSelectedTaskIds(autoSuggestedTasks.map(t => t.id));
+      const ordered = applyTaskOrderPreferences(autoSuggestedTasks);
+      setSelectedTaskIds(ordered.map((t) => t.id));
     }
-  }, [autoSuggestedTasks, selectedTaskIds.length]);
+  }, [autoSuggestedTasks, selectedTaskIds.length, applyTaskOrderPreferences]);
 
   // Quick Focus: Just auto-select tasks, don't auto-show confirmation modal
   // Users can manually click "Start Focus" when they're ready
@@ -187,9 +190,10 @@ function FocusPageContent() {
   useEffect(() => {
     if (user?.uid) {
       subscribe(user.uid);
+      loadTaskOrderPreferences();
     }
     checkForActiveSession();
-  }, [user?.uid, subscribe, checkForActiveSession]);
+  }, [user?.uid, subscribe, loadTaskOrderPreferences, checkForActiveSession]);
 
   useEffect(() => {
     if (user?.uid) {
@@ -210,7 +214,12 @@ function FocusPageContent() {
     );
   };
 
-  const selectedTasks = tasks.filter(t => selectedTaskIds.includes(t.id));
+  const selectedTasks = useMemo(() => {
+    const taskMap = new Map(tasks.map((task) => [task.id, task]));
+    return selectedTaskIds
+      .map((id) => taskMap.get(id))
+      .filter((task): task is Task => Boolean(task));
+  }, [tasks, selectedTaskIds]);
 
   const visibleActiveTasks = activeTasks.filter(shouldShowActiveTask);
 
@@ -221,12 +230,6 @@ function FocusPageContent() {
     });
     return scoreMap;
   }, [visibleActiveTasks, computeImportanceScore]);
-
-  const dailyStapleTasks = useMemo(() => {
-    return activeTasks.filter(task =>
-      task.recurrence?.type === 'daily' && checkTaskRelevanceForToday(task)
-    );
-  }, [activeTasks, checkTaskRelevanceForToday]);
 
   // Calculate hidden task count (tasks not relevant for today and not selected)
   const hiddenTaskCount = useMemo(() => {
@@ -272,24 +275,23 @@ function FocusPageContent() {
   const handleConfirmStart = async () => {
     if (selectedTasks.length === 0) return;
     setShowConfirmModal(false);
-    await startSession(selectedTasks, duration);
+    const orderedForSession = applyTaskOrderPreferences(selectedTasks);
+    await startSession(orderedForSession, duration);
     // Don't need to setShowSetup(false) - the component will automatically render FocusSession when currentSession exists
   };
 
-  const selectModeTask = (mode: 'regular' | 'philosopher' | 'beast' | 'selfcare') => {
+  const selectModeTask = (mode: 'regular' | 'philosopher' | 'beast' | 'selfcare' | 'startday') => {
     setFocusMode(mode);
-    let modeTasks: string[] = [];
+    let modeTaskObjects: Task[] = [];
 
     switch (mode) {
       case 'regular':
-        // Balanced mix of mastery and pleasure
-        modeTasks = selectBalancedTasks(tasks, duration).map(t => t.id);
+        modeTaskObjects = selectBalancedTasks(tasks, duration);
         break;
-      
+
       case 'philosopher':
-        // Deep thinking: CBT, thoughts, notes, deep thought tasks
-        modeTasks = activeTasks
-          .filter(t => 
+        modeTaskObjects = activeTasks
+          .filter(t =>
             t.title.toLowerCase().includes('think') ||
             t.title.toLowerCase().includes('reflect') ||
             t.title.toLowerCase().includes('journal') ||
@@ -297,14 +299,12 @@ function FocusPageContent() {
             t.title.toLowerCase().includes('read') ||
             t.tags?.some(tag => ['thinking', 'reading', 'reflection', 'journal'].includes(tag.toLowerCase()))
           )
-          .slice(0, Math.floor(duration / 20))
-          .map(t => t.id);
+          .slice(0, Math.floor(duration / 20));
         break;
-      
+
       case 'beast':
-        // High productivity: urgent and high priority mastery tasks
-        modeTasks = activeTasks
-          .filter(t => 
+        modeTaskObjects = activeTasks
+          .filter(t =>
             t.category === 'mastery' &&
             (t.priority === 'urgent' || t.priority === 'high')
           )
@@ -312,14 +312,12 @@ function FocusPageContent() {
             const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
             return priorityOrder[a.priority] - priorityOrder[b.priority];
           })
-          .slice(0, Math.floor(duration / 15))
-          .map(t => t.id);
+          .slice(0, Math.floor(duration / 15));
         break;
-      
+
       case 'selfcare':
-        // Wellness: pleasure tasks, low priority, self-care activities
-        modeTasks = activeTasks
-          .filter(t => 
+        modeTaskObjects = activeTasks
+          .filter(t =>
             t.category === 'pleasure' ||
             t.title.toLowerCase().includes('relax') ||
             t.title.toLowerCase().includes('rest') ||
@@ -327,17 +325,24 @@ function FocusPageContent() {
             t.title.toLowerCase().includes('hobby') ||
             t.tags?.some(tag => ['wellness', 'selfcare', 'hobby', 'fun'].includes(tag.toLowerCase()))
           )
-          .slice(0, Math.floor(duration / 25))
-          .map(t => t.id);
+          .slice(0, Math.floor(duration / 25));
+        break;
+
+      case 'startday':
+        modeTaskObjects = activeTasks.filter((t) => {
+          const recurrence = t.recurrence?.type;
+          const isDailyType = recurrence === 'daily' || recurrence === 'workweek';
+          return isDailyType && checkTaskRelevanceForToday(t);
+        });
         break;
     }
 
-    // If mode-specific selection is empty, fall back to balanced
-    if (modeTasks.length === 0) {
-      modeTasks = selectBalancedTasks(tasks, duration).map(t => t.id);
+    if (modeTaskObjects.length === 0) {
+      modeTaskObjects = selectBalancedTasks(tasks, duration);
     }
 
-    setSelectedTaskIds(modeTasks);
+    const ordered = applyTaskOrderPreferences(modeTaskObjects);
+    setSelectedTaskIds(ordered.map((task) => task.id));
   };
 
   // Show statistics if session is completed
@@ -373,13 +378,11 @@ function FocusPageContent() {
 
                 {/* Title and Description */}
                 <div className="flex-1 min-w-0">
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 bg-clip-text text-transparent flex items-center gap-2">
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 bg-clip-text text-transparent flex flex-wrap items-center gap-2">
                     <Zap className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                    Focus Session
+                    <span>Focus Session</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">· Deep work mode</span>
                   </h1>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Deep work mode
-                  </p>
                 </div>
               </div>
             </div>
@@ -446,14 +449,27 @@ function FocusPageContent() {
                         <Target className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
                         Focus Mode
                       </label>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
-                        <button
-                          onClick={() => selectModeTask('regular')}
-                          className={`px-3 py-2 rounded-lg border text-left transition-all ${
-                            focusMode === 'regular'
-                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 shadow-sm'
-                              : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
-                          }`}
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-1.5">
+                    <button
+                      onClick={() => selectModeTask('startday')}
+                      className={`px-3 py-2 rounded-lg border text-left transition-all ${
+                        focusMode === 'startday'
+                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30 shadow-sm'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-600'
+                      }`}
+                    >
+                      <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 mb-1" />
+                      <div className="text-xs font-bold text-gray-900 dark:text-white">Start Day</div>
+                      <div className="text-[10px] text-gray-500 dark:text-gray-400">Daily reset</div>
+                    </button>
+
+                    <button
+                      onClick={() => selectModeTask('regular')}
+                      className={`px-3 py-2 rounded-lg border text-left transition-all ${
+                        focusMode === 'regular'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 shadow-sm'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
+                      }`}
                         >
                           <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400 mb-1" />
                           <div className="text-xs font-bold text-gray-900 dark:text-white">Regular</div>
@@ -571,33 +587,6 @@ function FocusPageContent() {
                     )}
                   </div>
                 </div>
-
-                {dailyStapleTasks.length > 0 && (
-                  <div className="mb-4">
-                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-2">
-                      <Star className="h-3.5 w-3.5 text-yellow-500" />
-                      Daily staples
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {dailyStapleTasks.map((task) => {
-                        const isSelected = selectedTaskIds.includes(task.id);
-                        return (
-                          <button
-                            key={task.id}
-                            onClick={() => toggleTaskSelection(task.id)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                              isSelected
-                                ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                                : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-purple-400'
-                            }`}
-                          >
-                            {task.title}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
 
                 {activeTasks.length === 0 ? (
                   <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
@@ -836,6 +825,7 @@ function FocusPageContent() {
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Mode</div>
                   <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400 capitalize flex items-center gap-2">
                     {focusMode === 'regular' && <><Briefcase className="h-5 w-5" /> Regular</>}
+                    {focusMode === 'startday' && <><Clock className="h-5 w-5" /> Start Day</>}
                     {focusMode === 'philosopher' && <><Brain className="h-5 w-5" /> Philosopher</>}
                     {focusMode === 'beast' && <><Rocket className="h-5 w-5" /> Beast</>}
                     {focusMode === 'selfcare' && <><Heart className="h-5 w-5" /> Self Care</>}
@@ -882,6 +872,7 @@ function FocusPageContent() {
               <div className="bg-blue-50 dark:bg-blue-950/20 border-2 border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <p className="text-sm text-blue-800 dark:text-blue-200">
                   {focusMode === 'regular' && '💼 Balanced work session with a mix of mastery and pleasure tasks.'}
+                  {focusMode === 'startday' && '🌅 Morning kick-off focusing on daily maintenance rituals.'}
                   {focusMode === 'philosopher' && '🧠 Deep thinking session focused on reflection, reading, and intellectual work.'}
                   {focusMode === 'beast' && '🚀 High-intensity productivity session tackling urgent and high-priority tasks.'}
                   {focusMode === 'selfcare' && '💖 Wellness-focused session with relaxing and enjoyable activities.'}

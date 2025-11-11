@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { Task } from './useTasks'
-import { collection, query, orderBy, where, getDocs } from 'firebase/firestore'
+import { collection, query, orderBy, where, getDocs, doc, getDoc } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebaseClient'
-import { createAt, updateAt, deleteAt } from '@/lib/data/gateway'
+import { createAt, updateAt, deleteAt, setAt } from '@/lib/data/gateway'
 import { subscribeCol } from '@/lib/data/subscribe'
 import { TimeTrackingService } from '@/services/TimeTrackingService'
 import { EndSessionStep } from '@/components/EndSessionProgress'
@@ -21,6 +21,13 @@ export interface BreakSession {
   duration: number // in minutes
   type: 'coffee' | 'meditation' | 'stretch'
 }
+
+type TaskOrderPreference = {
+  score: number
+  updatedAt: string
+}
+
+type TaskOrderPreferenceMap = Record<string, TaskOrderPreference>
 
 export interface FocusSession {
   id: string
@@ -55,6 +62,7 @@ type State = {
   currentSession: FocusSession | null
   completedSession: FocusSession | null
   sessions: FocusSession[]
+  taskOrderPreferences: TaskOrderPreferenceMap
   isLoading: boolean
   fromCache: boolean
   hasPendingWrites: boolean
@@ -84,6 +92,10 @@ type State = {
   previousTask: () => Promise<void>
   startBreak: (type: 'coffee' | 'meditation' | 'stretch', duration: number) => Promise<void>
   endBreak: () => Promise<void>
+  reorderTasks: (fromIndex: number, toIndex: number) => Promise<void>
+  loadTaskOrderPreferences: () => Promise<void>
+  updateTaskOrderPreferences: (orderedTaskIds: string[]) => Promise<void>
+  applyTaskOrderPreferences: (tasks: Task[]) => Task[]
 }
 
 // Balance tasks between mastery and pleasure
@@ -183,6 +195,7 @@ export const useFocus = create<State>((set, get) => ({
   currentSession: null,
   completedSession: null,
   sessions: [],
+  taskOrderPreferences: {},
   isLoading: true,
   fromCache: false,
   hasPendingWrites: false,
@@ -354,6 +367,7 @@ export const useFocus = create<State>((set, get) => ({
       currentSession: null,
       completedSession,
     })
+    await get().updateTaskOrderPreferences(completedSession.tasks.map((t) => t.task.id))
 
     // Step 6: Complete
     onProgress?.('complete', 'completed')
@@ -498,6 +512,42 @@ export const useFocus = create<State>((set, get) => ({
     } catch (error) {
       console.error('Failed to persist active session:', error)
     }
+  },
+
+  reorderTasks: async (fromIndex, toIndex) => {
+    if (fromIndex === toIndex) return
+
+    set((state) => {
+      if (!state.currentSession) return state
+
+      const tasks = [...state.currentSession.tasks]
+      if (fromIndex < 0 || fromIndex >= tasks.length || toIndex < 0 || toIndex >= tasks.length) {
+        return state
+      }
+
+      const [movedTask] = tasks.splice(fromIndex, 1)
+      tasks.splice(toIndex, 0, movedTask)
+
+      let currentTaskIndex = state.currentSession.currentTaskIndex
+
+      if (fromIndex === currentTaskIndex) {
+        currentTaskIndex = toIndex
+      } else if (fromIndex < currentTaskIndex && toIndex >= currentTaskIndex) {
+        currentTaskIndex -= 1
+      } else if (fromIndex > currentTaskIndex && toIndex <= currentTaskIndex) {
+        currentTaskIndex += 1
+      }
+
+      return {
+        currentSession: {
+          ...state.currentSession,
+          tasks,
+          currentTaskIndex,
+        },
+      }
+    })
+
+    await get().persistActiveSession()
   },
   
   switchToTask: async (index) => {
@@ -759,5 +809,79 @@ export const useFocus = create<State>((set, get) => ({
     })
     
     await get().persistActiveSession()
+  },
+
+  loadTaskOrderPreferences: async () => {
+    const userId = auth.currentUser?.uid
+    if (!userId) return
+
+    try {
+      const prefRef = doc(db, `users/${userId}/preferences/focusTaskOrder`)
+      const snapshot = await getDoc(prefRef)
+      if (snapshot.exists()) {
+        const data = snapshot.data() as { preferences?: TaskOrderPreferenceMap }
+        set({ taskOrderPreferences: data.preferences || {} })
+      } else {
+        set({ taskOrderPreferences: {} })
+      }
+    } catch (error) {
+      console.error('Failed to load focus task order preferences:', error)
+    }
+  },
+
+  updateTaskOrderPreferences: async (orderedTaskIds) => {
+    if (!orderedTaskIds || orderedTaskIds.length === 0) return
+    const userId = auth.currentUser?.uid
+    if (!userId) return
+
+    const now = new Date().toISOString()
+    let updatedPreferences: TaskOrderPreferenceMap = {}
+
+    set((state) => {
+      const currentPrefs = state.taskOrderPreferences || {}
+      const prefsCopy: TaskOrderPreferenceMap = { ...currentPrefs }
+
+      orderedTaskIds.forEach((taskId, index) => {
+        const existing = prefsCopy[taskId]
+        const newScore = existing ? (existing.score * 0.7 + index * 0.3) : index
+        prefsCopy[taskId] = { score: newScore, updatedAt: now }
+      })
+
+      updatedPreferences = prefsCopy
+      return { taskOrderPreferences: prefsCopy }
+    })
+
+    try {
+      await setAt(`users/${userId}/preferences/focusTaskOrder`, {
+        preferences: updatedPreferences,
+        updatedAt: now,
+      })
+    } catch (error) {
+      console.error('Failed to save focus task order preferences:', error)
+    }
+  },
+
+  applyTaskOrderPreferences: (tasks) => {
+    const prefs = get().taskOrderPreferences
+    if (!prefs || Object.keys(prefs).length === 0) {
+      return [...tasks]
+    }
+
+    const baseOrder = new Map(tasks.map((task, index) => [task.id, index]))
+
+    return [...tasks].sort((a, b) => {
+      const prefA = prefs[a.id]?.score
+      const prefB = prefs[b.id]?.score
+
+      if (prefA === undefined && prefB === undefined) {
+        return (baseOrder.get(a.id) ?? 0) - (baseOrder.get(b.id) ?? 0)
+      }
+      if (prefA === undefined) return 1
+      if (prefB === undefined) return -1
+      if (prefA === prefB) {
+        return (baseOrder.get(a.id) ?? 0) - (baseOrder.get(b.id) ?? 0)
+      }
+      return prefA - prefB
+    })
   },
 }))

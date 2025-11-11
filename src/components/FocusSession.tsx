@@ -13,7 +13,8 @@ import {
   Clock,
   Plus,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  GripVertical
 } from "lucide-react";
 import { FormattedNotes } from '@/lib/formatNotes';
 import { ConfirmModal } from "./ConfirmModal";
@@ -22,19 +23,130 @@ import { TimeTrackingService } from '@/services/TimeTrackingService';
 import * as EntityService from '@/services/entityService';
 import { UnifiedEndSession } from './UnifiedEndSession';
 
+type FocusStore = ReturnType<typeof useFocus.getState>;
+
 export function FocusSession() {
   const router = useRouter();
   const currentSession = useFocus((s) => s.currentSession);
   const sessions = useFocus((s) => s.sessions);
-  const endSession = useFocus((s) => s.endSession);
-  const switchToTask = useFocus((s) => s.switchToTask);
-  const markTaskComplete = useFocus((s) => s.markTaskComplete);
-  const updateTaskTime = useFocus ((s) => s.updateTaskTime);
-  const updateTaskNotes = useFocus((s) => s.updateTaskNotes);
-  const addFollowUpTask = useFocus((s) => s.addFollowUpTask);
-  const pauseSession = useFocus((s) => s.pauseSession);
-  const resumeSession = useFocus((s) => s.resumeSession);
+  const {
+    endSession,
+    switchToTask,
+    markTaskComplete,
+    updateTaskTime,
+    updateTaskNotes,
+    addFollowUpTask,
+    pauseSession,
+    resumeSession,
+    reorderTasks,
+  } = useFocus((s) => ({
+    endSession: s.endSession,
+    switchToTask: s.switchToTask,
+    markTaskComplete: s.markTaskComplete,
+    updateTaskTime: s.updateTaskTime,
+    updateTaskNotes: s.updateTaskNotes,
+    addFollowUpTask: s.addFollowUpTask,
+    pauseSession: s.pauseSession,
+    resumeSession: s.resumeSession,
+    reorderTasks: s.reorderTasks,
+  }));
   const toggleTask = useTasks((s) => s.toggle);
+
+  const [isEndingSession, setIsEndingSession] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [completedSessionData, setCompletedSessionData] = useState<FocusSessionType | null>(null);
+
+  const handleStartNewSession = useCallback(() => {
+    setShowSummary(false);
+    setCompletedSessionData(null);
+    router.push('/tools/focus');
+  }, [router]);
+
+  const handleViewHistory = useCallback(() => {
+    setShowSummary(false);
+    setCompletedSessionData(null);
+    router.push('/tools/focus?tab=history');
+  }, [router]);
+
+  if (isEndingSession || (showSummary && completedSessionData)) {
+    return (
+      <UnifiedEndSession
+        isLoading={isEndingSession && !showSummary}
+        showSummary={showSummary}
+        completedSession={completedSessionData}
+        onStartNewSession={handleStartNewSession}
+        onViewHistory={handleViewHistory}
+      />
+    );
+  }
+
+  if (!currentSession) {
+    return null;
+  }
+
+  return (
+    <FocusSessionContent
+      currentSession={currentSession}
+      sessions={sessions}
+      actions={{
+        endSession,
+        switchToTask,
+        markTaskComplete,
+        updateTaskTime,
+        updateTaskNotes,
+        addFollowUpTask,
+        pauseSession,
+        resumeSession,
+        reorderTasks,
+      }}
+      toggleTask={toggleTask}
+      setIsEndingSession={setIsEndingSession}
+      setShowSummary={setShowSummary}
+      setCompletedSessionData={setCompletedSessionData}
+    />
+  );
+}
+
+type FocusSessionContentProps = {
+  currentSession: FocusSessionType;
+  sessions: FocusSessionType[];
+  actions: {
+    endSession: FocusStore['endSession'];
+    switchToTask: FocusStore['switchToTask'];
+    markTaskComplete: FocusStore['markTaskComplete'];
+    updateTaskTime: FocusStore['updateTaskTime'];
+    updateTaskNotes: FocusStore['updateTaskNotes'];
+    addFollowUpTask: FocusStore['addFollowUpTask'];
+    pauseSession: FocusStore['pauseSession'];
+    resumeSession: FocusStore['resumeSession'];
+    reorderTasks: FocusStore['reorderTasks'];
+  };
+  toggleTask: ReturnType<typeof useTasks.getState>['toggle'];
+  setIsEndingSession: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
+  setCompletedSessionData: React.Dispatch<React.SetStateAction<FocusSessionType | null>>;
+};
+
+function FocusSessionContent({
+  currentSession,
+  sessions,
+  actions,
+  toggleTask,
+  setIsEndingSession,
+  setShowSummary,
+  setCompletedSessionData,
+}: FocusSessionContentProps) {
+  const {
+    endSession,
+    switchToTask,
+    markTaskComplete,
+    updateTaskTime,
+    updateTaskNotes,
+    addFollowUpTask,
+    pauseSession,
+    resumeSession,
+    reorderTasks,
+  } = actions;
 
   const [currentTime, setCurrentTime] = useState(0);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
@@ -42,17 +154,15 @@ export function FocusSession() {
   const [followUpTitle, setFollowUpTitle] = useState("");
   const [localNotes, setLocalNotes] = useState("");
   const [autoSaving, setAutoSaving] = useState(false);
-  const [isEndingSession, setIsEndingSession] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
-  const [completedSessionData, setCompletedSessionData] = useState<FocusSessionType | null>(null);
   const [followUpCreated, setFollowUpCreated] = useState(false);
   const [createdTaskTitle, setCreatedTaskTitle] = useState("");
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
   const hasPendingChangesRef = useRef<boolean>(false);
   const pendingNotesTaskIndexRef = useRef<number>(0);
-
   // Get previous session notes for the current task
   const previousSessionNotes = useMemo(() => {
     if (!currentSession) return [];
@@ -298,33 +408,6 @@ export function FocusSession() {
     }
   };
 
-  const handleStartNewSession = () => {
-    setShowSummary(false);
-    setCompletedSessionData(null);
-    router.push('/tools/focus');
-  };
-
-  const handleViewHistory = () => {
-    setShowSummary(false);
-    setCompletedSessionData(null);
-    router.push('/tools/focus?tab=history');
-  };
-
-  // Show unified end session flow (loading → summary) in a single seamless view
-  if (isEndingSession || (showSummary && completedSessionData)) {
-    return (
-      <UnifiedEndSession
-        isLoading={isEndingSession && !showSummary}
-        showSummary={showSummary}
-        completedSession={completedSessionData}
-        onStartNewSession={handleStartNewSession}
-        onViewHistory={handleViewHistory}
-      />
-    );
-  }
-
-  if (!currentSession) return null;
-
   const currentTaskIndex = currentSession.currentTaskIndex;
   const currentFocusTask = currentSession.tasks[currentTaskIndex];
   const totalTasks = currentSession.tasks.length;
@@ -357,6 +440,54 @@ export function FocusSession() {
       setTimeout(() => handleNext(), 500);
     }
   };
+
+  const handleMoveTask = useCallback(
+    async (fromIndex: number, toIndex: number) => {
+      if (!currentSession) return;
+      if (fromIndex === toIndex) return;
+      const maxIndex = currentSession.tasks.length;
+      const targetIndex = Math.max(0, Math.min(maxIndex, toIndex));
+      await reorderTasks(fromIndex, targetIndex);
+    },
+    [currentSession, reorderTasks]
+  );
+
+  const handleDragStart = useCallback(
+    (event: React.DragEvent, index: number) => {
+      setDraggingIndex(index);
+      setDragOverIndex(index);
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', String(index));
+    },
+    []
+  );
+
+  const handleDragOver = useCallback(
+    (event: React.DragEvent, index: number) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      if (dragOverIndex !== index) {
+        setDragOverIndex(index);
+      }
+    },
+    [dragOverIndex]
+  );
+
+  const handleDrop = useCallback(
+    async (event: React.DragEvent, index: number) => {
+      event.preventDefault();
+      if (draggingIndex === null) return;
+      await handleMoveTask(draggingIndex, index);
+      setDraggingIndex(null);
+      setDragOverIndex(null);
+    },
+    [draggingIndex, handleMoveTask]
+  );
+
+  const handleDragEnd = useCallback(() => {
+    setDraggingIndex(null);
+    setDragOverIndex(null);
+  }, []);
 
   const handleEndSession = () => {
     setShowExitConfirm(true);
@@ -497,51 +628,85 @@ export function FocusSession() {
                 <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
                   Tasks ({completedTasks}/{totalTasks})
                 </h3>
-                {currentSession.tasks.map((focusTask, index) => (
-                  <button
-                    key={index}
-                    onClick={async () => {
-                      await switchToTask(index);
-                      setCurrentTime(focusTask.timeSpent);
-                    }}
-                    className={`w-full text-left p-3 rounded-lg transition-all ${
-                      index === currentTaskIndex
-                        ? 'bg-purple-100 dark:bg-purple-900/30 border-2 border-purple-500 shadow-sm'
-                        : focusTask.completed
-                        ? 'bg-green-50 dark:bg-green-950/20 border-2 border-green-200 dark:border-green-900 hover:border-green-300'
-                        : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                    }`}
-                  >
-                    <div className="flex items-start gap-2">
-                      <div className="mt-1 flex-shrink-0">
-                        {focusTask.completed ? (
-                          <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-                        ) : index === currentTaskIndex ? (
-                          <div className="h-4 w-4 rounded-full bg-purple-600 flex items-center justify-center">
-                            <div className="h-2 w-2 rounded-full bg-white" />
+                {currentSession.tasks.map((focusTask, index) => {
+                  const isActive = index === currentTaskIndex;
+                  const isDragOver = dragOverIndex === index && draggingIndex !== null && draggingIndex !== index;
+                  const isDragging = draggingIndex === index;
+                  return (
+                    <div
+                      key={focusTask.task.id}
+                      className={`relative group rounded-lg ${isDragOver ? 'ring-2 ring-purple-400' : ''} ${isDragging ? 'opacity-70' : ''}`}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDrop={(e) => handleDrop(e, index)}
+                      onDragEnd={handleDragEnd}
+                      onDragEnter={(e) => handleDragOver(e, index)}
+                      onDragLeave={() => {
+                        if (dragOverIndex === index) {
+                          setDragOverIndex(null);
+                        }
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await switchToTask(index);
+                          setCurrentTime(focusTask.timeSpent);
+                        }}
+                        className={`w-full text-left p-3 rounded-lg transition-all ${
+                          isActive
+                            ? 'bg-purple-100 dark:bg-purple-900/30 border-2 border-purple-500 shadow-sm'
+                            : focusTask.completed
+                            ? 'bg-green-50 dark:bg-green-950/20 border-2 border-green-200 dark:border-green-900 hover:border-green-300'
+                            : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <div className="mt-1 flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-400 dark:text-gray-500">
+                            <GripVertical className="h-4 w-4" />
                           </div>
-                        ) : (
-                          <div className="h-4 w-4 rounded-full border-2 border-gray-300 dark:border-gray-600" />
-                        )}
+                          <div className="flex-shrink-0 mt-1">
+                            {focusTask.completed ? (
+                              <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            ) : isActive ? (
+                              <div className="h-4 w-4 rounded-full bg-purple-600 flex items-center justify-center">
+                                <div className="h-2 w-2 rounded-full bg-white" />
+                              </div>
+                            ) : (
+                              <div className="h-4 w-4 rounded-full border-2 border-gray-300 dark:border-gray-600" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                          <p
+                            className={`text-sm font-medium line-clamp-2 break-words ${
+                              focusTask.completed
+                                ? 'line-through text-gray-500 dark:text-gray-500'
+                                : isActive
+                                ? 'text-purple-900 dark:text-purple-100'
+                                : 'text-gray-900 dark:text-gray-100'
+                            }`}
+                          >
+                            {focusTask.task.title}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium truncate ${
-                          focusTask.completed
-                            ? 'line-through text-gray-500 dark:text-gray-500'
-                            : index === currentTaskIndex
-                            ? 'text-purple-900 dark:text-purple-100'
-                            : 'text-gray-900 dark:text-gray-100'
-                        }`}>
-                          {focusTask.task.title}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          <Clock className="h-3 w-3 inline mr-1" />
-                          {formatTimeGentle(focusTask.timeSpent)}
-                        </p>
-                      </div>
+                    </button>
                     </div>
-                  </button>
-                ))}
+                  );
+                })}
+                <div
+                  className={`h-8 mt-2 rounded-lg border-2 border-dashed ${
+                    dragOverIndex === currentSession.tasks.length && draggingIndex !== null ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/10' : 'border-transparent'
+                  }`}
+                  onDragOver={(e) => handleDragOver(e, currentSession.tasks.length)}
+                  onDrop={(e) => handleDrop(e, currentSession.tasks.length)}
+                  onDragLeave={() => {
+                    if (dragOverIndex === currentSession.tasks.length) {
+                      setDragOverIndex(null);
+                    }
+                  }}
+                />
               </div>
             </div>
 
