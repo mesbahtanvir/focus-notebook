@@ -13,6 +13,7 @@ const FUNCTION_MAP: Record<string, string> = {
   'process-csv': 'processCSVTransactions',
   'link-transaction-trip': 'linkTransactionToTrip',
   'dismiss-trip-suggestion': 'dismissTransactionTripSuggestion',
+  'delete-all-transactions': 'deleteAllTransactions',
 };
 
 async function parseRequestBody(req: NextRequest) {

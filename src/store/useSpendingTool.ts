@@ -152,6 +152,7 @@ interface SpendingToolState {
   // Trip linking actions
   linkTransactionToTrip: (transactionId: string, tripId: string) => Promise<void>;
   dismissTripSuggestion: (transactionId: string) => Promise<void>;
+  clearAllTransactions: () => Promise<void>;
 }
 
 // ============================================================================
@@ -525,5 +526,9 @@ export const useSpendingTool = create<SpendingToolState>((set, get) => ({
 
   dismissTripSuggestion: async (transactionId) => {
     await callSpendingApi('dismiss-trip-suggestion', { transactionId });
+  },
+
+  clearAllTransactions: async () => {
+    await callSpendingApi('delete-all-transactions');
   },
 }));

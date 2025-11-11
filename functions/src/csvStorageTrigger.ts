@@ -74,7 +74,7 @@ interface CsvBatchJob {
   error?: string;
 }
 
-const CSV_BATCH_QUEUE_COLLECTION = 'csvBatchQueue';
+export const CSV_BATCH_QUEUE_COLLECTION = 'csvBatchQueue';
 
 interface EnhancementLoggingOptions {
   userId?: string;

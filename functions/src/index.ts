@@ -45,6 +45,7 @@ import {
   linkTransactionToTrip,
   dismissTransactionTripSuggestion,
 } from './tripLinking';
+import { deleteAllTransactions } from './spendingMaintenance';
 
 // Export cloud functions
 export {
@@ -83,4 +84,5 @@ export {
   processTransactionTripLinks,
   linkTransactionToTrip,
   dismissTransactionTripSuggestion,
+  deleteAllTransactions,
 };

@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useSpendingTool } from '@/store/useSpendingTool';
@@ -20,6 +20,7 @@ import {
   ArrowLeft,
   Loader2,
   FileText,
+  Trash2,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PlaidLinkButton from '@/components/spending/PlaidLinkButton';
@@ -34,6 +35,8 @@ import { CSVTransactionsList } from '@/components/spending/CSVDashboard';
 import CSVFileManager from '@/components/spending/CSVFileManager';
 import { EnhancedSpendingDashboard, DateRange, NormalizedSpendingTransaction } from '@/components/spending/EnhancedSpendingDashboard';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 const getDefaultDateRange = (): DateRange => {
   const end = new Date();
@@ -50,15 +53,19 @@ export default function SpendingPage() {
 
   const { user } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   const { initialize: initializePlaid, cleanup: cleanupPlaid, loading: plaidLoading, error: plaidError, getConnectionStatuses } = useSpendingTool();
   const plaidTransactions = useSpendingTool((state) => state.transactions);
   const plaidAccounts = useSpendingTool((state) => state.accounts);
+  const clearAllTransactions = useSpendingTool((state) => state.clearAllTransactions);
 
   const subscribeSpending = useSpending((state) => state.subscribe);
   const csvTransactions = useSpending((state) => state.transactions);
   const csvAccounts = useSpending((state) => state.accounts);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange);
+  const [showDeleteTransactionsModal, setShowDeleteTransactionsModal] = useState(false);
+  const [deleteTransactionsLoading, setDeleteTransactionsLoading] = useState(false);
 
   useEffect(() => {
     if (user?.uid) {
@@ -77,6 +84,7 @@ export default function SpendingPage() {
 
   // Check for CSV-uploaded transactions
   const hasCSVData = csvTransactions.length > 0;
+  const hasTransactionData = plaidTransactions.length > 0 || hasCSVData;
 
   const normalizedPlaidTransactions = useMemo<NormalizedSpendingTransaction[]>(() => {
     return plaidTransactions.map((txn) => {
@@ -138,7 +146,26 @@ export default function SpendingPage() {
     }));
   }, [csvAccounts]);
 
-  const hasAnyDataSources = hasPlaidConnections || hasCSVData;
+  const handleDeleteAllTransactions = useCallback(async () => {
+    if (deleteTransactionsLoading) return;
+    setDeleteTransactionsLoading(true);
+    try {
+      await clearAllTransactions();
+      toast({
+        title: 'Transactions deleted',
+        description: 'All transactions from connected accounts and CSV uploads have been removed.',
+      });
+      setShowDeleteTransactionsModal(false);
+    } catch (error: any) {
+      toast({
+        title: 'Failed to delete transactions',
+        description: error?.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleteTransactionsLoading(false);
+    }
+  }, [clearAllTransactions, deleteTransactionsLoading, toast]);
   
   const combinedTransactions = useMemo<NormalizedSpendingTransaction[]>(
     () => [...normalizedPlaidTransactions, ...normalizedCsvTransactions],
@@ -211,9 +238,8 @@ export default function SpendingPage() {
         </div>
       )}
 
-      {/* Main Content with Plaid or CSV */}
-      {hasAnyDataSources && (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      {/* Main Content */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
@@ -288,6 +314,31 @@ export default function SpendingPage() {
             {!hasPlaidConnections && !hasCSVData && (
               <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                 <p>No transactions found. Connect a bank account or upload a CSV statement to get started.</p>
+              </div>
+            )}
+
+            {hasTransactionData && (
+              <div className="rounded-2xl border-2 border-red-200 bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/20 dark:to-rose-950/20 p-6">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-300">
+                      <Trash2 className="h-4 w-4" />
+                      Danger Zone
+                    </div>
+                    <h3 className="mt-1 text-xl font-bold text-gray-900 dark:text-gray-100">
+                      Delete All Transactions
+                    </h3>
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 max-w-2xl">
+                      Permanently remove every transaction imported from Plaid connections and manual CSV uploads. This cannot be undone and will erase your spending history.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowDeleteTransactionsModal(true)}
+                    className="inline-flex items-center justify-center rounded-xl border-2 border-red-500 px-5 py-3 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-200 dark:hover:bg-red-900/30 transition-colors"
+                  >
+                    Delete Everything
+                  </button>
+                </div>
               </div>
             )}
           </TabsContent>
@@ -389,10 +440,22 @@ export default function SpendingPage() {
                 )}
               </div>
             </div>
-          </TabsContent>
+        </TabsContent>
+      </Tabs>
 
-        </Tabs>
-      )}
+      <ConfirmModal
+        isOpen={showDeleteTransactionsModal}
+        onCancel={() => {
+          if (!deleteTransactionsLoading) {
+            setShowDeleteTransactionsModal(false);
+          }
+        }}
+        onConfirm={handleDeleteAllTransactions}
+        title="Delete all transactions?"
+        message="This will permanently delete every transaction from connected accounts and CSV uploads. This action cannot be undone."
+        confirmText={deleteTransactionsLoading ? 'Deleting…' : 'Delete All'}
+        variant="danger"
+      />
     </div>
   );
 }
