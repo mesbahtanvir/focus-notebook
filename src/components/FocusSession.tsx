@@ -666,17 +666,6 @@ function FocusSessionContent({
                           <div className="mt-1 flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-400 dark:text-gray-500">
                             <GripVertical className="h-4 w-4" />
                           </div>
-                          <div className="flex-shrink-0 mt-1">
-                            {focusTask.completed ? (
-                              <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-                            ) : isActive ? (
-                              <div className="h-4 w-4 rounded-full bg-purple-600 flex items-center justify-center">
-                                <div className="h-2 w-2 rounded-full bg-white" />
-                              </div>
-                            ) : (
-                              <div className="h-4 w-4 rounded-full border-2 border-gray-300 dark:border-gray-600" />
-                            )}
-                          </div>
                           <div className="flex-1 min-w-0">
                           <p
                             className={`text-sm font-medium line-clamp-2 break-words ${
