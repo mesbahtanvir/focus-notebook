@@ -53,10 +53,28 @@ interface ProcessingStatus {
   fileName: string;
   storagePath?: string;
   processedCount?: number;
+  processedBatches?: number;
+  totalBatches?: number;
   error?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
+
+interface CsvBatchJob {
+  userId: string;
+  fileName: string;
+  storagePath: string;
+  batchIndex: number;
+  totalBatches: number;
+  totalTransactions: number;
+  transactions: CSVTransaction[];
+  status: 'pending' | 'processing' | 'completed' | 'error';
+  createdAt: FirebaseFirestore.FieldValue | string;
+  updatedAt?: FirebaseFirestore.FieldValue | string;
+  error?: string;
+}
+
+const CSV_BATCH_QUEUE_COLLECTION = 'csvBatchQueue';
 
 interface EnhancementLoggingOptions {
   userId?: string;
@@ -425,12 +443,21 @@ async function saveTransactions(
 async function updateProcessingStatus(
   userId: string,
   fileName: string,
-  status: ProcessingStatus
+  status: Partial<ProcessingStatus>
 ): Promise<void> {
   const db = admin.firestore();
   const statusRef = db.collection(`users/${userId}/csvProcessingStatus`).doc(fileName);
 
-  await statusRef.set(status, { merge: true });
+  const payload: Partial<ProcessingStatus> = {
+    fileName,
+    ...status,
+  };
+
+  if (!payload.updatedAt) {
+    payload.updatedAt = new Date().toISOString();
+  }
+
+  await statusRef.set(payload, { merge: true });
 }
 
 /**
@@ -442,7 +469,8 @@ async function upsertStatement(
   storagePath: string,
   status: 'processing' | 'completed' | 'error',
   processedCount?: number,
-  error?: string
+  error?: string,
+  options: { totalBatches?: number; processedBatches?: number } = {}
 ): Promise<void> {
   const db = admin.firestore();
   const statementId = fileName; // Use filename as ID for easy lookups
@@ -456,11 +484,68 @@ async function upsertStatement(
     source: 'csv-upload',
     processedCount: processedCount || 0,
     error: error || null,
+    totalBatches: options.totalBatches ?? admin.firestore.FieldValue.delete(),
+    processedBatches: options.processedBatches ?? admin.firestore.FieldValue.delete(),
     uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
 
   await statementRef.set(statementData, { merge: true });
+}
+
+async function recordBatchCompletion(
+  userId: string,
+  fileName: string,
+  storagePath: string,
+  batchIndex: number,
+  totalBatches: number,
+  savedCount: number
+): Promise<{ isComplete: boolean; processedBatches: number; processedCount: number }> {
+  const db = admin.firestore();
+  const statusRef = db.collection(`users/${userId}/csvProcessingStatus`).doc(fileName);
+
+  let isComplete = false;
+  let processedBatches = 0;
+  let processedCount = 0;
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(statusRef);
+    const data = snap.data() || {};
+    processedBatches = (data.processedBatches || 0) + 1;
+    processedCount = (data.processedCount || 0) + savedCount;
+    const total = data.totalBatches || totalBatches;
+    isComplete = processedBatches >= total;
+
+    tx.set(
+      statusRef,
+      {
+        fileName,
+        storagePath,
+        processedBatches,
+        processedCount,
+        totalBatches: total,
+        status: isComplete ? 'completed' : 'processing',
+        createdAt: data.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  });
+
+  await upsertStatement(
+    userId,
+    fileName,
+    storagePath,
+    isComplete ? 'completed' : 'processing',
+    processedCount,
+    undefined,
+    {
+      totalBatches,
+      processedBatches,
+    }
+  );
+
+  return { isComplete, processedBatches, processedCount };
 }
 
 /**
@@ -489,18 +574,6 @@ export const onCSVUpload = functions.storage.object().onFinalize(async (object) 
   console.log(`Processing CSV upload for user ${userId}: ${fileName}`);
 
   try {
-    // Update status to processing
-    await updateProcessingStatus(userId, fileName, {
-      status: 'processing',
-      fileName,
-      storagePath: filePath,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-
-    // Create persistent statement record
-    await upsertStatement(userId, fileName, filePath, 'processing');
-
     // Download CSV from storage
     const bucket = admin.storage().bucket();
     const file = bucket.file(filePath);
@@ -515,47 +588,52 @@ export const onCSVUpload = functions.storage.object().onFinalize(async (object) 
       throw new Error('No valid transactions found in CSV file');
     }
 
-    // Enhance transactions with AI (process in batches of 50)
     const batchSize = 50;
     const totalBatches = Math.ceil(transactions.length / batchSize);
-    const allEnhanced: EnhancedTransaction[] = [];
+    const nowIso = new Date().toISOString();
+
+    // Update status to reflect queued batches
+    await updateProcessingStatus(userId, fileName, {
+      status: 'processing',
+      fileName,
+      storagePath: filePath,
+      processedCount: 0,
+      processedBatches: 0,
+      totalBatches,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    });
+
+    // Create persistent statement record
+    await upsertStatement(userId, fileName, filePath, 'processing', 0, undefined, {
+      totalBatches,
+      processedBatches: 0,
+    });
+
+    const queueRef = admin.firestore().collection(CSV_BATCH_QUEUE_COLLECTION);
 
     for (let i = 0; i < transactions.length; i += batchSize) {
       const batch = transactions.slice(i, i + batchSize);
       const batchIndex = Math.floor(i / batchSize);
-      const result = await enhanceTransactions(batch, {
+
+      const job: CsvBatchJob = {
         userId,
-        trigger: 'csv-upload',
-        metadata: {
-          source: 'storage-trigger',
-          fileName,
-          storagePath: filePath,
-          batchIndex,
-          totalBatches,
-          batchSize: batch.length,
-          totalTransactions: transactions.length,
-        },
-      });
-      allEnhanced.push(...result.transactions);
+        fileName,
+        storagePath: filePath,
+        batchIndex,
+        totalBatches,
+        totalTransactions: transactions.length,
+        transactions: batch,
+        status: 'pending',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+      await queueRef.add(job);
     }
 
-    // Save to Firestore
-    const savedCount = await saveTransactions(userId, fileName, transactions, allEnhanced);
-
-    console.log(`Successfully processed ${savedCount} transactions`);
-
-    // Update status to completed
-    await updateProcessingStatus(userId, fileName, {
-      status: 'completed',
-      fileName,
-      storagePath: filePath,
-      processedCount: savedCount,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-
-    // Update persistent statement record
-    await upsertStatement(userId, fileName, filePath, 'completed', savedCount);
+    console.log(
+      `Queued ${totalBatches} CSV enhancement batches (${transactions.length} transactions) for ${fileName}`
+    );
   } catch (error: any) {
     console.error('Error processing CSV:', error);
 
@@ -573,6 +651,81 @@ export const onCSVUpload = functions.storage.object().onFinalize(async (object) 
     await upsertStatement(userId, fileName, filePath, 'error', 0, error.message || 'Unknown error');
   }
 });
+
+export const processCsvBatchQueue = functions.firestore
+  .document(`${CSV_BATCH_QUEUE_COLLECTION}/{jobId}`)
+  .onCreate(async (snapshot, context) => {
+    const job = snapshot.data() as CsvBatchJob | undefined;
+
+    if (!job) {
+      console.warn('CSV batch job missing data', context.params.jobId);
+      return;
+    }
+
+    const jobRef = snapshot.ref;
+
+    await jobRef.update({
+      status: 'processing',
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    try {
+      const result = await enhanceTransactions(job.transactions, {
+        userId: job.userId,
+        trigger: 'csv-upload',
+        metadata: {
+          source: 'storage-trigger-batch',
+          fileName: job.fileName,
+          storagePath: job.storagePath,
+          batchIndex: job.batchIndex,
+          totalBatches: job.totalBatches,
+          batchSize: job.transactions.length,
+          totalTransactions: job.totalTransactions,
+        },
+      });
+
+      const savedCount = await saveTransactions(
+        job.userId,
+        job.fileName,
+        job.transactions,
+        result.transactions
+      );
+
+      const progress = await recordBatchCompletion(
+        job.userId,
+        job.fileName,
+        job.storagePath,
+        job.batchIndex,
+        job.totalBatches,
+        savedCount
+      );
+
+      await jobRef.delete();
+
+      console.log(
+        `Processed CSV batch ${job.batchIndex + 1}/${job.totalBatches} for ${job.fileName}; total processed ${progress.processedCount}`
+      );
+    } catch (error: any) {
+      const message = error?.message || 'Unknown error';
+
+      await jobRef.update({
+        status: 'error',
+        error: message,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      await updateProcessingStatus(job.userId, job.fileName, {
+        status: 'error',
+        fileName: job.fileName,
+        storagePath: job.storagePath,
+        error: message,
+      });
+
+      await upsertStatement(job.userId, job.fileName, job.storagePath, 'error', 0, message);
+
+      throw error;
+    }
+  });
 /* istanbul ignore file */
 /**
  * Cloud Storage trigger that streams large CSV uploads. Covered via integration tests

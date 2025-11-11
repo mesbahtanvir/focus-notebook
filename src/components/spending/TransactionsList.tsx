@@ -40,12 +40,18 @@ export default function TransactionsList() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedTransaction, setSelectedTransaction] = useState<PlaidTransaction | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
 
   useEffect(() => {
     if (user?.uid) {
       subscribeTrips(user.uid);
     }
   }, [user?.uid, subscribeTrips]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [transactions.length, selectedAccountId, selectedCategory, searchQuery, sortBy, sortOrder]);
 
   const handleOpenDetails = useCallback((transaction: PlaidTransaction) => {
     setSelectedTransaction(transaction);
@@ -110,6 +116,23 @@ export default function TransactionsList() {
     return filtered;
   }, [transactions, selectedAccountId, selectedCategory, searchQuery, sortBy, sortOrder]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / pageSize));
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  const paginatedTransactions = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredTransactions.slice(start, start + pageSize);
+  }, [filteredTransactions, page]);
+
+  const startIndex =
+    filteredTransactions.length === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endIndex = Math.min(filteredTransactions.length, page * pageSize);
+
   const toggleSort = (field: 'date' | 'amount') => {
     if (sortBy === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -166,22 +189,47 @@ export default function TransactionsList() {
 
       {/* Results count */}
       <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-        <span>{filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}</span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => toggleSort('date')}
-            className="flex items-center gap-1 px-3 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            Date
-            {sortBy === 'date' && <ArrowUpDown className="h-3 w-3" />}
-          </button>
-          <button
-            onClick={() => toggleSort('amount')}
-            className="flex items-center gap-1 px-3 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            Amount
-            {sortBy === 'amount' && <ArrowUpDown className="h-3 w-3" />}
-          </button>
+        <span>
+          {filteredTransactions.length === 0
+            ? 'No transactions'
+            : `Showing ${startIndex}-${endIndex} of ${filteredTransactions.length.toLocaleString()} transactions`}
+        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => toggleSort('date')}
+              className="flex items-center gap-1 px-3 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              Date
+              {sortBy === 'date' && <ArrowUpDown className="h-3 w-3" />}
+            </button>
+            <button
+              onClick={() => toggleSort('amount')}
+              className="flex items-center gap-1 px-3 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              Amount
+              {sortBy === 'amount' && <ArrowUpDown className="h-3 w-3" />}
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              Previous
+            </button>
+            <span className="font-medium">
+              Page {page} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
 
@@ -192,7 +240,7 @@ export default function TransactionsList() {
             <p className="text-gray-600 dark:text-gray-400">No transactions found</p>
           </div>
         ) : (
-          filteredTransactions.map((txn) => (
+          paginatedTransactions.map((txn) => (
             <TransactionRow key={txn.id} transaction={txn} onSelect={handleOpenDetails} />
           ))
         )}

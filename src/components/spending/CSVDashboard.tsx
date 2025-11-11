@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   DollarSign,
   TrendingUp,
@@ -15,8 +15,11 @@ import {
   LineChart,
   BarChart,
   Calendar,
+  Search,
+  Tag,
+  X,
 } from 'lucide-react';
-import { useSpending } from '@/store/useSpending';
+import { useSpending, type Transaction as CsvTransaction } from '@/store/useSpending';
 import {
   LineChart as RechartsLineChart,
   Line,
@@ -352,10 +355,62 @@ export function CSVSpendingTrends() {
 
 export function CSVTransactionsList() {
   const { transactions } = useSpending();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [selectedTransaction, setSelectedTransaction] = useState<CsvTransaction | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
+  const pageSize = 20;
 
-  const sortedTransactions = useMemo(() => {
-    return [...transactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20);
-  }, [transactions]);
+  const handleOpenDetails = useCallback((txn: CsvTransaction) => {
+    setSelectedTransaction(txn);
+    setShowDetails(true);
+  }, []);
+
+  const handleCloseDetails = useCallback(() => {
+    setSelectedTransaction(null);
+    setShowDetails(false);
+  }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, transactions.length]);
+
+  const filteredTransactions = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return transactions;
+    }
+
+    const query = searchQuery.trim().toLowerCase();
+    return transactions.filter((txn) => {
+      const merchant = txn.merchant?.toLowerCase() || '';
+      const description = txn.description?.toLowerCase() || '';
+      const category = txn.category?.toLowerCase() || '';
+      const notes = txn.notes?.toLowerCase() || '';
+
+      return (
+        merchant.includes(query) ||
+        description.includes(query) ||
+        category.includes(query) ||
+        notes.includes(query)
+      );
+    });
+  }, [transactions, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / pageSize));
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  const paginatedTransactions = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredTransactions
+      .slice()
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(start, start + pageSize);
+  }, [filteredTransactions, page]);
 
   if (transactions.length === 0) {
     return (
@@ -365,55 +420,223 @@ export function CSVTransactionsList() {
     );
   }
 
+  const startIndex = filteredTransactions.length === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endIndex = Math.min(filteredTransactions.length, page * pageSize);
+
   return (
-    <div className="space-y-3">
-      {sortedTransactions.map((txn) => (
-        <div
-          key={txn.id}
-          className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
-                  {txn.merchant}
-                </span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
-                  {txn.category}
-                </span>
+    <div className="space-y-4">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Search by merchant, description, category, or notes"
+          className="w-full pl-10 pr-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
+        />
+      </div>
+
+      {filteredTransactions.length === 0 ? (
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-700 rounded-xl">
+          <p>No transactions match your search.</p>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+            <span>
+              Showing {startIndex}-{endIndex} of {filteredTransactions.length.toLocaleString()} transactions
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                disabled={page === 1}
+                className="px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Previous
+              </button>
+              <span className="font-medium">
+                Page {page} / {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={page === totalPages}
+                className="px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {paginatedTransactions.map((txn) => (
+              <div
+                key={txn.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => handleOpenDetails(txn)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleOpenDetails(txn);
+                  }
+                }}
+                className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md transition-shadow cursor-pointer focus-visible:ring-2 focus-visible:ring-green-500/70 focus:outline-none"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">
+                        {txn.merchant}
+                      </span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
+                        {txn.category}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{txn.description}</p>
+                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                      <span>{new Date(txn.date).toLocaleDateString()}</span>
+                      {txn.tags && txn.tags.length > 0 && (
+                        <span className="text-purple-600 dark:text-purple-400">
+                          {txn.tags.join(', ')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div
+                      className={`text-lg font-bold ${
+                        txn.amount < 0
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-red-600 dark:text-red-400'
+                      }`}
+                    >
+                      {txn.amount < 0 ? '+' : '-'}${Math.abs(txn.amount).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </div>
+                  </div>
+                </div>
+                {txn.notes && (
+                  <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 italic">
+                    {txn.notes}
+                  </div>
+                )}
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{txn.description}</p>
-              <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                <span>{new Date(txn.date).toLocaleDateString()}</span>
-                {txn.tags && txn.tags.length > 0 && (
-                  <span className="text-purple-600 dark:text-purple-400">
-                    {txn.tags.join(', ')}
-                  </span>
+            ))}
+          </div>
+
+          <CSVTransactionDetailModal
+            transaction={selectedTransaction}
+            isOpen={showDetails && Boolean(selectedTransaction)}
+            onClose={handleCloseDetails}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+interface CSVTransactionDetailModalProps {
+  transaction: CsvTransaction | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+function CSVTransactionDetailModal({ transaction, isOpen, onClose }: CSVTransactionDetailModalProps) {
+  if (!transaction || !isOpen) return null;
+
+  const isIncome = transaction.amount < 0;
+  const amount = Math.abs(transaction.amount);
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: 'USD',
+    }).format(value);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-900"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header className="flex items-start justify-between border-b border-gray-200 p-6 dark:border-gray-800">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Transaction Details
+            </p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-50">{transaction.merchant}</h2>
+            <div className="mt-2 text-lg font-semibold">
+              <span className={isIncome ? 'text-emerald-600' : 'text-rose-600'}>
+                {isIncome ? '+' : '-'}
+                {formatCurrency(amount)}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-full p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </header>
+
+        <div className="space-y-5 p-6">
+          <section className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900/40">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <Calendar className="h-4 w-4" />
+              <span>{new Date(transaction.date).toLocaleDateString()}</span>
+              <span className="text-gray-400">•</span>
+              <span>{transaction.category}</span>
+            </div>
+            <p className="text-base text-gray-700 dark:text-gray-200">{transaction.description}</p>
+            {transaction.notes && (
+              <p className="text-sm italic text-gray-500 dark:text-gray-400">{transaction.notes}</p>
+            )}
+          </section>
+
+          <section className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900/40">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Source
+              </p>
+              <p className="mt-1 text-sm text-gray-700 dark:text-gray-200 capitalize">
+                {transaction.source || 'csv-upload'}
+              </p>
+              {transaction.csvFileName && (
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  File: {transaction.csvFileName}
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900/40">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Tags
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {transaction.tags && transaction.tags.length > 0 ? (
+                  transaction.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                    >
+                      <Tag className="h-3 w-3" />
+                      {tag}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">No tags</span>
                 )}
               </div>
             </div>
-            <div className="text-right">
-              <div
-                className={`text-lg font-bold ${
-                  txn.amount < 0
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-red-600 dark:text-red-400'
-                }`}
-              >
-                {txn.amount < 0 ? '+' : '-'}${Math.abs(txn.amount).toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </div>
-            </div>
-          </div>
-          {txn.notes && (
-            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 italic">
-              {txn.notes}
-            </div>
-          )}
+          </section>
         </div>
-      ))}
+      </div>
     </div>
   );
 }
