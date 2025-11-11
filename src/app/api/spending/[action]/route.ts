@@ -43,7 +43,7 @@ export async function POST(
       { status: 401 }
     );
   }
-  const idToken = authHeader.replace('Bearer', '').trim();
+  const idToken = authHeader.slice(7).trim(); // Remove "Bearer " prefix (7 chars)
   const appCheckToken = req.headers.get('x-firebase-appcheck');
   const instanceIdToken = req.headers.get('firebase-instance-id-token');
 
