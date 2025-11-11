@@ -62,6 +62,25 @@ export function getDateString(date: Date = new Date()): string {
 }
 
 /**
+ * Get a date string in YYYY-MM-DD format using the local timezone
+ * 
+ * @param date - Date to format (defaults to current date)
+ * @returns Date string adjusted to the current timezone (YYYY-MM-DD)
+ * 
+ * @example
+ * ```typescript
+ * getLocalDateString(new Date('2025-01-24T15:00:00')) // '2025-01-24'
+ * getLocalDateString() // Current local date in YYYY-MM-DD format
+ * ```
+ */
+export function getLocalDateString(date: Date = new Date()): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
  * Check if a date falls on a workday (Monday-Friday)
  * 
  * @param date - Date to check (defaults to current date)
@@ -249,7 +268,7 @@ export function isTaskCompletedToday(task: {
   }
 
   // For recurring tasks, check if there's a completion for today
-  const today = getDateString(new Date())
+  const today = getLocalDateString(new Date())
   return task.completionHistory?.some(c => c.date === today) ?? false
 }
 

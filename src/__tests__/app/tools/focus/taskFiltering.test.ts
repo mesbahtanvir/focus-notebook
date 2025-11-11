@@ -8,11 +8,11 @@
  */
 
 import { TaskBuilder } from '@/__tests__/utils/builders/TaskBuilder';
-import { getDateString, isWorkday, isTaskCompletedToday } from '@/lib/utils/date';
+import { getLocalDateString, isWorkday, isTaskCompletedToday } from '@/lib/utils/date';
 import type { Task, TaskCompletion } from '@/store/useTasks';
 
 describe('Focus Page Task Filtering', () => {
-  const today = getDateString(new Date());
+  const today = getLocalDateString(new Date());
 
   const completion = (date: string): TaskCompletion => ({
     date,

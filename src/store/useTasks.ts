@@ -3,7 +3,7 @@ import { collection, query, orderBy } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebaseClient'
 import { createAt, updateAt, deleteAt } from '@/lib/data/gateway'
 import { subscribeCol } from '@/lib/data/subscribe'
-import { isWorkday, getDateString } from '@/lib/utils/date'
+import { isWorkday, getLocalDateString } from '@/lib/utils/date'
 import { AIActionMetadata } from '@/types/aiMetadata'
 
 export type TaskStatus = 'active' | 'completed' | 'backlog'
@@ -78,7 +78,7 @@ export interface Task {
 function shouldCreateTaskForToday(task: Task, existingTasks: Task[]): boolean {
   if (!task.recurrence || task.recurrence.type === 'none') return false
   
-  const today = getDateString(new Date())
+  const today = getLocalDateString(new Date())
   const { type } = task.recurrence
   
   // For workweek tasks, only create on weekdays
@@ -109,7 +109,7 @@ function shouldCreateTaskForToday(task: Task, existingTasks: Task[]): boolean {
 
 // Create a task instance for today
 function createTaskForToday(task: Task): Omit<Task, 'id'> {
-  const today = getDateString(new Date())
+  const today = getLocalDateString(new Date())
   
   return {
     title: task.title,
@@ -263,7 +263,7 @@ export const useTasks = create<State>((set, get) => ({
     
     const isRecurring = task.recurrence && task.recurrence.type !== 'none'
     const nowDone = !task.done
-    const today = getDateString(new Date())
+    const today = getLocalDateString(new Date())
     
     let updates: Partial<Task> = {}
     

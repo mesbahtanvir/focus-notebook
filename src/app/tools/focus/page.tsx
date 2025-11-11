@@ -16,7 +16,7 @@ import { FocusSession as FocusSessionType } from "@/store/useFocus";
 import { formatDateTime } from "@/lib/formatDateTime";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
-import { isWorkday, getDateString, isTaskCompletedToday } from "@/lib/utils/date";
+import { isWorkday, getLocalDateString, isTaskCompletedToday } from "@/lib/utils/date";
 import { isTaskRelevantForToday as determineTaskRelevanceForToday } from "./isTaskRelevantForToday";
 
 const PRIORITY_WEIGHTS: Record<TaskPriority, number> = {
@@ -64,7 +64,7 @@ function FocusPageContent() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Filter active tasks - ALL active tasks are candidates for focus selection
-  const today = getDateString(new Date());
+  const today = getLocalDateString(new Date());
   const activeTasks = tasks.filter(t => {
     // Basic filter: active status only
     // Note: focusEligible is checked but undefined is treated as eligible (opt-out, not opt-in)

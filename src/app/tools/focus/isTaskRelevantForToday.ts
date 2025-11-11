@@ -1,5 +1,5 @@
 import type { Task, TaskCompletion } from '@/store/useTasks';
-import { getDateString } from '@/lib/utils/date';
+import { getLocalDateString } from '@/lib/utils/date';
 
 function normalizeDate(date: Date): Date {
   const normalized = new Date(date);
@@ -55,7 +55,7 @@ function hasCompletionOnDate(task: Task, date: string): boolean {
 
   if (task.completedAt) {
     const completedDate = parseDate(task.completedAt);
-    if (completedDate && getDateString(completedDate) === date) {
+    if (completedDate && getLocalDateString(completedDate) === date) {
       return true;
     }
   }
