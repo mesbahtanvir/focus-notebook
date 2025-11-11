@@ -41,6 +41,7 @@ export default function CSVFileManager({ enableManualProcessing = false }: CSVFi
   useEffect(() => {
     if (!user?.uid) return;
 
+    console.log('[CSVFileManager] Setting up listeners for user:', user.uid);
     const filesMap = new Map<string, CSVFileInfo>();
     const unsubscribers: (() => void)[] = [];
 
@@ -51,9 +52,11 @@ export default function CSVFileManager({ enableManualProcessing = false }: CSVFi
     const unsubStatements = onSnapshot(
       statementsQuery,
       (snapshot) => {
+        console.log('[CSVFileManager] Statements collection snapshot received:', snapshot.size, 'documents');
         snapshot.forEach((doc) => {
           const data = doc.data() as Statement;
           const fileName = data.fileName || doc.id;
+          console.log('[CSVFileManager] Found statement:', fileName, data);
           filesMap.set(fileName, {
             id: doc.id,
             fileName,
@@ -69,7 +72,7 @@ export default function CSVFileManager({ enableManualProcessing = false }: CSVFi
         updateFilesList();
       },
       (error) => {
-        console.warn('Error loading statements collection (might not exist yet):', error);
+        console.warn('[CSVFileManager] Error loading statements collection:', error);
       }
     );
     unsubscribers.push(unsubStatements);
@@ -81,9 +84,11 @@ export default function CSVFileManager({ enableManualProcessing = false }: CSVFi
     const unsubStatus = onSnapshot(
       statusQuery,
       (snapshot) => {
+        console.log('[CSVFileManager] csvProcessingStatus collection snapshot received:', snapshot.size, 'documents');
         snapshot.forEach((doc) => {
           const data = doc.data();
           const fileName = data.fileName || doc.id;
+          console.log('[CSVFileManager] Found processing status:', fileName, data);
           // Only add if not already in the new collection
           if (!filesMap.has(fileName)) {
             filesMap.set(fileName, {
@@ -102,13 +107,14 @@ export default function CSVFileManager({ enableManualProcessing = false }: CSVFi
         updateFilesList();
       },
       (error) => {
-        console.warn('Error loading old csvProcessingStatus collection:', error);
+        console.warn('[CSVFileManager] Error loading old csvProcessingStatus collection:', error);
       }
     );
     unsubscribers.push(unsubStatus);
 
     function updateFilesList() {
       const files = Array.from(filesMap.values());
+      console.log('[CSVFileManager] Updating files list with', files.length, 'files:', files);
       // Sort by updatedAt in memory (newest first)
       files.sort((a, b) => {
         const aTime = a.updatedAt?.toMillis?.() || a.updatedAt?.toDate?.().getTime() || 0;
