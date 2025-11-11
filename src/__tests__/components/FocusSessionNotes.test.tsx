@@ -21,6 +21,7 @@ jest.mock('@/lib/data/gateway', () => ({
   createAt: jest.fn().mockResolvedValue('mock-session-id'),
   updateAt: jest.fn().mockResolvedValue(undefined),
   deleteAt: jest.fn().mockResolvedValue(undefined),
+  setAt: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Mock subscription
