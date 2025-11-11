@@ -64,7 +64,9 @@ function AdminPageContent() {
   const [requestStatusFilter, setRequestStatusFilter] = useState<'all' | 'pending' | 'in-progress' | 'completed' | 'failed'>('all');
   const [requestTypeFilter, setRequestTypeFilter] = useState<'all' | 'firebase' | 'api' | 'sync'>('all');
   const [requestSearch, setRequestSearch] = useState('');
-  const [promptTriggerFilter, setPromptTriggerFilter] = useState<'all' | 'auto' | 'manual' | 'reprocess'>('all');
+  const [promptTriggerFilter, setPromptTriggerFilter] = useState<
+    'all' | 'auto' | 'manual' | 'reprocess' | 'csv-upload' | 'csv-api'
+  >('all');
   const [promptStatusFilter, setPromptStatusFilter] = useState<'all' | 'completed' | 'failed'>('all');
   const [promptSearch, setPromptSearch] = useState('');
   const promptThoughtAppliedRef = useRef<string | null>(null);
@@ -549,13 +551,19 @@ function AdminPageContent() {
               Trigger
               <select
                 value={promptTriggerFilter}
-                onChange={(e) => setPromptTriggerFilter(e.target.value as 'all' | 'auto' | 'manual' | 'reprocess')}
+                onChange={(e) =>
+                  setPromptTriggerFilter(
+                    e.target.value as 'all' | 'auto' | 'manual' | 'reprocess' | 'csv-upload' | 'csv-api'
+                  )
+                }
                 className="mt-1 rounded-lg border border-purple-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
               >
                 <option value="all">All triggers</option>
                 <option value="auto">Auto</option>
                 <option value="manual">Manual</option>
                 <option value="reprocess">Reprocess</option>
+                <option value="csv-upload">CSV Upload</option>
+                <option value="csv-api">CSV API</option>
               </select>
             </label>
             <label className="text-xs text-gray-600 font-semibold flex flex-col">

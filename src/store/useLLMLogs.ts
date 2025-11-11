@@ -6,7 +6,7 @@ import { subscribeCol } from '@/lib/data/subscribe';
 export interface LLMLog {
   id: string;
   thoughtId?: string;
-  trigger: 'auto' | 'manual' | 'reprocess';
+  trigger: 'auto' | 'manual' | 'reprocess' | 'csv-upload' | 'csv-api';
   prompt: string;
   rawResponse: string;
   actions?: any[];
@@ -19,6 +19,8 @@ export interface LLMLog {
   createdAt?: string;
   status?: 'completed' | 'failed';
   error?: string;
+  promptType?: string;
+  metadata?: Record<string, any>;
 }
 
 interface State {

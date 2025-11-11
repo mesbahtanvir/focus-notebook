@@ -25,6 +25,7 @@ import {
   SUBSCRIPTION_STATUS_DOC_ID,
 } from '../../shared/subscription';
 import { incrementUsageStats } from './stripeBilling';
+import { logLLMInteraction } from './utils/aiPromptLogger';
 
 const ANONYMOUS_SESSION_COLLECTION = 'anonymousSessions';
 const ANONYMOUS_AI_OVERRIDE_KEY = process.env.ANONYMOUS_AI_OVERRIDE_KEY || '';
@@ -215,36 +216,6 @@ async function enqueueProcessingJob(
   ]);
 
   return { jobId: jobRef.id, status: 'queued' };
-}
-
-async function logLLMInteraction(params: {
-  userId: string;
-  thoughtId: string;
-  trigger: ProcessingTrigger;
-  prompt: string;
-  rawResponse: string;
-  actions: any[];
-  toolSpecIds: string[];
-  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
-  error?: string;
-}) {
-  const { userId, thoughtId, trigger, prompt, rawResponse, actions, toolSpecIds, usage, error } = params;
-  const logRef = admin
-    .firestore()
-    .collection(`users/${userId}/llmLogs`)
-    .doc();
-
-  await logRef.set({
-    thoughtId,
-    trigger,
-    prompt,
-    rawResponse,
-    actions,
-    toolSpecIds,
-    usage: usage || null,
-    error: error || null,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
 }
 
 async function createAutoRelationships(params: {

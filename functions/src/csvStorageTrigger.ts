@@ -10,6 +10,7 @@ import * as fsSync from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
 import { CONFIG } from './config';
+import { logLLMInteraction, formatPromptForLogging, type LlmLogTrigger } from './utils/aiPromptLogger';
 
 const PROMPT_FILE_NAME = 'enhance-transactions.prompt.yml';
 
@@ -57,6 +58,21 @@ interface ProcessingStatus {
   updatedAt: string;
 }
 
+interface EnhancementLoggingOptions {
+  userId?: string;
+  trigger?: LlmLogTrigger;
+  metadata?: Record<string, any>;
+}
+
+type AiResponsePayload =
+  | {
+      transactions?: EnhancedTransaction[];
+      summary?: any;
+    }
+  | EnhancedTransaction[]
+  | null
+  | undefined;
+
 function tryParseJson<T = unknown>(input: string): T | null {
   try {
     return JSON.parse(input);
@@ -92,6 +108,48 @@ function parseStructuredAIResponse<T = unknown>(aiResponse: string): T {
   }
 
   throw new Error('Failed to parse AI-enhanced transaction data');
+}
+
+function buildFallbackSummary(
+  transactions: EnhancedTransaction[],
+  expectedCount: number
+) {
+  const categories = transactions
+    .map((tx) => tx.category)
+    .filter((category): category is string => Boolean(category));
+
+  return {
+    totalProcessed: transactions.length || expectedCount,
+    categoriesUsed: Array.from(new Set(categories)),
+    subscriptionsDetected: transactions.filter((tx) => tx.isSubscription).length,
+  };
+}
+
+function normalizeAiResponse(
+  parsed: AiResponsePayload,
+  expectedCount: number
+): { transactions: EnhancedTransaction[]; summary: any } {
+  if (!parsed) {
+    return {
+      transactions: [],
+      summary: buildFallbackSummary([], expectedCount),
+    };
+  }
+
+  if (Array.isArray(parsed)) {
+    return {
+      transactions: parsed,
+      summary: buildFallbackSummary(parsed, expectedCount),
+    };
+  }
+
+  const transactions = Array.isArray(parsed.transactions) ? parsed.transactions : [];
+  const summary = parsed.summary ?? buildFallbackSummary(transactions, expectedCount);
+
+  return {
+    transactions,
+    summary,
+  };
 }
 
 /**
@@ -190,7 +248,8 @@ function parseCSV(csvContent: string): CSVTransaction[] {
  * Enhance transactions using AI
  */
 async function enhanceTransactions(
-  transactions: CSVTransaction[]
+  transactions: CSVTransaction[],
+  logging?: EnhancementLoggingOptions
 ): Promise<{
   transactions: EnhancedTransaction[];
   summary: any;
@@ -209,6 +268,40 @@ async function enhanceTransactions(
     ? prompt.model.split('/')[1]
     : prompt.model || 'gpt-4o';
 
+  const promptForLog = formatPromptForLogging(systemMessage, userMessage);
+  const logMetadata = {
+    promptFile: PROMPT_FILE_NAME,
+    model: modelName,
+    batchSize: transactions.length,
+    ...logging?.metadata,
+  };
+  let logRecorded = false;
+
+  const logResult = async (
+    status: 'completed' | 'failed',
+    rawResponse: string,
+    error?: unknown
+  ) => {
+    if (!logging?.userId) {
+      return;
+    }
+    try {
+      await logLLMInteraction({
+        userId: logging.userId,
+        trigger: logging.trigger ?? 'csv-upload',
+        prompt: promptForLog,
+        rawResponse,
+        promptType: 'enhance-transactions',
+        metadata: logMetadata,
+        status,
+        error: error ? (error instanceof Error ? error.message : String(error)) : undefined,
+      });
+      logRecorded = true;
+    } catch (logError) {
+      console.warn('Failed to log transaction enhancement prompt history', logError);
+    }
+  };
+
   // Call OpenAI API directly
   const requestBody: Record<string, unknown> = {
     model: modelName,
@@ -221,33 +314,49 @@ async function enhanceTransactions(
     response_format: { type: 'json_object' },
   };
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${CONFIG.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify(requestBody),
-  });
+  let responseBody = '';
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`);
-  }
-
-  const data = await response.json();
-  const aiResponse = data.choices[0]?.message?.content;
-
-  if (!aiResponse) {
-    throw new Error('No response from OpenAI');
-  }
-
-  // Parse the response
   try {
-    return parseStructuredAIResponse(aiResponse);
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${CONFIG.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    responseBody = await response.text();
+    const data = responseBody ? JSON.parse(responseBody) : null;
+
+    if (!response.ok) {
+      const message = data?.error?.message || 'Unknown error';
+      await logResult('failed', responseBody, message);
+      throw new Error(`OpenAI API error: ${message}`);
+    }
+
+    const aiResponse = data?.choices?.[0]?.message?.content;
+
+    if (!aiResponse) {
+      await logResult('failed', responseBody, 'No response from OpenAI');
+      throw new Error('No response from OpenAI');
+    }
+
+    try {
+      const parsed = parseStructuredAIResponse<AiResponsePayload>(aiResponse);
+      const normalized = normalizeAiResponse(parsed, transactions.length);
+      await logResult('completed', aiResponse);
+      return normalized;
+    } catch (error) {
+      console.error('Failed to parse AI response:', error);
+      console.error('Response was:', aiResponse);
+      await logResult('failed', aiResponse, error);
+      throw error;
+    }
   } catch (error) {
-    console.error('Failed to parse AI response:', error);
-    console.error('Response was:', aiResponse);
+    if (!logRecorded) {
+      await logResult('failed', responseBody, error);
+    }
     throw error;
   }
 }
@@ -408,11 +517,25 @@ export const onCSVUpload = functions.storage.object().onFinalize(async (object) 
 
     // Enhance transactions with AI (process in batches of 50)
     const batchSize = 50;
+    const totalBatches = Math.ceil(transactions.length / batchSize);
     const allEnhanced: EnhancedTransaction[] = [];
 
     for (let i = 0; i < transactions.length; i += batchSize) {
       const batch = transactions.slice(i, i + batchSize);
-      const result = await enhanceTransactions(batch);
+      const batchIndex = Math.floor(i / batchSize);
+      const result = await enhanceTransactions(batch, {
+        userId,
+        trigger: 'csv-upload',
+        metadata: {
+          source: 'storage-trigger',
+          fileName,
+          storagePath: filePath,
+          batchIndex,
+          totalBatches,
+          batchSize: batch.length,
+          totalTransactions: transactions.length,
+        },
+      });
       allEnhanced.push(...result.transactions);
     }
 
