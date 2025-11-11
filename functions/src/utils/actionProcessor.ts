@@ -7,6 +7,9 @@
 import { CONFIG } from '../config';
 import { AIAction } from './openaiClient';
 
+const GOAL_TAG_PREFIX = 'goal-';
+const PROJECT_TAG_PREFIX = 'project-';
+
 export interface PendingLink {
   targetType: 'goal' | 'project';
   targetId: string;
@@ -93,12 +96,53 @@ function applyHighConfidenceAction(
       result.autoApply.textChanges = action.data.changes || [];
       break;
 
-    case 'addTag':
-      const tag = action.data.tag;
-      const normalizedTag = typeof tag === 'string' ? tag.toLowerCase() : '';
+    case 'addTag': {
+      const tag = typeof action.data.tag === 'string' ? action.data.tag.trim() : '';
+      const normalizedTag = tag.toLowerCase();
+
+      if (!tag) {
+        break;
+      }
 
       // Skip deprecated person tags
       if (normalizedTag.startsWith('person-')) {
+        break;
+      }
+
+      // Convert legacy entity tags into graph relationships instead of storing on the thought
+      if (normalizedTag.startsWith(GOAL_TAG_PREFIX)) {
+        const goalId = tag.slice(GOAL_TAG_PREFIX.length);
+        if (goalId) {
+          const exists = result.linksToCreate.find(
+            (link) => link.targetType === 'goal' && link.targetId === goalId
+          );
+          if (!exists) {
+            result.linksToCreate.push({
+              targetType: 'goal',
+              targetId: goalId,
+              relationshipType: 'linked-to',
+              confidence: action.confidence,
+            });
+          }
+        }
+        break;
+      }
+
+      if (normalizedTag.startsWith(PROJECT_TAG_PREFIX)) {
+        const projectId = tag.slice(PROJECT_TAG_PREFIX.length);
+        if (projectId) {
+          const exists = result.linksToCreate.find(
+            (link) => link.targetType === 'project' && link.targetId === projectId
+          );
+          if (!exists) {
+            result.linksToCreate.push({
+              targetType: 'project',
+              targetId: projectId,
+              relationshipType: 'linked-to',
+              confidence: action.confidence,
+            });
+          }
+        }
         break;
       }
 
@@ -107,6 +151,7 @@ function applyHighConfidenceAction(
         result.autoApply.tagsToAdd.push(tag);
       }
       break;
+    }
 
     // These are handled through entity tags
     case 'linkToGoal': {

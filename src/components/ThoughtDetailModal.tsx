@@ -472,6 +472,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
         setThoughtPromptLogs(entries);
       } catch (error) {
         if (isMounted) {
+          console.log('Error loading thought prompt logs:', error);
           setThoughtPromptError('Unable to load recent AI requests');
         }
       } finally {
@@ -744,12 +745,21 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                         <p className="text-xs text-gray-600 dark:text-gray-400">Latest debug logs for this thought</p>
                       </div>
                     </div>
-                    <Link
-                      href={`/admin?thoughtId=${thought.id}`}
-                      className="text-xs font-semibold text-purple-700 dark:text-purple-300 hover:underline"
-                    >
-                      Open Debug Console ↗
-                    </Link>
+                    <div className="flex items-center gap-3 text-xs font-semibold">
+                      <Link
+                        href={`/admin/prompts?thoughtId=${thought.id}`}
+                        className="text-purple-700 dark:text-purple-300 hover:underline"
+                      >
+                        Open AI History ↗
+                      </Link>
+                      <span className="text-gray-400">•</span>
+                      <Link
+                        href={`/admin?thoughtId=${thought.id}`}
+                        className="text-gray-600 dark:text-gray-400 hover:underline"
+                      >
+                        Debug Console ↗
+                      </Link>
+                    </div>
                   </div>
 
                   {isThoughtPromptLoading && (
@@ -760,8 +770,14 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                   )}
 
                   {thoughtPromptError && (
-                    <div className="text-sm text-red-600 dark:text-red-300">
-                      {thoughtPromptError}
+                    <div className="text-sm text-red-600 dark:text-red-300 space-y-1">
+                      <p>{thoughtPromptError}</p>
+                      <Link
+                        href={`/admin/prompts?thoughtId=${thought.id}`}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-purple-700 hover:underline dark:text-purple-300"
+                      >
+                        View AI history ↗
+                      </Link>
                     </div>
                   )}
 

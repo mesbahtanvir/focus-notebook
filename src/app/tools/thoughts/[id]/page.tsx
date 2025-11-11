@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useThoughts, Thought } from "@/store/useThoughts";
 import { ThoughtProcessingService } from "@/services/thoughtProcessingService";
@@ -15,8 +15,8 @@ import {
   Loader2,
 } from "lucide-react";
 
-export default function ThoughtDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function ThoughtDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const router = useRouter();
   const thoughts = useThoughts((s) => s.thoughts);
   
