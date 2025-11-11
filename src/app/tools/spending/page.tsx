@@ -358,28 +358,24 @@ export default function SpendingPage() {
                 </div>
               </div>
 
-              {/* Existing Statements */}
-              {(hasPlaidConnections || hasCSVData) && (
-                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-                    Statement History
-                  </h3>
+              {/* Statement History - Always show to display processing/failed uploads */}
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                  Statement History
+                </h3>
 
-                  {hasCSVData && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        CSV Uploads
-                      </h4>
-                      <CSVFileManager enableManualProcessing />
-                    </div>
-                  )}
+                {/* CSV Uploads - Always shown, handles empty state internally */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    CSV Uploads
+                  </h4>
+                  <CSVFileManager enableManualProcessing />
+                </div>
 
-                  {hasPlaidConnections && hasCSVData && (
+                {hasPlaidConnections && (
+                  <>
                     <div className="my-6 border-t border-gray-200 dark:border-gray-700" />
-                  )}
-
-                  {hasPlaidConnections && (
                     <div>
                       <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                         <Building className="h-4 w-4" />
@@ -389,9 +385,9 @@ export default function SpendingPage() {
                         <ConnectionsManager />
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
+                  </>
+                )}
+              </div>
             </div>
           </TabsContent>
 
