@@ -802,7 +802,7 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                             <span></span>
                           )}
                           <Link
-                            href={`/admin?promptId=${log.id}`}
+                            href={`/admin/prompts/${log.id}`}
                             className="text-purple-600 dark:text-purple-300 font-semibold hover:underline"
                           >
                             View log ↗

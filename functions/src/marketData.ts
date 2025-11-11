@@ -169,6 +169,20 @@ const collectCurrenciesFromPortfolio = (portfolio: FirestorePortfolio): string[]
  */
 const delay = (duration: number) => new Promise(resolve => setTimeout(resolve, duration));
 
+class QuoteNotFoundError extends Error {
+  constructor(ticker: string) {
+    super(`Alpha Vantage returned no quote for ${ticker}`);
+    this.name = 'QuoteNotFoundError';
+  }
+}
+
+class QuoteDataError extends Error {
+  constructor(ticker: string, detail: string) {
+    super(`Alpha Vantage returned invalid data for ${ticker}: ${detail}`);
+    this.name = 'QuoteDataError';
+  }
+}
+
 const parseAlphaVantageQuote = (ticker: string, payload: any): TrackedQuote => {
   if (!payload) {
     throw new Error('Missing Alpha Vantage response payload');
@@ -184,7 +198,7 @@ const parseAlphaVantageQuote = (ticker: string, payload: any): TrackedQuote => {
 
   const quote = payload['Global Quote'];
   if (!quote || typeof quote !== 'object') {
-    throw new Error(`Alpha Vantage returned no quote for ${ticker}`);
+    throw new QuoteNotFoundError(ticker);
   }
 
   const price = Number.parseFloat(quote['05. price']);
@@ -194,7 +208,7 @@ const parseAlphaVantageQuote = (ticker: string, payload: any): TrackedQuote => {
   const latestTradingDay = typeof quote['07. latest trading day'] === 'string' ? quote['07. latest trading day'] : '';
 
   if (!Number.isFinite(price)) {
-    throw new Error(`Alpha Vantage returned an invalid price for ${ticker}`);
+    throw new QuoteDataError(ticker, 'invalid price');
   }
 
   return {
@@ -208,11 +222,24 @@ const parseAlphaVantageQuote = (ticker: string, payload: any): TrackedQuote => {
   };
 };
 
-const fetchTickerQuote = async (ticker: string, apiKey: string): Promise<TrackedQuote> => {
+const fetchTickerQuote = async (
+  ticker: string,
+  apiKey: string,
+  logger: Pick<typeof functions.logger, 'info' | 'warn' | 'error'> = functions.logger
+): Promise<TrackedQuote> => {
   const params = new URLSearchParams({
     function: 'GLOBAL_QUOTE',
     symbol: ticker,
     apikey: apiKey,
+  });
+
+  logger.info('Requesting Alpha Vantage quote', {
+    ticker,
+    endpoint: ALPHA_VANTAGE_BASE_URL,
+    params: {
+      function: 'GLOBAL_QUOTE',
+      symbol: ticker,
+    },
   });
 
   const response = await fetch(`${ALPHA_VANTAGE_BASE_URL}?${params.toString()}`);
@@ -325,7 +352,7 @@ const runRefreshTrackedTickerPrices = async (
   const tickerSnapshots: Record<string, TrackedQuote> = {};
   const failures: Array<{ ticker: string; error: string }> = [];
   const quoteFetcher =
-    dependencies.quoteFetcher ?? ((ticker: string) => fetchTickerQuote(ticker, apiKey));
+    dependencies.quoteFetcher ?? ((ticker: string) => fetchTickerQuote(ticker, apiKey, logger));
   const delayFn = dependencies.delayFn ?? delay;
   const nowProvider = dependencies.now ?? (() => new Date());
 
@@ -342,11 +369,20 @@ const runRefreshTrackedTickerPrices = async (
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       failures.push({ ticker, error: errorMessage });
-      logger.error('Failed to refresh ticker price', {
+
+      const logPayload = {
         ticker,
         error: errorMessage,
         executionId: context.eventId,
-      });
+      };
+
+      if (error instanceof QuoteNotFoundError) {
+        logger.warn('Skipping ticker without Alpha Vantage quote', logPayload);
+      } else if (error instanceof QuoteDataError) {
+        logger.warn('Skipping ticker with invalid Alpha Vantage data', logPayload);
+      } else {
+        logger.error('Failed to refresh ticker price', logPayload);
+      }
     }
 
     if (index < trackedTickers.length - 1) {
@@ -409,5 +445,7 @@ export const __private__ = {
   runUpdateTrackedTickers,
   runRefreshTrackedTickerPrices,
   fetchTickerQuote,
+  QuoteNotFoundError,
+  QuoteDataError,
   delay,
 };
