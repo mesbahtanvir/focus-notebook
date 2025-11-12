@@ -65,6 +65,8 @@ export interface Task {
   thoughtId?: string // Link to thought that created this task
   focusEligible?: boolean // Can be done during a focus session (laptop/notebook work)
   ctaButton?: CTAButton // Call-to-action button for quick access to related tools/sites
+  archived?: boolean // Whether the task is archived
+  archivedAt?: string // ISO timestamp when task was archived
 
   // AI Action Tracking (Bug 1)
   createdBy?: 'ai' | 'user' // Who created this task
@@ -162,6 +164,8 @@ type State = {
   toggle: (id: string) => Promise<void>
   updateTask: (id: string, updates: Partial<Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>>) => Promise<void>
   deleteTask: (id: string) => Promise<void>
+  archiveTask: (id: string) => Promise<void>
+  unarchiveTask: (id: string) => Promise<void>
   getTasksByStatus: (status: TaskStatus) => Task[]
   resetDailyTasks: () => Promise<void>
   resetWeeklyTasks: () => Promise<void>
@@ -317,10 +321,30 @@ export const useTasks = create<State>((set, get) => ({
   deleteTask: async (id) => {
     const userId = auth.currentUser?.uid
     if (!userId) throw new Error('Not authenticated')
-    
+
     await deleteAt(`users/${userId}/tasks/${id}`)
   },
-  
+
+  archiveTask: async (id) => {
+    const userId = auth.currentUser?.uid
+    if (!userId) throw new Error('Not authenticated')
+
+    await updateAt(`users/${userId}/tasks/${id}`, {
+      archived: true,
+      archivedAt: new Date().toISOString(),
+    })
+  },
+
+  unarchiveTask: async (id) => {
+    const userId = auth.currentUser?.uid
+    if (!userId) throw new Error('Not authenticated')
+
+    await updateAt(`users/${userId}/tasks/${id}`, {
+      archived: false,
+      archivedAt: undefined,
+    })
+  },
+
   getTasksByStatus: (status) => {
     return get().tasks.filter(t => t.status === status)
   },

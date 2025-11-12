@@ -6,18 +6,22 @@ import { useTasks, Task } from "@/store/useTasks";
 import { useThoughts } from "@/store/useThoughts";
 import { isTodayISO, isTaskCompletedToday } from "@/lib/utils/date";
 import Link from "next/link";
-import { MessageCircle, ExternalLink } from "lucide-react";
+import { MessageCircle, ExternalLink, Archive } from "lucide-react";
 import { TimeDisplay } from "./TimeDisplay";
 
 export default function TaskList() {
   const tasks = useTasks((s) => s.tasks);
   const thoughts = useThoughts((s) => s.thoughts);
   const toggle = useTasks((s) => s.toggle);
+  const archiveTask = useTasks((s) => s.archiveTask);
   const prefersReducedMotion = useReducedMotion();
   const [showCompleted, setShowCompleted] = useState(false);
 
   const todays = useMemo(() => {
     const list = tasks.filter((t) => {
+      // Hide archived tasks
+      if (t.archived) return false;
+
       // Show tasks for today
       const isToday = isTodayISO(t.dueDate) || isTodayISO(t.createdAt);
       if (!isToday) return false;
@@ -91,6 +95,19 @@ export default function TaskList() {
                 exit={{ opacity: 0 }}
                 className={`group relative overflow-hidden rounded-lg p-3 transition-all duration-300 border ${isTaskCompletedToday(t) ? "opacity-50 bg-gray-50 dark:bg-gray-800/30 border-gray-300 dark:border-gray-700" : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"}`}
               >
+                {/* Archive Button - Shows on hover */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    archiveTask(t.id);
+                  }}
+                  className="absolute top-2 right-2 p-1.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10"
+                  title="Archive task"
+                  aria-label={`Archive ${t.title}`}
+                >
+                  <Archive className="h-3.5 w-3.5" />
+                </button>
+
                 <div className="flex items-start gap-2">
                   <input
                     type="checkbox"
