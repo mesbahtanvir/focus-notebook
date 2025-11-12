@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Friend, RelationshipType, EnergyLevel, InteractionFrequency } from "@/store/useFriends";
 import { Heart, X, Save } from "lucide-react";
+import RichTextEditor from "@/components/RichTextEditor";
 
 export function FriendModal({ friend, onClose, onSave }: {
   friend: Friend | null;
@@ -296,12 +297,11 @@ export function FriendModal({ friend, onClose, onSave }: {
             {/* Notes */}
             <div>
               <label className="block text-sm font-medium mb-2">📝 Notes & Reflections</label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                rows={4}
-                className="input w-full"
+              <RichTextEditor
+                content={formData.notes || ''}
+                onChange={(value) => setFormData({ ...formData, notes: value })}
                 placeholder="Write your observations, feelings, and reflections about this relationship..."
+                minHeight="min-h-[150px]"
               />
             </div>
           </div>

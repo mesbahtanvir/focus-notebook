@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Place, PlaceType } from "@/store/usePlaces";
 import { MapPin, X, Save, Link as LinkIcon, Plus as PlusIcon } from "lucide-react";
+import RichTextEditor from "@/components/RichTextEditor";
 
 export function PlaceModal({ place, onClose, onSave }: {
   place: Place | null;
@@ -182,12 +183,11 @@ export function PlaceModal({ place, onClose, onSave }: {
             {/* Description */}
             <div>
               <label className="block text-sm font-medium mb-2">Description (Optional)</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="input w-full"
-                rows={3}
+              <RichTextEditor
+                content={formData.description || ''}
+                onChange={(value) => setFormData({ ...formData, description: value })}
                 placeholder="What makes this place special..."
+                minHeight="min-h-[120px]"
               />
             </div>
 
@@ -454,12 +454,11 @@ export function PlaceModal({ place, onClose, onSave }: {
             {/* Notes */}
             <div>
               <label className="block text-sm font-medium mb-2">Notes (Optional)</label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="input w-full"
-                rows={3}
+              <RichTextEditor
+                content={formData.notes || ''}
+                onChange={(value) => setFormData({ ...formData, notes: value })}
                 placeholder="Any additional notes..."
+                minHeight="min-h-[120px]"
               />
             </div>
           </div>
