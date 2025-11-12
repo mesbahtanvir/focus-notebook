@@ -256,7 +256,9 @@ export default function GoalsPage() {
                     </div>
 
                     {/* Objective text */}
-                    <p className="text-sm text-muted-foreground line-clamp-2">{goal.objective}</p>
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <div className="text-sm text-muted-foreground line-clamp-2" dangerouslySetInnerHTML={{ __html: goal.objective }} />
+                    </div>
                   </div>
                 </motion.div>
               );
@@ -348,7 +350,9 @@ export default function GoalsPage() {
                     </div>
 
                     {/* Objective text */}
-                    <p className="text-sm text-muted-foreground line-clamp-2">{goal.objective}</p>
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <div className="text-sm text-muted-foreground line-clamp-2" dangerouslySetInnerHTML={{ __html: goal.objective }} />
+                    </div>
                   </div>
                 </motion.div>
               );
@@ -386,7 +390,9 @@ export default function GoalsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold">{goal.title}</h3>
-                    <p className="text-sm text-muted-foreground">{goal.objective}</p>
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <div className="text-sm text-muted-foreground" dangerouslySetInnerHTML={{ __html: goal.objective }} />
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -433,7 +439,9 @@ export default function GoalsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold line-through text-muted-foreground">{goal.title}</h3>
-                    <p className="text-sm text-muted-foreground">{goal.objective}</p>
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <div className="text-sm text-muted-foreground" dangerouslySetInnerHTML={{ __html: goal.objective }} />
+                    </div>
                     {goal.completedAt && (
                       <p className="text-xs text-muted-foreground mt-1">
                         Completed: {new Date(goal.completedAt).toLocaleDateString()}
@@ -486,7 +494,9 @@ export default function GoalsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold text-muted-foreground">{goal.title}</h3>
-                    <p className="text-sm text-muted-foreground">{goal.objective}</p>
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <div className="text-sm text-muted-foreground" dangerouslySetInnerHTML={{ __html: goal.objective }} />
+                    </div>
                     {goal.completedAt && (
                       <p className="text-xs text-muted-foreground mt-1">
                         Archived: {new Date(goal.completedAt).toLocaleDateString()}

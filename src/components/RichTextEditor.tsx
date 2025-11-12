@@ -50,7 +50,12 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
       <div className="flex items-center gap-1 flex-wrap">
         {/* Text formatting */}
         <button
-          onClick={() => editor.chain().focus().toggleBold().run()}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            editor.chain().focus().toggleBold().run();
+          }}
           disabled={!editor.can().chain().focus().toggleBold().run()}
           className={buttonClass(editor.isActive('bold'))}
           title="Bold (Cmd+B)"
@@ -59,7 +64,12 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         </button>
 
         <button
-          onClick={() => editor.chain().focus().toggleItalic().run()}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            editor.chain().focus().toggleItalic().run();
+          }}
           disabled={!editor.can().chain().focus().toggleItalic().run()}
           className={buttonClass(editor.isActive('italic'))}
           title="Italic (Cmd+I)"
@@ -68,7 +78,12 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         </button>
 
         <button
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            editor.chain().focus().toggleUnderline().run();
+          }}
           disabled={!editor.can().chain().focus().toggleUnderline().run()}
           className={buttonClass(editor.isActive('underline'))}
           title="Underline (Cmd+U)"
@@ -77,7 +92,12 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         </button>
 
         <button
-          onClick={() => editor.chain().focus().toggleStrike().run()}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            editor.chain().focus().toggleStrike().run();
+          }}
           disabled={!editor.can().chain().focus().toggleStrike().run()}
           className={buttonClass(editor.isActive('strike'))}
           title="Strikethrough (Cmd+Shift+X)"
@@ -86,7 +106,12 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         </button>
 
         <button
-          onClick={() => editor.chain().focus().toggleCode().run()}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            editor.chain().focus().toggleCode().run();
+          }}
           disabled={!editor.can().chain().focus().toggleCode().run()}
           className={buttonClass(editor.isActive('code'))}
           title="Inline Code (Cmd+E)"
@@ -98,7 +123,12 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
 
         {/* Headings */}
         <button
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            editor.chain().focus().toggleHeading({ level: 1 }).run();
+          }}
           className={buttonClass(editor.isActive('heading', { level: 1 }))}
           title="Heading 1 (Cmd+Alt+1)"
         >
@@ -106,7 +136,12 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         </button>
 
         <button
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            editor.chain().focus().toggleHeading({ level: 2 }).run();
+          }}
           className={buttonClass(editor.isActive('heading', { level: 2 }))}
           title="Heading 2 (Cmd+Alt+2)"
         >
@@ -114,7 +149,12 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         </button>
 
         <button
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            editor.chain().focus().toggleHeading({ level: 3 }).run();
+          }}
           className={buttonClass(editor.isActive('heading', { level: 3 }))}
           title="Heading 3 (Cmd+Alt+3)"
         >
@@ -125,7 +165,12 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
 
         {/* Lists */}
         <button
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            editor.chain().focus().toggleBulletList().run();
+          }}
           className={buttonClass(editor.isActive('bulletList'))}
           title="Bullet List (Cmd+Shift+8)"
         >
@@ -133,7 +178,12 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         </button>
 
         <button
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            editor.chain().focus().toggleOrderedList().run();
+          }}
           className={buttonClass(editor.isActive('orderedList'))}
           title="Numbered List (Cmd+Shift+7)"
         >
@@ -144,7 +194,12 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
 
         {/* Undo/Redo */}
         <button
-          onClick={() => editor.chain().focus().undo().run()}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            editor.chain().focus().undo().run();
+          }}
           disabled={!editor.can().chain().focus().undo().run()}
           className={buttonClass(false)}
           title="Undo (Cmd+Z)"
@@ -153,7 +208,12 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         </button>
 
         <button
-          onClick={() => editor.chain().focus().redo().run()}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            editor.chain().focus().redo().run();
+          }}
           disabled={!editor.can().chain().focus().redo().run()}
           className={buttonClass(false)}
           title="Redo (Cmd+Shift+Z)"
@@ -165,7 +225,12 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
 
         {/* Keyboard shortcuts toggle */}
         <button
-          onClick={() => setShowShortcuts(!showShortcuts)}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowShortcuts(!showShortcuts);
+          }}
           className={buttonClass(showShortcuts)}
           title="Keyboard Shortcuts"
         >
@@ -179,7 +244,12 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
           <div className="flex items-center justify-between mb-2">
             <h4 className="font-semibold text-gray-900 dark:text-gray-100">Keyboard Shortcuts</h4>
             <button
-              onClick={() => setShowShortcuts(false)}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowShortcuts(false);
+              }}
               className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
             >
               <X className="h-4 w-4" />
