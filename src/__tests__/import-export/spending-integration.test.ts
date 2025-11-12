@@ -96,9 +96,11 @@ describe('Spending Integration in Import/Export System', () => {
         people: 12,
         portfolios: 2,
         spending: 50,
+        relationships: 7,
+        llmLogs: 4,
       };
 
-      expect(Object.keys(entityCounts).length).toBe(9);
+      expect(Object.keys(entityCounts).length).toBe(11);
       expect(entityCounts.spending).toBe(50);
     });
 
@@ -113,9 +115,11 @@ describe('Spending Integration in Import/Export System', () => {
         people: 'People',
         portfolios: 'Portfolios',
         spending: 'Transactions',
+        relationships: 'Relationships',
+        llmLogs: 'LLM Logs',
       };
 
-      expect(Object.keys(entityLabels).length).toBe(9);
+      expect(Object.keys(entityLabels).length).toBe(11);
       expect(entityLabels.spending).toBe('Transactions');
     });
   });
