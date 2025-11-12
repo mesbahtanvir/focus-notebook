@@ -121,11 +121,7 @@ async function callSpendingApi(
     throw new Error(message);
   }
 
-<<<<<<< HEAD
-  console.log('[callSpendingApi] Request succeeded:', endpoint);
-=======
   console.log('✅ API Success:', endpoint);
->>>>>>> fdb8f6b (feat: implement critical fixes and enhancements)
   return data;
 }
 
