@@ -1,0 +1,107 @@
+\documentclass[11pt]{article}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage[utf8]{inputenc}
+\geometry{margin=1in}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.75em}{}
+\setlist[itemize]{leftmargin=1.5em}
+
+\title{Focus Notebook Information Security Policy}
+\author{Focus Notebook}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Purpose \& Scope}
+This policy defines how Focus Notebook protects the confidentiality, integrity, and availability of customer data processed through our Firebase-backed platform. The policy covers all employees, contractors, systems, and vendors that interact with production or customer data, including Google Cloud Platform (GCP), Firebase services, Stripe, Plaid, and AI providers.
+
+\section{Governance}
+\begin{itemize}
+  \item The Chief Technology Officer (CTO) owns this policy, reviews it at least annually, and reports material risks to company leadership.
+  \item All personnel must acknowledge the policy during onboarding and whenever substantive updates are made.
+  \item Security requirements are embedded in our SDLC through peer review, automated checks, and deployment gates.
+  \item Risks are tracked in the internal issue tracker with owners, mitigation dates, and validation notes.
+\end{itemize}
+
+\section{Risk Management}
+\begin{itemize}
+  \item Conduct a lightweight risk assessment twice per year focused on Firebase, Plaid, Stripe, and data pipeline changes.
+  \item Prioritize risks based on impact and likelihood; document resulting controls or compensating measures.
+  \item Require architectural review before onboarding new data processors or deploying new Firebase regions.
+\end{itemize}
+
+\section{Access Control}
+\begin{itemize}
+  \item Use Google Workspace identities with enforced MFA for all engineering accounts.
+  \item Apply least-privilege IAM roles in GCP/Firebase; production deploy access is limited to the on-call engineering team.
+  \item Service accounts are scoped per environment; secrets such as Plaid tokens are injected via Firebase Secret Manager and never committed to source control.
+  \item Access reviews occur quarterly; stale accounts or unused roles are removed within five business days.
+\end{itemize}
+
+\section{Data Protection}
+\begin{itemize}
+  \item Data is classified as Public, Internal, Sensitive, or Highly Sensitive. Plaid-derived banking data and PII are Highly Sensitive.
+  \item All data in Firebase (Firestore, Storage) inherits Google-managed encryption at rest; TLS 1.2+ is enforced for data in transit.
+  \item Sensitive exports (e.g., CSV statements) are deleted once processed unless a product requirement mandates retention; retention schedules are documented per dataset.
+  \item Encryption keys are managed by GCP KMS; overrides require CTO approval and change management.
+\end{itemize}
+
+\section{Application \& Infrastructure Security}
+\begin{itemize}
+  \item Firestore and Storage security rules enforce per-user access, verified via automated tests before deployment.
+  \item Cloud Functions use the minimum necessary permissions; environment configuration is stored in Firebase Secrets and Config.
+  \item Dependencies are scanned via GitHub Dependabot and npm audit; critical advisories are patched within seven days.
+  \item All production changes require pull-request review and automated CI (lint, tests, build) before deployment.
+\end{itemize}
+
+\section{Monitoring \& Logging}
+\begin{itemize}
+  \item Cloud Logging captures application logs, admin actions, and IAM events; logs are retained for at least 90 days.
+  \item Alerts notify the on-call engineer of elevated error rates, failed deployments, and suspicious authentication events.
+  \item Weekly log reviews confirm no unauthorized access occurred; findings feed into the risk register.
+\end{itemize}
+
+\section{Incident Response}
+\begin{itemize}
+  \item Incidents follow four stages: Detect, Triage, Contain/Eradicate, and Recovery/Postmortem.
+  \item Severity definitions determine notification timelines; Plaid and affected customers are notified within 24 hours of confirming exposure of financial data.
+  \item Postmortems are completed within five business days and include remediation owners and due dates.
+\end{itemize}
+
+\section{Business Continuity \& Backup}
+\begin{itemize}
+  \item Firestore managed backups or scheduled exports run daily; restore procedures are tested quarterly in a staging project.
+  \item Infrastructure-as-code (firebase.json, rules, deployment scripts) is version-controlled to enable rapid rebuilds.
+  \item Critical vendor outages (GCP, Plaid, Stripe) are tracked via status feeds; runbooks document fallback steps.
+\end{itemize}
+
+\section{Vendor \& Third-Party Management}
+\begin{itemize}
+  \item Maintain an inventory of critical vendors with contract owner, data processed, and compliance posture (SOC 2/ISO 27001).
+  \item Require DPAs and security documentation before onboarding vendors handling Sensitive or Highly Sensitive data.
+  \item Review vendor security attestations annually; high-risk vendors undergo penetration testing or independent audits when available.
+\end{itemize}
+
+\section{Physical Security \& Device Management}
+\begin{itemize}
+  \item Production systems run exclusively on Google data centers; we rely on Google’s physical controls (SOC 2 Type II).
+  \item Employee devices use full-disk encryption, screen auto-lock (<5 minutes), and company-managed endpoint protection.
+  \item Lost or stolen devices are reported within one hour and remotely wiped; replacements require fresh security posture verification.
+\end{itemize}
+
+\section{Training \& Awareness}
+\begin{itemize}
+  \item Security awareness training is required at hire and refreshed annually, covering phishing, data handling, and incident reporting.
+  \item Engineers receive role-specific training on Firebase security rules, secret management, and compliance obligations.
+\end{itemize}
+
+\section{Policy Maintenance}
+\begin{itemize}
+  \item This policy is reviewed annually or upon major platform changes; revisions are versioned and communicated to all staff.
+  \item Exceptions require written approval from the CTO, include an expiration date, and are tracked in the risk register.
+\end{itemize}
+
+\end{document}
