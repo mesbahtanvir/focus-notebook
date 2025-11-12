@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const idToken = authHeader.replace('Bearer', '').trim();
+    const idToken = authHeader.slice(7).trim(); // Remove "Bearer " prefix (7 chars)
     const appCheckToken = request.headers.get('x-firebase-appcheck');
     const instanceIdToken = request.headers.get('firebase-instance-id-token');
 
