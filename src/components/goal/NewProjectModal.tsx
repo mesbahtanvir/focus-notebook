@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import RichTextEditor from "@/components/RichTextEditor";
 
 interface NewProjectModalProps {
   isOpen: boolean;
@@ -28,6 +29,13 @@ export function NewProjectModal({ isOpen, onClose, onCreate }: NewProjectModalPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Strip HTML tags for validation
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = objective;
+    const plainTextObjective = tempDiv.textContent || tempDiv.innerText || '';
+
+    if (!title.trim() || !plainTextObjective.trim()) return;
+
     onCreate({ title, objective, category, priority, timeframe });
     setTitle("");
     setObjective("");
@@ -69,14 +77,15 @@ export function NewProjectModal({ isOpen, onClose, onCreate }: NewProjectModalPr
               className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
               required
             />
-            <textarea
-              value={objective}
-              onChange={(e) => setObjective(e.target.value)}
-              placeholder="Objective..."
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
-              rows={3}
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Objective</label>
+              <RichTextEditor
+                content={objective}
+                onChange={setObjective}
+                placeholder="Describe the project objective..."
+                minHeight="min-h-[120px]"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Category</label>

@@ -34,6 +34,7 @@ import { TaskModal } from "@/components/TaskModal";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import Link from "next/link";
+import RichTextEditor from "@/components/RichTextEditor";
 
 // Helper function to format time until deadline
 function formatTimeUntil(targetDate: string): { value: number; unit: string; isOverdue: boolean } {
@@ -307,13 +308,15 @@ export default function ProjectDetailPage() {
                     className="text-3xl font-bold bg-transparent border-b-2 border-green-300 dark:border-green-700 focus:border-green-500 dark:focus:border-green-500 outline-none w-full text-gray-900 dark:text-white pb-1"
                     placeholder="Project Title"
                   />
-                  <textarea
-                    value={editForm.objective}
-                    onChange={(e) => setEditForm({ ...editForm, objective: e.target.value })}
-                    className="text-lg bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2 w-full focus:ring-2 focus:ring-green-500 outline-none"
-                    placeholder="Objective"
-                    rows={2}
-                  />
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Objective</label>
+                    <RichTextEditor
+                      content={editForm.objective}
+                      onChange={(value) => setEditForm({ ...editForm, objective: value })}
+                      placeholder="Describe the project objective..."
+                      minHeight="min-h-[100px]"
+                    />
+                  </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     <select
                       value={editForm.status}
@@ -360,7 +363,9 @@ export default function ProjectDetailPage() {
                   <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
                     {project.title}
                   </h1>
-                  <p className="text-gray-700 dark:text-gray-300 text-lg mb-3">{project.objective}</p>
+                  <div className="prose prose-lg dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 mb-3">
+                    <div dangerouslySetInnerHTML={{ __html: project.objective }} />
+                  </div>
 
                   {/* Meta info */}
                   <div className="flex flex-wrap items-center gap-3 text-sm">

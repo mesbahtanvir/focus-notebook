@@ -35,6 +35,7 @@ import {
   Plus,
   AlertCircle,
 } from "lucide-react";
+import RichTextEditor from "@/components/RichTextEditor";
 
 interface ThoughtDetailModalProps {
   thought: Thought;
@@ -626,15 +627,14 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                   <Brain className="h-5 w-5 text-purple-600" />
                   Thought Content
                 </h3>
-                
+
                 {isEditing ? (
                   <div className="space-y-3">
-                    <textarea
-                      value={text}
-                      onChange={(e) => setText(e.target.value)}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      rows={4}
+                    <RichTextEditor
+                      content={text}
+                      onChange={setText}
                       placeholder="Enter your thought..."
+                      minHeight="min-h-[150px]"
                     />
                     <div className="flex gap-2">
                       <button
@@ -657,9 +657,9 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                   </div>
                 ) : (
                   <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <p className="text-gray-900 dark:text-gray-100 leading-relaxed">
-                      {thought.text}
-                    </p>
+                    <div className="prose prose-sm dark:prose-invert max-w-none text-gray-900 dark:text-gray-100 leading-relaxed">
+                      <div dangerouslySetInnerHTML={{ __html: thought.text }} />
+                    </div>
                   </div>
                 )}
               </div>
