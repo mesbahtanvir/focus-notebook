@@ -239,6 +239,8 @@ export class ConflictDetectionService {
       people: new Set((importedEntities.people || []).map((p: any) => p.id)),
       portfolios: new Set((importedEntities.portfolios || []).map((p: any) => p.id)),
       spending: new Set((importedEntities.spending || []).map((s: any) => s.id)),
+      relationships: new Set((importedEntities.relationships || []).map((r: any) => r.id)),
+      llmLogs: new Set((importedEntities.llmLogs || []).map((l: any) => l.id)),
     };
   }
 
@@ -281,6 +283,12 @@ export class ConflictDetectionService {
         return item.name || 'Unnamed';
       case 'portfolios':
         return item.name || 'Untitled Portfolio';
+      case 'spending':
+        return item.name || `Transaction: $${item.amount}`;
+      case 'relationships':
+        return `${item.sourceEntityType} → ${item.targetEntityType}`;
+      case 'llmLogs':
+        return item.prompt?.substring(0, 50) || 'LLM Log';
       default:
         return 'Unknown';
     }

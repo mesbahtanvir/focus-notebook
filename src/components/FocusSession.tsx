@@ -22,6 +22,7 @@ import { formatTimeGentle } from '@/lib/utils/date';
 import { TimeTrackingService } from '@/services/TimeTrackingService';
 import * as EntityService from '@/services/entityService';
 import { UnifiedEndSession } from './UnifiedEndSession';
+import RichTextEditor from "@/components/RichTextEditor";
 
 type FocusStore = ReturnType<typeof useFocus.getState>;
 
@@ -809,7 +810,9 @@ function FocusSessionContent({
                             Description
                           </h3>
                           <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                            <FormattedNotes notes={currentFocusTask.task.notes} />
+                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                              <div dangerouslySetInnerHTML={{ __html: currentFocusTask.task.notes }} />
+                            </div>
                           </div>
                         </div>
                       )}
@@ -933,8 +936,8 @@ function FocusSessionContent({
                                   <span>•</span>
                                   <span>{formatTimeGentle(session.duration)}</span>
                                 </div>
-                                <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                                  <FormattedNotes notes={session.notes} />
+                                <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
+                                  <div dangerouslySetInnerHTML={{ __html: session.notes }} />
                                 </div>
                                 {idx < previousSessionNotes.length - 1 && (
                                   <div className="mt-3 border-b border-gray-300 dark:border-gray-600" />
@@ -961,15 +964,15 @@ function FocusSessionContent({
                             </span>
                           )}
                         </div>
-                        <textarea
-                          value={localNotes}
-                          onChange={(e) => setLocalNotes(e.target.value)}
+                        <RichTextEditor
+                          content={localNotes}
+                          onChange={setLocalNotes}
                           placeholder="Session notes... (auto-saved per task)"
-                          className={`w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-purple-500 dark:focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900/50 resize-none bg-white dark:bg-gray-800 text-sm transition-colors outline-none ${
+                          minHeight={
                             previousSessionNotes.length > 0
                               ? 'h-[calc(100vh-32rem)] lg:h-[calc(100vh-28rem)]'
                               : 'h-[calc(100vh-16rem)] lg:h-[calc(100vh-12rem)]'
-                          }`}
+                          }
                         />
                       </div>
                     </div>

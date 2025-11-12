@@ -17,6 +17,8 @@ import {
   Filter,
   Briefcase,
   DollarSign,
+  Link2,
+  MessagesSquare,
 } from 'lucide-react';
 import { EntityType, EntityCollection, Conflict } from '@/types/import-export';
 
@@ -39,6 +41,8 @@ const entityIcons: Record<EntityType, React.ComponentType<any>> = {
   people: Users,
   portfolios: Briefcase,
   spending: DollarSign,
+  relationships: Link2,
+  llmLogs: MessagesSquare,
 };
 
 export function EntityPreviewTable({

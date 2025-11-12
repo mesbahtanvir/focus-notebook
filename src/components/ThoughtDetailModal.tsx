@@ -33,6 +33,7 @@ import {
   Smile,
   Link2,
   Plus,
+  AlertCircle,
 } from "lucide-react";
 
 interface ThoughtDetailModalProps {

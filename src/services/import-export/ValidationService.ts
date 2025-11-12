@@ -438,6 +438,8 @@ export class ValidationService {
         people: 0,
         portfolios: 0,
         spending: 0,
+        relationships: 0,
+        llmLogs: 0,
       }
     };
   }

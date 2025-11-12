@@ -12,6 +12,7 @@ import { TaskSteps } from "@/components/TaskSteps";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { TimeDisplay } from "@/components/TimeDisplay";
 import { SessionHistory } from "@/components/SessionHistory";
+import RichTextEditor from "@/components/RichTextEditor";
 import Link from "next/link";
 import {
   X,
@@ -313,15 +314,15 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                   📝 Notes
                 </h3>
                 {isEditing ? (
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
+                  <RichTextEditor
+                    content={notes}
+                    onChange={setNotes}
                     placeholder="Add notes or description..."
-                    className="input w-full min-h-[120px] resize-none"
+                    minHeight="min-h-[150px]"
                   />
                 ) : notes ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <FormattedNotes notes={notes} className="text-gray-700 dark:text-gray-300" />
+                  <div className="prose prose-sm dark:prose-invert max-w-none bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div dangerouslySetInnerHTML={{ __html: notes }} />
                   </div>
                 ) : null}
 

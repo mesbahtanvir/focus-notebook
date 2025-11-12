@@ -208,6 +208,8 @@ export class ImportService {
       focusSessions: { add: (session: any) => Promise<void> };
       people: { add: (person: any) => Promise<void> };
       portfolios: { add: (portfolio: any) => Promise<void> };
+      relationships: { add: (relationship: any) => Promise<void> };
+      llmLogs: { add: (log: any) => Promise<void> };
     },
     onProgress?: ProgressCallback
   ): Promise<ImportResult> {
@@ -528,6 +530,8 @@ export class ImportService {
       people: entities.people?.length || 0,
       portfolios: entities.portfolios?.length || 0,
       spending: entities.spending?.length || 0,
+      relationships: entities.relationships?.length || 0,
+      llmLogs: entities.llmLogs?.length || 0,
     };
 
     const totalItems = Object.values(itemsByType).reduce((sum, count) => sum + count, 0);
@@ -552,6 +556,8 @@ export class ImportService {
       people: ImportPhase.IMPORTING_PEOPLE,
       portfolios: ImportPhase.IMPORTING_PORTFOLIOS,
       spending: ImportPhase.IMPORTING_SPENDING,
+      relationships: ImportPhase.UPDATING_REFERENCES,
+      llmLogs: ImportPhase.UPDATING_REFERENCES,
     };
     return phaseMap[entityType];
   }
@@ -572,6 +578,12 @@ export class ImportService {
         return item.name || 'Unnamed';
       case 'portfolios':
         return item.name || 'Untitled Portfolio';
+      case 'spending':
+        return item.name || `Transaction: $${item.amount}`;
+      case 'relationships':
+        return `${item.sourceEntityType} → ${item.targetEntityType}`;
+      case 'llmLogs':
+        return item.prompt?.substring(0, 50) || 'LLM Log';
       default:
         return 'Unknown';
     }
@@ -611,6 +623,8 @@ export class ImportService {
       people: { processed: 0, total: 0, progress: 0 },
       portfolios: { processed: 0, total: 0, progress: 0 },
       spending: { processed: 0, total: 0, progress: 0 },
+      relationships: { processed: 0, total: 0, progress: 0 },
+      llmLogs: { processed: 0, total: 0, progress: 0 },
     };
   }
 
@@ -625,6 +639,8 @@ export class ImportService {
       people: 0,
       portfolios: 0,
       spending: 0,
+      relationships: 0,
+      llmLogs: 0,
     };
   }
 
@@ -639,6 +655,8 @@ export class ImportService {
       people: { processed: 0, total: stats.itemsByType.people, progress: 0 },
       portfolios: { processed: 0, total: stats.itemsByType.portfolios, progress: 0 },
       spending: { processed: 0, total: stats.itemsByType.spending, progress: 0 },
+      relationships: { processed: 0, total: stats.itemsByType.relationships, progress: 0 },
+      llmLogs: { processed: 0, total: stats.itemsByType.llmLogs, progress: 0 },
     };
   }
 
@@ -648,7 +666,7 @@ export class ImportService {
     stats: ImportStats
   ): Record<EntityType, { processed: number; total: number; progress: number }> {
     const result: any = {};
-    const entityTypes: EntityType[] = ['tasks', 'projects', 'goals', 'thoughts', 'moods', 'focusSessions', 'people', 'portfolios'];
+    const entityTypes: EntityType[] = ['tasks', 'projects', 'goals', 'thoughts', 'moods', 'focusSessions', 'people', 'portfolios', 'spending', 'relationships', 'llmLogs'];
 
     for (const type of entityTypes) {
       const total = stats.itemsByType[type];

@@ -17,6 +17,8 @@ import {
   Users,
   Briefcase,
   DollarSign,
+  Link2,
+  MessagesSquare,
 } from 'lucide-react';
 import {
   Conflict,
@@ -41,6 +43,8 @@ const entityIcons: Record<EntityType, React.ComponentType<any>> = {
   people: Users,
   portfolios: Briefcase,
   spending: DollarSign,
+  relationships: Link2,
+  llmLogs: MessagesSquare,
 };
 
 const conflictTypeLabels: Record<ConflictType, string> = {
