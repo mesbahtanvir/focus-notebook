@@ -343,6 +343,7 @@ function TasksPageContent() {
             thoughts={thoughts}
             getPriorityColor={getPriorityColor}
             getPriorityIcon={getPriorityIcon}
+            archiveTask={archiveTask}
           />
         ))}
       </div>
@@ -399,7 +400,8 @@ function TaskGroup({
   setSelectedTask,
   thoughts,
   getPriorityColor,
-  getPriorityIcon
+  getPriorityIcon,
+  archiveTask
 }: {
   frequency: string;
   tasks: Task[];
@@ -410,6 +412,7 @@ function TaskGroup({
   thoughts: any[];
   getPriorityColor: (priority: TaskPriority) => string;
   getPriorityIcon: (priority: TaskPriority) => React.ReactNode;
+  archiveTask: (id: string) => Promise<void>;
 }) {
   const { displayedItems, hasMore, observerTarget } = useInfiniteScroll(tasks, {
     initialItemsPerPage: 15,
