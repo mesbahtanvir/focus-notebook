@@ -374,6 +374,8 @@ export class ExportService {
       people: data.people?.length || 0,
       portfolios: data.portfolios?.length || 0,
       spending: data.spending?.length || 0,
+      relationships: data.relationships?.length || 0,
+      llmLogs: data.llmLogs?.length || 0,
     };
 
     const totalItems = Object.values(entityCounts).reduce((sum, count) => sum + count, 0);

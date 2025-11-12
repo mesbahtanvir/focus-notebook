@@ -21,6 +21,8 @@ import {
   ChevronDown,
   ChevronUp,
   DollarSign,
+  Link2,
+  MessagesSquare,
 } from 'lucide-react';
 import { ImportProgress, ImportPhase, EntityType } from '@/types/import-export';
 
@@ -42,6 +44,8 @@ const entityIcons: Record<EntityType, React.ComponentType<any>> = {
   people: Users,
   portfolios: Briefcase,
   spending: DollarSign,
+  relationships: Link2,
+  llmLogs: MessagesSquare,
 };
 
 const entityLabels: Record<EntityType, string> = {
@@ -54,6 +58,8 @@ const entityLabels: Record<EntityType, string> = {
   people: 'People',
   portfolios: 'Portfolios',
   spending: 'Transactions',
+  relationships: 'Relationships',
+  llmLogs: 'LLM Logs',
 };
 
 const phaseLabels: Record<ImportPhase, string> = {

@@ -18,6 +18,8 @@ import {
   Square,
   Briefcase,
   DollarSign,
+  Link2,
+  MessagesSquare,
 } from 'lucide-react';
 import { ExportFilterOptions, EntityType } from '@/types/import-export';
 
@@ -38,6 +40,8 @@ const entityIcons: Record<EntityType, React.ComponentType<any>> = {
   people: Users,
   portfolios: Briefcase,
   spending: DollarSign,
+  relationships: Link2,
+  llmLogs: MessagesSquare,
 };
 
 const entityLabels: Record<EntityType, string> = {
@@ -50,6 +54,8 @@ const entityLabels: Record<EntityType, string> = {
   people: 'People',
   portfolios: 'Portfolios',
   spending: 'Transactions',
+  relationships: 'Relationships',
+  llmLogs: 'LLM Logs',
 };
 
 export function ExportOptionsModal({
@@ -59,7 +65,7 @@ export function ExportOptionsModal({
   availableCounts,
 }: ExportOptionsModalProps) {
   const [selectedEntities, setSelectedEntities] = useState<Set<EntityType>>(
-    new Set(['tasks', 'projects', 'goals', 'thoughts', 'moods', 'focusSessions', 'people', 'portfolios'])
+    new Set(['tasks', 'projects', 'goals', 'thoughts', 'moods', 'focusSessions', 'people', 'portfolios', 'relationships', 'llmLogs'])
   );
   const [useDateRange, setUseDateRange] = useState(false);
   const [startDate, setStartDate] = useState('');
@@ -79,6 +85,9 @@ export function ExportOptionsModal({
     'focusSessions',
     'people',
     'portfolios',
+    'spending',
+    'relationships',
+    'llmLogs',
   ];
 
   const availableEntityTypes = entityTypes.filter(

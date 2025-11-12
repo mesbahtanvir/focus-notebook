@@ -35,7 +35,9 @@ export function GoalHeader({ goal, onEdit, onDelete }: GoalHeaderProps) {
             <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
               {goal.title}
             </h1>
-            <p className="text-gray-700 dark:text-gray-300 text-lg mb-3">{goal.objective}</p>
+            <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 text-lg mb-3">
+              <div dangerouslySetInnerHTML={{ __html: goal.objective }} />
+            </div>
 
             {/* Meta info */}
             <div className="flex flex-wrap items-center gap-3 text-sm">

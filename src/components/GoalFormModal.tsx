@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Target, Save, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Goal, GoalTimeframe } from "@/store/useGoals";
+import RichTextEditor from "@/components/RichTextEditor";
 
 interface GoalFormModalProps {
   isOpen: boolean;
@@ -45,11 +46,16 @@ export function GoalFormModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !objective.trim()) return;
+    // Strip HTML tags for validation
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = objective;
+    const plainTextObjective = tempDiv.textContent || tempDiv.innerText || '';
+
+    if (!title.trim() || !plainTextObjective.trim()) return;
 
     onSubmit({
       title: title.trim(),
-      objective: objective.trim(),
+      objective: objective, // Keep HTML format
       timeframe,
       priority,
     });
@@ -137,14 +143,11 @@ export function GoalFormModal({
 
               <div>
                 <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Objective *</label>
-                <textarea
-                  value={objective}
-                  onChange={(e) => setObjective(e.target.value)}
-                  className="w-full p-4 min-h-[120px] rounded-xl border-2 border-purple-200 dark:border-purple-800 focus:border-purple-400 dark:focus:border-purple-600 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900 bg-white dark:bg-gray-800 transition-all outline-none touch-manipulation text-base resize-none"
-                  rows={3}
+                <RichTextEditor
+                  content={objective}
+                  onChange={setObjective}
                   placeholder="Why is this goal important? What will achieving it mean to you?"
-                  inputMode="text"
-                  required
+                  minHeight="min-h-[150px]"
                 />
               </div>
 

@@ -1,13 +1,20 @@
 import { Thought } from "@/store/useThoughts";
 
 /**
- * Filters thoughts that have the 'cbt' tag but not the 'cbt-processed' tag
+ * Filters thoughts that have the 'cbt' tag but have not been processed yet
+ * Uses the new toolProcessing.cbt.processed field instead of 'cbt-processed' tag
  */
 export function filterUnprocessedThoughts(thoughts: Thought[], searchQuery: string = ""): Thought[] {
   const searchLower = searchQuery.toLowerCase();
   return thoughts.filter(thought => {
     const tags = thought.tags || [];
-    const isCBT = tags.includes('cbt') && !tags.includes('cbt-processed');
+    const hasCBTTag = tags.includes('cbt');
+
+    // Check new field first, fall back to tag for backward compatibility
+    const isProcessed = thought.toolProcessing?.cbt?.processed === true ||
+                        tags.includes('cbt-processed');
+
+    const isCBT = hasCBTTag && !isProcessed;
 
     if (!isCBT) return false;
 
@@ -24,12 +31,17 @@ export function filterUnprocessedThoughts(thoughts: Thought[], searchQuery: stri
 
 /**
  * Filters thoughts that have been processed with CBT
+ * Uses the new toolProcessing.cbt.processed field instead of 'cbt-processed' tag
  */
 export function filterProcessedThoughts(thoughts: Thought[], searchQuery: string = ""): Thought[] {
   const searchLower = searchQuery.toLowerCase();
   return thoughts.filter(thought => {
     const tags = thought.tags || [];
-    const isProcessed = tags.includes('cbt-processed') && thought.cbtAnalysis;
+
+    // Check new field first, fall back to tag for backward compatibility
+    const isProcessed = (thought.toolProcessing?.cbt?.processed === true ||
+                         tags.includes('cbt-processed')) &&
+                        thought.cbtAnalysis;
 
     if (!isProcessed) return false;
 
@@ -50,19 +62,22 @@ export function filterProcessedThoughts(thoughts: Thought[], searchQuery: string
 
 /**
  * Calculates CBT statistics from a list of thoughts
+ * Uses the new toolProcessing.cbt.processed field instead of 'cbt-processed' tag
  */
 export function calculateCBTStats(thoughts: Thought[], unprocessedCount: number): {
   toProcess: number;
   processed: number;
   total: number;
 } {
-  const processed = thoughts.filter(t => t.tags?.includes('cbt-processed')).length;
+  const processed = thoughts.filter(t =>
+    t.toolProcessing?.cbt?.processed === true || t.tags?.includes('cbt-processed')
+  ).length;
   const total = thoughts.filter(t => t.tags?.includes('cbt')).length;
-  
-  return { 
-    toProcess: unprocessedCount, 
-    processed, 
-    total 
+
+  return {
+    toProcess: unprocessedCount,
+    processed,
+    total
   };
 }
 
@@ -146,6 +161,7 @@ export function formatDetailedDate(date: string | undefined): string {
 }
 
 /**
+ * @deprecated Use markCBTAsProcessed instead
  * Adds the 'cbt-processed' tag to a thought's tags array
  */
 export function addCBTProcessedTag(tags: string[]): string[] {
@@ -154,5 +170,20 @@ export function addCBTProcessedTag(tags: string[]): string[] {
     updatedTags.push('cbt-processed');
   }
   return updatedTags;
+}
+
+/**
+ * Creates the toolProcessing.cbt object to mark a thought as CBT processed
+ * This is the recommended way to mark CBT processing (replaces tag-based system)
+ */
+export function markCBTAsProcessed(processedBy: 'auto' | 'manual' = 'manual'): Thought['toolProcessing'] {
+  return {
+    cbt: {
+      processed: true,
+      processedAt: new Date().toISOString(),
+      processedBy,
+      resultStored: true,
+    }
+  };
 }
 

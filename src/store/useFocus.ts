@@ -327,7 +327,7 @@ export const useFocus = create<State>((set, get) => ({
       throw error // This is critical, don't continue
     }
 
-    // Step 3: Update actual time for each task worked on
+    // Step 3: Update actual time and completion status for each task worked on
     onProgress?.('updating-tasks', 'in-progress')
     const tasksToUpdate = completedSession.tasks.filter(t => t.timeSpent > 0)
 
@@ -336,12 +336,49 @@ export const useFocus = create<State>((set, get) => ({
       onProgress?.('updating-tasks', 'in-progress', i + 1, tasksToUpdate.length)
 
       try {
+        // Update task time
         await TimeTrackingService.updateTaskActualTime(
           focusTask.task.id,
           focusTask.timeSpent
         )
+
+        // If task was marked complete during session, update completion status
+        if (focusTask.completed && !focusTask.task.done) {
+          const { getLocalDateString } = await import('@/lib/utils/date')
+          const today = getLocalDateString(new Date())
+          const isRecurring = focusTask.task.recurrence && focusTask.task.recurrence.type !== 'none'
+
+          if (isRecurring) {
+            // For recurring tasks, add to completion history
+            const completionHistory = focusTask.task.completionHistory || []
+            const todayCompletion = completionHistory.find((c: any) => c.date === today)
+
+            if (!todayCompletion) {
+              await updateAt(`users/${userId}/tasks/${focusTask.task.id}`, {
+                done: true,
+                completedAt: new Date().toISOString(),
+                completionHistory: [
+                  ...completionHistory,
+                  {
+                    date: today,
+                    completedAt: new Date().toISOString(),
+                    note: 'Completed during focus session'
+                  }
+                ],
+                completionCount: (focusTask.task.completionCount || 0) + 1,
+              })
+            }
+          } else {
+            // For one-time tasks, simple completion
+            await updateAt(`users/${userId}/tasks/${focusTask.task.id}`, {
+              done: true,
+              status: 'completed',
+              completedAt: new Date().toISOString(),
+            })
+          }
+        }
       } catch (error) {
-        console.error(`Failed to update task time for ${focusTask.task.title}:`, error)
+        console.error(`Failed to update task ${focusTask.task.title}:`, error)
         failedTasks.push(focusTask.task.title)
       }
     }

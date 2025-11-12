@@ -19,6 +19,8 @@ import { useFocus } from '@/store/useFocus';
 import { useRelationships } from '@/store/useRelationships';
 import { useInvestments } from '@/store/useInvestments';
 import { useSpending } from '@/store/useSpending';
+import { useEntityGraph } from '@/store/useEntityGraph';
+import { useLLMLogs } from '@/store/useLLMLogs';
 import { auth, db } from '@/lib/firebaseClient';
 import { doc, setDoc, Timestamp } from 'firebase/firestore';
 
@@ -175,6 +177,35 @@ function normalizePerson(person: any, userId: string) {
   };
 }
 
+function normalizeRelationship(relationship: any, userId: string) {
+  const base = withBaseMetadata(relationship ?? {}, userId, 'rel');
+
+  return {
+    ...base,
+    sourceEntityType: base.sourceEntityType ?? 'thought',
+    targetEntityType: base.targetEntityType ?? 'thought',
+    relationshipType: base.relationshipType ?? 'related_to',
+    status: base.status ?? 'active',
+    strength: typeof base.strength === 'number' ? base.strength : 50,
+    metadata: base.metadata ?? {},
+  };
+}
+
+function normalizeLLMLog(log: any, userId: string) {
+  const base = withBaseMetadata(log ?? {}, userId, 'log');
+
+  return {
+    ...base,
+    trigger: base.trigger ?? 'manual',
+    prompt: base.prompt ?? '',
+    rawResponse: base.rawResponse ?? '',
+    status: base.status ?? 'completed',
+    actions: Array.isArray(base.actions) ? base.actions : [],
+    toolSpecIds: Array.isArray(base.toolSpecIds) ? base.toolSpecIds : [],
+    usage: base.usage ?? {},
+  };
+}
+
 function normalizeFocusSession(
   session: any,
   userId: string,
@@ -280,6 +311,8 @@ export function useImportExport() {
   const relationships = useRelationships();
   const investments = useInvestments();
   const spending = useSpending();
+  const entityGraph = useEntityGraph();
+  const llmLogs = useLLMLogs();
 
   const importedTasksRef = useRef<Map<string, any>>(new Map());
 
@@ -428,6 +461,20 @@ export function useImportExport() {
                 });
               },
             },
+            relationships: {
+              add: async (relationship: any) => {
+                const userId = getUserId();
+                const normalized = normalizeRelationship(relationship, userId);
+                await writeDocument(userId, 'relationships', normalized);
+              },
+            },
+            llmLogs: {
+              add: async (log: any) => {
+                const userId = getUserId();
+                const normalized = normalizeLLMLog(log, userId);
+                await writeDocument(userId, 'llmLogs', normalized);
+              },
+            },
           },
           (progress) => {
             setImportProgress(progress);
@@ -476,6 +523,8 @@ export function useImportExport() {
           portfolios: investments.getPortfoliosForExport
             ? investments.getPortfoliosForExport()
             : investments.portfolios,
+          relationships: entityGraph.relationships,
+          llmLogs: llmLogs.logs,
         };
 
         // Export with filters
@@ -496,7 +545,7 @@ export function useImportExport() {
         setIsExporting(false);
       }
     },
-    [exportService, tasks, projects, goals, thoughts, moods, focus, relationships, investments]
+    [exportService, tasks, projects, goals, thoughts, moods, focus, relationships, investments, entityGraph, llmLogs]
   );
 
   /**
@@ -519,6 +568,8 @@ export function useImportExport() {
         portfolios: investments.getPortfoliosForExport
           ? investments.getPortfoliosForExport()
           : investments.portfolios,
+        relationships: entityGraph.relationships,
+        llmLogs: llmLogs.logs,
       };
 
       const exported = await exportService.exportAll(allData, userId);
@@ -531,7 +582,7 @@ export function useImportExport() {
     } finally {
       setIsExporting(false);
     }
-  }, [exportService, tasks, projects, goals, thoughts, moods, focus, relationships, investments]);
+  }, [exportService, tasks, projects, goals, thoughts, moods, focus, relationships, investments, entityGraph, llmLogs]);
 
   /**
    * Get available entity counts for export
@@ -547,8 +598,10 @@ export function useImportExport() {
       people: relationships.people.length,
       portfolios: investments.portfolios.length,
       spending: spending.transactions.length,
+      relationships: entityGraph.relationships.length,
+      llmLogs: llmLogs.logs.length,
     };
-  }, [tasks, projects, goals, thoughts, moods, focus, relationships, investments, spending]);
+  }, [tasks, projects, goals, thoughts, moods, focus, relationships, investments, spending, entityGraph, llmLogs]);
 
   /**
    * Get detailed data summaries for each entity type
@@ -627,8 +680,20 @@ export function useImportExport() {
           ? (spending.transactions.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0) / spending.transactions.length).toFixed(2)
           : '0',
       },
+      relationships: {
+        total: entityGraph.relationships.length,
+        active: entityGraph.relationships.filter(r => r.status === 'active').length,
+        toolRelated: entityGraph.relationships.filter(r => r.relationshipType.startsWith('tool_')).length,
+        manual: entityGraph.relationships.filter(r => r.createdBy === 'user').length,
+      },
+      llmLogs: {
+        total: llmLogs.logs.length,
+        completed: llmLogs.logs.filter(l => l.status === 'completed').length,
+        failed: llmLogs.logs.filter(l => l.status === 'failed').length,
+        totalTokens: llmLogs.logs.reduce((sum, l) => sum + (l.usage?.total_tokens || 0), 0),
+      },
     };
-  }, [tasks, projects, goals, thoughts, moods, focus, relationships, investments, spending]);
+  }, [tasks, projects, goals, thoughts, moods, focus, relationships, investments, spending, entityGraph, llmLogs]);
 
   /**
    * Reset import state

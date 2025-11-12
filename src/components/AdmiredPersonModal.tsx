@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { AdmiredPerson } from "@/store/useAdmiredPeople";
 import { Sparkles, X, Save, Link as LinkIcon } from "lucide-react";
+import RichTextEditor from "@/components/RichTextEditor";
 
 export function AdmiredPersonModal({ person, onClose, onSave }: {
   person: AdmiredPerson | null;
@@ -115,36 +116,33 @@ export function AdmiredPersonModal({ person, onClose, onSave }: {
             {/* Bio */}
             <div>
               <label className="block text-sm font-medium mb-2">Bio (Optional)</label>
-              <textarea
-                value={formData.bio}
-                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                className="input w-full"
-                rows={2}
+              <RichTextEditor
+                content={formData.bio || ''}
+                onChange={(value) => setFormData({ ...formData, bio: value })}
                 placeholder="Brief description of who they are..."
+                minHeight="min-h-[100px]"
               />
             </div>
 
             {/* Why Admire */}
             <div>
               <label className="block text-sm font-medium mb-2">Why I Admire Them (Optional)</label>
-              <textarea
-                value={formData.whyAdmire}
-                onChange={(e) => setFormData({ ...formData, whyAdmire: e.target.value })}
-                className="input w-full"
-                rows={3}
+              <RichTextEditor
+                content={formData.whyAdmire || ''}
+                onChange={(value) => setFormData({ ...formData, whyAdmire: value })}
                 placeholder="What inspires you about this person..."
+                minHeight="min-h-[120px]"
               />
             </div>
 
             {/* Key Lessons */}
             <div>
               <label className="block text-sm font-medium mb-2">Key Lessons (Optional)</label>
-              <textarea
-                value={formData.keyLessons}
-                onChange={(e) => setFormData({ ...formData, keyLessons: e.target.value })}
-                className="input w-full"
-                rows={3}
+              <RichTextEditor
+                content={formData.keyLessons || ''}
+                onChange={(value) => setFormData({ ...formData, keyLessons: value })}
                 placeholder="What have you learned from them..."
+                minHeight="min-h-[120px]"
               />
             </div>
 
@@ -232,12 +230,11 @@ export function AdmiredPersonModal({ person, onClose, onSave }: {
             {/* Notes */}
             <div>
               <label className="block text-sm font-medium mb-2">Notes (Optional)</label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="input w-full"
-                rows={3}
+              <RichTextEditor
+                content={formData.notes || ''}
+                onChange={(value) => setFormData({ ...formData, notes: value })}
                 placeholder="Any additional notes..."
+                minHeight="min-h-[120px]"
               />
             </div>
           </div>

@@ -178,12 +178,12 @@ export default function CSVUploadSection() {
 
   return (
     <div className="space-y-3">
-      {/* Compact Upload Area */}
+      {/* Upload Area - Compact Design */}
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-lg p-4 text-center transition-all ${
+        className={`border-2 border-dashed rounded-lg p-4 transition-all ${
           isDragging
             ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
             : 'border-gray-300 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600'
@@ -197,15 +197,28 @@ export default function CSVUploadSection() {
           onChange={handleFileSelect}
           className="hidden"
         />
-        <label
-          htmlFor="csv-upload"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 transition-colors cursor-pointer"
-        >
-          <Upload className="h-4 w-4" />
-          Upload CSV
-        </label>
-        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          <p>Drag & drop or click to select</p>
+        <div className="flex items-center gap-3">
+          <div className="flex-shrink-0">
+            <Upload className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <label
+              htmlFor="csv-upload"
+              className="block text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+            >
+              Choose CSV file or drag & drop
+            </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Bank statements auto-processed with AI
+            </p>
+          </div>
+          <label
+            htmlFor="csv-upload"
+            className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 transition-colors cursor-pointer"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Browse
+          </label>
         </div>
       </div>
 

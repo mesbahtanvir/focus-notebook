@@ -55,21 +55,9 @@ async function callSpendingApi(
     throw new Error('User must be authenticated before using Plaid.');
   }
 
-  console.log('[callSpendingApi] Getting auth tokens for user:', user.uid);
-
-  let idToken: string;
-  try {
-    idToken = await user.getIdToken();
-    console.log('[callSpendingApi] Got ID token:', {
-      length: idToken.length,
-      prefix: idToken.substring(0, 20),
-    });
-  } catch (error) {
-    console.error('[callSpendingApi] Failed to get ID token:', error);
-    throw new Error('Failed to get authentication token. Please try signing in again.');
-  }
-
-  const [instanceIdToken, appCheckToken] = await Promise.all([
+  // Force token refresh to ensure it's not expired
+  const [idToken, instanceIdToken, appCheckToken] = await Promise.all([
+    user.getIdToken(true), // true = force refresh
     getFirebaseInstanceIdToken(),
     getClientAppCheckToken(),
   ]);
@@ -86,13 +74,8 @@ async function callSpendingApi(
     headers['X-Firebase-AppCheck'] = appCheckToken;
   }
 
-  console.log('[callSpendingApi] Calling endpoint:', {
-    endpoint,
-    payload,
-    hasToken: Boolean(idToken),
-    hasInstanceId: Boolean(instanceIdToken),
-    hasAppCheck: Boolean(appCheckToken),
-  });
+  console.log('📤 Calling spending API:', endpoint);
+  console.log('🔑 Auth header present:', !!headers.Authorization);
 
   const response = await fetch(`/api/spending/${endpoint}`, {
     method: 'POST',
@@ -118,6 +101,13 @@ async function callSpendingApi(
   }
 
   if (!response.ok) {
+    console.error('❌ API Error:', {
+      endpoint,
+      status: response.status,
+      error: data?.error,
+      message: data?.message,
+    });
+
     const message =
       data?.error ||
       data?.message ||
@@ -131,7 +121,7 @@ async function callSpendingApi(
     throw new Error(message);
   }
 
-  console.log('[callSpendingApi] Request succeeded:', endpoint);
+  console.log('✅ API Success:', endpoint);
   return data;
 }
 

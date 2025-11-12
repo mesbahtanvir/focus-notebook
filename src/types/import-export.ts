@@ -7,6 +7,8 @@ import { FocusSession } from "@/store/useFocus";
 import { Person } from "@/store/useRelationships";
 import { Portfolio } from "@/store/useInvestments";
 import { Transaction } from "@/store/useSpending";
+import { Relationship } from "@/types/entityGraph";
+import { LLMLog } from "@/store/useLLMLogs";
 
 // ============================================================================
 // ENTITY TYPES
@@ -21,7 +23,9 @@ export type EntityType =
   | 'focusSessions'
   | 'people'
   | 'portfolios'
-  | 'spending';
+  | 'spending'
+  | 'relationships'  // EntityGraph data
+  | 'llmLogs';        // LLM Prompt History
 
 export interface EntityCollection {
   tasks: Task[];
@@ -33,6 +37,8 @@ export interface EntityCollection {
   people: Person[];
   portfolios: Portfolio[];
   spending: Transaction[];
+  relationships: Relationship[];
+  llmLogs: LLMLog[];
 }
 
 // ============================================================================
