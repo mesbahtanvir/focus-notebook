@@ -108,7 +108,9 @@ export function GoalProjectLinks({
                       {project.title}
                     </div>
                     {project.objective && (
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{project.objective}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 prose prose-sm dark:prose-invert max-w-none">
+                        <div dangerouslySetInnerHTML={{ __html: project.objective }} />
+                      </div>
                     )}
                     <div className="flex items-center gap-2 mt-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -197,7 +199,9 @@ export function GoalProjectLinks({
                           {project.title}
                         </div>
                         {project.objective && (
-                          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{project.objective}</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 prose prose-sm dark:prose-invert max-w-none">
+                            <div dangerouslySetInnerHTML={{ __html: project.objective }} />
+                          </div>
                         )}
                       </div>
                     </div>
