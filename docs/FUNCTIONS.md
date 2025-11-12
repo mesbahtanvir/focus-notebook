@@ -55,6 +55,16 @@ For production deployment, configure environment variables in the Firebase Conso
 - `APP_BASE_URL` - Your application's base URL (e.g., `https://your-domain.com`)
 - `ENCRYPTION_KEY` - Encryption key for sensitive data (optional, falls back to PLAID_SECRET)
 
+#### Managing Secrets via Firebase CLI
+
+Sensitive values such as `PLAID_SECRET` must be stored in Firebase's Secret Manager rather than plain config. Set or rotate the secret with:
+
+```bash
+mesbahtanvir@aa:fb:2a:65:c8:3f functions % firebase functions:secrets:set PLAID_SECRET
+```
+
+Run the command from the `functions` directory (or prefix with `cd functions && …`), redeploy, and the runtime will surface the value at `process.env.PLAID_SECRET`.
+
 **Note:** The Firebase Functions runtime automatically loads environment variables from the `.env` file during local development and from the Firebase Console configuration in production.
 
 ## Local Development

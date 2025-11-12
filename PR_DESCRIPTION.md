@@ -151,9 +151,13 @@ Before deploying to production:
 ```bash
 firebase functions:config:set \
   plaid.client_id="YOUR_PLAID_CLIENT_ID" \
-  plaid.secret="YOUR_PLAID_SECRET" \
   plaid.env="sandbox" \
   anthropic.api_key="YOUR_ANTHROPIC_KEY"
+```
+
+### 1b. Secrets (Cloud Functions)
+```bash
+mesbahtanvir@aa:fb:2a:65:c8:3f functions % firebase functions:secrets:set PLAID_SECRET
 ```
 
 ### 2. Firestore Security Rules
