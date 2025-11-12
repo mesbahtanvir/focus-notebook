@@ -964,8 +964,8 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                                   {project.title}
                                 </div>
                                 {project.objective && (
-                                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-1">
-                                    {project.objective}
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-1 prose prose-xs dark:prose-invert max-w-none">
+                                    <div dangerouslySetInnerHTML={{ __html: project.objective }} />
                                   </div>
                                 )}
                               </Link>
@@ -1057,8 +1057,8 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                                   {goal.title}
                                 </div>
                                 {goal.objective && (
-                                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-1">
-                                    {goal.objective}
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-1 prose prose-xs dark:prose-invert max-w-none">
+                                    <div dangerouslySetInnerHTML={{ __html: goal.objective }} />
                                   </div>
                                 )}
                               </Link>
@@ -1115,8 +1115,8 @@ export function ThoughtDetailModal({ thought, onClose }: ThoughtDetailModalProps
                                   {project.title}
                                 </div>
                                 {project.objective && (
-                                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-1">
-                                    {project.objective}
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-1 prose prose-xs dark:prose-invert max-w-none">
+                                    <div dangerouslySetInnerHTML={{ __html: project.objective }} />
                                   </div>
                                 )}
                               </Link>

@@ -539,7 +539,9 @@ export default function ProjectDetailPage() {
                     <div className="font-bold text-purple-700 dark:text-purple-300 text-lg group-hover:text-purple-800 dark:group-hover:text-purple-200 transition-colors">
                       {linkedGoal.title}
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{linkedGoal.objective}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 prose prose-sm dark:prose-invert max-w-none">
+                      <div dangerouslySetInnerHTML={{ __html: linkedGoal.objective }} />
+                    </div>
                   </div>
                   <div className="text-purple-400 dark:text-purple-500 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
                     <Flag className="h-5 w-5" />
