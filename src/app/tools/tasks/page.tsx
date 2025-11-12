@@ -15,7 +15,8 @@ import {
   ChevronDown,
   MessageCircle,
   Loader2,
-  FileText} from "lucide-react";
+  FileText,
+  Archive} from "lucide-react";
 import { TaskDetailModal } from "@/components/TaskDetailModal";
 import { TaskInput } from "@/components/TaskInput";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
@@ -33,6 +34,7 @@ function TasksPageContent() {
 
   const router = useRouter();
   const tasks = useTasks((s) => s.tasks);
+  const archiveTask = useTasks((s) => s.archiveTask);
   const thoughts = useThoughts((s) => s.thoughts);
   const searchParams = useSearchParams();
   const [showNewTask, setShowNewTask] = useState(false);
@@ -75,8 +77,11 @@ function TasksPageContent() {
 
   const filteredAndSortedTasks = useMemo(() => {
     const searchLower = searchTerm.toLowerCase();
-    
+
     let filtered = tasks.filter(task => {
+      // Hide archived tasks
+      if (task.archived) return false;
+
       // If showCompleted is true, show all tasks
       if (!showCompleted) {
         // Hide completed one-time tasks, but show completed recurring tasks (they're "done for today")
@@ -164,11 +169,12 @@ function TasksPageContent() {
   }, [filteredAndSortedTasks]);
 
   const taskStats = useMemo(() => {
-    const total = tasks.length;
-    const completed = tasks.filter(t => isTaskCompletedToday(t)).length;
-    const active = tasks.filter(t => t.status === 'active' && !isTaskCompletedToday(t)).length;
-    const backlog = tasks.filter(t => t.status === 'backlog').length;
-    const overdue = tasks.filter(t => {
+    const nonArchivedTasks = tasks.filter(t => !t.archived);
+    const total = nonArchivedTasks.length;
+    const completed = nonArchivedTasks.filter(t => isTaskCompletedToday(t)).length;
+    const active = nonArchivedTasks.filter(t => t.status === 'active' && !isTaskCompletedToday(t)).length;
+    const backlog = nonArchivedTasks.filter(t => t.status === 'backlog').length;
+    const overdue = nonArchivedTasks.filter(t => {
       if (!t.dueDate || isTaskCompletedToday(t)) return false;
       return new Date(t.dueDate) < new Date();
     }).length;
@@ -337,6 +343,7 @@ function TasksPageContent() {
             thoughts={thoughts}
             getPriorityColor={getPriorityColor}
             getPriorityIcon={getPriorityIcon}
+            archiveTask={archiveTask}
           />
         ))}
       </div>
@@ -393,7 +400,8 @@ function TaskGroup({
   setSelectedTask,
   thoughts,
   getPriorityColor,
-  getPriorityIcon
+  getPriorityIcon,
+  archiveTask
 }: {
   frequency: string;
   tasks: Task[];
@@ -404,6 +412,7 @@ function TaskGroup({
   thoughts: any[];
   getPriorityColor: (priority: TaskPriority) => string;
   getPriorityIcon: (priority: TaskPriority) => React.ReactNode;
+  archiveTask: (id: string) => Promise<void>;
 }) {
   const { displayedItems, hasMore, observerTarget } = useInfiniteScroll(tasks, {
     initialItemsPerPage: 15,
@@ -491,7 +500,7 @@ function TaskGroup({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className={`p-4 rounded-xl cursor-pointer transition-all transform hover:scale-[1.02] hover:shadow-xl border-2 ${
+                className={`group relative p-4 rounded-xl cursor-pointer transition-all transform hover:scale-[1.02] hover:shadow-xl border-2 ${
                   isTaskCompletedToday(task)
                     ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-300 dark:border-green-800'
                     : task.category === 'mastery'
@@ -500,6 +509,19 @@ function TaskGroup({
                 }`}
                 onClick={() => onTaskClick(task)}
               >
+                {/* Archive Button - Shows on hover */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    archiveTask(task.id);
+                  }}
+                  className="absolute top-3 right-3 p-2 rounded-md bg-white/90 dark:bg-gray-800/90 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 shadow-md"
+                  title="Archive task"
+                  aria-label={`Archive ${task.title}`}
+                >
+                  <Archive className="h-4 w-4" />
+                </button>
+
                 <div className="flex flex-col gap-3">
                   <div className="flex items-start gap-3">
                     <div
