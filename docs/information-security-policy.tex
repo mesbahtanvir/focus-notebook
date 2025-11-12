@@ -49,6 +49,16 @@ This policy defines how Focus Notebook protects the confidentiality, integrity, 
   \item Encryption keys are managed by GCP KMS; overrides require CTO approval and change management.
 \end{itemize}
 
+\section{Data Retention \& Deletion}
+\begin{itemize}
+  \item Maintain a living data inventory (Firestore collections, Storage buckets, analytics exports, and logs) with documented lawful bases, retention targets, and disposal procedures aligned with GDPR, CCPA, and other applicable privacy laws.
+  \item Highly Sensitive Plaid-derived data is retained only as long as an account remains active plus 24 months for fraud prevention and accounting; manual CSV exports and ad-hoc reports are purged within 30 days unless a shorter contractual requirement applies.
+  \item Daily managed backups inherit Google defaults and expire within 35 days; on-demand exports include signed timestamps and destruction dates recorded in the retention register.
+  \item Verified data-subject deletion requests are fulfilled within 30 days (or faster when required) by removing data from Firestore, Storage, and analytics tables, then scheduling the next backup rotation to ensure irreversible removal.
+  \item Deletion events and retention audits are tracked in the ticketing system with an assigned owner and reviewer; completion is evidenced by automation logs or manual validation notes.
+  \item Retention schedules and deletion controls are reviewed at least annually in partnership with legal counsel, and updates are communicated to engineering and support teams.
+\end{itemize}
+
 \section{Application \& Infrastructure Security}
 \begin{itemize}
   \item Firestore and Storage security rules enforce per-user access, verified via automated tests before deployment.
