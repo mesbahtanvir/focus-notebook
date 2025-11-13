@@ -67,14 +67,9 @@ function FocusPageContent() {
   // Filter active tasks - ALL active tasks are candidates for focus selection
   const today = getLocalDateString(new Date());
   const activeTasks = tasks.filter(t => {
-    // Basic filter: active status only
+    // Basic filter: active status only (excludes completed, backlog, and archived)
     // Note: focusEligible is checked but undefined is treated as eligible (opt-out, not opt-in)
     if (t.status !== 'active' || t.focusEligible === false) {
-      return false;
-    }
-
-    // Exclude archived tasks
-    if (t.archived) {
       return false;
     }
 

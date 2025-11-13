@@ -29,7 +29,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -46,7 +45,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -63,7 +61,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -82,7 +79,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -99,7 +95,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -116,7 +111,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -132,7 +126,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -148,7 +141,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -166,7 +158,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -184,7 +175,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -201,7 +191,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -219,7 +208,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -238,7 +226,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -257,7 +244,6 @@ describe('Focus Page Task Filtering', () => {
         const shouldBeIncluded = (
           task.status === 'active' &&
           task.focusEligible !== false &&
-          !task.archived &&
           !isTaskCompletedToday(task) &&
           !(task.recurrence?.type === 'workweek' && !isWorkday())
         );
@@ -275,7 +261,6 @@ describe('Focus Page Task Filtering', () => {
         const shouldBeIncluded = (
           task.status === 'active' &&
           task.focusEligible !== false &&
-          !task.archived &&
           !isTaskCompletedToday(task) &&
           !(task.recurrence?.type === 'workweek' && !isWorkday())
         );
@@ -287,55 +272,27 @@ describe('Focus Page Task Filtering', () => {
     it('excludes archived tasks', () => {
       const task = new TaskBuilder()
         .withTitle('Archived task')
-        .withStatus('active')
+        .withStatus('archived')
         .build();
-
-      // Manually set archived property since TaskBuilder might not have this method
-      (task as any).archived = true;
-      (task as any).archivedAt = new Date().toISOString();
 
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
       expect(shouldBeIncluded).toBe(false);
     });
 
-    it('includes non-archived tasks', () => {
+    it('includes non-archived active tasks', () => {
       const task = new TaskBuilder()
         .withTitle('Non-archived task')
         .withStatus('active')
         .build();
 
-      // Ensure task is not archived (should be undefined by default)
-      expect(task.archived).toBeUndefined();
-
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
-        !isTaskCompletedToday(task)
-      );
-
-      expect(shouldBeIncluded).toBe(true);
-    });
-
-    it('includes tasks with archived explicitly set to false', () => {
-      const task = new TaskBuilder()
-        .withTitle('Explicitly not archived')
-        .withStatus('active')
-        .build();
-
-      // Manually set archived to false
-      (task as any).archived = false;
-
-      const shouldBeIncluded = (
-        task.status === 'active' &&
-        task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -425,7 +382,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -444,7 +400,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -666,7 +621,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -690,7 +644,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
@@ -713,7 +666,6 @@ describe('Focus Page Task Filtering', () => {
       const shouldBeIncluded = (
         task.status === 'active' &&
         task.focusEligible !== false &&
-        !task.archived &&
         !isTaskCompletedToday(task)
       );
 
