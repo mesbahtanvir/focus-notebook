@@ -43,18 +43,19 @@ interface PanelLayout {
 const PANEL_CONSTRAINTS = {
   left: {
     min: 200,
-    max: 400,
-    default: 256,
+    max: 500,
+    defaultPercent: 0.20, // 20% of screen width
     minimized: 48,
   },
   right: {
     min: 300,
-    max: 600,
-    default: 384,
+    max: 800,
+    defaultPercent: 0.50, // 50% of screen width
     minimized: 48,
   },
   main: {
-    min: 400,
+    min: 300,
+    defaultPercent: 0.30, // 30% of screen width (auto-calculated)
   },
 };
 
@@ -209,12 +210,26 @@ function FocusSessionContent({
           // Ignore parsing errors
         }
       }
+
+      // Calculate default widths based on screen size
+      const screenWidth = window.innerWidth;
+      const leftWidth = Math.round(screenWidth * PANEL_CONSTRAINTS.left.defaultPercent);
+      const rightWidth = Math.round(screenWidth * PANEL_CONSTRAINTS.right.defaultPercent);
+
+      return {
+        left: 'normal',
+        right: 'normal',
+        leftWidth: Math.max(PANEL_CONSTRAINTS.left.min, Math.min(PANEL_CONSTRAINTS.left.max, leftWidth)),
+        rightWidth: Math.max(PANEL_CONSTRAINTS.right.min, Math.min(PANEL_CONSTRAINTS.right.max, rightWidth)),
+      };
     }
+
+    // Server-side fallback (shouldn't be used but just in case)
     return {
       left: 'normal',
       right: 'normal',
-      leftWidth: PANEL_CONSTRAINTS.left.default,
-      rightWidth: PANEL_CONSTRAINTS.right.default,
+      leftWidth: 384, // ~20% of 1920px
+      rightWidth: 960, // ~50% of 1920px
     };
   });
 
