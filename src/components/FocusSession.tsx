@@ -1021,9 +1021,9 @@ function FocusSessionContent({
                   transition={{ duration: 0.2 }}
                   className="h-full"
                 >
-                  <div className="h-full p-4 sm:p-6 lg:p-8">
+                  <div className="h-full p-4 sm:p-6 lg:p-6">
                     {/* Task Details */}
-                    <div className="space-y-6 max-w-4xl mx-auto lg:max-w-none lg:mx-0">
+                    <div className="space-y-4 max-w-4xl mx-auto lg:max-w-none lg:mx-0">
                       {/* Mobile: Task Navigation Arrows */}
                       <div className="lg:hidden flex items-center justify-between">
                         <button
@@ -1055,9 +1055,9 @@ function FocusSessionContent({
                         </button>
                       </div>
 
-                      {/* Task Title */}
-                      <div className="space-y-3">
-                        <h1 className={`text-2xl md:text-3xl font-bold ${
+                      {/* Task Title & Timer */}
+                      <div className="space-y-2">
+                        <h1 className={`text-lg md:text-xl font-semibold ${
                           currentFocusTask.completed
                             ? 'line-through text-gray-400 dark:text-gray-600'
                             : 'text-gray-900 dark:text-white'
@@ -1067,8 +1067,8 @@ function FocusSessionContent({
 
                         {/* Timer */}
                         <div className="flex items-center gap-2">
-                          <Clock className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                          <span className="text-2xl font-mono font-bold text-purple-600 dark:text-purple-400">
+                          <Clock className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                          <span className="text-xl font-mono font-semibold text-purple-600 dark:text-purple-400">
                             {formatTimeGentle(currentFocusTask.timeSpent)}
                           </span>
                         </div>
@@ -1105,45 +1105,30 @@ function FocusSessionContent({
                         )}
                       </div>
 
-                      {/* Description */}
-                      {currentFocusTask.task.notes && (
-                        <div className="space-y-2">
-                          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            Description
-                          </h3>
-                          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                            <div className="prose prose-sm dark:prose-invert max-w-none">
-                              <div dangerouslySetInnerHTML={{ __html: currentFocusTask.task.notes }} />
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                      {/* Description - Hidden to save space */}
 
                       {/* Task Steps */}
                       {currentFocusTask.task.steps && currentFocusTask.task.steps.length > 0 && (
-                        <div className="space-y-3">
-                          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Steps:</h3>
-                          <div className="space-y-2">
+                        <div className="space-y-2">
+                          <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Steps</h3>
+                          <div className="space-y-1.5">
                             {currentFocusTask.task.steps.map((step, idx) => (
                               <div
                                 key={idx}
-                                className={`flex items-start gap-3 p-3 rounded-lg transition-all ${
+                                className={`flex items-start gap-2 p-2 rounded transition-all ${
                                   step.completed
-                                    ? 'bg-green-50 dark:bg-green-950/20 border-2 border-green-200 dark:border-green-800'
-                                    : 'bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700'
+                                    ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800'
+                                    : 'bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700'
                                 }`}
                               >
-                                <div className={`mt-0.5 flex items-center justify-center w-5 h-5 rounded-full border-2 flex-shrink-0 ${
+                                <div className={`mt-0.5 flex items-center justify-center w-4 h-4 rounded-full border flex-shrink-0 ${
                                   step.completed
                                     ? 'bg-green-500 border-green-600 dark:bg-green-600 dark:border-green-500'
                                     : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
                                 }`}>
-                                  {step.completed && <Check className="h-3 w-3 text-white" />}
+                                  {step.completed && <Check className="h-2.5 w-2.5 text-white" />}
                                 </div>
-                                <span className={`flex-1 text-sm ${
+                                <span className={`flex-1 text-xs ${
                                   step.completed
                                     ? 'line-through text-gray-500 dark:text-gray-500'
                                     : 'text-gray-800 dark:text-gray-200'
@@ -1157,14 +1142,14 @@ function FocusSessionContent({
                       )}
 
                       {/* Primary Actions */}
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         {/* Follow-up Task Button */}
                         <button
                           onClick={() => setShowFollowUpModal(true)}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-indigo-300 dark:border-indigo-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors text-indigo-600 dark:text-indigo-400 font-medium text-sm"
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 border border-indigo-300 dark:border-indigo-700 rounded hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors text-indigo-600 dark:text-indigo-400 font-medium text-xs"
                         >
-                          <Plus className="h-4 w-4" />
-                          Create Follow-up Task
+                          <Plus className="h-3.5 w-3.5" />
+                          Follow-up Task
                         </button>
 
                         {/* Success Feedback */}
@@ -1184,18 +1169,18 @@ function FocusSessionContent({
                           )}
                         </AnimatePresence>
 
-                        <div className="flex gap-3">
+                        <div className="flex gap-2">
                           {!currentFocusTask.completed ? (
                             <button
                               onClick={handleMarkComplete}
-                              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors shadow-lg"
+                              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold text-sm transition-colors shadow-md"
                             >
-                              <Check className="h-5 w-5" />
-                              Mark Complete
+                              <Check className="h-4 w-4" />
+                              Complete
                             </button>
                           ) : (
-                            <div className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 rounded-lg font-semibold">
-                              <Check className="h-5 w-5" />
+                            <div className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 rounded font-semibold text-sm">
+                              <Check className="h-4 w-4" />
                               Completed
                             </div>
                           )}
@@ -1203,7 +1188,7 @@ function FocusSessionContent({
                           {currentTaskIndex < totalTasks - 1 && (
                             <button
                               onClick={handleNext}
-                              className="lg:hidden px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium text-gray-700 dark:text-gray-300"
+                              className="lg:hidden px-4 py-2 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium text-sm text-gray-700 dark:text-gray-300"
                             >
                               Next →
                             </button>
