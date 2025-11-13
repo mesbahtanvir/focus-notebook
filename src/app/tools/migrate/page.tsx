@@ -109,7 +109,7 @@ export default function MigratePage() {
         executedAt: new Date().toISOString(),
         success: result.success,
         itemsProcessed: result.itemsProcessed,
-        error: result.error,
+        ...(result.error && { error: result.error }),
       };
 
       await recordMigration(userId, record);
@@ -132,6 +132,7 @@ export default function MigratePage() {
     } catch (error) {
       console.error('Migration execution failed:', error);
 
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const record: MigrationRecord = {
         id: migrationState.migration.id,
         version: migrationState.migration.version,
@@ -139,7 +140,7 @@ export default function MigratePage() {
         executedAt: new Date().toISOString(),
         success: false,
         itemsProcessed: 0,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
       };
 
       await recordMigration(userId, record);
