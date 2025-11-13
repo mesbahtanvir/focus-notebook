@@ -66,7 +66,7 @@ function TasksPageContent() {
 
     let filtered = tasks.filter(task => {
       // Hide archived tasks
-      if (task.archived) return false;
+      if (task.status === 'archived') return false;
 
       // If showCompleted is true, show all tasks
       if (!showCompleted) {
@@ -155,7 +155,7 @@ function TasksPageContent() {
   }, [filteredAndSortedTasks]);
 
   const taskStats = useMemo(() => {
-    const nonArchivedTasks = tasks.filter(t => !t.archived);
+    const nonArchivedTasks = tasks.filter(t => t.status !== 'archived');
     const total = nonArchivedTasks.length;
     const completed = nonArchivedTasks.filter(t => isTaskCompletedToday(t)).length;
     const active = nonArchivedTasks.filter(t => t.status === 'active' && !isTaskCompletedToday(t)).length;

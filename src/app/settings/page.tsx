@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -18,7 +18,7 @@ import { useFocus } from '@/store/useFocus';
 import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
 import { EnhancedDataManagement } from '@/components/EnhancedDataManagement';
 import { TokenUsageDashboard } from '@/components/TokenUsageDashboard';
-import { Crown, Database, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
+import { Crown, Database, Rocket, ShieldCheck, Sparkles, RefreshCw } from 'lucide-react';
 
 const PRO_BENEFITS = [
   {
@@ -162,101 +162,104 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <Card className="border-4 border-purple-200 shadow-xl bg-gradient-to-br from-white to-purple-50">
-        <CardHeader className="bg-gradient-to-r from-purple-100 to-pink-100 border-b-4 border-purple-200">
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-            ⚙️ Settings
-          </CardTitle>
-          <CardDescription className="text-gray-600 font-medium">
-            Manage your Focus Notebook preferences and membership
-          </CardDescription>
-        </CardHeader>
+    <div className="container mx-auto py-4 px-3 space-y-4 max-w-6xl">
+      {/* Compact Header */}
+      <div className="flex items-baseline gap-2">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">⚙️ Settings</h1>
+        <span className="text-sm text-gray-500 dark:text-gray-400">Manage preferences</span>
+      </div>
 
-        <CardContent className="p-8 space-y-10">
+      {/* Ultra-Compact Grid - 3 columns on large screens */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
 
-          <section className="rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-6">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="allowBackgroundProcessing" className="text-base font-semibold text-gray-800">
-                    Background processing
-                  </Label>
-                  {!hasProAccess && (
-                    <Link href="/profile" className="text-sm font-semibold text-purple-600 underline-offset-4 hover:underline">
-                      Pro feature
-                    </Link>
-                  )}
-                </div>
-                <p className="text-sm text-gray-600 max-w-2xl">
-                  Let Focus Notebook automatically analyze new thoughts and queue AI suggestions in the background.
-                  You&apos;ll receive confident actions without lifting a finger.
+        {/* Background Processing */}
+        <Card className="border border-blue-200 dark:border-blue-800">
+          <CardHeader className="pb-2 pt-3 px-3">
+            <CardTitle className="text-base flex items-center gap-1.5">
+              <Sparkles className="h-4 w-4 text-blue-600" />
+              Background Processing
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 pb-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Auto-analyze thoughts
                 </p>
-                <p className="text-xs text-gray-500">
-                  We only run background jobs while your account is active. You can toggle this anytime.
-                </p>
+                <Switch
+                  id="allowBackgroundProcessing"
+                  checked={allowBackgroundProcessing && hasProAccess}
+                  disabled={!hasProAccess}
+                  onCheckedChange={handleBackgroundToggle}
+                />
               </div>
-
-              <Switch
-                id="allowBackgroundProcessing"
-                checked={allowBackgroundProcessing && hasProAccess}
-                disabled={!hasProAccess}
-                onCheckedChange={handleBackgroundToggle}
-              />
+              {!hasProAccess && (
+                <Link href="/profile" className="text-xs font-semibold text-purple-600 hover:underline">
+                  Pro feature →
+                </Link>
+              )}
             </div>
-          </section>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Data Management Card - Link to Dedicated Page */}
-      <Card className="border-4 border-green-200 dark:border-green-700 shadow-xl bg-gradient-to-br from-white to-green-50 dark:from-gray-900 dark:to-green-900/20">
-        <CardHeader className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/40 dark:to-emerald-900/40 border-b-4 border-green-200 dark:border-green-700">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full shadow-lg">
-              <Database className="h-6 w-6 text-white" />
+        {/* Data Management */}
+        <Card className="border border-green-200 dark:border-green-800">
+          <CardHeader className="pb-2 pt-3 px-3">
+            <CardTitle className="text-base flex items-center gap-1.5">
+              <Database className="h-4 w-4 text-green-600" />
+              Data Management
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 pb-3">
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                  Import/Export
+                </Badge>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                  Preview
+                </Badge>
+              </div>
+              <Link href="/settings/data-management" className="block">
+                <Button size="sm" className="w-full h-7 text-xs bg-green-600 hover:bg-green-700 text-white">
+                  <Database className="h-3 w-3 mr-1" />
+                  Manage
+                </Button>
+              </Link>
             </div>
-            <div>
-              <CardTitle className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                Data Management
-              </CardTitle>
-              <CardDescription className="text-gray-600 dark:text-gray-300 font-medium">
-                Import, export, and manage your data
-              </CardDescription>
+          </CardContent>
+        </Card>
+
+        {/* Database Migrations */}
+        <Card className="border border-orange-200 dark:border-orange-800">
+          <CardHeader className="pb-2 pt-3 px-3">
+            <CardTitle className="text-base flex items-center gap-1.5">
+              <RefreshCw className="h-4 w-4 text-orange-600" />
+              Migrations
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 pb-3">
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
+                  Sequential
+                </Badge>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
+                  Tracked
+                </Badge>
+              </div>
+              <Link href="/tools/migrate" className="block">
+                <Button size="sm" variant="outline" className="w-full h-7 text-xs border-orange-300 hover:bg-orange-50 dark:border-orange-700 dark:hover:bg-orange-900/20">
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Run
+                </Button>
+              </Link>
             </div>
-          </div>
-        </CardHeader>
+          </CardContent>
+        </Card>
+      </div>
 
-        <CardContent className="p-6 sm:p-8">
-          <div className="space-y-4">
-            <p className="text-sm text-gray-700 dark:text-gray-300">
-              Access advanced data management tools including import/export, preview, conflict resolution, and progress tracking.
-            </p>
-
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                ✓ Preview before import
-              </Badge>
-              <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                ✓ Conflict detection
-              </Badge>
-              <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                ✓ Progress tracking
-              </Badge>
-              <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                ✓ Selective import/export
-              </Badge>
-            </div>
-
-            <Link href="/settings/data-management" className="block">
-              <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium">
-                <Database className="h-4 w-4 mr-2" />
-                Open Data Management
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-
+      {/* Token Usage Dashboard - Full Width */}
       <TokenUsageDashboard />
     </div>
   );

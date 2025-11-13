@@ -20,7 +20,7 @@ export default function TaskList() {
   const todays = useMemo(() => {
     const list = tasks.filter((t) => {
       // Hide archived tasks
-      if (t.archived) return false;
+      if (t.status === 'archived') return false;
 
       // Show tasks for today
       const isToday = isTodayISO(t.dueDate) || isTodayISO(t.createdAt);

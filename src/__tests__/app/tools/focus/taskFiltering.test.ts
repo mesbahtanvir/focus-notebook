@@ -268,6 +268,36 @@ describe('Focus Page Task Filtering', () => {
         expect(shouldBeIncluded).toBe(false);
       });
     }
+
+    it('excludes archived tasks', () => {
+      const task = new TaskBuilder()
+        .withTitle('Archived task')
+        .withStatus('archived')
+        .build();
+
+      const shouldBeIncluded = (
+        task.status === 'active' &&
+        task.focusEligible !== false &&
+        !isTaskCompletedToday(task)
+      );
+
+      expect(shouldBeIncluded).toBe(false);
+    });
+
+    it('includes non-archived active tasks', () => {
+      const task = new TaskBuilder()
+        .withTitle('Non-archived task')
+        .withStatus('active')
+        .build();
+
+      const shouldBeIncluded = (
+        task.status === 'active' &&
+        task.focusEligible !== false &&
+        !isTaskCompletedToday(task)
+      );
+
+      expect(shouldBeIncluded).toBe(true);
+    });
   });
 
   describe('Category display logic', () => {

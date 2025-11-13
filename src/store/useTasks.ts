@@ -6,7 +6,7 @@ import { subscribeCol } from '@/lib/data/subscribe'
 import { isWorkday, getLocalDateString } from '@/lib/utils/date'
 import { AIActionMetadata } from '@/types/aiMetadata'
 
-export type TaskStatus = 'active' | 'completed' | 'backlog'
+export type TaskStatus = 'active' | 'completed' | 'backlog' | 'archived'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type TaskCategory = 'mastery' | 'pleasure'
 export type RecurrenceType = 'none' | 'daily' | 'workweek' | 'weekly' | 'biweekly' | 'monthly' | 'bimonthly' | 'halfyearly' | 'yearly'
@@ -321,7 +321,7 @@ export const useTasks = create<State>((set, get) => ({
     if (!userId) throw new Error('Not authenticated')
 
     await updateAt(`users/${userId}/tasks/${id}`, {
-      archived: true,
+      status: 'archived' as TaskStatus,
       archivedAt: new Date().toISOString(),
     })
   },
@@ -331,7 +331,7 @@ export const useTasks = create<State>((set, get) => ({
     if (!userId) throw new Error('Not authenticated')
 
     await updateAt(`users/${userId}/tasks/${id}`, {
-      archived: false,
+      status: 'active' as TaskStatus,
       archivedAt: undefined,
     })
   },

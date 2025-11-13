@@ -101,7 +101,7 @@ type State = {
 
 // Balance tasks between mastery and pleasure
 export function selectBalancedTasks(allTasks: Task[], sessionDurationMinutes: number): Task[] {
-  // Filter active, non-completed, focus-eligible tasks
+  // Filter active, non-completed, focus-eligible tasks (status='active' excludes archived, completed, and backlog)
   const availableTasks = allTasks.filter(t => !t.done && t.status === 'active' && (t.focusEligible === true || t.focusEligible === undefined))
   
   if (availableTasks.length === 0) return []
