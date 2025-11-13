@@ -298,7 +298,8 @@ async function enhanceTransactions(
   const logResult = async (
     status: 'completed' | 'failed',
     rawResponse: string,
-    error?: unknown
+    error?: unknown,
+    usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }
   ) => {
     if (!logging?.userId) {
       return;
@@ -312,6 +313,7 @@ async function enhanceTransactions(
         promptType: 'enhance-transactions',
         metadata: logMetadata,
         status,
+        usage,
         error: error ? (error instanceof Error ? error.message : String(error)) : undefined,
       });
       logRecorded = true;
@@ -349,26 +351,27 @@ async function enhanceTransactions(
 
     if (!response.ok) {
       const message = data?.error?.message || 'Unknown error';
-      await logResult('failed', responseBody, message);
+      await logResult('failed', responseBody, message, data?.usage);
       throw new Error(`OpenAI API error: ${message}`);
     }
 
     const aiResponse = data?.choices?.[0]?.message?.content;
+    const usage = data?.usage;
 
     if (!aiResponse) {
-      await logResult('failed', responseBody, 'No response from OpenAI');
+      await logResult('failed', responseBody, 'No response from OpenAI', usage);
       throw new Error('No response from OpenAI');
     }
 
     try {
       const parsed = parseStructuredAIResponse<AiResponsePayload>(aiResponse);
       const normalized = normalizeAiResponse(parsed, transactions.length);
-      await logResult('completed', aiResponse);
+      await logResult('completed', aiResponse, undefined, usage);
       return normalized;
     } catch (error) {
       console.error('Failed to parse AI response:', error);
       console.error('Response was:', aiResponse);
-      await logResult('failed', aiResponse, error);
+      await logResult('failed', aiResponse, error, usage);
       throw error;
     }
   } catch (error) {
