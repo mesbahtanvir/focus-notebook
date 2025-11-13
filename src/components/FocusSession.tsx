@@ -14,7 +14,10 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
-  GripVertical
+  GripVertical,
+  Minimize2,
+  Maximize2,
+  Minimize
 } from "lucide-react";
 import { FormattedNotes } from '@/lib/formatNotes';
 import { ConfirmModal } from "./ConfirmModal";
@@ -25,6 +28,35 @@ import { UnifiedEndSession } from './UnifiedEndSession';
 import RichTextEditor from "@/components/RichTextEditor";
 
 type FocusStore = ReturnType<typeof useFocus.getState>;
+
+// Panel state types
+type PanelState = 'normal' | 'minimized' | 'maximized';
+
+interface PanelLayout {
+  left: PanelState;
+  right: PanelState;
+  leftWidth: number;
+  rightWidth: number;
+}
+
+// Panel width constraints
+const PANEL_CONSTRAINTS = {
+  left: {
+    min: 200,
+    max: 400,
+    default: 256,
+    minimized: 48,
+  },
+  right: {
+    min: 300,
+    max: 600,
+    default: 384,
+    minimized: 48,
+  },
+  main: {
+    min: 400,
+  },
+};
 
 export function FocusSession() {
   const router = useRouter();
@@ -164,6 +196,121 @@ function FocusSessionContent({
   const lastUpdateRef = useRef<number>(Date.now());
   const hasPendingChangesRef = useRef<boolean>(false);
   const pendingNotesTaskIndexRef = useRef<number>(0);
+
+  // Panel layout state
+  const [panelLayout, setPanelLayout] = useState<PanelLayout>(() => {
+    // Load from localStorage
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('focusSession.panelLayout');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          // Ignore parsing errors
+        }
+      }
+    }
+    return {
+      left: 'normal',
+      right: 'normal',
+      leftWidth: PANEL_CONSTRAINTS.left.default,
+      rightWidth: PANEL_CONSTRAINTS.right.default,
+    };
+  });
+
+  // Resize state
+  const [isResizing, setIsResizing] = useState<'left' | 'right' | null>(null);
+  const resizeStartX = useRef<number>(0);
+  const resizeStartWidth = useRef<number>(0);
+  // Save panel layout to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('focusSession.panelLayout', JSON.stringify(panelLayout));
+    }
+  }, [panelLayout]);
+
+  // Panel control handlers
+  const handleMinimizeLeft = useCallback(() => {
+    setPanelLayout(prev => ({
+      ...prev,
+      left: prev.left === 'minimized' ? 'normal' : 'minimized',
+    }));
+  }, []);
+
+  const handleMinimizeRight = useCallback(() => {
+    setPanelLayout(prev => ({
+      ...prev,
+      right: prev.right === 'minimized' ? 'normal' : 'minimized',
+    }));
+  }, []);
+
+  const handleMaximizeRight = useCallback(() => {
+    setPanelLayout(prev => {
+      if (prev.right === 'maximized') {
+        // Restore to normal
+        return {
+          ...prev,
+          left: 'normal',
+          right: 'normal',
+        };
+      } else {
+        // Maximize right, minimize left
+        return {
+          ...prev,
+          left: 'minimized',
+          right: 'maximized',
+        };
+      }
+    });
+  }, []);
+
+  // Resize handlers
+  const handleResizeStart = useCallback((panel: 'left' | 'right', e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(panel);
+    resizeStartX.current = e.clientX;
+    resizeStartWidth.current = panel === 'left' ? panelLayout.leftWidth : panelLayout.rightWidth;
+  }, [panelLayout]);
+
+  const handleResizeMove = useCallback((e: MouseEvent) => {
+    if (!isResizing) return;
+
+    const delta = e.clientX - resizeStartX.current;
+    const newWidth = resizeStartWidth.current + (isResizing === 'left' ? delta : -delta);
+
+    const constraints = isResizing === 'left' ? PANEL_CONSTRAINTS.left : PANEL_CONSTRAINTS.right;
+    const clampedWidth = Math.max(constraints.min, Math.min(constraints.max, newWidth));
+
+    // Snap to grid (8px)
+    const snappedWidth = Math.round(clampedWidth / 8) * 8;
+
+    setPanelLayout(prev => ({
+      ...prev,
+      [isResizing === 'left' ? 'leftWidth' : 'rightWidth']: snappedWidth,
+    }));
+  }, [isResizing]);
+
+  const handleResizeEnd = useCallback(() => {
+    setIsResizing(null);
+  }, []);
+
+  // Resize mouse events
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleResizeMove);
+      document.addEventListener('mouseup', handleResizeEnd);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+
+      return () => {
+        document.removeEventListener('mousemove', handleResizeMove);
+        document.removeEventListener('mouseup', handleResizeEnd);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+    }
+  }, [isResizing, handleResizeMove, handleResizeEnd]);
+
   // Get previous session notes for the current task
   const previousSessionNotes = useMemo(() => {
     if (!currentSession) return [];
@@ -346,7 +493,7 @@ function FocusSessionContent({
     if (!currentSession) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle if not typing in textarea
+      // Only handle if not typing in textarea or input
       if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) {
         return;
       }
@@ -354,6 +501,7 @@ function FocusSessionContent({
       const currentTaskIndex = currentSession.currentTaskIndex;
       const totalTasks = currentSession.tasks.length;
 
+      // Task navigation
       if (e.key === 'ArrowLeft' && currentTaskIndex > 0) {
         e.preventDefault();
         switchToTask(currentTaskIndex - 1);
@@ -363,11 +511,33 @@ function FocusSessionContent({
         switchToTask(currentTaskIndex + 1);
         setCurrentTime(currentSession.tasks[currentTaskIndex + 1].timeSpent);
       }
+      // Panel controls
+      else if (e.key === '[') {
+        e.preventDefault();
+        handleMinimizeLeft();
+      } else if (e.key === ']') {
+        e.preventDefault();
+        handleMinimizeRight();
+      } else if (e.key === '\\') {
+        e.preventDefault();
+        // Toggle distraction-free mode (both panels minimized)
+        setPanelLayout(prev => {
+          const bothMinimized = prev.left === 'minimized' && prev.right === 'minimized';
+          return {
+            ...prev,
+            left: bothMinimized ? 'normal' : 'minimized',
+            right: bothMinimized ? 'normal' : 'minimized',
+          };
+        });
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        handleMaximizeRight();
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentSession, switchToTask]);
+  }, [currentSession, switchToTask, handleMinimizeLeft, handleMinimizeRight, handleMaximizeRight]);
 
   const performEndSession = async () => {
     if (!currentSession) return;
@@ -624,11 +794,48 @@ function FocusSessionContent({
         <div className="h-full w-full">
           <div className="h-full flex">
             {/* Desktop: Task Navigation Sidebar */}
-            <div className="hidden lg:block w-64 border-r border-gray-200 dark:border-gray-800 overflow-y-auto bg-gray-50 dark:bg-gray-900/50">
-              <div className="p-4 space-y-2">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-                  Tasks ({completedTasks}/{totalTasks})
-                </h3>
+            <motion.div
+              className="hidden lg:block border-r border-gray-200 dark:border-gray-800 overflow-y-auto bg-gray-50 dark:bg-gray-900/50 flex-shrink-0"
+              animate={{
+                width: panelLayout.left === 'minimized'
+                  ? PANEL_CONSTRAINTS.left.minimized
+                  : panelLayout.leftWidth,
+              }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+            >
+              {panelLayout.left === 'minimized' ? (
+                // Minimized state - icon bar
+                <div className="h-full flex flex-col items-center py-4 px-2">
+                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 [writing-mode:vertical-lr] rotate-180 select-none mb-4">
+                    TASKS
+                  </span>
+                  <button
+                    onClick={handleMinimizeLeft}
+                    className="mt-auto p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    title="Expand Tasks Panel ([)"
+                  >
+                    <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  </button>
+                </div>
+              ) : (
+                // Normal state - full panel
+                <>
+                  {/* Panel Header */}
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+                    <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      Tasks ({completedTasks}/{totalTasks})
+                    </h3>
+                    <button
+                      onClick={handleMinimizeLeft}
+                      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                      title="Minimize Tasks Panel ([)"
+                    >
+                      <Minimize2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+                    </button>
+                  </div>
+
+                  {/* Panel Content */}
+                  <div className="p-4 space-y-2">
                 {currentSession.tasks.map((focusTask, index) => {
                   const isActive = index === currentTaskIndex;
                   const isDragOver = dragOverIndex === index && draggingIndex !== null && draggingIndex !== index;
@@ -697,8 +904,24 @@ function FocusSessionContent({
                     }
                   }}
                 />
+                  </div>
+                </>
+              )}
+            </motion.div>
+
+            {/* Left Resize Handle */}
+            {panelLayout.left === 'normal' && (
+              <div
+                className="hidden lg:block w-1 hover:w-1.5 bg-gray-200 dark:bg-gray-800 hover:bg-purple-500 dark:hover:bg-purple-600 cursor-col-resize transition-all duration-150 relative group flex-shrink-0"
+                onMouseDown={(e) => handleResizeStart('left', e)}
+              >
+                <div className="absolute inset-y-0 -left-8 w-16 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <span className="text-xs text-white bg-gray-900 dark:bg-gray-100 dark:text-gray-900 px-2 py-1 rounded shadow-lg whitespace-nowrap">
+                    Drag to resize
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Main Content Area with Swipe Support */}
             <div
@@ -716,9 +939,9 @@ function FocusSessionContent({
                   transition={{ duration: 0.2 }}
                   className="h-full"
                 >
-                  <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-6 p-4 sm:p-6 lg:p-8">
-                    {/* Task Details Column */}
-                    <div className="space-y-6">
+                  <div className="h-full p-4 sm:p-6 lg:p-8">
+                    {/* Task Details */}
+                    <div className="space-y-6 max-w-4xl mx-auto lg:max-w-none lg:mx-0">
                       {/* Mobile: Task Navigation Arrows */}
                       <div className="lg:hidden flex items-center justify-between">
                         <button
@@ -906,9 +1129,83 @@ function FocusSessionContent({
                         </div>
                       </div>
                     </div>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
 
-                    {/* Notes Column */}
-                    <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+            {/* Right Resize Handle */}
+            {panelLayout.right === 'normal' && (
+              <div
+                className="hidden lg:block w-1 hover:w-1.5 bg-gray-200 dark:bg-gray-800 hover:bg-purple-500 dark:hover:bg-purple-600 cursor-col-resize transition-all duration-150 relative group flex-shrink-0"
+                onMouseDown={(e) => handleResizeStart('right', e)}
+              >
+                <div className="absolute inset-y-0 -right-8 w-16 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <span className="text-xs text-white bg-gray-900 dark:bg-gray-100 dark:text-gray-900 px-2 py-1 rounded shadow-lg whitespace-nowrap">
+                    Drag to resize
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Desktop: Notes Panel */}
+            <motion.div
+              className="hidden lg:block border-l border-gray-200 dark:border-gray-800 overflow-y-auto bg-white dark:bg-gray-900 flex-shrink-0"
+              animate={{
+                width: panelLayout.right === 'minimized'
+                  ? PANEL_CONSTRAINTS.right.minimized
+                  : panelLayout.right === 'maximized'
+                  ? `calc(100vw - ${PANEL_CONSTRAINTS.left.minimized + PANEL_CONSTRAINTS.main.min}px)`
+                  : panelLayout.rightWidth,
+              }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+            >
+              {panelLayout.right === 'minimized' ? (
+                // Minimized state - icon bar
+                <div className="h-full flex flex-col items-center py-4 px-2">
+                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 [writing-mode:vertical-lr] rotate-180 select-none mb-4">
+                    NOTES
+                  </span>
+                  <button
+                    onClick={handleMinimizeRight}
+                    className="mt-auto p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    title="Expand Notes Panel (])"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  </button>
+                </div>
+              ) : (
+                // Normal or maximized state - full panel
+                <>
+                  {/* Panel Header */}
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      Notes
+                    </h3>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={handleMinimizeRight}
+                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                        title="Minimize Notes Panel (])"
+                      >
+                        <Minimize2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+                      </button>
+                      <button
+                        onClick={handleMaximizeRight}
+                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                        title={panelLayout.right === 'maximized' ? 'Restore Notes Panel' : 'Maximize Notes Panel (Ctrl+Shift+F)'}
+                      >
+                        {panelLayout.right === 'maximized' ? (
+                          <Minimize className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+                        ) : (
+                          <Maximize2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Panel Content */}
+                  <div className="p-4 space-y-4">
                       {/* Previous Sessions */}
                       {previousSessionNotes.length > 0 && (
                         <div className="space-y-2">
@@ -975,11 +1272,10 @@ function FocusSessionContent({
                           }
                         />
                       </div>
-                    </div>
                   </div>
-                </motion.div>
-              </AnimatePresence>
-            </div>
+                </>
+              )}
+            </motion.div>
           </div>
         </div>
       </div>
