@@ -28,6 +28,7 @@ export interface OpenAIResponse {
   };
   prompt: string;
   rawResponse: string;
+  model?: string; // Model used for the request
 }
 
 /**
@@ -264,5 +265,6 @@ export async function callOpenAI(
     usage: data.usage,
     prompt: fullPrompt,
     rawResponse: aiResponse,
+    model: data.model || modelName, // Include model from response or fallback to requested model
   };
 }

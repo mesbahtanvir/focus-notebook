@@ -688,6 +688,9 @@ async function processThoughtInternal(
         actions: result.actions,
         toolSpecIds: toolSpecs.map((spec) => spec.id),
         usage: result.usage,
+        metadata: {
+          model: result.model,
+        },
       });
     } catch (logError) {
       console.warn('Failed to log LLM interaction:', logError);
