@@ -73,6 +73,11 @@ function FocusPageContent() {
       return false;
     }
 
+    // Exclude archived tasks
+    if (t.archived) {
+      return false;
+    }
+
     // Check if task is completed today (works for both recurring and non-recurring)
     if (isTaskCompletedToday(t)) {
       return false;
