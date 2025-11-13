@@ -1066,9 +1066,9 @@ function FocusSessionContent({
                         </h1>
 
                         {/* Timer */}
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                          <span className="text-xl font-mono font-semibold text-purple-600 dark:text-purple-400">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                          <span className="text-sm font-mono font-medium text-purple-600 dark:text-purple-400">
                             {formatTimeGentle(currentFocusTask.timeSpent)}
                           </span>
                         </div>
