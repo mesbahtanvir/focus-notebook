@@ -1272,7 +1272,7 @@ function FocusSessionContent({
                   </div>
 
                   {/* Panel Content */}
-                  <div className="h-[calc(100vh-8rem)] flex flex-col p-4">
+                  <div className="flex-1 flex flex-col p-4 overflow-hidden">
                       {/* Previous Sessions */}
                       {previousSessionNotes.length > 0 && (
                         <>
