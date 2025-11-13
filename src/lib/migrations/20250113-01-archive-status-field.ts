@@ -20,7 +20,7 @@ export const migration20250113_01: Migration = {
   name: 'Archive Status Field Migration',
   description: 'Migrate archived tasks to use status field instead of archived boolean',
 
-  execute: async (userId: string): Promise<MigrationResult> => {
+  execute: async (userId: string, onProgress?: (current: number, total: number) => void): Promise<MigrationResult> => {
     try {
       const tasksRef = collection(db, `users/${userId}/tasks`);
       const archivedQuery = query(tasksRef, where('archived', '==', true));
@@ -35,22 +35,24 @@ export const migration20250113_01: Migration = {
       const tasksToMigrate = tasks.filter((task: any) => task.status !== 'archived');
 
       if (tasksToMigrate.length === 0) {
+        onProgress?.(0, 0);
         return {
           success: true,
           itemsProcessed: 0
         };
       }
 
-      // Update all tasks
-      const updatePromises = tasksToMigrate.map((task: any) =>
-        updateAt(`users/${userId}/tasks/${task.id}`, {
+      // Update tasks one by one to track progress
+      let completed = 0;
+      for (const task of tasksToMigrate) {
+        await updateAt(`users/${userId}/tasks/${task.id}`, {
           status: 'archived',
           // Keep archived field for backward compatibility during transition
           archived: true,
-        })
-      );
-
-      await Promise.all(updatePromises);
+        });
+        completed++;
+        onProgress?.(completed, tasksToMigrate.length);
+      }
 
       return {
         success: true,
