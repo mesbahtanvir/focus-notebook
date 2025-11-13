@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -162,84 +162,68 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 space-y-6 max-w-6xl">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-          ⚙️ Settings
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Manage your Focus Notebook preferences and membership
-        </p>
+    <div className="container mx-auto py-4 px-3 space-y-4 max-w-6xl">
+      {/* Compact Header */}
+      <div className="flex items-baseline gap-2">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">⚙️ Settings</h1>
+        <span className="text-sm text-gray-500 dark:text-gray-400">Manage preferences</span>
       </div>
 
-      {/* Grid Layout for Compact Organization */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Ultra-Compact Grid - 3 columns on large screens */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
 
         {/* Background Processing */}
-        <Card className="border-2 border-blue-200 dark:border-blue-800 shadow-md">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-blue-600" />
+        <Card className="border border-blue-200 dark:border-blue-800">
+          <CardHeader className="pb-2 pt-3 px-3">
+            <CardTitle className="text-base flex items-center gap-1.5">
+              <Sparkles className="h-4 w-4 text-blue-600" />
               Background Processing
             </CardTitle>
-            <CardDescription className="text-xs">
-              Automatic AI analysis for new thoughts
-            </CardDescription>
           </CardHeader>
-          <CardContent className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex-1 pr-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Auto-analyze thoughts and queue AI suggestions
+          <CardContent className="px-3 pb-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Auto-analyze thoughts
                 </p>
-                {!hasProAccess && (
-                  <Link href="/profile" className="text-xs font-semibold text-purple-600 hover:underline inline-block mt-1">
-                    Pro feature →
-                  </Link>
-                )}
+                <Switch
+                  id="allowBackgroundProcessing"
+                  checked={allowBackgroundProcessing && hasProAccess}
+                  disabled={!hasProAccess}
+                  onCheckedChange={handleBackgroundToggle}
+                />
               </div>
-              <Switch
-                id="allowBackgroundProcessing"
-                checked={allowBackgroundProcessing && hasProAccess}
-                disabled={!hasProAccess}
-                onCheckedChange={handleBackgroundToggle}
-              />
+              {!hasProAccess && (
+                <Link href="/profile" className="text-xs font-semibold text-purple-600 hover:underline">
+                  Pro feature →
+                </Link>
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* Data Management */}
-        <Card className="border-2 border-green-200 dark:border-green-800 shadow-md">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Database className="h-5 w-5 text-green-600" />
+        <Card className="border border-green-200 dark:border-green-800">
+          <CardHeader className="pb-2 pt-3 px-3">
+            <CardTitle className="text-base flex items-center gap-1.5">
+              <Database className="h-4 w-4 text-green-600" />
               Data Management
             </CardTitle>
-            <CardDescription className="text-xs">
-              Import, export, and manage your data
-            </CardDescription>
           </CardHeader>
-          <CardContent className="pb-4">
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-1.5">
-                <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+          <CardContent className="px-3 pb-3">
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                  Import/Export
+                </Badge>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
                   Preview
-                </Badge>
-                <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                  Conflicts
-                </Badge>
-                <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                  Progress
-                </Badge>
-                <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                  Selective
                 </Badge>
               </div>
               <Link href="/settings/data-management" className="block">
-                <Button size="sm" className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white">
-                  <Database className="h-3.5 w-3.5 mr-1.5" />
-                  Open Data Management
+                <Button size="sm" className="w-full h-7 text-xs bg-green-600 hover:bg-green-700 text-white">
+                  <Database className="h-3 w-3 mr-1" />
+                  Manage
                 </Button>
               </Link>
             </div>
@@ -247,36 +231,27 @@ export default function SettingsPage() {
         </Card>
 
         {/* Database Migrations */}
-        <Card className="border-2 border-orange-200 dark:border-orange-800 shadow-md">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <RefreshCw className="h-5 w-5 text-orange-600" />
-              Database Migrations
+        <Card className="border border-orange-200 dark:border-orange-800">
+          <CardHeader className="pb-2 pt-3 px-3">
+            <CardTitle className="text-base flex items-center gap-1.5">
+              <RefreshCw className="h-4 w-4 text-orange-600" />
+              Migrations
             </CardTitle>
-            <CardDescription className="text-xs">
-              Update your data structure
-            </CardDescription>
           </CardHeader>
-          <CardContent className="pb-4">
-            <div className="space-y-3">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Run ordered migrations to keep your database schema up to date
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
+          <CardContent className="px-3 pb-3">
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
                   Sequential
                 </Badge>
-                <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
                   Tracked
-                </Badge>
-                <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
-                  Safe
                 </Badge>
               </div>
               <Link href="/tools/migrate" className="block">
-                <Button size="sm" variant="outline" className="w-full border-orange-300 hover:bg-orange-50 dark:border-orange-700 dark:hover:bg-orange-900/20">
-                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                  Run Migrations
+                <Button size="sm" variant="outline" className="w-full h-7 text-xs border-orange-300 hover:bg-orange-50 dark:border-orange-700 dark:hover:bg-orange-900/20">
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Run
                 </Button>
               </Link>
             </div>
