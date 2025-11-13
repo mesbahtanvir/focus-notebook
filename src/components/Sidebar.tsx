@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, LayoutDashboard, Settings, User, Wrench, Menu, X, Shield, ChevronDown, ChevronRight, Target, Heart, Wallet, Plane, Grid3x3 } from 'lucide-react';
+import { Home, LayoutDashboard, Settings, User, Wrench, Menu, X, Shield, ChevronDown, ChevronRight, Target, Heart, Wallet, Plane, Grid3x3, Database } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toolGroups } from '../../shared/toolSpecs';
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [toolsExpanded, setToolsExpanded] = useState(true);
+  const [settingsExpanded, setSettingsExpanded] = useState(true);
   const pathname = usePathname();
   const { user } = useAuth();
 
@@ -293,32 +294,86 @@ export default function Sidebar() {
             </span>
           </Link>
 
-          {/* Settings Link */}
-          <Link
-            href="/settings"
-            onClick={closeSidebar}
-            aria-current={pathname === '/settings' ? 'page' : undefined}
-            className={`
-              group relative flex items-center gap-3 p-4 min-h-[44px] rounded-xl
-              transition-all duration-200 transform
-              focus:outline-none focus:ring-4 focus:ring-orange-300
-              touch-manipulation
-              ${pathname === '/settings'
-                ? 'bg-gradient-to-r from-orange-500 to-yellow-500 text-white shadow-md scale-105'
-                : 'text-gray-700 hover:bg-gradient-to-r hover:from-orange-100 hover:to-yellow-100 hover:scale-105'
-              }
-              lg:justify-center xl:justify-start
-            `}
-            title="Settings"
-          >
-            <Settings className={`h-5 w-5 ${pathname === '/settings' ? 'text-white' : 'text-gray-600'}`} />
-            <span className="font-medium lg:hidden xl:inline">Settings</span>
+          {/* Settings Section with Expandable Subsections */}
+          <div className="space-y-1">
+            <button
+              onClick={() => setSettingsExpanded(!settingsExpanded)}
+              className={`
+                group relative flex items-center gap-3 p-4 min-h-[44px] rounded-xl w-full
+                transition-all duration-200 transform
+                focus:outline-none focus:ring-4 focus:ring-orange-300
+                touch-manipulation
+                ${pathname.startsWith('/settings')
+                  ? 'bg-gradient-to-r from-orange-500 to-yellow-500 text-white shadow-md scale-105'
+                  : 'text-gray-700 hover:bg-gradient-to-r hover:from-orange-100 hover:to-yellow-100 hover:scale-105'
+                }
+                lg:justify-center xl:justify-start
+              `}
+              title="Settings"
+            >
+              <Settings className={`h-5 w-5 ${pathname.startsWith('/settings') ? 'text-white' : 'text-gray-600'}`} />
+              <span className="font-medium lg:hidden xl:inline flex-1 text-left">Settings</span>
+              {settingsExpanded ? (
+                <ChevronDown className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/settings') ? 'text-white' : 'text-gray-600'}`} />
+              ) : (
+                <ChevronRight className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/settings') ? 'text-white' : 'text-gray-600'}`} />
+              )}
 
-            {/* Tooltip for tablet view */}
-            <span className="hidden lg:block xl:hidden absolute left-full ml-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-              Settings
-            </span>
-          </Link>
+              {/* Tooltip for tablet view */}
+              <span className="hidden lg:block xl:hidden absolute left-full ml-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                Settings
+              </span>
+            </button>
+
+            {/* Settings Sub-items */}
+            {settingsExpanded && (
+              <div className="lg:hidden xl:block space-y-1 pl-4">
+                {/* General Settings */}
+                <Link
+                  href="/settings"
+                  onClick={closeSidebar}
+                  className={`
+                    flex items-center gap-3 p-3 min-h-[40px] rounded-lg
+                    transition-all duration-200
+                    focus:outline-none focus:ring-2 focus:ring-orange-300
+                    touch-manipulation
+                    ${pathname === '/settings'
+                      ? 'bg-white/60 shadow-sm'
+                      : 'hover:bg-white/40'
+                    }
+                  `}
+                  title="General Settings"
+                >
+                  <Settings className="h-4 w-4 text-orange-600" />
+                  <span className={`text-sm font-medium ${pathname === '/settings' ? 'text-gray-900' : 'text-gray-700'}`}>
+                    General
+                  </span>
+                </Link>
+
+                {/* Data Management */}
+                <Link
+                  href="/settings/data-management"
+                  onClick={closeSidebar}
+                  className={`
+                    flex items-center gap-3 p-3 min-h-[40px] rounded-lg
+                    transition-all duration-200
+                    focus:outline-none focus:ring-2 focus:ring-orange-300
+                    touch-manipulation
+                    ${pathname === '/settings/data-management'
+                      ? 'bg-white/60 shadow-sm'
+                      : 'hover:bg-white/40'
+                    }
+                  `}
+                  title="Data Management"
+                >
+                  <Database className="h-4 w-4 text-green-600" />
+                  <span className={`text-sm font-medium ${pathname === '/settings/data-management' ? 'text-gray-900' : 'text-gray-700'}`}>
+                    Data Management
+                  </span>
+                </Link>
+              </div>
+            )}
+          </div>
 
           {/* Debug Link - Visible for all users */}
           <Link
