@@ -29,14 +29,17 @@ service cloud.firestore {
     match /users/{userId}/{collection}/{document} {
       // Allow read if user owns the data
       allow read: if isOwner(userId);
-      
+
       // Allow create if user owns the data
       allow create: if isOwner(userId);
-      
-      // Allow update/delete with version and timestamp validation
-      allow update, delete: if isOwner(userId) 
-                            && isValidVersion()
-                            && hasValidTimestamp();
+
+      // Allow update with version and timestamp validation
+      allow update: if isOwner(userId)
+                    && isValidVersion()
+                    && hasValidTimestamp();
+
+      // Allow delete if user owns the data (no validation needed for delete)
+      allow delete: if isOwner(userId);
     }
     
     // Deny all other access
