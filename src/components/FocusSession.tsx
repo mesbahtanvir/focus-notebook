@@ -558,8 +558,10 @@ function FocusSessionContent({
     if (!currentSession) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle if not typing in textarea or input
-      if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) {
+      // Only handle if not typing in textarea, input, or contentEditable elements (like RichTextEditor)
+      if (e.target instanceof HTMLTextAreaElement ||
+          e.target instanceof HTMLInputElement ||
+          (e.target instanceof HTMLElement && e.target.isContentEditable)) {
         return;
       }
 
