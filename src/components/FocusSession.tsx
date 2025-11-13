@@ -222,12 +222,33 @@ function FocusSessionContent({
   const [isResizing, setIsResizing] = useState<'left' | 'right' | null>(null);
   const resizeStartX = useRef<number>(0);
   const resizeStartWidth = useRef<number>(0);
+
+  // Vertical resize state for notes sections
+  const [isResizingVertical, setIsResizingVertical] = useState(false);
+  const [previousNotesHeight, setPreviousNotesHeight] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('focusSession.previousNotesHeight');
+      if (saved) {
+        return parseInt(saved, 10);
+      }
+    }
+    return 200; // Default height in pixels
+  });
+  const resizeStartY = useRef<number>(0);
+  const resizeStartHeight = useRef<number>(0);
   // Save panel layout to localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('focusSession.panelLayout', JSON.stringify(panelLayout));
     }
   }, [panelLayout]);
+
+  // Save previous notes height to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('focusSession.previousNotesHeight', previousNotesHeight.toString());
+    }
+  }, [previousNotesHeight]);
 
   // Panel control handlers
   const handleMinimizeLeft = useCallback(() => {
@@ -294,6 +315,33 @@ function FocusSessionContent({
     setIsResizing(null);
   }, []);
 
+  // Vertical resize handlers for notes sections
+  const handleVerticalResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingVertical(true);
+    resizeStartY.current = e.clientY;
+    resizeStartHeight.current = previousNotesHeight;
+  }, [previousNotesHeight]);
+
+  const handleVerticalResizeMove = useCallback((e: MouseEvent) => {
+    if (!isResizingVertical) return;
+
+    const delta = e.clientY - resizeStartY.current;
+    const newHeight = resizeStartHeight.current + delta;
+
+    // Min height: 100px, Max height: 600px
+    const clampedHeight = Math.max(100, Math.min(600, newHeight));
+
+    // Snap to grid (8px)
+    const snappedHeight = Math.round(clampedHeight / 8) * 8;
+
+    setPreviousNotesHeight(snappedHeight);
+  }, [isResizingVertical]);
+
+  const handleVerticalResizeEnd = useCallback(() => {
+    setIsResizingVertical(false);
+  }, []);
+
   // Resize mouse events
   useEffect(() => {
     if (isResizing) {
@@ -310,6 +358,23 @@ function FocusSessionContent({
       };
     }
   }, [isResizing, handleResizeMove, handleResizeEnd]);
+
+  // Vertical resize mouse events
+  useEffect(() => {
+    if (isResizingVertical) {
+      document.addEventListener('mousemove', handleVerticalResizeMove);
+      document.addEventListener('mouseup', handleVerticalResizeEnd);
+      document.body.style.cursor = 'row-resize';
+      document.body.style.userSelect = 'none';
+
+      return () => {
+        document.removeEventListener('mousemove', handleVerticalResizeMove);
+        document.removeEventListener('mouseup', handleVerticalResizeEnd);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+    }
+  }, [isResizingVertical, handleVerticalResizeMove, handleVerticalResizeEnd]);
 
   // Get previous session notes for the current task
   const previousSessionNotes = useMemo(() => {
@@ -1205,17 +1270,24 @@ function FocusSessionContent({
                   </div>
 
                   {/* Panel Content */}
-                  <div className="p-4 space-y-4">
+                  <div className="h-[calc(100vh-8rem)] flex flex-col p-4">
                       {/* Previous Sessions */}
                       {previousSessionNotes.length > 0 && (
-                        <div className="space-y-2">
-                          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Previous Sessions
-                          </h3>
-                          <div className="max-h-48 overflow-y-auto rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-3 space-y-3">
+                        <>
+                          <div className="flex-shrink-0 space-y-2">
+                            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Previous Sessions
+                            </h3>
+                          </div>
+
+                          {/* Previous Sessions Scrollable Area */}
+                          <div
+                            className="overflow-y-auto rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-3 space-y-3 flex-shrink-0"
+                            style={{ height: `${previousNotesHeight}px` }}
+                          >
                             {previousSessionNotes.map((session, idx) => (
                               <div key={idx} className="text-sm">
                                 <div className="flex items-center gap-2 mb-1 text-xs text-gray-600 dark:text-gray-400">
@@ -1242,12 +1314,24 @@ function FocusSessionContent({
                               </div>
                             ))}
                           </div>
-                        </div>
+
+                          {/* Vertical Resize Handle */}
+                          <div
+                            className="h-1 hover:h-1.5 bg-gray-200 dark:bg-gray-800 hover:bg-purple-500 dark:hover:bg-purple-600 cursor-row-resize transition-all duration-150 relative group flex-shrink-0 my-2"
+                            onMouseDown={handleVerticalResizeStart}
+                          >
+                            <div className="absolute inset-x-0 -top-8 h-16 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                              <span className="text-xs text-white bg-gray-900 dark:bg-gray-100 dark:text-gray-900 px-2 py-1 rounded shadow-lg whitespace-nowrap">
+                                Drag to resize sections
+                              </span>
+                            </div>
+                          </div>
+                        </>
                       )}
 
                       {/* Current Session */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
+                      <div className="flex-1 flex flex-col space-y-2 min-h-0">
+                        <div className="flex items-center justify-between flex-shrink-0">
                           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -1261,16 +1345,14 @@ function FocusSessionContent({
                             </span>
                           )}
                         </div>
-                        <RichTextEditor
-                          content={localNotes}
-                          onChange={setLocalNotes}
-                          placeholder="Session notes... (auto-saved per task)"
-                          minHeight={
-                            previousSessionNotes.length > 0
-                              ? 'h-[calc(100vh-32rem)] lg:h-[calc(100vh-28rem)]'
-                              : 'h-[calc(100vh-16rem)] lg:h-[calc(100vh-12rem)]'
-                          }
-                        />
+                        <div className="flex-1 min-h-0">
+                          <RichTextEditor
+                            content={localNotes}
+                            onChange={setLocalNotes}
+                            placeholder="Session notes... (auto-saved per task)"
+                            minHeight="h-full"
+                          />
+                        </div>
                       </div>
                   </div>
                 </>
