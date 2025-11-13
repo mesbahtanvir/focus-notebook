@@ -187,8 +187,6 @@ export const useTasks = create<State>((set, get) => ({
       currentUnsub()
     }
 
-    console.log('[useTasks] Starting subscription for user:', userId);
-
     try {
       // Mark subscription as started
       set({ isSubscribed: true, isLoading: true, syncError: null })
@@ -200,13 +198,6 @@ export const useTasks = create<State>((set, get) => ({
       )
 
       const unsub = subscribeCol<Task>(tasksQuery, async (tasks, meta) => {
-        console.log('[useTasks] Snapshot received:', {
-          taskCount: tasks.length,
-          fromCache: meta.fromCache,
-          hasError: !!meta.error,
-          error: meta.error?.message
-        });
-
         set({
           tasks,
           isLoading: false,

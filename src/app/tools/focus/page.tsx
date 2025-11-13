@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { isWorkday, getLocalDateString, isTaskCompletedToday } from "@/lib/utils/date";
 import { isTaskRelevantForToday as determineTaskRelevanceForToday } from "./isTaskRelevantForToday";
+import { FOCUS_DURATION, TASK_SELECTION, TIME_CONVERSION, OVERDUE_PRIORITY_SCORE } from "@/lib/constants/focus";
 
 const PRIORITY_WEIGHTS: Record<TaskPriority, number> = {
   urgent: 4,
@@ -48,9 +49,9 @@ function FocusPageContent() {
   const loadTaskOrderPreferences = useFocus((s) => s.loadTaskOrderPreferences);
   const applyTaskOrderPreferences = useFocus((s) => s.applyTaskOrderPreferences);
 
-  // Get duration from URL or default to 60 minutes
+  // Get duration from URL or default to configured default
   const urlDuration = searchParams.get('duration');
-  const initialDuration = urlDuration ? parseInt(urlDuration) || 60 : 60;
+  const initialDuration = urlDuration ? parseInt(urlDuration) || FOCUS_DURATION.DEFAULT : FOCUS_DURATION.DEFAULT;
   const [duration, setDuration] = useState(initialDuration);
   const [customDurationValue, setCustomDurationValue] = useState(String(initialDuration));
   const [isCustomDurationOpen, setIsCustomDurationOpen] = useState(false);
@@ -106,7 +107,9 @@ function FocusPageContent() {
 
   const parsedCustomDuration = parseInt(customDurationValue, 10);
   const isCustomDurationValid =
-    !Number.isNaN(parsedCustomDuration) && parsedCustomDuration >= 15 && parsedCustomDuration <= 240;
+    !Number.isNaN(parsedCustomDuration) &&
+    parsedCustomDuration >= FOCUS_DURATION.MIN &&
+    parsedCustomDuration <= FOCUS_DURATION.MAX;
 
   const applyCustomDuration = () => {
     if (!isCustomDurationValid) return;
@@ -125,9 +128,9 @@ function FocusPageContent() {
     const dueStart = new Date(due);
     dueStart.setHours(0, 0, 0, 0);
 
-    const diffDays = Math.round((dueStart.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
+    const diffDays = Math.round((dueStart.getTime() - todayStart.getTime()) / TIME_CONVERSION.MILLISECONDS_PER_DAY);
 
-    if (diffDays < 0) return 5;
+    if (diffDays < 0) return OVERDUE_PRIORITY_SCORE;
     if (diffDays === 0) return 4;
     if (diffDays <= 2) return 3;
     if (diffDays <= 5) return 2;
@@ -312,7 +315,7 @@ function FocusPageContent() {
             const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
             return priorityOrder[a.priority] - priorityOrder[b.priority];
           })
-          .slice(0, Math.floor(duration / 15));
+          .slice(0, Math.floor(duration / TASK_SELECTION.ESTIMATED_MINUTES_PER_TASK));
         break;
 
       case 'selfcare':
@@ -747,7 +750,7 @@ function FocusPageContent() {
                               <div className="flex items-center gap-1">
                                 <Clock className="h-4 w-4 text-purple-500 dark:text-purple-400" />
                                 <span className="font-medium text-foreground">
-                                  {Math.floor(totalTime / 60)}m
+                                  {Math.floor(totalTime / TIME_CONVERSION.MINUTES_PER_HOUR)}m
                                 </span>
                               </div>
                               <div className="flex items-center gap-1">
@@ -991,14 +994,14 @@ function CustomDurationModal({
               </button>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Enter a duration between 15 and 240 minutes.
+              Enter a duration between {FOCUS_DURATION.MIN} and {FOCUS_DURATION.MAX} minutes.
             </p>
             <input
               type="number"
               value={value}
               onChange={(e) => onChange(e.target.value)}
-              min={15}
-              max={240}
+              min={FOCUS_DURATION.MIN}
+              max={FOCUS_DURATION.MAX}
               className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900/50 outline-none transition-colors"
               placeholder="Minutes"
             />

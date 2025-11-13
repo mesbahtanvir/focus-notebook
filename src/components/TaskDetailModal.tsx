@@ -13,6 +13,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { TimeDisplay } from "@/components/TimeDisplay";
 import { SessionHistory } from "@/components/SessionHistory";
 import RichTextEditor from "@/components/RichTextEditor";
+import { parseNotesMetadata, getUserNotes as getTaskUserNotes } from "@/lib/utils/taskNotes";
 import Link from "next/link";
 import {
   X,
@@ -53,21 +54,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
     return capitalize(type);
   };
 
-  // Helper functions to extract thoughtId and parse metadata from task notes
-  const getMetadataFromNotes = (notes?: string): any => {
-    if (!notes) return null;
-    try {
-      const parsed = JSON.parse(notes);
-      // Check if it's metadata (has sourceThoughtId, createdBy, etc.)
-      if (parsed.sourceThoughtId || parsed.createdBy === 'thought-processor') {
-        return parsed;
-      }
-    } catch {
-      // Not JSON, regular notes
-    }
-    return null;
-  };
-
+  // Helper function to extract thoughtId from task
   const getThoughtIdFromTask = (task: Task): string => {
     // First check the thoughtId field
     if (task.thoughtId) {
@@ -75,23 +62,13 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
     }
 
     // Then check if it's in the notes as metadata
-    const metadata = getMetadataFromNotes(task.notes);
+    const metadata = parseNotesMetadata(task.notes);
     return metadata?.sourceThoughtId || '';
-  };
-
-  const getUserNotesFromTask = (task: Task): string => {
-    // If notes contain metadata, return empty string (metadata shouldn't be edited)
-    const metadata = getMetadataFromNotes(task.notes);
-    if (metadata) {
-      return metadata.userNotes || '';
-    }
-    // Otherwise return the notes as-is
-    return task.notes || '';
   };
 
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
-  const [notes, setNotes] = useState(getUserNotesFromTask(task));
+  const [notes, setNotes] = useState(getTaskUserNotes(task.notes));
   const [category, setCategory] = useState<TaskCategory>(task.category || 'mastery');
   const [priority, setPriority] = useState<TaskPriority>(task.priority);
   const [status, setStatus] = useState<TaskStatus>(task.status);
@@ -162,7 +139,7 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
 
     // Handle notes field carefully to preserve metadata if it exists
     let notesToSave: string | undefined;
-    const existingMetadata = getMetadataFromNotes(task.notes);
+    const existingMetadata = parseNotesMetadata(task.notes);
 
     if (existingMetadata) {
       // If task has metadata, preserve it and add user notes
@@ -860,8 +837,9 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
           </section>
 
           {/* AI Generated Task Info */}
-          {!isEditing && getMetadataFromNotes(task.notes) && (() => {
-            const metadata = getMetadataFromNotes(task.notes);
+          {!isEditing && parseNotesMetadata(task.notes) && (() => {
+            const metadata = parseNotesMetadata(task.notes);
+            if (!metadata) return null;
             return (
               <section className="border-t border-gray-200 dark:border-gray-800 pt-6">
                 <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">

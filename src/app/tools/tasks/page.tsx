@@ -9,8 +9,6 @@ import {
   SortAsc,
   Calendar,
   CheckCircle2,
-  Circle,
-  AlertCircle,
   Repeat,
   ChevronDown,
   MessageCircle,
@@ -25,6 +23,8 @@ import Link from "next/link";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { toolThemes, ToolHeader, SearchAndFilters, ToolPageLayout } from "@/components/tools";
 import { isTaskCompletedToday } from "@/lib/utils/date";
+import { getPriorityColor, getPriorityIcon } from "@/lib/utils/priority";
+import { getUserNotes } from "@/lib/utils/taskNotes";
 
 type SortOption = 'priority' | 'dueDate' | 'createdAt' | 'title';
 type ViewMode = 'list' | 'kanban';
@@ -60,20 +60,6 @@ function TasksPageContent() {
     }
   }, [searchParams, tasks]);
 
-  // Helper function to extract user notes from task.notes
-  const getUserNotes = (notes?: string): string => {
-    if (!notes) return '';
-    try {
-      const parsed = JSON.parse(notes);
-      // Check if it's metadata
-      if (parsed.sourceThoughtId || parsed.createdBy === 'thought-processor') {
-        return parsed.userNotes || '';
-      }
-    } catch {
-      // Not JSON, return as-is
-    }
-    return notes;
-  };
 
   const filteredAndSortedTasks = useMemo(() => {
     const searchLower = searchTerm.toLowerCase();
@@ -182,23 +168,6 @@ function TasksPageContent() {
     return { total, completed, active, backlog, overdue };
   }, [tasks]);
 
-  const getPriorityColor = (priority: TaskPriority) => {
-    switch (priority) {
-      case 'urgent': return 'text-red-600 bg-red-50 border-red-200';
-      case 'high': return 'text-orange-600 bg-orange-50 border-orange-200';
-      case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'low': return 'text-green-600 bg-green-50 border-green-200';
-    }
-  };
-
-  const getPriorityIcon = (priority: TaskPriority) => {
-    switch (priority) {
-      case 'urgent': return <AlertCircle className="h-4 w-4" />;
-      case 'high': return <AlertCircle className="h-4 w-4" />;
-      case 'medium': return <Circle className="h-4 w-4" />;
-      case 'low': return <Circle className="h-4 w-4" />;
-    }
-  };
 
   const toggleGroupCollapse = (groupKey: string) => {
     setCollapsedGroups(prev => {
@@ -419,20 +388,6 @@ function TaskGroup({
     threshold: 0.8
   });
 
-  // Helper function to extract user notes from task.notes
-  const getUserNotes = (notes?: string): string => {
-    if (!notes) return '';
-    try {
-      const parsed = JSON.parse(notes);
-      // Check if it's metadata
-      if (parsed.sourceThoughtId || parsed.createdBy === 'thought-processor') {
-        return parsed.userNotes || '';
-      }
-    } catch {
-      // Not JSON, return as-is
-    }
-    return notes;
-  };
 
   if (tasks.length === 0) return null;
 

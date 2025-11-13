@@ -16,6 +16,7 @@ import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { GoalFormModal } from "@/components/GoalFormModal";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { toolThemes, ToolHeader, SearchAndFilters, ToolPageLayout } from "@/components/tools";
+import { getPriorityBadgeClasses } from "@/lib/utils/priority";
 
 export default function GoalsPage() {
   useTrackToolUsage('goals');
@@ -240,12 +241,7 @@ export default function GoalsPage() {
 
                     {/* Badges inline */}
                     <div className="flex flex-wrap gap-1.5 mb-2">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                        goal.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' :
-                        goal.priority === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400' :
-                        goal.priority === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-400' :
-                        'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400'
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getPriorityBadgeClasses(goal.priority)}`}>
                         {goal.priority}
                       </span>
                       {goalTime.totalMinutes > 0 && (
@@ -334,12 +330,7 @@ export default function GoalsPage() {
 
                     {/* Badges inline */}
                     <div className="flex flex-wrap gap-1.5 mb-2">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                        goal.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' :
-                        goal.priority === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400' :
-                        goal.priority === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-400' :
-                        'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400'
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getPriorityBadgeClasses(goal.priority)}`}>
                         {goal.priority}
                       </span>
                       {goalTime.totalMinutes > 0 && (

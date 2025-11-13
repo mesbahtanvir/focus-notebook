@@ -13,6 +13,8 @@ coverage/
 .jest-cache/
 node_modules/.cache/jest
 
+user_data/
+
 # Playwright
 test-results/
 playwright-report/

@@ -468,7 +468,7 @@ export const useFocus = create<State>((set, get) => ({
   
   loadSessions: async () => {
     // This is now handled by subscribe(), but keep for backward compatibility
-    console.log('loadSessions() is deprecated - use subscribe() instead')
+    // Method deprecated - use subscribe() instead
   },
   
   loadActiveSession: async () => {
@@ -689,7 +689,6 @@ export const useFocus = create<State>((set, get) => ({
 
     const userId = auth.currentUser?.uid
     if (!userId) {
-      console.warn('Cannot pause session: user not authenticated')
       return
     }
 
