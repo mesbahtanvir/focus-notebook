@@ -3,7 +3,7 @@ export interface Migration {
   version: number; // Sequential version number (1, 2, 3, etc.)
   name: string;
   description: string;
-  execute: (userId: string) => Promise<MigrationResult>;
+  execute: (userId: string, onProgress?: (current: number, total: number) => void) => Promise<MigrationResult>;
 }
 
 export interface MigrationResult {

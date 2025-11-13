@@ -9,6 +9,22 @@ import {
   canExecuteMigration,
 } from '@/lib/migrations/tracker';
 import { Migration, MigrationRecord } from '@/lib/migrations/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import {
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Lock,
+  Play,
+  Loader2,
+  AlertCircle,
+  Database,
+  ArrowRight
+} from 'lucide-react';
 
 type MigrationStatus = 'pending' | 'running' | 'completed' | 'failed' | 'blocked';
 
@@ -92,15 +108,25 @@ export default function MigratePage() {
     setMigrationStates(prev =>
       prev.map(s =>
         s.migration.id === migrationState.migration.id
-          ? { ...s, status: 'running' as MigrationStatus }
+          ? { ...s, status: 'running' as MigrationStatus, progress: { current: 0, total: 0 } }
           : s
       )
     );
 
     try {
-      const startTime = Date.now();
-      const result = await migrationState.migration.execute(userId);
-      const endTime = Date.now();
+      const result = await migrationState.migration.execute(
+        userId,
+        (current: number, total: number) => {
+          // Update progress
+          setMigrationStates(prev =>
+            prev.map(s =>
+              s.migration.id === migrationState.migration.id
+                ? { ...s, progress: { current, total } }
+                : s
+            )
+          );
+        }
+      );
 
       const record: MigrationRecord = {
         id: migrationState.migration.id,
@@ -170,37 +196,52 @@ export default function MigratePage() {
     }
   };
 
+  const getStatusIcon = (status: MigrationStatus) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />;
+      case 'running':
+        return <Loader2 className="h-5 w-5 text-blue-600 dark:text-blue-400 animate-spin" />;
+      case 'failed':
+        return <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />;
+      case 'blocked':
+        return <Lock className="h-5 w-5 text-gray-400 dark:text-gray-600" />;
+      case 'pending':
+        return <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />;
+    }
+  };
+
   const getStatusBadge = (status: MigrationStatus) => {
     switch (status) {
       case 'completed':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-            ✓ Completed
-          </span>
+          <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-300 dark:border-green-700">
+            Completed
+          </Badge>
         );
       case 'running':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-            ⟳ Running...
-          </span>
+          <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-300 dark:border-blue-700">
+            Running
+          </Badge>
         );
       case 'failed':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-            ✗ Failed
-          </span>
+          <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-300 dark:border-red-700">
+            Failed
+          </Badge>
         );
       case 'blocked':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400">
-            🔒 Blocked
-          </span>
+          <Badge variant="outline" className="text-gray-600 dark:text-gray-400">
+            Blocked
+          </Badge>
         );
       case 'pending':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-            ⏸ Pending
-          </span>
+          <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border-orange-300 dark:border-orange-700">
+            Pending
+          </Badge>
         );
     }
   };
@@ -210,146 +251,222 @@ export default function MigratePage() {
   const totalCount = migrationStates.length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">
-            Database Migrations
-          </h1>
+    <div className="container mx-auto py-4 px-3 space-y-4 max-w-4xl">
+      {/* Compact Header */}
+      <div className="flex items-baseline gap-2">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <RefreshCw className="h-6 w-6 text-orange-600" />
+          Database Migrations
+        </h1>
+      </div>
 
-          <div className="mb-6">
-            <p className="text-gray-700 dark:text-gray-300 mb-4">
-              Database migrations help keep your data structure up to date. Migrations are executed in order,
-              and each migration must complete successfully before the next one can run.
-            </p>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-          ) : (
-            <>
-              {/* Summary */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-                <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                  Migration Status
-                </h2>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-700 dark:text-gray-300">Total migrations:</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">{totalCount}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-700 dark:text-gray-300">Completed:</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">{completedCount}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-700 dark:text-gray-300">Pending:</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">{pendingCount}</span>
-                  </div>
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      ) : (
+        <>
+          {/* Summary Card */}
+          <Card className="border-blue-200 dark:border-blue-800">
+            <CardHeader className="pb-3 pt-4 px-4">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Database className="h-4 w-4 text-blue-600" />
+                Migration Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalCount}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">Total</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">{completedCount}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">Completed</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{pendingCount}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">Pending</div>
                 </div>
               </div>
 
-              {/* Run All Button */}
               {pendingCount > 0 && (
-                <div className="mb-6">
-                  <button
-                    onClick={executeAllPending}
-                    disabled={runningMigrationId !== null}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-                  >
-                    {runningMigrationId ? 'Running...' : `Run All Pending Migrations (${pendingCount})`}
-                  </button>
-                </div>
+                <Button
+                  onClick={executeAllPending}
+                  disabled={runningMigrationId !== null}
+                  className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
+                >
+                  {runningMigrationId ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Running migrations...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4" />
+                      Run All Pending ({pendingCount})
+                    </>
+                  )}
+                </Button>
               )}
+            </CardContent>
+          </Card>
 
-              {/* Migration List */}
-              <div className="space-y-4">
-                {migrationStates.map((state) => (
-                  <div
-                    key={state.migration.id}
-                    className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-1">
-                          <span className="text-sm font-mono text-gray-500 dark:text-gray-400">
-                            v{state.migration.version}
-                          </span>
-                          {getStatusBadge(state.status)}
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                          {state.migration.name}
-                        </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                          {state.migration.description}
-                        </p>
+          {/* Info Alert */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 flex gap-3">
+            <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-blue-900 dark:text-blue-100">
+              <p className="font-medium mb-1">About Migrations</p>
+              <p className="text-blue-700 dark:text-blue-300">
+                Migrations update your data structure. They run sequentially and must complete successfully before the next one can run.
+              </p>
+            </div>
+          </div>
+
+          {/* Migration List */}
+          <div className="space-y-3">
+            {migrationStates.map((state) => {
+              const statusColor = {
+                completed: 'border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10',
+                running: 'border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10',
+                failed: 'border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10',
+                blocked: 'border-gray-200 dark:border-gray-700',
+                pending: 'border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-900/10',
+              }[state.status];
+
+              return (
+                <Card key={state.migration.id} className={`${statusColor} transition-all`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      {/* Icon */}
+                      <div className="flex-shrink-0 mt-1">
+                        {getStatusIcon(state.status)}
                       </div>
 
-                      {state.status === 'pending' && state.canRun && (
-                        <button
-                          onClick={() => executeMigration(state)}
-                          disabled={runningMigrationId !== null}
-                          className="ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-colors"
-                        >
-                          Run
-                        </button>
-                      )}
-                    </div>
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-mono text-gray-500 dark:text-gray-400">
+                                v{state.migration.version}
+                              </span>
+                              {getStatusBadge(state.status)}
+                            </div>
+                            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                              {state.migration.name}
+                            </h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              {state.migration.description}
+                            </p>
+                          </div>
 
-                    {state.record && (
-                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <span className="text-gray-600 dark:text-gray-400">Executed:</span>
-                            <span className="ml-2 text-gray-900 dark:text-white">
-                              {new Date(state.record.executedAt).toLocaleString()}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-gray-600 dark:text-gray-400">Items processed:</span>
-                            <span className="ml-2 text-gray-900 dark:text-white">
-                              {state.record.itemsProcessed}
-                            </span>
-                          </div>
+                          {/* Action Button */}
+                          {state.status === 'pending' && state.canRun && (
+                            <Button
+                              onClick={() => executeMigration(state)}
+                              disabled={runningMigrationId !== null}
+                              size="sm"
+                              className="flex-shrink-0 bg-blue-600 hover:bg-blue-700"
+                            >
+                              <Play className="h-3 w-3" />
+                              Run
+                            </Button>
+                          )}
+
+                          {state.status === 'failed' && (
+                            <Button
+                              onClick={() => executeMigration(state)}
+                              disabled={runningMigrationId !== null}
+                              size="sm"
+                              variant="outline"
+                              className="flex-shrink-0 border-red-300 hover:bg-red-50 dark:border-red-700 dark:hover:bg-red-900/20"
+                            >
+                              <RefreshCw className="h-3 w-3" />
+                              Retry
+                            </Button>
+                          )}
                         </div>
-                        {state.record.error && (
-                          <div className="mt-2 text-sm text-red-600 dark:text-red-400">
-                            Error: {state.record.error}
+
+                        {/* Progress Bar */}
+                        {state.status === 'running' && state.progress && state.progress.total > 0 && (
+                          <div className="space-y-1.5">
+                            <Progress
+                              value={(state.progress.current / state.progress.total) * 100}
+                              className="h-2 bg-blue-200 dark:bg-blue-800"
+                            />
+                            <div className="text-xs text-gray-600 dark:text-gray-400">
+                              Processing: {state.progress.current} / {state.progress.total} items
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Record Details */}
+                        {state.record && (
+                          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500 dark:text-gray-400">Executed:</span>
+                                <span className="text-gray-900 dark:text-white font-medium">
+                                  {new Date(state.record.executedAt).toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500 dark:text-gray-400">Items processed:</span>
+                                <span className="text-gray-900 dark:text-white font-medium">
+                                  {state.record.itemsProcessed}
+                                </span>
+                              </div>
+                            </div>
+                            {state.record.error && (
+                              <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                                <div className="flex items-start gap-2">
+                                  <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                                  <div className="text-xs text-red-800 dark:text-red-200">
+                                    <span className="font-semibold">Error: </span>
+                                    {state.record.error}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Blocked Message */}
+                        {state.status === 'blocked' && (
+                          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                            <Lock className="h-3 w-3" />
+                            Previous migrations must be completed first
                           </div>
                         )}
                       </div>
-                    )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
 
-                    {state.status === 'blocked' && (
-                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          This migration is blocked. Previous migrations must be completed first.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ))}
+            {totalCount === 0 && (
+              <Card className="border-gray-200 dark:border-gray-700">
+                <CardContent className="py-12 text-center">
+                  <Database className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600 dark:text-gray-400">No migrations available</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
-                {totalCount === 0 && (
-                  <div className="text-center py-12">
-                    <p className="text-gray-600 dark:text-gray-400">No migrations available</p>
-                  </div>
-                )}
+          {/* Success Message */}
+          {completedCount === totalCount && totalCount > 0 && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+              <div className="flex items-center justify-center gap-2 text-green-900 dark:text-green-100">
+                <CheckCircle2 className="h-5 w-5" />
+                <p className="font-semibold">All migrations completed successfully!</p>
               </div>
-
-              {completedCount === totalCount && totalCount > 0 && (
-                <div className="mt-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                  <p className="text-green-900 dark:text-green-100 text-center font-semibold">
-                    ✓ All migrations completed successfully!
-                  </p>
-                </div>
-              )}
-            </>
+            </div>
           )}
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
