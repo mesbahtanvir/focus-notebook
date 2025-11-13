@@ -22,6 +22,12 @@ playwright/.cache/
 e2e/**/*-actual.png
 e2e/**/*-diff.png
 
+# Temporary/Generated Documentation
+# (Keep generated error context markdown from test failures out of git)
+**/error-context.md
+PR_DESCRIPTION_*.md
+TEMP_*.md
+
 # Environment variables
 .env*.local
 .env

@@ -31,7 +31,7 @@ npm run dev
 
 **That's it!** The app works locally without any setup.
 
-For cloud sync, see [Setup Guide](docs/SETUP.md).
+For cloud sync, see [Setup Guide](docs/guides/setup.md).
 
 ---
 
@@ -43,19 +43,27 @@ Next.js 14 · TypeScript · Tailwind CSS · Firebase · Zustand · Capacitor
 
 ## Documentation
 
-- **[Setup Guide](docs/SETUP.md)** – Firebase, environment variables, deployment, iPad build steps
-- **[Development Workflow](docs/DEVELOPMENT.md)** – Local workflow, CI strategy, troubleshooting
-- **[Testing Reference](docs/TESTING.md)** – Jest suites, Safari fix coverage, Playwright + emulator setup
-- **[Feature Catalog](docs/FEATURES.md)** – Tool-by-tool overview (tasks, focus, spending, investments, etc.)
-- **[Architecture & Resilience](docs/ARCHITECTURE.md)** – Project structure, offline queue, circuit breakers
-- **[Cloud Functions](docs/FUNCTIONS.md)** – Callable endpoints, Stripe, Plaid, and AI services
-- **[Codebase Audit Snapshot](docs/CODEBASE_AUDIT.md)** – Active technical-debt findings and priorities
+📚 **[Complete Documentation](docs/README.md)** - Full documentation index
+
+### Quick Links
+
+- **[Setup Guide](docs/guides/setup.md)** – Firebase, environment variables, deployment, iPad build steps
+- **[Development Guide](docs/guides/development.md)** – Local workflow, CI strategy, troubleshooting
+- **[Testing Guide](docs/guides/testing.md)** – Jest suites, Playwright, emulator setup
+- **[Contributing Guide](docs/guides/contributing.md)** – How to contribute to the project
+
+### Reference Documentation
+
+- **[Architecture](docs/reference/architecture.md)** – Project structure, offline queue, circuit breakers
+- **[Features](docs/reference/features.md)** – Complete tool-by-tool overview
+- **[Cloud Functions](docs/reference/functions.md)** – Callable endpoints, Stripe, Plaid, AI services
+- **[Spending API](docs/reference/spending-api.md)** – Spending tool architecture
 
 ---
 
 ## Contributing
 
-Contributions welcome! See [Development Guide](docs/DEVELOPMENT.md).
+Contributions welcome! See [Contributing Guide](docs/guides/contributing.md).
 
 **Priority areas**: Testing, accessibility, mobile optimization, documentation
 
