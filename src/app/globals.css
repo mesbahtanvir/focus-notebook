@@ -9,59 +9,70 @@
     --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-inset-left: env(safe-area-inset-left, 0px);
     --safe-area-inset-right: env(safe-area-inset-right, 0px);
-    
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+
+    /* Vibrant yet Calm Palette */
+    --background: 0 0% 98%; /* Crisp white background */
+    --foreground: 0 0% 15%; /* Rich dark for better contrast */
+    --card: 0 0% 100%; /* Pure white cards */
+    --card-foreground: 0 0% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --popover-foreground: 0 0% 15%;
+    --primary: 250 45% 58%; /* Rich lavender */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 100 25% 55%; /* Vibrant sage */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 96%; /* Neutral muted background */
+    --muted-foreground: 0 0% 40%; /* Darker for readability */
+    --accent: 15 75% 60%; /* Bold terracotta */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 70% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 85%; /* More visible borders */
+    --input: 0 0% 92%;
+    --ring: 250 45% 58%;
+    --radius: 0.75rem; /* Gentler curves */
+
+    /* Vibrant Data Visualization Colors */
+    --chart-1: 183 40% 60%; /* Rich cyan */
+    --chart-2: 27 80% 62%; /* Warm peach */
+    --chart-3: 11 75% 58%; /* Bold terracotta */
+    --chart-4: 174 50% 50%; /* Deep teal */
+    --chart-5: 35 70% 60%; /* Golden */
+
+    /* Custom shadows for depth */
+    --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.04);
+    --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+    --shadow-elevated: 0 12px 48px rgba(0, 0, 0, 0.10);
   }
 
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    /* Rich Dark Mode */
+    --background: 0 0% 10%; /* Deep background */
+    --foreground: 0 0% 95%; /* Bright white text */
+    --card: 0 0% 14%; /* Dark cards */
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 14%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 250 50% 65%; /* Vibrant lavender for dark mode */
+    --primary-foreground: 0 0% 10%;
+    --secondary: 100 30% 50%; /* Rich sage for dark */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 15 70% 58%; /* Rich terracotta */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 25%; /* More visible borders */
+    --input: 0 0% 20%;
+    --ring: 250 50% 65%;
+
+    /* Vibrant data viz for dark mode */
+    --chart-1: 183 45% 55%;
+    --chart-2: 27 75% 60%;
+    --chart-3: 11 70% 55%;
+    --chart-4: 174 45% 50%;
+    --chart-5: 35 65% 58%;
   }
 }
 
@@ -132,16 +143,30 @@
 }
 
 @layer components {
+  /* Floating Paper Card Style */
   .card {
-    @apply rounded-lg border bg-card text-card-foreground shadow-sm;
+    @apply rounded-xl border bg-card text-card-foreground;
+    box-shadow: var(--shadow-card);
   }
-  
+
+  .card-elevated {
+    @apply rounded-xl border bg-card text-card-foreground;
+    box-shadow: var(--shadow-elevated);
+  }
+
+  /* Touch-friendly buttons with gentle interactions */
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2;
+    @apply inline-flex items-center justify-center rounded-xl text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-[1.02] min-h-12 px-6 py-3;
   }
-  
+
+  /* Calm input styling */
   .input {
-    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex min-h-12 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200;
+  }
+
+  /* Subtle background texture */
+  .bg-textured {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
   }
 }
 

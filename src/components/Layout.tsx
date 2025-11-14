@@ -15,7 +15,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   // Note: Cloud sync is now automatic via FirestoreSubscriber in layout.tsx
   
   return (
-    <div className="flex h-[100dvh] bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 text-gray-800" style={{
+    <div className="flex h-[100dvh] bg-gradient-to-br from-slate-50 via-white to-blue-50/50 bg-textured text-foreground" style={{
       paddingTop: 'env(safe-area-inset-top, 0px)',
       paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       paddingLeft: 'env(safe-area-inset-left, 0px)',
@@ -25,16 +25,16 @@ export default function Layout({ children }: { children: ReactNode }) {
       <UpgradeBanner />
       <ConnectionHealthMonitor />
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-6 md:p-8 lg:p-10 pt-10 lg:pt-6" role="main" aria-label="Main content area">
-        <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-white text-gray-900 rounded px-3 py-1 shadow-lg">Skip to content</a>
+      <main className="flex-1 overflow-y-auto p-8 md:p-12 lg:p-16 pt-12 lg:pt-8" role="main" aria-label="Main content area">
+        <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-card text-foreground rounded-xl px-4 py-2 shadow-lg">Skip to content</a>
         <AnimatePresence mode="wait">
           <motion.div
             key={pathname}
-            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 2 }}
             animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="max-w-7xl mx-auto"
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -2 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="max-w-6xl mx-auto"
             id="main"
           >
             {children}

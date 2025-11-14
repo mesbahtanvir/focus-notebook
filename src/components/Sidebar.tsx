@@ -38,13 +38,13 @@ export default function Sidebar() {
     color: string;
     badge?: string | number;
   }> = [
-    { href: '/', icon: Home, label: 'Home', color: 'from-purple-500 to-pink-500' },
+    { href: '/', icon: Home, label: 'Home', color: 'from-purple-500 to-indigo-500' },
   ];
 
   const toolGroupItems = [
     { id: 'productivity', icon: Target, label: 'Productivity', color: 'text-purple-600' },
     { id: 'soulful', icon: Heart, label: 'Soulful', color: 'text-pink-600' },
-    { id: 'finances', icon: Wallet, label: 'Finances', color: 'text-green-600' },
+    { id: 'finances', icon: Wallet, label: 'Finances', color: 'text-emerald-600' },
     { id: 'travel', icon: Plane, label: 'Travel', color: 'text-blue-600' },
   ];
 
@@ -89,7 +89,8 @@ export default function Sidebar() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
-        className="lg:hidden fixed top-4 left-4 z-50 p-4 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg hover:shadow-xl transition-all transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-purple-300 min-h-[44px] min-w-[44px] touch-manipulation"
+        className="lg:hidden fixed top-4 left-4 z-50 p-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-ring min-h-[48px] min-w-[48px] touch-manipulation"
+        style={{ boxShadow: 'var(--shadow-card)' }}
         aria-label={isOpen ? 'Close menu' : 'Open menu'}
         aria-expanded={isOpen}
       >
@@ -116,8 +117,8 @@ export default function Sidebar() {
         className={`
           fixed lg:static inset-y-0 left-0 z-40
           flex flex-col h-[100dvh] lg:h-screen
-          bg-gradient-to-b from-white via-purple-50 to-pink-50
-          border-r-4 border-purple-200 shadow-2xl
+          bg-card/95 backdrop-blur-sm
+          border-r border-border
           transition-all duration-300 ease-in-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0
@@ -126,11 +127,12 @@ export default function Sidebar() {
         style={{
           paddingTop: 'env(safe-area-inset-top, 0px)',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          boxShadow: 'var(--shadow-elevated)',
         }}
       >
         {/* Header */}
-        <div className="p-4 border-b-4 border-purple-200 bg-gradient-to-r from-purple-100 to-pink-100">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent lg:hidden xl:block">
+        <div className="p-5 border-b border-border">
+          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent lg:hidden xl:block">
             ✨ Notebook
           </h1>
           <div className="hidden lg:block xl:hidden text-center text-2xl">
@@ -139,7 +141,7 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-3 space-y-2 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-3 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -149,19 +151,20 @@ export default function Sidebar() {
                 onClick={closeSidebar}
                 aria-current={isActive ? 'page' : undefined}
                 className={`
-                  group relative flex items-center gap-3 p-4 min-h-[44px] rounded-xl
-                  transition-all duration-200 transform
-                  focus:outline-none focus:ring-4 focus:ring-purple-300
+                  group relative flex items-center gap-3 p-4 min-h-[48px] rounded-xl
+                  transition-all duration-200
+                  focus:outline-none focus:ring-2 focus:ring-ring
                   touch-manipulation
                   ${isActive
-                    ? `bg-gradient-to-r ${item.color} text-white shadow-md scale-105`
-                    : 'text-gray-700 hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 hover:scale-105'
+                    ? `bg-gradient-to-r ${item.color} text-white border-l-4 border-primary`
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }
                   lg:justify-center xl:justify-start
                 `}
                 title={item.label}
+                style={isActive ? { boxShadow: 'var(--shadow-subtle)' } : {}}
               >
-                <item.icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-600'}`} />
+                <item.icon className={`h-5 w-5 ${isActive ? 'text-white' : ''}`} />
                 <span className="font-medium lg:hidden xl:inline flex-1">{item.label}</span>
                 {item.badge && (
                   <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
@@ -182,28 +185,29 @@ export default function Sidebar() {
           })}
 
           {/* Tools Section with Expandable Categories */}
-          <div className="space-y-1">
+          <div className="space-y-2">
             <button
               onClick={() => setToolsExpanded(!toolsExpanded)}
               className={`
-                group relative flex items-center gap-3 p-4 min-h-[44px] rounded-xl w-full
-                transition-all duration-200 transform
-                focus:outline-none focus:ring-4 focus:ring-green-300
+                group relative flex items-center gap-3 p-4 min-h-[48px] rounded-xl w-full
+                transition-all duration-200
+                focus:outline-none focus:ring-2 focus:ring-ring
                 touch-manipulation
                 ${pathname.startsWith('/tools')
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-md scale-105'
-                  : 'text-gray-700 hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 hover:scale-105'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-l-4 border-emerald-500'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 }
                 lg:justify-center xl:justify-start
               `}
               title="Tools"
+              style={pathname.startsWith('/tools') ? { boxShadow: 'var(--shadow-subtle)' } : {}}
             >
-              <Wrench className={`h-5 w-5 ${pathname.startsWith('/tools') ? 'text-white' : 'text-gray-600'}`} />
+              <Wrench className={`h-5 w-5 ${pathname.startsWith('/tools') ? 'text-white' : ''}`} />
               <span className="font-medium lg:hidden xl:inline flex-1 text-left">Tools</span>
               {toolsExpanded ? (
-                <ChevronDown className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/tools') ? 'text-white' : 'text-gray-600'}`} />
+                <ChevronDown className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/tools') ? 'text-white' : ''}`} />
               ) : (
-                <ChevronRight className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/tools') ? 'text-white' : 'text-gray-600'}`} />
+                <ChevronRight className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/tools') ? 'text-white' : ''}`} />
               )}
 
               {/* Tooltip for tablet view */}
@@ -258,7 +262,7 @@ export default function Sidebar() {
                     }
                   `}
                 >
-                  <Grid3x3 className="h-4 w-4 text-gray-600" />
+                  <Grid3x3 className="h-4 w-4 text-slate-600" />
                   <span className={`text-sm font-medium ${pathname === '/tools' ? 'text-gray-900' : 'text-gray-700'}`}>
                     All Tools
                   </span>
@@ -273,19 +277,20 @@ export default function Sidebar() {
             onClick={closeSidebar}
             aria-current={pathname === '/dashboard' ? 'page' : undefined}
             className={`
-              group relative flex items-center gap-3 p-4 min-h-[44px] rounded-xl
-              transition-all duration-200 transform
-              focus:outline-none focus:ring-4 focus:ring-blue-300
+              group relative flex items-center gap-3 p-4 min-h-[48px] rounded-xl
+              transition-all duration-200
+              focus:outline-none focus:ring-2 focus:ring-ring
               touch-manipulation
               ${pathname === '/dashboard'
-                ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md scale-105'
-                : 'text-gray-700 hover:bg-gradient-to-r hover:from-blue-100 hover:to-cyan-100 hover:scale-105'
+                ? 'bg-gradient-to-r from-slate-500 to-blue-500 text-white border-l-4 border-blue-500'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }
               lg:justify-center xl:justify-start
             `}
             title="Dashboard"
+            style={pathname === '/dashboard' ? { boxShadow: 'var(--shadow-subtle)' } : {}}
           >
-            <LayoutDashboard className={`h-5 w-5 ${pathname === '/dashboard' ? 'text-white' : 'text-gray-600'}`} />
+            <LayoutDashboard className={`h-5 w-5 ${pathname === '/dashboard' ? 'text-white' : ''}`} />
             <span className="font-medium lg:hidden xl:inline">Dashboard</span>
 
             {/* Tooltip for tablet view */}
@@ -295,28 +300,29 @@ export default function Sidebar() {
           </Link>
 
           {/* Settings Section with Expandable Subsections */}
-          <div className="space-y-1">
+          <div className="space-y-2">
             <button
               onClick={() => setSettingsExpanded(!settingsExpanded)}
               className={`
-                group relative flex items-center gap-3 p-4 min-h-[44px] rounded-xl w-full
-                transition-all duration-200 transform
-                focus:outline-none focus:ring-4 focus:ring-orange-300
+                group relative flex items-center gap-3 p-4 min-h-[48px] rounded-xl w-full
+                transition-all duration-200
+                focus:outline-none focus:ring-2 focus:ring-ring
                 touch-manipulation
                 ${pathname.startsWith('/settings')
-                  ? 'bg-gradient-to-r from-orange-500 to-yellow-500 text-white shadow-md scale-105'
-                  : 'text-gray-700 hover:bg-gradient-to-r hover:from-orange-100 hover:to-yellow-100 hover:scale-105'
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-l-4 border-orange-500'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 }
                 lg:justify-center xl:justify-start
               `}
               title="Settings"
+              style={pathname.startsWith('/settings') ? { boxShadow: 'var(--shadow-subtle)' } : {}}
             >
-              <Settings className={`h-5 w-5 ${pathname.startsWith('/settings') ? 'text-white' : 'text-gray-600'}`} />
+              <Settings className={`h-5 w-5 ${pathname.startsWith('/settings') ? 'text-white' : ''}`} />
               <span className="font-medium lg:hidden xl:inline flex-1 text-left">Settings</span>
               {settingsExpanded ? (
-                <ChevronDown className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/settings') ? 'text-white' : 'text-gray-600'}`} />
+                <ChevronDown className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/settings') ? 'text-white' : ''}`} />
               ) : (
-                <ChevronRight className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/settings') ? 'text-white' : 'text-gray-600'}`} />
+                <ChevronRight className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/settings') ? 'text-white' : ''}`} />
               )}
 
               {/* Tooltip for tablet view */}
@@ -333,19 +339,19 @@ export default function Sidebar() {
                   href="/settings"
                   onClick={closeSidebar}
                   className={`
-                    flex items-center gap-3 p-3 min-h-[40px] rounded-lg
+                    flex items-center gap-3 p-3 min-h-[44px] rounded-lg
                     transition-all duration-200
-                    focus:outline-none focus:ring-2 focus:ring-orange-300
+                    focus:outline-none focus:ring-2 focus:ring-ring
                     touch-manipulation
                     ${pathname === '/settings'
-                      ? 'bg-white/60 shadow-sm'
-                      : 'hover:bg-white/40'
+                      ? 'bg-muted shadow-sm'
+                      : 'hover:bg-muted/50'
                     }
                   `}
                   title="General Settings"
                 >
                   <Settings className="h-4 w-4 text-orange-600" />
-                  <span className={`text-sm font-medium ${pathname === '/settings' ? 'text-gray-900' : 'text-gray-700'}`}>
+                  <span className={`text-sm font-medium ${pathname === '/settings' ? 'text-foreground' : 'text-muted-foreground'}`}>
                     General
                   </span>
                 </Link>
@@ -355,19 +361,19 @@ export default function Sidebar() {
                   href="/settings/data-management"
                   onClick={closeSidebar}
                   className={`
-                    flex items-center gap-3 p-3 min-h-[40px] rounded-lg
+                    flex items-center gap-3 p-3 min-h-[44px] rounded-lg
                     transition-all duration-200
-                    focus:outline-none focus:ring-2 focus:ring-orange-300
+                    focus:outline-none focus:ring-2 focus:ring-ring
                     touch-manipulation
                     ${pathname === '/settings/data-management'
-                      ? 'bg-white/60 shadow-sm'
-                      : 'hover:bg-white/40'
+                      ? 'bg-muted shadow-sm'
+                      : 'hover:bg-muted/50'
                     }
                   `}
                   title="Data Management"
                 >
-                  <Database className="h-4 w-4 text-green-600" />
-                  <span className={`text-sm font-medium ${pathname === '/settings/data-management' ? 'text-gray-900' : 'text-gray-700'}`}>
+                  <Database className="h-4 w-4 text-emerald-600" />
+                  <span className={`text-sm font-medium ${pathname === '/settings/data-management' ? 'text-foreground' : 'text-muted-foreground'}`}>
                     Data Management
                   </span>
                 </Link>
@@ -381,17 +387,18 @@ export default function Sidebar() {
             onClick={closeSidebar}
             aria-current={pathname === '/admin' ? 'page' : undefined}
             className={`
-              group relative flex items-center gap-3 p-4 min-h-[44px] rounded-xl
-              transition-all duration-200 transform
-              focus:outline-none focus:ring-4 focus:ring-red-300
+              group relative flex items-center gap-3 p-4 min-h-[48px] rounded-xl
+              transition-all duration-200
+              focus:outline-none focus:ring-2 focus:ring-ring
               touch-manipulation
               ${pathname === '/admin'
-                ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-md scale-105'
-                : 'text-gray-700 hover:bg-gradient-to-r hover:from-red-100 hover:to-pink-100 hover:scale-105'
+                ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white border-l-4 border-red-500'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }
               lg:justify-center xl:justify-start
             `}
             title="Debug"
+            style={pathname === '/admin' ? { boxShadow: 'var(--shadow-subtle)' } : {}}
           >
             <Shield className={`h-5 w-5 ${pathname === '/admin' ? 'text-white' : 'text-red-600'}`} />
             <span className="font-medium lg:hidden xl:inline">Debug</span>
@@ -404,12 +411,12 @@ export default function Sidebar() {
         </nav>
 
         {/* User Info or Login Button */}
-        <div className="p-4 border-t-4 border-purple-200 bg-gradient-to-r from-purple-100 to-pink-100">
+        <div className="p-5 border-t border-border">
           {user ? (
             <Link
               href="/profile"
               onClick={closeSidebar}
-              className="flex items-center gap-3 lg:justify-center xl:justify-start p-2 rounded-xl hover:bg-white/50 transition-all transform hover:scale-105 cursor-pointer group"
+              className="flex items-center gap-3 lg:justify-center xl:justify-start p-3 rounded-xl hover:bg-muted transition-all cursor-pointer group"
               title="Go to Profile"
             >
               {user.photoURL ? (
@@ -417,18 +424,18 @@ export default function Sidebar() {
                 <img
                   src={user.photoURL}
                   alt={user.displayName || 'User'}
-                  className="h-10 w-10 rounded-full ring-2 ring-purple-400 flex-shrink-0 group-hover:ring-4 transition-all"
+                  className="h-10 w-10 rounded-full ring-2 ring-primary/40 flex-shrink-0 group-hover:ring-primary transition-all"
                 />
               ) : (
-                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white flex-shrink-0 group-hover:shadow-lg transition-all">
-                  <User className="h-6 w-6" />
+                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white flex-shrink-0 transition-all">
+                  <User className="h-5 w-5" />
                 </div>
               )}
               <div className="truncate lg:hidden xl:block">
-                <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-purple-600 transition-colors">
+                <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">
                   {user.displayName || 'User'}
                 </p>
-                <p className="text-xs text-gray-600 truncate">
+                <p className="text-xs text-muted-foreground truncate">
                   {user.email}
                 </p>
               </div>
@@ -437,7 +444,8 @@ export default function Sidebar() {
             <Link
               href="/login"
               onClick={closeSidebar}
-              className="flex items-center justify-center gap-2 w-full px-6 py-3 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300"
+              className="flex items-center justify-center gap-2 w-full px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all focus:outline-none focus:ring-2 focus:ring-ring"
+              style={{ boxShadow: 'var(--shadow-card)' }}
             >
               <User className="h-5 w-5" />
               <span className="lg:hidden xl:inline">Sign In</span>
