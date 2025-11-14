@@ -1,16 +1,11 @@
-import { create } from 'zustand';
-import { createAt, deleteAt, updateAt } from '@/lib/data/gateway';
-import { subscribeCol } from '@/lib/data/subscribe';
-import { collection, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebaseClient';
-import type { Unsubscribe } from 'firebase/firestore';
+import { createEntityStore, BaseEntity } from './createEntityStore';
+import { auth } from '@/lib/firebaseClient';
 
 export type SubscriptionCategory = 'entertainment' | 'productivity' | 'health' | 'utilities' | 'education' | 'other';
 export type BillingCycle = 'monthly' | 'quarterly' | 'yearly' | 'one-time';
 export type SubscriptionStatus = 'active' | 'cancelled' | 'paused';
 
-export interface Subscription {
-  id: string;
+export interface Subscription extends BaseEntity {
   name: string;
   category: SubscriptionCategory;
   cost: number;
@@ -22,198 +17,134 @@ export interface Subscription {
   autoRenew: boolean;
   paymentMethod?: string;
   notes?: string;
-  createdAt: string;
-  updatedAt?: number;
 }
 
-interface SubscriptionsState {
-  subscriptions: Subscription[];
-  isLoading: boolean;
-  fromCache: boolean;
-  hasPendingWrites: boolean;
-  unsubscribe: Unsubscribe | null;
+// Helper to calculate monthly cost
+const getMonthlyCost = (sub: Subscription): number => {
+  switch (sub.billingCycle) {
+    case 'monthly': return sub.cost;
+    case 'quarterly': return sub.cost / 3;
+    case 'yearly': return sub.cost / 12;
+    case 'one-time': return 0;
+    default: return 0;
+  }
+};
 
-  // CRUD methods
-  subscribe: (userId: string) => void;
-  add: (userId: string, subscription: Omit<Subscription, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
-  update: (userId: string, id: string, updates: Partial<Omit<Subscription, 'id' | 'createdAt'>>) => Promise<void>;
-  delete: (userId: string, id: string) => Promise<void>;
+// Helper to calculate yearly cost
+const getYearlyCost = (sub: Subscription): number => {
+  switch (sub.billingCycle) {
+    case 'monthly': return sub.cost * 12;
+    case 'quarterly': return sub.cost * 4;
+    case 'yearly': return sub.cost;
+    case 'one-time': return sub.cost;
+    default: return 0;
+  }
+};
 
-  // Utility methods
-  getSubscription: (id: string) => Subscription | undefined;
-  getActiveSubscriptions: () => Subscription[];
-  getTotalMonthlyCost: () => number;
-  getTotalYearlyCost: () => number;
-  getCostByCategory: (category: SubscriptionCategory) => number;
-  getUpcomingBillings: (days: number) => Subscription[];
-  getMostExpensive: () => Subscription | undefined;
-}
-
-export const useSubscriptions = create<SubscriptionsState>((set, get) => ({
-  subscriptions: [],
-  isLoading: false,
-  fromCache: false,
-  hasPendingWrites: false,
-  unsubscribe: null,
-
-  subscribe: (userId: string) => {
-    const currentUnsub = get().unsubscribe;
-    if (currentUnsub) {
-      currentUnsub();
-    }
-
-    set({ isLoading: true });
-
-    const subscriptionsQuery = query(
-      collection(db, `users/${userId}/subscriptions`),
-      orderBy('createdAt', 'desc')
-    );
-
-    const unsubscribe = subscribeCol<Subscription>(
-      subscriptionsQuery,
-      (data, metadata) => {
-        set({
-          subscriptions: data,
-          isLoading: false,
-          fromCache: metadata.fromCache,
-          hasPendingWrites: metadata.hasPendingWrites,
-        });
-      }
-    );
-
-    set({ unsubscribe });
+export const useSubscriptions = createEntityStore<Subscription>(
+  {
+    collectionName: 'subscriptions',
   },
+  (set, get) => ({
+    // Backward compatibility
+    get subscriptions() {
+      return get().items;
+    },
 
-  add: async (userId, subscription) => {
-    const id = crypto.randomUUID();
-    const now = new Date().toISOString();
+    // Override add to accept userId parameter for backward compatibility
+    add: async (userIdOrData: string | Omit<Subscription, 'id' | 'createdAt'>, subscriptionData?: Omit<Subscription, 'id' | 'createdAt'>) => {
+      // Handle both old API (userId, data) and new API (data only)
+      const data = typeof userIdOrData === 'string' ? subscriptionData! : userIdOrData;
+      const userId = auth.currentUser?.uid;
+      if (!userId) throw new Error('Not authenticated');
 
-    const newSubscription: Subscription = {
-      ...subscription,
-      id,
-      createdAt: now,
-    };
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
 
-    await createAt(`users/${userId}/subscriptions/${id}`, newSubscription);
-    return id;
-  },
+      const newSubscription: Subscription = {
+        ...data,
+        id,
+        createdAt: now,
+      } as Subscription;
 
-  update: async (userId, id, updates) => {
-    await updateAt(`users/${userId}/subscriptions/${id}`, {
-      ...updates,
-      updatedAt: Date.now(),
-    });
-  },
+      const { createAt } = await import('@/lib/data/gateway');
+      await createAt(`users/${userId}/subscriptions/${id}`, newSubscription);
+      return id;
+    },
 
-  delete: async (userId, id) => {
-    await deleteAt(`users/${userId}/subscriptions/${id}`);
-  },
+    // Override update/delete for userId parameter backward compatibility
+    update: async (userIdOrId: string, idOrUpdates: string | Partial<Subscription>, updates?: Partial<Subscription>) => {
+      const actualId = updates ? idOrUpdates as string : userIdOrId;
+      const actualUpdates = updates || idOrUpdates as Partial<Subscription>;
 
-  getSubscription: (id) => {
-    return get().subscriptions.find(s => s.id === id);
-  },
+      const userId = auth.currentUser?.uid;
+      if (!userId) throw new Error('Not authenticated');
 
-  getActiveSubscriptions: () => {
-    return get().subscriptions.filter(s => s.status === 'active');
-  },
+      const { updateAt } = await import('@/lib/data/gateway');
+      await updateAt(`users/${userId}/subscriptions/${actualId}`, {
+        ...actualUpdates,
+        updatedAt: Date.now(),
+      });
+    },
 
-  getTotalMonthlyCost: () => {
-    return get().subscriptions
-      .filter(s => s.status === 'active')
-      .reduce((total, sub) => {
-        switch (sub.billingCycle) {
-          case 'monthly':
-            return total + sub.cost;
-          case 'quarterly':
-            return total + (sub.cost / 3);
-          case 'yearly':
-            return total + (sub.cost / 12);
-          case 'one-time':
-            return total;
-          default:
-            return total;
-        }
-      }, 0);
-  },
+    delete: async (userIdOrId: string, id?: string) => {
+      const actualId = id || userIdOrId;
+      const userId = auth.currentUser?.uid;
+      if (!userId) throw new Error('Not authenticated');
 
-  getTotalYearlyCost: () => {
-    return get().subscriptions
-      .filter(s => s.status === 'active')
-      .reduce((total, sub) => {
-        switch (sub.billingCycle) {
-          case 'monthly':
-            return total + (sub.cost * 12);
-          case 'quarterly':
-            return total + (sub.cost * 4);
-          case 'yearly':
-            return total + sub.cost;
-          case 'one-time':
-            return total + sub.cost;
-          default:
-            return total;
-        }
-      }, 0);
-  },
+      const { deleteAt } = await import('@/lib/data/gateway');
+      await deleteAt(`users/${userId}/subscriptions/${actualId}`);
+    },
 
-  getCostByCategory: (category) => {
-    return get().subscriptions
-      .filter(s => s.status === 'active' && s.category === category)
-      .reduce((total, sub) => {
-        switch (sub.billingCycle) {
-          case 'monthly':
-            return total + sub.cost;
-          case 'quarterly':
-            return total + (sub.cost / 3);
-          case 'yearly':
-            return total + (sub.cost / 12);
-          case 'one-time':
-            return total;
-          default:
-            return total;
-        }
-      }, 0);
-  },
+    getSubscription: (id: string) => {
+      return get().items.find(s => s.id === id);
+    },
 
-  getUpcomingBillings: (days) => {
-    const now = new Date();
-    const futureDate = new Date(now);
-    futureDate.setDate(futureDate.getDate() + days);
+    getActiveSubscriptions: () => {
+      return get().items.filter(s => s.status === 'active');
+    },
 
-    return get().subscriptions
-      .filter(s => {
-        if (s.status !== 'active') return false;
-        const billingDate = new Date(s.nextBillingDate);
-        return billingDate >= now && billingDate <= futureDate;
-      })
-      .sort((a, b) => new Date(a.nextBillingDate).getTime() - new Date(b.nextBillingDate).getTime());
-  },
+    getTotalMonthlyCost: () => {
+      return get().items
+        .filter(s => s.status === 'active')
+        .reduce((total, sub) => total + getMonthlyCost(sub), 0);
+    },
 
-  getMostExpensive: () => {
-    const active = get().getActiveSubscriptions();
-    if (active.length === 0) return undefined;
+    getTotalYearlyCost: () => {
+      return get().items
+        .filter(s => s.status === 'active')
+        .reduce((total, sub) => total + getYearlyCost(sub), 0);
+    },
 
-    return active.reduce((max, sub) => {
-      const subMonthlyCost = (() => {
-        switch (sub.billingCycle) {
-          case 'monthly': return sub.cost;
-          case 'quarterly': return sub.cost / 3;
-          case 'yearly': return sub.cost / 12;
-          case 'one-time': return sub.cost;
-          default: return 0;
-        }
-      })();
+    getCostByCategory: (category: SubscriptionCategory) => {
+      return get().items
+        .filter(s => s.status === 'active' && s.category === category)
+        .reduce((total, sub) => total + getMonthlyCost(sub), 0);
+    },
 
-      const maxMonthlyCost = (() => {
-        switch (max.billingCycle) {
-          case 'monthly': return max.cost;
-          case 'quarterly': return max.cost / 3;
-          case 'yearly': return max.cost / 12;
-          case 'one-time': return max.cost;
-          default: return 0;
-        }
-      })();
+    getUpcomingBillings: (days: number) => {
+      const now = new Date();
+      const futureDate = new Date(now);
+      futureDate.setDate(futureDate.getDate() + days);
 
-      return subMonthlyCost > maxMonthlyCost ? sub : max;
-    });
-  },
-}));
+      return get().items
+        .filter(s => {
+          if (s.status !== 'active') return false;
+          const billingDate = new Date(s.nextBillingDate);
+          return billingDate >= now && billingDate <= futureDate;
+        })
+        .sort((a, b) => new Date(a.nextBillingDate).getTime() - new Date(b.nextBillingDate).getTime());
+    },
+
+    getMostExpensive: () => {
+      const active = get().items.filter(s => s.status === 'active');
+      if (active.length === 0) return undefined;
+
+      return active.reduce((max, sub) => {
+        const subMonthlyCost = getMonthlyCost(sub);
+        const maxMonthlyCost = getMonthlyCost(max);
+        return subMonthlyCost > maxMonthlyCost ? sub : max;
+      });
+    },
+  })
+);

@@ -1,14 +1,9 @@
-import { create } from 'zustand';
-import { collection, query, orderBy } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebaseClient';
-import { createAt, updateAt, deleteAt } from '@/lib/data/gateway';
-import { subscribeCol } from '@/lib/data/subscribe';
+import { createEntityStore, BaseEntity } from './createEntityStore';
 
 export type ProjectTimeframe = 'short-term' | 'long-term';
 export type ProjectStatus = 'active' | 'on-hold' | 'completed' | 'cancelled';
 
-export interface Project {
-  id: string;
+export interface Project extends BaseEntity {
   title: string;
   objective: string;
   actionPlan: string[];
@@ -19,18 +14,16 @@ export interface Project {
   status: ProjectStatus;
   priority: 'urgent' | 'high' | 'medium' | 'low';
   targetDate?: string;
-  createdAt: string;
-  updatedAt?: number;
   completedAt?: string;
   category: 'health' | 'wealth' | 'mastery' | 'connection';
-  linkedThoughtIds: string[]; // Thoughts attached to this project
-  linkedTaskIds: string[]; // Tasks related to this project (only for leaf projects)
+  linkedThoughtIds: string[];
+  linkedTaskIds: string[];
   tags?: string[];
   progress?: number; // 0-100
   notes?: string;
   source?: 'manual' | 'ai' | 'thought';
-  isLeaf?: boolean; // True if this project has tasks, false if it has sub-projects
-  level?: number; // Depth in hierarchy: 0 = under goal, 1 = sub-project, etc.
+  isLeaf?: boolean;
+  level?: number;
   milestones?: {
     id: string;
     title: string;
@@ -39,173 +32,104 @@ export interface Project {
   }[];
 }
 
-type State = {
-  projects: Project[];
-  isLoading: boolean;
-  fromCache: boolean;
-  hasPendingWrites: boolean;
-  unsubscribe: (() => void) | null;
-  subscribe: (userId: string) => void;
-  add: (data: Omit<Project, 'id' | 'createdAt' | 'linkedThoughtIds' | 'linkedTaskIds' | 'updatedAt'>) => Promise<string>;
-  update: (id: string, updates: Partial<Omit<Project, 'id'>>) => Promise<void>;
-  delete: (id: string) => Promise<void>;
-  linkThought: (projectId: string, thoughtId: string) => Promise<void>;
-  unlinkThought: (projectId: string, thoughtId: string) => Promise<void>;
-  linkTask: (projectId: string, taskId: string) => Promise<void>;
-  unlinkTask: (projectId: string, taskId: string) => Promise<void>;
-  getProjectsByStatus: (status: ProjectStatus) => Project[];
-  getProjectsByTimeframe: (timeframe: ProjectTimeframe) => Project[];
-  getProjectsByGoal: (goalId: string) => Project[];
-  getSubProjects: (projectId: string) => Project[];
-  getTopLevelProjects: () => Project[];
-  getProjectHierarchy: (projectId: string) => Project[];
-  isLeafProject: (projectId: string) => boolean;
-};
-
-export const useProjects = create<State>((set, get) => ({
-  projects: [],
-  isLoading: true,
-  fromCache: false,
-  hasPendingWrites: false,
-  unsubscribe: null,
-
-  subscribe: (userId: string) => {
-    const currentUnsub = get().unsubscribe;
-    if (currentUnsub) {
-      currentUnsub();
-    }
-
-    const projectsQuery = query(
-      collection(db, `users/${userId}/projects`),
-      orderBy('createdAt', 'desc')
-    );
-
-    const unsub = subscribeCol<Project>(projectsQuery, (projects, meta) => {
-      set({
-        projects,
-        isLoading: false,
-        fromCache: meta.fromCache,
-        hasPendingWrites: meta.hasPendingWrites,
-      });
-    });
-
-    set({ unsubscribe: unsub });
-  },
-
-  add: async (data) => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) throw new Error('Not authenticated');
-
-    const projectId = Date.now().toString();
-    const newProject: Project = {
-      ...data,
-      id: projectId,
-      createdAt: new Date().toISOString(),
+// Create the store with project-specific actions
+export const useProjects = createEntityStore<Project>(
+  {
+    collectionName: 'projects',
+    defaultValues: {
       linkedThoughtIds: [],
       linkedTaskIds: [],
-      priority: data.priority || 'medium',
-      status: data.status || 'active',
-    };
-
-    await createAt(`users/${userId}/projects/${projectId}`, newProject);
-    return projectId;
+      priority: 'medium',
+      status: 'active',
+    } as Partial<Project>,
   },
+  (set, get) => ({
+    // Computed property for backward compatibility
+    get projects() {
+      return get().items;
+    },
 
-  update: async (id, updates) => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) throw new Error('Not authenticated');
+    // Link/unlink thoughts
+    linkThought: async (projectId: string, thoughtId: string) => {
+      const project = get().items.find((p) => p.id === projectId);
+      if (!project) return;
 
-    await updateAt(`users/${userId}/projects/${id}`, {
-      ...updates,
-      updatedAt: Date.now(),
-    });
-  },
+      await get().update(projectId, {
+        linkedThoughtIds: [...project.linkedThoughtIds, thoughtId],
+      });
+    },
 
-  delete: async (id) => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) throw new Error('Not authenticated');
+    unlinkThought: async (projectId: string, thoughtId: string) => {
+      const project = get().items.find((p) => p.id === projectId);
+      if (!project) return;
 
-    await deleteAt(`users/${userId}/projects/${id}`);
-  },
+      await get().update(projectId, {
+        linkedThoughtIds: project.linkedThoughtIds.filter((id) => id !== thoughtId),
+      });
+    },
 
-  linkThought: async (projectId, thoughtId) => {
-    const project = get().projects.find(p => p.id === projectId);
-    if (!project) return;
-    
-    await get().update(projectId, {
-      linkedThoughtIds: [...project.linkedThoughtIds, thoughtId],
-    });
-  },
+    // Link/unlink tasks
+    linkTask: async (projectId: string, taskId: string) => {
+      const project = get().items.find((p) => p.id === projectId);
+      if (!project) return;
 
-  unlinkThought: async (projectId, thoughtId) => {
-    const project = get().projects.find(p => p.id === projectId);
-    if (!project) return;
-    
-    await get().update(projectId, {
-      linkedThoughtIds: project.linkedThoughtIds.filter(id => id !== thoughtId),
-    });
-  },
+      await get().update(projectId, {
+        linkedTaskIds: [...project.linkedTaskIds, taskId],
+      });
+    },
 
-  linkTask: async (projectId, taskId) => {
-    const project = get().projects.find(p => p.id === projectId);
-    if (!project) return;
-    
-    await get().update(projectId, {
-      linkedTaskIds: [...project.linkedTaskIds, taskId],
-    });
-  },
+    unlinkTask: async (projectId: string, taskId: string) => {
+      const project = get().items.find((p) => p.id === projectId);
+      if (!project) return;
 
-  unlinkTask: async (projectId, taskId) => {
-    const project = get().projects.find(p => p.id === projectId);
-    if (!project) return;
-    
-    await get().update(projectId, {
-      linkedTaskIds: project.linkedTaskIds.filter(id => id !== taskId),
-    });
-  },
+      await get().update(projectId, {
+        linkedTaskIds: project.linkedTaskIds.filter((id) => id !== taskId),
+      });
+    },
 
-  getProjectsByStatus: (status) => {
-    return get().projects.filter(p => p.status === status);
-  },
+    // Query helpers
+    getProjectsByStatus: (status: ProjectStatus) => {
+      return get().items.filter((p) => p.status === status);
+    },
 
-  getProjectsByTimeframe: (timeframe) => {
-    return get().projects.filter(p => p.timeframe === timeframe);
-  },
+    getProjectsByTimeframe: (timeframe: ProjectTimeframe) => {
+      return get().items.filter((p) => p.timeframe === timeframe);
+    },
 
-  getProjectsByGoal: (goalId) => {
-    return get().projects.filter(p => p.goalId === goalId && !p.parentProjectId);
-  },
+    getProjectsByGoal: (goalId: string) => {
+      return get().items.filter((p) => p.goalId === goalId && !p.parentProjectId);
+    },
 
-  getSubProjects: (projectId) => {
-    return get().projects.filter(p => p.parentProjectId === projectId);
-  },
+    getSubProjects: (projectId: string) => {
+      return get().items.filter((p) => p.parentProjectId === projectId);
+    },
 
-  getTopLevelProjects: () => {
-    return get().projects.filter(p => !p.parentProjectId);
-  },
+    getTopLevelProjects: () => {
+      return get().items.filter((p) => !p.parentProjectId);
+    },
 
-  getProjectHierarchy: (projectId) => {
-    const hierarchy: Project[] = [];
-    let currentProject = get().projects.find(p => p.id === projectId);
-    
-    while (currentProject) {
-      hierarchy.unshift(currentProject);
-      if (currentProject.parentProjectId) {
-        currentProject = get().projects.find(p => p.id === currentProject!.parentProjectId);
-      } else {
-        break;
+    getProjectHierarchy: (projectId: string) => {
+      const hierarchy: Project[] = [];
+      let currentProject = get().items.find((p) => p.id === projectId);
+
+      while (currentProject) {
+        hierarchy.unshift(currentProject);
+        if (currentProject.parentProjectId) {
+          currentProject = get().items.find((p) => p.id === currentProject!.parentProjectId);
+        } else {
+          break;
+        }
       }
-    }
-    
-    return hierarchy;
-  },
 
-  isLeafProject: (projectId) => {
-    const project = get().projects.find(p => p.id === projectId);
-    if (!project) return false;
-    
-    // A project is a leaf if it explicitly has isLeaf=true or has no sub-projects
-    const hasSubProjects = get().projects.some(p => p.parentProjectId === projectId);
-    return project.isLeaf !== false && !hasSubProjects;
-  },
-}));
+      return hierarchy;
+    },
+
+    isLeafProject: (projectId: string) => {
+      const project = get().items.find((p) => p.id === projectId);
+      if (!project) return false;
+
+      const hasSubProjects = get().items.some((p) => p.parentProjectId === projectId);
+      return project.isLeaf !== false && !hasSubProjects;
+    },
+  })
+);
