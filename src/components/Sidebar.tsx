@@ -38,14 +38,14 @@ export default function Sidebar() {
     color: string;
     badge?: string | number;
   }> = [
-    { href: '/', icon: Home, label: 'Home', color: 'from-purple-400/70 to-indigo-400/70' },
+    { href: '/', icon: Home, label: 'Home', color: 'from-purple-500 to-indigo-500' },
   ];
 
   const toolGroupItems = [
-    { id: 'productivity', icon: Target, label: 'Productivity', color: 'text-purple-500/70' },
-    { id: 'soulful', icon: Heart, label: 'Soulful', color: 'text-pink-500/70' },
-    { id: 'finances', icon: Wallet, label: 'Finances', color: 'text-emerald-500/70' },
-    { id: 'travel', icon: Plane, label: 'Travel', color: 'text-blue-500/70' },
+    { id: 'productivity', icon: Target, label: 'Productivity', color: 'text-purple-600' },
+    { id: 'soulful', icon: Heart, label: 'Soulful', color: 'text-pink-600' },
+    { id: 'finances', icon: Wallet, label: 'Finances', color: 'text-emerald-600' },
+    { id: 'travel', icon: Plane, label: 'Travel', color: 'text-blue-600' },
   ];
 
   const closeSidebar = () => setIsOpen(false);
@@ -164,7 +164,7 @@ export default function Sidebar() {
                 title={item.label}
                 style={isActive ? { boxShadow: 'var(--shadow-subtle)' } : {}}
               >
-                <item.icon className={`h-5 w-5 ${isActive ? 'text-white' : 'opacity-70'}`} />
+                <item.icon className={`h-5 w-5 ${isActive ? 'text-white' : ''}`} />
                 <span className="font-medium lg:hidden xl:inline flex-1">{item.label}</span>
                 {item.badge && (
                   <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
@@ -194,7 +194,7 @@ export default function Sidebar() {
                 focus:outline-none focus:ring-2 focus:ring-ring
                 touch-manipulation
                 ${pathname.startsWith('/tools')
-                  ? 'bg-gradient-to-r from-emerald-400/70 to-teal-400/70 text-white border-l-4 border-emerald-500'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-l-4 border-emerald-500'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 }
                 lg:justify-center xl:justify-start
@@ -202,12 +202,12 @@ export default function Sidebar() {
               title="Tools"
               style={pathname.startsWith('/tools') ? { boxShadow: 'var(--shadow-subtle)' } : {}}
             >
-              <Wrench className={`h-5 w-5 ${pathname.startsWith('/tools') ? 'text-white' : 'opacity-70'}`} />
+              <Wrench className={`h-5 w-5 ${pathname.startsWith('/tools') ? 'text-white' : ''}`} />
               <span className="font-medium lg:hidden xl:inline flex-1 text-left">Tools</span>
               {toolsExpanded ? (
-                <ChevronDown className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/tools') ? 'text-white' : 'opacity-70'}`} />
+                <ChevronDown className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/tools') ? 'text-white' : ''}`} />
               ) : (
-                <ChevronRight className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/tools') ? 'text-white' : 'opacity-70'}`} />
+                <ChevronRight className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/tools') ? 'text-white' : ''}`} />
               )}
 
               {/* Tooltip for tablet view */}
@@ -262,7 +262,7 @@ export default function Sidebar() {
                     }
                   `}
                 >
-                  <Grid3x3 className="h-4 w-4 text-gray-600" />
+                  <Grid3x3 className="h-4 w-4 text-slate-600" />
                   <span className={`text-sm font-medium ${pathname === '/tools' ? 'text-gray-900' : 'text-gray-700'}`}>
                     All Tools
                   </span>
@@ -282,7 +282,7 @@ export default function Sidebar() {
               focus:outline-none focus:ring-2 focus:ring-ring
               touch-manipulation
               ${pathname === '/dashboard'
-                ? 'bg-gradient-to-r from-slate-400/70 to-blue-400/70 text-white border-l-4 border-blue-500'
+                ? 'bg-gradient-to-r from-slate-500 to-blue-500 text-white border-l-4 border-blue-500'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }
               lg:justify-center xl:justify-start
@@ -290,7 +290,7 @@ export default function Sidebar() {
             title="Dashboard"
             style={pathname === '/dashboard' ? { boxShadow: 'var(--shadow-subtle)' } : {}}
           >
-            <LayoutDashboard className={`h-5 w-5 ${pathname === '/dashboard' ? 'text-white' : 'opacity-70'}`} />
+            <LayoutDashboard className={`h-5 w-5 ${pathname === '/dashboard' ? 'text-white' : ''}`} />
             <span className="font-medium lg:hidden xl:inline">Dashboard</span>
 
             {/* Tooltip for tablet view */}
@@ -309,7 +309,7 @@ export default function Sidebar() {
                 focus:outline-none focus:ring-2 focus:ring-ring
                 touch-manipulation
                 ${pathname.startsWith('/settings')
-                  ? 'bg-gradient-to-r from-orange-400/70 to-amber-400/70 text-white border-l-4 border-orange-500'
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-l-4 border-orange-500'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 }
                 lg:justify-center xl:justify-start
@@ -317,12 +317,12 @@ export default function Sidebar() {
               title="Settings"
               style={pathname.startsWith('/settings') ? { boxShadow: 'var(--shadow-subtle)' } : {}}
             >
-              <Settings className={`h-5 w-5 ${pathname.startsWith('/settings') ? 'text-white' : 'opacity-70'}`} />
+              <Settings className={`h-5 w-5 ${pathname.startsWith('/settings') ? 'text-white' : ''}`} />
               <span className="font-medium lg:hidden xl:inline flex-1 text-left">Settings</span>
               {settingsExpanded ? (
-                <ChevronDown className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/settings') ? 'text-white' : 'opacity-70'}`} />
+                <ChevronDown className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/settings') ? 'text-white' : ''}`} />
               ) : (
-                <ChevronRight className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/settings') ? 'text-white' : 'opacity-70'}`} />
+                <ChevronRight className={`h-4 w-4 lg:hidden xl:block ${pathname.startsWith('/settings') ? 'text-white' : ''}`} />
               )}
 
               {/* Tooltip for tablet view */}
@@ -350,7 +350,7 @@ export default function Sidebar() {
                   `}
                   title="General Settings"
                 >
-                  <Settings className="h-4 w-4 text-orange-500/70" />
+                  <Settings className="h-4 w-4 text-orange-600" />
                   <span className={`text-sm font-medium ${pathname === '/settings' ? 'text-foreground' : 'text-muted-foreground'}`}>
                     General
                   </span>
@@ -372,7 +372,7 @@ export default function Sidebar() {
                   `}
                   title="Data Management"
                 >
-                  <Database className="h-4 w-4 text-emerald-500/70" />
+                  <Database className="h-4 w-4 text-emerald-600" />
                   <span className={`text-sm font-medium ${pathname === '/settings/data-management' ? 'text-foreground' : 'text-muted-foreground'}`}>
                     Data Management
                   </span>
@@ -392,7 +392,7 @@ export default function Sidebar() {
               focus:outline-none focus:ring-2 focus:ring-ring
               touch-manipulation
               ${pathname === '/admin'
-                ? 'bg-gradient-to-r from-red-400/70 to-pink-400/70 text-white border-l-4 border-red-500'
+                ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white border-l-4 border-red-500'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }
               lg:justify-center xl:justify-start
@@ -400,7 +400,7 @@ export default function Sidebar() {
             title="Debug"
             style={pathname === '/admin' ? { boxShadow: 'var(--shadow-subtle)' } : {}}
           >
-            <Shield className={`h-5 w-5 ${pathname === '/admin' ? 'text-white' : 'text-red-500/70'}`} />
+            <Shield className={`h-5 w-5 ${pathname === '/admin' ? 'text-white' : 'text-red-600'}`} />
             <span className="font-medium lg:hidden xl:inline">Debug</span>
 
             {/* Tooltip for tablet view */}

@@ -15,7 +15,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   // Note: Cloud sync is now automatic via FirestoreSubscriber in layout.tsx
   
   return (
-    <div className="flex h-[100dvh] bg-gradient-to-br from-stone-50 via-amber-50/30 to-sky-50/40 bg-textured text-foreground" style={{
+    <div className="flex h-[100dvh] bg-gradient-to-br from-slate-50 via-white to-blue-50/50 bg-textured text-foreground" style={{
       paddingTop: 'env(safe-area-inset-top, 0px)',
       paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       paddingLeft: 'env(safe-area-inset-left, 0px)',

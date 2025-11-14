@@ -10,34 +10,34 @@
     --safe-area-inset-left: env(safe-area-inset-left, 0px);
     --safe-area-inset-right: env(safe-area-inset-right, 0px);
 
-    /* Calm, Nature-Inspired Palette */
-    --background: 30 25% 97%; /* Warm stone background */
-    --foreground: 25 15% 20%; /* Warm dark gray */
-    --card: 0 0% 100%; /* Pure white cards for contrast */
-    --card-foreground: 25 15% 20%;
+    /* Vibrant yet Calm Palette */
+    --background: 0 0% 98%; /* Crisp white background */
+    --foreground: 0 0% 15%; /* Rich dark for better contrast */
+    --card: 0 0% 100%; /* Pure white cards */
+    --card-foreground: 0 0% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 25 15% 20%;
-    --primary: 250 30% 60%; /* Soft lavender */
+    --popover-foreground: 0 0% 15%;
+    --primary: 250 45% 58%; /* Rich lavender */
     --primary-foreground: 0 0% 100%;
-    --secondary: 100 15% 65%; /* Warm sage */
-    --secondary-foreground: 25 15% 20%;
-    --muted: 30 20% 94%; /* Warm muted background */
-    --muted-foreground: 25 10% 45%;
-    --accent: 15 70% 65%; /* Terracotta accent */
+    --secondary: 100 25% 55%; /* Vibrant sage */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 96%; /* Neutral muted background */
+    --muted-foreground: 0 0% 40%; /* Darker for readability */
+    --accent: 15 75% 60%; /* Bold terracotta */
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 65% 60%;
+    --destructive: 0 70% 58%;
     --destructive-foreground: 0 0% 100%;
-    --border: 30 15% 88%; /* Warm subtle borders */
-    --input: 30 15% 90%;
-    --ring: 250 30% 60%;
+    --border: 0 0% 85%; /* More visible borders */
+    --input: 0 0% 92%;
+    --ring: 250 45% 58%;
     --radius: 0.75rem; /* Gentler curves */
 
-    /* Pastel Data Visualization Colors */
-    --chart-1: 183 25% 70%; /* Soft cyan */
-    --chart-2: 27 78% 67%; /* Warm peach */
-    --chart-3: 11 68% 61%; /* Terracotta */
-    --chart-4: 174 42% 55%; /* Teal */
-    --chart-5: 35 65% 65%; /* Golden */
+    /* Vibrant Data Visualization Colors */
+    --chart-1: 183 40% 60%; /* Rich cyan */
+    --chart-2: 27 80% 62%; /* Warm peach */
+    --chart-3: 11 75% 58%; /* Bold terracotta */
+    --chart-4: 174 50% 50%; /* Deep teal */
+    --chart-5: 35 70% 60%; /* Golden */
 
     /* Custom shadows for depth */
     --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -46,33 +46,33 @@
   }
 
   .dark {
-    /* Warm Dark Mode */
-    --background: 25 20% 12%; /* Warm brown-gray */
-    --foreground: 30 15% 95%; /* Softer white */
-    --card: 25 18% 15%; /* Warmer card background */
-    --card-foreground: 30 15% 95%;
-    --popover: 25 18% 15%;
-    --popover-foreground: 30 15% 95%;
-    --primary: 250 35% 70%; /* Lighter lavender for dark mode */
-    --primary-foreground: 25 20% 12%;
-    --secondary: 100 20% 45%; /* Muted sage for dark */
-    --secondary-foreground: 30 15% 95%;
-    --muted: 25 15% 20%;
-    --muted-foreground: 30 10% 60%;
-    --accent: 15 65% 60%; /* Slightly muted terracotta */
-    --accent-foreground: 30 15% 95%;
-    --destructive: 0 60% 50%;
-    --destructive-foreground: 30 15% 95%;
-    --border: 25 15% 25%; /* Subtle warm borders */
-    --input: 25 15% 22%;
-    --ring: 250 35% 70%;
+    /* Rich Dark Mode */
+    --background: 0 0% 10%; /* Deep background */
+    --foreground: 0 0% 95%; /* Bright white text */
+    --card: 0 0% 14%; /* Dark cards */
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 14%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 250 50% 65%; /* Vibrant lavender for dark mode */
+    --primary-foreground: 0 0% 10%;
+    --secondary: 100 30% 50%; /* Rich sage for dark */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 15 70% 58%; /* Rich terracotta */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 25%; /* More visible borders */
+    --input: 0 0% 20%;
+    --ring: 250 50% 65%;
 
-    /* Darker data viz with subtle glows */
-    --chart-1: 183 30% 50%;
-    --chart-2: 27 70% 55%;
-    --chart-3: 11 60% 50%;
-    --chart-4: 174 40% 45%;
-    --chart-5: 35 60% 55%;
+    /* Vibrant data viz for dark mode */
+    --chart-1: 183 45% 55%;
+    --chart-2: 27 75% 60%;
+    --chart-3: 11 70% 55%;
+    --chart-4: 174 45% 50%;
+    --chart-5: 35 65% 58%;
   }
 }
 
