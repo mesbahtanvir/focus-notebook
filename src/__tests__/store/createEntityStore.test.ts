@@ -16,7 +16,7 @@ jest.mock('@/lib/data/gateway', () => ({
 jest.mock('@/lib/data/subscribe', () => ({
   subscribeCol: jest.fn((query, callback) => {
     // Immediately call with empty data
-    callback([], { fromCache: false, hasPendingWrites: false, error: null });
+    callback([], { fromCache: false, hasPendingWrites: false, error: null as Error | null });
     return jest.fn(); // Return unsubscribe function
   }),
 }));
@@ -73,7 +73,7 @@ describe('createEntityStore', () => {
       ];
 
       subscribeColMock.mockImplementation((query, callback) => {
-        callback(testData, { fromCache: false, hasPendingWrites: false, error: null });
+        callback(testData, { fromCache: false, hasPendingWrites: false, error: null as Error | null });
         return jest.fn();
       });
 
@@ -161,7 +161,7 @@ describe('createEntityStore', () => {
       ];
 
       subscribeColMock.mockImplementation((query, callback) => {
-        callback(testData, { fromCache: false, hasPendingWrites: false, error: null });
+        callback(testData, { fromCache: false, hasPendingWrites: false, error: null as Error | null });
         return jest.fn();
       });
 
@@ -259,7 +259,7 @@ describe('createEntityStore', () => {
       ];
 
       subscribeColMock.mockImplementation((query, callback) => {
-        callback(testData, { fromCache: false, hasPendingWrites: false, error: null });
+        callback(testData, { fromCache: false, hasPendingWrites: false, error: null as Error | null });
         return jest.fn();
       });
 
@@ -301,7 +301,7 @@ describe('createEntityStore', () => {
       ];
 
       subscribeColMock.mockImplementation((query, callback) => {
-        callback(testData, { fromCache: false, hasPendingWrites: false, error: null });
+        callback(testData, { fromCache: false, hasPendingWrites: false, error: null as Error | null });
         return jest.fn();
       });
 
@@ -370,11 +370,11 @@ describe('createEntityStore', () => {
 
       subscribeColMock
         .mockImplementationOnce((query, callback) => {
-          callback([], { fromCache: false, hasPendingWrites: false, error: null });
+          callback([], { fromCache: false, hasPendingWrites: false, error: null as Error | null });
           return unsubscribe1;
         })
         .mockImplementationOnce((query, callback) => {
-          callback([], { fromCache: false, hasPendingWrites: false, error: null });
+          callback([], { fromCache: false, hasPendingWrites: false, error: null as Error | null });
           return unsubscribe2;
         });
 
@@ -438,7 +438,7 @@ describe('createEntityStore', () => {
       ];
 
       subscribeColMock.mockImplementation((query, callback) => {
-        callback(testGoals, { fromCache: false, hasPendingWrites: false, error: null });
+        callback(testGoals, { fromCache: false, hasPendingWrites: false, error: null as Error | null });
         return jest.fn();
       });
 

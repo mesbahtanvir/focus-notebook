@@ -1,4 +1,4 @@
-import { createEntityStore, BaseEntity } from './createEntityStore';
+import { createEntityStore, BaseEntity, BaseState, BaseActions } from './createEntityStore';
 
 export interface TimelineEvent {
   date: string;
@@ -62,7 +62,14 @@ export interface AdmiredPerson extends BaseEntity {
   aiEnriched?: boolean;
 }
 
-export const useAdmiredPeople = createEntityStore<AdmiredPerson>(
+// Extra actions specific to admired people
+interface AdmiredPeopleExtraActions {
+  people: AdmiredPerson[];
+  getByCategory: (category: string) => AdmiredPerson[];
+  getByTag: (tag: string) => AdmiredPerson[];
+}
+
+export const useAdmiredPeople = createEntityStore<AdmiredPerson, Omit<AdmiredPerson, 'id' | 'createdAt'>, AdmiredPeopleExtraActions>(
   {
     collectionName: 'admiredPeople',
     defaultValues: {

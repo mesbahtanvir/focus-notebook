@@ -1,4 +1,4 @@
-import { createEntityStore, BaseEntity } from './createEntityStore';
+import { createEntityStore, BaseEntity, BaseState, BaseActions } from './createEntityStore';
 
 export type GoalTimeframe = 'immediate' | 'short-term' | 'long-term';
 
@@ -18,13 +18,18 @@ export interface Goal extends BaseEntity {
 }
 
 // Extra actions specific to goals
-interface GoalActions {
+interface GoalExtraActions {
   goals: Goal[];
+  updateGoal: (id: string, updates: Partial<Goal>) => Promise<void>;
+  deleteGoal: (id: string) => Promise<void>;
   toggleStatus: (id: string) => Promise<void>;
 }
 
+// Full store type
+export type GoalsStore = BaseState<Goal> & BaseActions<Goal> & GoalExtraActions;
+
 // Create the base store
-const baseStore = createEntityStore<Goal>(
+export const useGoals = createEntityStore<Goal, Omit<Goal, 'id' | 'createdAt'>, GoalExtraActions>(
   {
     collectionName: 'goals',
     defaultValues: {
@@ -37,6 +42,15 @@ const baseStore = createEntityStore<Goal>(
     // Computed property for backward compatibility
     get goals() {
       return get().items;
+    },
+
+    // Backward compatible method names
+    updateGoal: async (id: string, updates: Partial<Goal>) => {
+      await get().update(id, updates);
+    },
+
+    deleteGoal: async (id: string) => {
+      await get().delete(id);
     },
 
     // Goal-specific action: toggle between active and completed
@@ -61,17 +75,3 @@ const baseStore = createEntityStore<Goal>(
     },
   })
 );
-
-export const useGoals = baseStore;
-
-// Convenience methods for backward compatibility
-export const useGoalsActions = () => {
-  const store = useGoals();
-  return {
-    subscribe: store.subscribe,
-    add: store.add,
-    updateGoal: store.update,
-    deleteGoal: store.delete,
-    toggleStatus: store.toggleStatus,
-  };
-};

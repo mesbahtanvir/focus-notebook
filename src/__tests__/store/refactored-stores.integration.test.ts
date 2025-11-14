@@ -19,7 +19,7 @@ jest.mock('@/lib/data/gateway', () => ({
 
 jest.mock('@/lib/data/subscribe', () => ({
   subscribeCol: jest.fn((query, callback) => {
-    callback([], { fromCache: false, hasPendingWrites: false, error: null });
+    callback([], { fromCache: false, hasPendingWrites: false, error: null as Error | null });
     return jest.fn();
   }),
 }));
@@ -95,7 +95,7 @@ describe('Refactored Stores Integration Tests', () => {
       ];
 
       subscribeColMock.mockImplementation((query, callback) => {
-        callback(mockGoals, { fromCache: false, hasPendingWrites: false, error: null });
+        callback(mockGoals, { fromCache: false, hasPendingWrites: false, error: null as Error | null });
         return jest.fn();
       });
 
@@ -178,7 +178,7 @@ describe('Refactored Stores Integration Tests', () => {
       ];
 
       subscribeColMock.mockImplementation((query, callback) => {
-        callback(mockProjects, { fromCache: false, hasPendingWrites: false, error: null });
+        callback(mockProjects, { fromCache: false, hasPendingWrites: false, error: null as Error | null });
         return jest.fn();
       });
 
@@ -244,7 +244,7 @@ describe('Refactored Stores Integration Tests', () => {
       ];
 
       subscribeColMock.mockImplementation((query, callback) => {
-        callback(mockProjects, { fromCache: false, hasPendingWrites: false, error: null });
+        callback(mockProjects, { fromCache: false, hasPendingWrites: false, error: null as Error | null });
         return jest.fn();
       });
 
@@ -305,7 +305,7 @@ describe('Refactored Stores Integration Tests', () => {
       ];
 
       subscribeColMock.mockImplementation((query, callback) => {
-        callback(mockSubscriptions, { fromCache: false, hasPendingWrites: false, error: null });
+        callback(mockSubscriptions, { fromCache: false, hasPendingWrites: false, error: null as Error | null });
         return jest.fn();
       });
 
@@ -382,7 +382,7 @@ describe('Refactored Stores Integration Tests', () => {
       ];
 
       subscribeColMock.mockImplementation((query, callback) => {
-        callback(mockPeople, { fromCache: false, hasPendingWrites: false, error: null });
+        callback(mockPeople, { fromCache: false, hasPendingWrites: false, error: null as Error | null });
         return jest.fn();
       });
 
@@ -455,7 +455,7 @@ describe('Refactored Stores Integration Tests', () => {
       ];
 
       subscribeColMock.mockImplementation((query, callback) => {
-        callback(mockPeople, { fromCache: false, hasPendingWrites: false, error: null });
+        callback(mockPeople, { fromCache: false, hasPendingWrites: false, error: null as Error | null });
         return jest.fn();
       });
 

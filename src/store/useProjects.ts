@@ -1,4 +1,4 @@
-import { createEntityStore, BaseEntity } from './createEntityStore';
+import { createEntityStore, BaseEntity, BaseState, BaseActions } from './createEntityStore';
 
 export type ProjectTimeframe = 'short-term' | 'long-term';
 export type ProjectStatus = 'active' | 'on-hold' | 'completed' | 'cancelled';
@@ -32,8 +32,24 @@ export interface Project extends BaseEntity {
   }[];
 }
 
+// Extra actions specific to projects
+interface ProjectExtraActions {
+  projects: Project[];
+  linkThought: (projectId: string, thoughtId: string) => Promise<void>;
+  unlinkThought: (projectId: string, thoughtId: string) => Promise<void>;
+  linkTask: (projectId: string, taskId: string) => Promise<void>;
+  unlinkTask: (projectId: string, taskId: string) => Promise<void>;
+  getProjectsByStatus: (status: ProjectStatus) => Project[];
+  getProjectsByTimeframe: (timeframe: ProjectTimeframe) => Project[];
+  getProjectsByGoal: (goalId: string) => Project[];
+  getSubProjects: (projectId: string) => Project[];
+  getTopLevelProjects: () => Project[];
+  getProjectHierarchy: (projectId: string) => Project[];
+  isLeafProject: (projectId: string) => boolean;
+}
+
 // Create the store with project-specific actions
-export const useProjects = createEntityStore<Project>(
+export const useProjects = createEntityStore<Project, Omit<Project, 'id' | 'createdAt'>, ProjectExtraActions>(
   {
     collectionName: 'projects',
     defaultValues: {

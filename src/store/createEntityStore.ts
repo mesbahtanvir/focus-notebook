@@ -16,7 +16,7 @@ export interface BaseEntity {
 /**
  * Base state interface for all entity stores
  */
-interface BaseState<T extends BaseEntity> {
+export interface BaseState<T extends BaseEntity> {
   items: T[];
   isLoading: boolean;
   fromCache: boolean;
@@ -28,7 +28,7 @@ interface BaseState<T extends BaseEntity> {
 /**
  * Base actions interface for all entity stores
  */
-interface BaseActions<T extends BaseEntity, TCreate = Omit<T, 'id' | 'createdAt'>> {
+export interface BaseActions<T extends BaseEntity, TCreate = Omit<T, 'id' | 'createdAt'>> {
   subscribe: (userId: string) => void;
   add: (data: TCreate) => Promise<string>;
   update: (id: string, updates: Partial<Omit<T, 'id' | 'createdAt'>>) => Promise<void>;
@@ -143,13 +143,13 @@ export function createEntityStore<
         const transformed = config.beforeCreate ? config.beforeCreate(data) : {};
 
         // Build new entity
-        const newEntity: T = {
+        const newEntity = {
           ...(config.defaultValues || {}),
           ...data,
           ...transformed,
           id: entityId,
           createdAt: new Date().toISOString(),
-        } as T;
+        } as unknown as T;
 
         await createAt(`users/${userId}/${config.collectionName}/${entityId}`, newEntity);
         return entityId;

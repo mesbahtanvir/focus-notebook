@@ -1,4 +1,4 @@
-import { createEntityStore, BaseEntity } from './createEntityStore';
+import { createEntityStore, BaseEntity, BaseState, BaseActions } from './createEntityStore';
 
 export type RelationshipType =
   | 'friend'
@@ -54,19 +54,23 @@ export interface Person extends BaseEntity {
   version?: number;
 }
 
-export const useRelationships = createEntityStore<Person>(
+// Extra actions specific to relationships
+interface RelationshipsExtraActions {
+  people: Person[];
+  loading: boolean;
+  error: null;
+  linkThought: (personId: string, thoughtId: string) => Promise<void>;
+  unlinkThought: (personId: string, thoughtId: string) => Promise<void>;
+  addInteractionLog: (personId: string, log: Omit<InteractionLog, 'id'>) => Promise<void>;
+}
+
+export const useRelationships = createEntityStore<Person, Omit<Person, 'id' | 'createdAt'>, RelationshipsExtraActions>(
   {
     collectionName: 'people',
     defaultValues: {
       linkedThoughtIds: [],
       version: 1,
     } as Partial<Person>,
-    beforeCreate: (data) => ({
-      updatedBy: (async () => {
-        const { auth } = await import('@/lib/firebaseClient');
-        return auth.currentUser?.uid;
-      })() as any,
-    }),
   },
   (set, get) => ({
     // Backward compatibility

@@ -1,5 +1,4 @@
-import { createEntityStore, BaseEntity } from './createEntityStore';
-import { auth } from '@/lib/firebaseClient';
+import { createEntityStore, BaseEntity, BaseState, BaseActions } from './createEntityStore';
 
 export type SubscriptionCategory = 'entertainment' | 'productivity' | 'health' | 'utilities' | 'education' | 'other';
 export type BillingCycle = 'monthly' | 'quarterly' | 'yearly' | 'one-time';
@@ -41,7 +40,19 @@ const getYearlyCost = (sub: Subscription): number => {
   }
 };
 
-export const useSubscriptions = createEntityStore<Subscription>(
+// Extra actions specific to subscriptions
+interface SubscriptionExtraActions {
+  subscriptions: Subscription[];
+  getSubscription: (id: string) => Subscription | undefined;
+  getActiveSubscriptions: () => Subscription[];
+  getTotalMonthlyCost: () => number;
+  getTotalYearlyCost: () => number;
+  getCostByCategory: (category: SubscriptionCategory) => number;
+  getUpcomingBillings: (days: number) => Subscription[];
+  getMostExpensive: () => Subscription | undefined;
+}
+
+export const useSubscriptions = createEntityStore<Subscription, Omit<Subscription, 'id' | 'createdAt'>, SubscriptionExtraActions>(
   {
     collectionName: 'subscriptions',
   },
@@ -49,51 +60,6 @@ export const useSubscriptions = createEntityStore<Subscription>(
     // Backward compatibility
     get subscriptions() {
       return get().items;
-    },
-
-    // Override add to accept userId parameter for backward compatibility
-    add: async (userIdOrData: string | Omit<Subscription, 'id' | 'createdAt'>, subscriptionData?: Omit<Subscription, 'id' | 'createdAt'>) => {
-      // Handle both old API (userId, data) and new API (data only)
-      const data = typeof userIdOrData === 'string' ? subscriptionData! : userIdOrData;
-      const userId = auth.currentUser?.uid;
-      if (!userId) throw new Error('Not authenticated');
-
-      const id = crypto.randomUUID();
-      const now = new Date().toISOString();
-
-      const newSubscription: Subscription = {
-        ...data,
-        id,
-        createdAt: now,
-      } as Subscription;
-
-      const { createAt } = await import('@/lib/data/gateway');
-      await createAt(`users/${userId}/subscriptions/${id}`, newSubscription);
-      return id;
-    },
-
-    // Override update/delete for userId parameter backward compatibility
-    update: async (userIdOrId: string, idOrUpdates: string | Partial<Subscription>, updates?: Partial<Subscription>) => {
-      const actualId = updates ? idOrUpdates as string : userIdOrId;
-      const actualUpdates = updates || idOrUpdates as Partial<Subscription>;
-
-      const userId = auth.currentUser?.uid;
-      if (!userId) throw new Error('Not authenticated');
-
-      const { updateAt } = await import('@/lib/data/gateway');
-      await updateAt(`users/${userId}/subscriptions/${actualId}`, {
-        ...actualUpdates,
-        updatedAt: Date.now(),
-      });
-    },
-
-    delete: async (userIdOrId: string, id?: string) => {
-      const actualId = id || userIdOrId;
-      const userId = auth.currentUser?.uid;
-      if (!userId) throw new Error('Not authenticated');
-
-      const { deleteAt } = await import('@/lib/data/gateway');
-      await deleteAt(`users/${userId}/subscriptions/${actualId}`);
     },
 
     getSubscription: (id: string) => {
