@@ -359,8 +359,6 @@ export const updateVisaDataManual = onCall({
     fullUpdate?: boolean;
   };
 
-  const db = getFirestore();
-
   try {
     logger.info('Starting manual visa data update', { sourceCountries, fullUpdate });
 
