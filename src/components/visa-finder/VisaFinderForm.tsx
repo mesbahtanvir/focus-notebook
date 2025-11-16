@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Plus, X, Passport } from 'lucide-react';
+import { Search, Plus, X, ShieldCheck } from 'lucide-react';
 import { useVisaFinder } from '@/store/useVisaFinder';
 import { COUNTRIES, searchCountries, getAllRegions } from '@/data/countries';
 import type { AdditionalVisaType } from '@/types/visa';
@@ -70,7 +70,7 @@ export default function VisaFinderForm() {
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex items-center gap-3 mb-6">
         <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center">
-          <Passport className="w-6 h-6 text-white" />
+          <ShieldCheck className="w-6 h-6 text-white" />
         </div>
         <div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">

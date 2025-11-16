@@ -10,6 +10,15 @@ import {
 import { useVisaFinder } from '@/store/useVisaFinder';
 import type { VisaType } from '@/types/visa';
 
+// Type for geography object from react-simple-maps
+interface GeoType {
+  id: string;
+  properties: {
+    name: string;
+  };
+  rsmKey: string;
+}
+
 const geoUrl = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 
 // ISO 3166-1 alpha-3 to alpha-2 mapping for common countries
@@ -85,7 +94,7 @@ export default function VisaAccessMap() {
     return visaType ? visaColors[visaType] : visaColors.default;
   };
 
-  const handleMouseEnter = (geo: any, event: React.MouseEvent) => {
+  const handleMouseEnter = (geo: GeoType, event: React.MouseEvent) => {
     const alpha3 = geo.id;
     const alpha2 = alpha3ToAlpha2[alpha3];
 
@@ -133,8 +142,8 @@ export default function VisaAccessMap() {
         >
           <ZoomableGroup>
             <Geographies geography={geoUrl}>
-              {({ geographies }) =>
-                geographies.map((geo) => {
+              {({ geographies }: { geographies: GeoType[] }) =>
+                geographies.map((geo: GeoType) => {
                   const alpha3 = geo.id;
                   const alpha2 = alpha3ToAlpha2[alpha3];
                   const fillColor = alpha2 ? getCountryColor(alpha2) : visaColors.default;
@@ -146,7 +155,7 @@ export default function VisaAccessMap() {
                       fill={fillColor}
                       stroke="#ffffff"
                       strokeWidth={0.5}
-                      onMouseEnter={(event) => handleMouseEnter(geo, event)}
+                      onMouseEnter={(event: React.MouseEvent) => handleMouseEnter(geo, event)}
                       onMouseLeave={handleMouseLeave}
                       style={{
                         default: { outline: 'none' },

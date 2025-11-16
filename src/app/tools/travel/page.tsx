@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTrips } from "@/store/useTrips";
 import { ToolHeader, ToolPageLayout, ToolGroupNav } from "@/components/tools";
 import { toolThemes } from "@/components/tools/themes";
-import { Plane, MapPin, Calendar, ArrowRight, Zap, PackageCheck, Clock, Passport } from "lucide-react";
+import { Plane, MapPin, Calendar, ArrowRight, Zap, PackageCheck, Clock, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 export default function TravelHubPage() {
@@ -165,7 +165,7 @@ export default function TravelHubPage() {
         <Link href="/tools/travel/visa-finder" className="card p-6 hover:shadow-lg transition-all bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 border-2 border-teal-200 dark:border-teal-800">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold flex items-center gap-2">
-              <Passport className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+              <ShieldCheck className="h-5 w-5 text-teal-600 dark:text-teal-400" />
               Visa Finder
             </h3>
             <ArrowRight className="h-5 w-5 text-teal-400" />

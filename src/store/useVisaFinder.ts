@@ -1,6 +1,4 @@
 import { create } from 'zustand';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/lib/firebaseClient';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebaseClient';
 import type {
