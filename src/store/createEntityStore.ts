@@ -193,10 +193,22 @@ export function createEntityStore<
 
     const extras = extraActions ? extraActions(set, get) : ({} as TExtraActions);
 
-    return {
+    // Create the state object and properly merge getters
+    const state = {
       ...baseState,
       ...baseActions,
-      ...extras,
     } as State;
+
+    // Properly copy extra actions including getters
+    if (extras) {
+      Object.keys(extras).forEach((key) => {
+        const descriptor = Object.getOwnPropertyDescriptor(extras, key);
+        if (descriptor) {
+          Object.defineProperty(state, key, descriptor);
+        }
+      });
+    }
+
+    return state;
   });
 }
