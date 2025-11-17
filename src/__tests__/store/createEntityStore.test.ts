@@ -252,6 +252,65 @@ describe('createEntityStore', () => {
       );
     });
 
+    it('should handle async beforeCreate transformation', async () => {
+      const useTestStore = createEntityStore<TestEntity>({
+        collectionName: 'testEntities',
+        beforeCreate: async (data) => {
+          // Simulate async operation (e.g., fetching user ID)
+          await new Promise(resolve => setTimeout(resolve, 10));
+          return {
+            value: (data as any).value * 3,
+            status: 'async-created',
+          };
+        },
+      });
+
+      const { result } = renderHook(() => useTestStore());
+
+      await act(async () => {
+        await result.current.add({ name: 'Test', value: 10 });
+      });
+
+      expect(createAtMock).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          name: 'Test',
+          value: 30, // Tripled by async beforeCreate
+          status: 'async-created',
+        })
+      );
+    });
+
+    it('should handle async beforeUpdate transformation', async () => {
+      const useTestStore = createEntityStore<TestEntity>({
+        collectionName: 'testEntities',
+        beforeUpdate: async (id, updates) => {
+          // Simulate async operation
+          await new Promise(resolve => setTimeout(resolve, 10));
+          return {
+            status: 'async-updated',
+            value: 99,
+          };
+        },
+      });
+
+      const { result } = renderHook(() => useTestStore());
+
+      await act(async () => {
+        await result.current.update('test-id', { name: 'Updated' });
+      });
+
+      expect(updateAtMock).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          name: 'Updated',
+          status: 'async-updated',
+          value: 99,
+          updatedAt: expect.any(Number),
+        })
+      );
+    });
+
     it('should call onSubscriptionData callback', () => {
       const onSubscriptionData = jest.fn();
       const testData: TestEntity[] = [

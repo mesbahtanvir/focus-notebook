@@ -31,8 +31,8 @@ Tests the core `createEntityStore` factory pattern that eliminates duplication a
 
 **Configuration Options**
 - ✅ Applies default values when creating entities
-- ✅ Applies `beforeCreate` transformation
-- ✅ Applies `beforeUpdate` transformation
+- ✅ Applies `beforeCreate` transformation (sync and async)
+- ✅ Applies `beforeUpdate` transformation (sync and async)
 - ✅ Calls `onSubscriptionData` callback
 
 **Extra Actions**

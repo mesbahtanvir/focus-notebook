@@ -49,11 +49,11 @@ export interface EntityStoreConfig<T extends BaseEntity, TCreate = Omit<T, 'id' 
   /** Custom query builder (optional) - defaults to orderBy('createdAt', 'desc') */
   queryBuilder?: (userId: string) => Query<T>;
 
-  /** Transform data before creating (optional) */
-  beforeCreate?: (data: TCreate) => Partial<T>;
+  /** Transform data before creating (optional) - can be async */
+  beforeCreate?: (data: TCreate) => Partial<T> | Promise<Partial<T>>;
 
-  /** Transform data before updating (optional) */
-  beforeUpdate?: (id: string, updates: Partial<Omit<T, 'id' | 'createdAt'>>) => Partial<T>;
+  /** Transform data before updating (optional) - can be async */
+  beforeUpdate?: (id: string, updates: Partial<Omit<T, 'id' | 'createdAt'>>) => Partial<T> | Promise<Partial<T>>;
 
   /** Callback after subscription data is received (optional) */
   onSubscriptionData?: (items: T[], userId: string) => void | Promise<void>;
@@ -66,7 +66,11 @@ export interface EntityStoreConfig<T extends BaseEntity, TCreate = Omit<T, 'id' 
  * ```ts
  * export const useGoals = createEntityStore<Goal>({
  *   collectionName: 'goals',
- *   defaultValues: { status: 'active', priority: 'medium', progress: 0 }
+ *   defaultValues: { status: 'active', priority: 'medium', progress: 0 },
+ *   // Optional: Transform data before creating (supports async)
+ *   beforeCreate: async (data) => ({
+ *     updatedBy: auth.currentUser?.uid,
+ *   }),
  * });
  * ```
  */
@@ -139,8 +143,8 @@ export function createEntityStore<
         // Generate unique ID
         const entityId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-        // Apply transformations
-        const transformed = config.beforeCreate ? config.beforeCreate(data) : {};
+        // Apply transformations (await in case it returns a Promise)
+        const transformed = config.beforeCreate ? await config.beforeCreate(data) : {};
 
         // Build new entity
         const newEntity = {
@@ -159,8 +163,8 @@ export function createEntityStore<
         const userId = auth.currentUser?.uid;
         if (!userId) throw new Error('Not authenticated');
 
-        // Apply transformations
-        const transformed = config.beforeUpdate ? config.beforeUpdate(id, updates) : {};
+        // Apply transformations (await in case it returns a Promise)
+        const transformed = config.beforeUpdate ? await config.beforeUpdate(id, updates) : {};
 
         await updateAt(`users/${userId}/${config.collectionName}/${id}`, {
           ...updates,
