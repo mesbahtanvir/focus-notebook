@@ -46,6 +46,11 @@ import {
   dismissTransactionTripSuggestion,
 } from './tripLinking';
 import { deleteAllTransactions } from './spendingMaintenance';
+import {
+  updateVisaDataWeekly,
+  updateVisaDataManual,
+  getVisaRequirements,
+} from './visaDataUpdater';
 
 // Export cloud functions
 export {
@@ -85,4 +90,8 @@ export {
   linkTransactionToTrip,
   dismissTransactionTripSuggestion,
   deleteAllTransactions,
+  // Visa Data
+  updateVisaDataWeekly,
+  updateVisaDataManual,
+  getVisaRequirements,
 };

@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTrips } from "@/store/useTrips";
 import { ToolHeader, ToolPageLayout, ToolGroupNav } from "@/components/tools";
 import { toolThemes } from "@/components/tools/themes";
-import { Plane, MapPin, Calendar, ArrowRight, Zap, PackageCheck, Clock } from "lucide-react";
+import { Plane, MapPin, Calendar, ArrowRight, Zap, PackageCheck, Clock, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 export default function TravelHubPage() {
@@ -143,7 +143,7 @@ export default function TravelHubPage() {
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-6 mb-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
         {/* All Trips */}
         <Link href="/tools/trips" className="card p-6 hover:shadow-lg transition-all">
           <div className="flex items-center justify-between mb-4">
@@ -158,6 +158,27 @@ export default function TravelHubPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Manage your travel plans and itineraries
             </p>
+          </div>
+        </Link>
+
+        {/* Visa Finder */}
+        <Link href="/tools/travel/visa-finder" className="card p-6 hover:shadow-lg transition-all bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 border-2 border-teal-200 dark:border-teal-800">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+              Visa Finder
+            </h3>
+            <ArrowRight className="h-5 w-5 text-teal-400" />
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Discover visa-free destinations based on your passport
+          </p>
+          <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-teal-600 dark:text-teal-400">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+            </span>
+            New Feature
           </div>
         </Link>
 
