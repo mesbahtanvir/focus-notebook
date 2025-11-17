@@ -261,7 +261,7 @@ describe('Add Task to Session Feature', () => {
       const taskWithAllProps: Task = {
         id: 'task-full',
         title: 'Task with All Properties',
-        description: 'Detailed description',
+        notes: 'Detailed notes',
         done: false,
         status: 'active',
         priority: 'high',
@@ -270,11 +270,12 @@ describe('Add Task to Session Feature', () => {
         actualMinutes: 15,
         dueDate: new Date().toISOString(),
         steps: [
-          { text: 'Step 1', completed: false },
-          { text: 'Step 2', completed: true },
+          { id: 'step-1', text: 'Step 1', completed: false },
+          { id: 'step-2', text: 'Step 2', completed: true },
         ],
         projectId: 'project-1',
-        goalId: 'goal-1',
+        thoughtId: 'thought-1',
+        tags: ['important', 'urgent'],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -290,11 +291,12 @@ describe('Add Task to Session Feature', () => {
       const addedTask = result.current.currentSession?.tasks[1].task;
 
       // Verify all properties are preserved
-      expect(addedTask?.description).toBe('Detailed description');
+      expect(addedTask?.notes).toBe('Detailed notes');
       expect(addedTask?.estimatedMinutes).toBe(30);
       expect(addedTask?.steps).toHaveLength(2);
       expect(addedTask?.projectId).toBe('project-1');
-      expect(addedTask?.goalId).toBe('goal-1');
+      expect(addedTask?.thoughtId).toBe('thought-1');
+      expect(addedTask?.tags).toEqual(['important', 'urgent']);
     });
   });
 
@@ -506,9 +508,10 @@ describe('Add Task to Session Feature', () => {
       });
 
       const addedTask = result.current.currentSession?.tasks[1].task;
-      expect(addedTask?.description).toBeUndefined();
+      expect(addedTask?.notes).toBeUndefined();
       expect(addedTask?.estimatedMinutes).toBeUndefined();
       expect(addedTask?.steps).toBeUndefined();
+      expect(addedTask?.tags).toBeUndefined();
     });
   });
 
@@ -698,7 +701,7 @@ describe('Add Task to Session Feature', () => {
       const tasks = [mockTask3, mockTask4];
 
       // Simulate category color logic
-      const getCategoryColor = (category: string) => {
+      const getCategoryColor = (category?: string) => {
         return category === 'mastery' ? 'bg-blue-500' : 'bg-pink-500';
       };
 
