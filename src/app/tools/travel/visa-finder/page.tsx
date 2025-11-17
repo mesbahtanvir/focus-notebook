@@ -1,9 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
 import { ArrowLeft, Plane } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
 import VisaFinderForm from '@/components/visa-finder/VisaFinderForm';
 import VisaAccessMap from '@/components/visa-finder/VisaAccessMap';
 import DestinationList from '@/components/visa-finder/DestinationList';
@@ -11,18 +9,7 @@ import { useVisaFinder } from '@/store/useVisaFinder';
 
 export default function VisaFinderPage() {
   const router = useRouter();
-  const { user } = useAuth();
   const { destinations, error, isLoading } = useVisaFinder();
-
-  useEffect(() => {
-    if (!user) {
-      router.push('/auth/signin');
-    }
-  }, [user, router]);
-
-  if (!user) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
