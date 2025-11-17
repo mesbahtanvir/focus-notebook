@@ -13,6 +13,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useFocus } from '@/store/useFocus';
 import type { Task } from '@/store/useTasks';
+import * as gateway from '@/lib/data/gateway';
 
 // Mock Firebase
 jest.mock('@/lib/firebaseClient', () => ({
@@ -23,10 +24,9 @@ jest.mock('@/lib/firebaseClient', () => ({
 }));
 
 // Mock Firestore operations from data gateway
-const mockUpdateAt = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/lib/data/gateway', () => ({
   createAt: jest.fn().mockResolvedValue('mock-session-id'),
-  updateAt: mockUpdateAt,
+  updateAt: jest.fn().mockResolvedValue(undefined),
   deleteAt: jest.fn().mockResolvedValue(undefined),
   setAt: jest.fn().mockResolvedValue(undefined),
 }));
@@ -166,7 +166,7 @@ describe('Add Task to Session Feature', () => {
         await result.current.startSession([mockTask1], 60);
       });
 
-      mockUpdateAt.mockClear();
+      (gateway.updateAt as jest.Mock).mockClear();
 
       await act(async () => {
         await result.current.addTaskToSession(mockTask3);
@@ -174,7 +174,7 @@ describe('Add Task to Session Feature', () => {
 
       // Verify persistActiveSession was called (updateAt should be called)
       await waitFor(() => {
-        expect(mockUpdateAt).toHaveBeenCalled();
+        expect(gateway.updateAt).toHaveBeenCalled();
       });
     });
 
