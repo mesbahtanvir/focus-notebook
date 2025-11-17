@@ -128,11 +128,10 @@ export const useVisaFinder = create<VisaFinderState>((set, get) => ({
 
       // If no data found, this might be a new passport or data not yet generated
       if (baseDestinations.length === 0) {
-        // Optionally trigger cloud function to generate data
         set({
           destinations: [],
           isLoading: false,
-          error: 'No visa data found for this nationality. Data may still be processing.',
+          error: 'No visa data available yet. The database needs to be populated by running the cloud function. Please contact your administrator to run the initial data import.',
         });
         return;
       }

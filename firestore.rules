@@ -41,7 +41,25 @@ service cloud.firestore {
       // Allow delete if user owns the data (no validation needed for delete)
       allow delete: if isOwner(userId);
     }
-    
+
+    // Visa requirements - read-only for all users
+    match /visa_requirements/{document} {
+      allow read: if true;
+      allow write: if false; // Only cloud functions can write
+    }
+
+    // Visa data metadata - read-only for all users
+    match /visa_data/{document} {
+      allow read: if true;
+      allow write: if false; // Only cloud functions can write
+    }
+
+    // Visa update errors - read-only for authenticated users (for debugging)
+    match /visa_update_errors/{document} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only cloud functions can write
+    }
+
     // Deny all other access
     match /{document=**} {
       allow read, write: if false;
