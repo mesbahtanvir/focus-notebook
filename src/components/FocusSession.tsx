@@ -73,6 +73,7 @@ export function FocusSession() {
     pauseSession,
     resumeSession,
     reorderTasks,
+    addTaskToSession,
   } = useFocus((s) => ({
     endSession: s.endSession,
     switchToTask: s.switchToTask,
@@ -83,8 +84,10 @@ export function FocusSession() {
     pauseSession: s.pauseSession,
     resumeSession: s.resumeSession,
     reorderTasks: s.reorderTasks,
+    addTaskToSession: s.addTaskToSession,
   }));
   const toggleTask = useTasks((s) => s.toggle);
+  const allTasks = useTasks((s) => s.tasks);
 
   const [isEndingSession, setIsEndingSession] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
@@ -132,8 +135,10 @@ export function FocusSession() {
         pauseSession,
         resumeSession,
         reorderTasks,
+        addTaskToSession,
       }}
       toggleTask={toggleTask}
+      allTasks={allTasks}
       setIsEndingSession={setIsEndingSession}
       setShowSummary={setShowSummary}
       setCompletedSessionData={setCompletedSessionData}
@@ -154,8 +159,10 @@ type FocusSessionContentProps = {
     pauseSession: FocusStore['pauseSession'];
     resumeSession: FocusStore['resumeSession'];
     reorderTasks: FocusStore['reorderTasks'];
+    addTaskToSession: FocusStore['addTaskToSession'];
   };
   toggleTask: ReturnType<typeof useTasks.getState>['toggle'];
+  allTasks: ReturnType<typeof useTasks.getState>['tasks'];
   setIsEndingSession: React.Dispatch<React.SetStateAction<boolean>>;
   setShowSummary: React.Dispatch<React.SetStateAction<boolean>>;
   setCompletedSessionData: React.Dispatch<React.SetStateAction<FocusSessionType | null>>;
@@ -166,6 +173,7 @@ function FocusSessionContent({
   sessions,
   actions,
   toggleTask,
+  allTasks,
   setIsEndingSession,
   setShowSummary,
   setCompletedSessionData,
@@ -180,6 +188,7 @@ function FocusSessionContent({
     pauseSession,
     resumeSession,
     reorderTasks,
+    addTaskToSession,
   } = actions;
 
   const [currentTime, setCurrentTime] = useState(0);
@@ -192,6 +201,8 @@ function FocusSessionContent({
   const [createdTaskTitle, setCreatedTaskTitle] = useState("");
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [taskAddedFeedback, setTaskAddedFeedback] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
@@ -796,6 +807,27 @@ function FocusSessionContent({
     }
   };
 
+  const handleAddTaskToSession = async (taskId: string) => {
+    const task = allTasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    try {
+      await addTaskToSession(task);
+
+      // Show success feedback
+      setCreatedTaskTitle(task.title);
+      setTaskAddedFeedback(true);
+      setShowAddTaskModal(false);
+
+      // Hide success message after 2 seconds
+      setTimeout(() => {
+        setTaskAddedFeedback(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to add task to session:', error);
+    }
+  };
+
   const progressPercentage = (completedTasks / totalTasks) * 100;
 
   return (
@@ -986,6 +1018,34 @@ function FocusSessionContent({
                     }
                   }}
                 />
+
+                {/* Add Task Button */}
+                <button
+                  onClick={() => setShowAddTaskModal(true)}
+                  className="w-full mt-4 p-3 rounded-lg border-2 border-dashed border-purple-300 dark:border-purple-700 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20 hover:from-purple-100 hover:to-indigo-100 dark:hover:from-purple-900/30 dark:hover:to-indigo-900/30 transition-all duration-200 group"
+                >
+                  <div className="flex items-center justify-center gap-2 text-purple-600 dark:text-purple-400">
+                    <Plus className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                    <span className="text-sm font-medium">Add Task</span>
+                  </div>
+                </button>
+
+                {/* Task Added Feedback */}
+                <AnimatePresence>
+                  {taskAddedFeedback && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="mt-2 flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-950/30 border border-green-300 dark:border-green-800 rounded-lg text-green-700 dark:text-green-300 text-xs"
+                    >
+                      <Check className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="flex-1 line-clamp-1">
+                        &quot;{createdTaskTitle}&quot; added!
+                      </span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                   </div>
                 </>
               )}
@@ -1425,6 +1485,85 @@ function FocusSessionContent({
                   </button>
                 </div>
               </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Add Task Modal */}
+      {showAddTaskModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col"
+          >
+            <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Add Task to Session</h3>
+                <button
+                  onClick={() => setShowAddTaskModal(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-2">
+                {allTasks
+                  .filter(task =>
+                    task.status === 'active' &&
+                    !task.done &&
+                    !currentSession.tasks.some(ft => ft.task.id === task.id)
+                  )
+                  .map(task => (
+                    <button
+                      key={task.id}
+                      onClick={() => handleAddTaskToSession(task.id)}
+                      className="w-full text-left p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600 bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-purple-950/20 transition-all group"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`mt-0.5 w-3 h-3 rounded-full flex-shrink-0 ${
+                          task.category === 'mastery'
+                            ? 'bg-blue-500'
+                            : 'bg-pink-500'
+                        }`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2">
+                            {task.title}
+                          </p>
+                          {task.estimatedMinutes && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              ~{task.estimatedMinutes} min
+                            </p>
+                          )}
+                        </div>
+                        <Plus className="h-5 w-5 text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors flex-shrink-0" />
+                      </div>
+                    </button>
+                  ))}
+                {allTasks.filter(task =>
+                  task.status === 'active' &&
+                  !task.done &&
+                  !currentSession.tasks.some(ft => ft.task.id === task.id)
+                ).length === 0 && (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <p className="text-sm">No available tasks to add.</p>
+                    <p className="text-xs mt-1">All active tasks are already in this session.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 dark:border-gray-800">
+              <button
+                onClick={() => setShowAddTaskModal(false)}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium text-gray-700 dark:text-gray-300"
+              >
+                Cancel
+              </button>
             </div>
           </motion.div>
         </div>

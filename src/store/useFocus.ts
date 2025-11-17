@@ -94,6 +94,7 @@ type State = {
   startBreak: (type: 'coffee' | 'meditation' | 'stretch', duration: number) => Promise<void>
   endBreak: () => Promise<void>
   reorderTasks: (fromIndex: number, toIndex: number) => Promise<void>
+  addTaskToSession: (task: Task) => Promise<void>
   loadTaskOrderPreferences: () => Promise<void>
   updateTaskOrderPreferences: (orderedTaskIds: string[]) => Promise<void>
   applyTaskOrderPreferences: (tasks: Task[]) => Task[]
@@ -581,6 +582,29 @@ export const useFocus = create<State>((set, get) => ({
           ...state.currentSession,
           tasks,
           currentTaskIndex,
+        },
+      }
+    })
+
+    await get().persistActiveSession()
+  },
+
+  addTaskToSession: async (task) => {
+    set((state) => {
+      if (!state.currentSession) return state
+
+      const newFocusTask: FocusTask = {
+        task,
+        timeSpent: 0,
+        completed: false,
+        notes: '',
+        followUpTaskIds: []
+      }
+
+      return {
+        currentSession: {
+          ...state.currentSession,
+          tasks: [...state.currentSession.tasks, newFocusTask],
         },
       }
     })
