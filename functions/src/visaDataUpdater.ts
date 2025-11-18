@@ -8,6 +8,9 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import OpenAI from 'openai';
 import { logger } from 'firebase-functions/v2';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as yaml from 'yaml';
 
 // Country data structure
 interface Country {
@@ -135,6 +138,47 @@ const getOpenAIClient = () => {
   return new OpenAI({ apiKey });
 };
 
+const PROMPT_FILE_NAME = 'enhance-visa-requirements.prompt.yml';
+
+interface PromptConfig {
+  name: string;
+  model: string;
+  modelParameters: {
+    temperature: number;
+    max_tokens: number;
+  };
+  messages: Array<{
+    role: string;
+    content: string;
+  }>;
+}
+
+function resolvePromptPath(): string {
+  const candidatePaths = [
+    path.join(__dirname, '../../prompts', PROMPT_FILE_NAME),
+    path.join(__dirname, '../../../prompts', PROMPT_FILE_NAME),
+    path.join(__dirname, '../../../../functions/prompts', PROMPT_FILE_NAME),
+    path.join(process.cwd(), 'functions', 'prompts', PROMPT_FILE_NAME),
+    path.join(process.cwd(), 'prompts', PROMPT_FILE_NAME),
+  ];
+
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    `Prompt file "${PROMPT_FILE_NAME}" not found. Checked: ${candidatePaths.join(', ')}`
+  );
+}
+
+function loadPromptConfig(): PromptConfig {
+  const promptPath = resolvePromptPath();
+  const fileContents = fs.readFileSync(promptPath, 'utf8');
+  return yaml.parse(fileContents);
+}
+
 /**
  * Process a batch of destination countries for a source country
  */
@@ -148,57 +192,33 @@ async function processCountryBatch(
 
   logger.info(`Processing ${sourceCountry.name} (${sourceCountry.code})`);
 
+  const promptConfig = loadPromptConfig();
+
   // Process destinations in batches
   for (let i = 0; i < destinations.length; i += batchSize) {
     const batch = destinations.slice(i, i + batchSize);
 
-    const prompt = `You are a visa requirements expert. Provide accurate visa requirements for citizens of ${sourceCountry.name} (${sourceCountry.code}) traveling to the following countries.
+    // Build destination list
+    const destinationsText = batch.map(c => `${c.name} (${c.code})`).join(', ');
 
-For each destination, provide:
-1. Visa type: "visa-free", "e-visa", "visa-on-arrival", or "visa-required"
-2. Duration allowed (e.g., "90 days", "30 days", "N/A" for visa-required)
-3. Brief description (25-35 words highlighting key attractions, culture, or features)
-4. Region (use: "Africa", "Asia", "Europe", "North America", "South America", or "Oceania")
-5. Basic requirements (e.g., ["Valid passport", "Return ticket"])
-
-Destinations: ${batch.map(c => `${c.name} (${c.code})`).join(', ')}
-
-IMPORTANT: Respond ONLY with valid JSON. No additional text.
-
-JSON format:
-{
-  "destinations": [
-    {
-      "countryCode": "JP",
-      "countryName": "Japan",
-      "visaType": "visa-free",
-      "duration": "90 days",
-      "description": "Island nation known for cherry blossoms, ancient temples, cutting-edge technology, anime culture, hot springs, and world-class cuisine including sushi and ramen.",
-      "region": "Asia",
-      "requirements": ["Valid passport with 6 months validity", "Return or onward ticket", "Proof of sufficient funds"],
-      "notes": "For tourism, business, or visiting friends/family"
-    }
-  ]
-}`;
+    // Build messages from prompt config
+    const messages = promptConfig.messages.map(msg => ({
+      role: msg.role,
+      content: msg.content
+        .replace(/\{\{sourceCountryName\}\}/g, sourceCountry.name)
+        .replace(/\{\{sourceCountryCode\}\}/g, sourceCountry.code)
+        .replace(/\{\{destinations\}\}/g, destinationsText),
+    }));
 
     try {
       logger.info(`Querying OpenAI for batch ${i / batchSize + 1} (${batch.length} destinations)`);
 
       const response = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a visa requirements expert. Always respond with valid JSON only. Be accurate and concise.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
+        messages: messages as any,
         response_format: { type: 'json_object' },
-        temperature: 0.3,
-        max_tokens: 4000,
+        temperature: promptConfig.modelParameters.temperature,
+        max_tokens: promptConfig.modelParameters.max_tokens,
       });
 
       const content = response.choices[0].message.content;

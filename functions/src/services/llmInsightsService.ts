@@ -5,6 +5,9 @@
 
 import { Anthropic } from '@anthropic-ai/sdk';
 import * as admin from 'firebase-admin';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as yaml from 'yaml';
 import {
   buildMonthlyRollup,
   getNotableTransactions,
@@ -16,6 +19,47 @@ const db = admin.firestore();
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
+
+const PROMPT_FILE_NAME = 'generate-spending-insights.prompt.yml';
+
+interface PromptConfig {
+  name: string;
+  model: string;
+  modelParameters: {
+    temperature: number;
+    max_tokens: number;
+  };
+  messages: Array<{
+    role: string;
+    content: string;
+  }>;
+}
+
+function resolvePromptPath(): string {
+  const candidatePaths = [
+    path.join(__dirname, '../../../prompts', PROMPT_FILE_NAME),
+    path.join(__dirname, '../../prompts', PROMPT_FILE_NAME),
+    path.join(__dirname, '../../../../functions/prompts', PROMPT_FILE_NAME),
+    path.join(process.cwd(), 'functions', 'prompts', PROMPT_FILE_NAME),
+    path.join(process.cwd(), 'prompts', PROMPT_FILE_NAME),
+  ];
+
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    `Prompt file "${PROMPT_FILE_NAME}" not found. Checked: ${candidatePaths.join(', ')}`
+  );
+}
+
+function loadPromptConfig(): PromptConfig {
+  const promptPath = resolvePromptPath();
+  const fileContents = fs.readFileSync(promptPath, 'utf8');
+  return yaml.parse(fileContents);
+}
 
 // ============================================================================
 // LLM Insight Output Schema
@@ -139,66 +183,54 @@ async function callClaudeForInsights(
   rollup: any,
   notableTransactions: any[]
 ): Promise<LLMInsightOutput> {
-  const systemPrompt = `You are a precise personal-finance analyst. Use only provided aggregates and notable transactions.
-Do not invent numbers. If data is missing, state what's missing.
-Produce 3–6 headlineInsights; spendWarnings for categories with >30% MoM increase; list newSubscriptions exactly as provided; suggest 2–4 actionable budgetSuggestions; ask 1–3 clarifying questions.
-Return valid JSON only conforming to the schema.`;
+  const promptConfig = loadPromptConfig();
 
-  const userPrompt = `Analyze this spending data for ${rollup.month}:
+  // Prepare template variables
+  const categoryBreakdown = rollup.categoryBreakdown.slice(0, 10).map((cat: any) =>
+    `- ${cat.category}: $${cat.total.toFixed(2)} (${cat.percentage.toFixed(1)}%, ${cat.count} txns)`
+  ).join('\n');
 
-## Summary
-- Total Outflow: $${rollup.cashflow.outflow.toFixed(2)}
-- Total Inflow: $${rollup.cashflow.inflow.toFixed(2)}
-- Net Cashflow: $${rollup.cashflow.net.toFixed(2)}
-- Transaction Count: ${rollup.transactionCount}
+  const topMerchants = rollup.topMerchants.slice(0, 10).map((m: any) =>
+    `- ${m.merchant}: $${m.total.toFixed(2)} (${m.count} txns)`
+  ).join('\n');
 
-## Category Breakdown
-${rollup.categoryBreakdown.slice(0, 10).map((cat: any) =>
-  `- ${cat.category}: $${cat.total.toFixed(2)} (${cat.percentage.toFixed(1)}%, ${cat.count} txns)`
-).join('\n')}
+  const anomalies = rollup.anomalies.length > 0
+    ? rollup.anomalies.map((a: any) =>
+        `- ${a.category}: ${a.deltaPct > 0 ? '+' : ''}${a.deltaPct}% ${a.explanation || ''}`
+      ).join('\n')
+    : 'No significant anomalies detected';
 
-## Top Merchants
-${rollup.topMerchants.slice(0, 10).map((m: any) =>
-  `- ${m.merchant}: $${m.total.toFixed(2)} (${m.count} txns)`
-).join('\n')}
+  const notableTransactionsText = notableTransactions.slice(0, 10).map((t: any) =>
+    `- ${t.merchant}: $${t.amount.toFixed(2)} on ${t.date} (${t.category})`
+  ).join('\n');
 
-## Anomalies (vs Previous Month)
-${rollup.anomalies.length > 0
-  ? rollup.anomalies.map((a: any) =>
-      `- ${a.category}: ${a.deltaPct > 0 ? '+' : ''}${a.deltaPct}% ${a.explanation || ''}`
-    ).join('\n')
-  : 'No significant anomalies detected'}
+  // Build messages from prompt config
+  const messages = promptConfig.messages.map(msg => {
+    let content = msg.content
+      .replace(/\{\{month\}\}/g, rollup.month)
+      .replace(/\{\{outflow\}\}/g, rollup.cashflow.outflow.toFixed(2))
+      .replace(/\{\{inflow\}\}/g, rollup.cashflow.inflow.toFixed(2))
+      .replace(/\{\{netCashflow\}\}/g, rollup.cashflow.net.toFixed(2))
+      .replace(/\{\{transactionCount\}\}/g, rollup.transactionCount)
+      .replace(/\{\{categoryBreakdown\}\}/g, categoryBreakdown)
+      .replace(/\{\{topMerchants\}\}/g, topMerchants)
+      .replace(/\{\{anomalies\}\}/g, anomalies)
+      .replace(/\{\{notableTransactions\}\}/g, notableTransactionsText);
 
-## Notable Transactions
-${notableTransactions.slice(0, 10).map((t: any) =>
-  `- ${t.merchant}: $${t.amount.toFixed(2)} on ${t.date} (${t.category})`
-).join('\n')}
+    return { role: msg.role, content };
+  });
 
-Return a JSON object with this exact structure:
-{
-  "month": "YYYY-MM",
-  "headlineInsights": ["string", "string", ...],
-  "spendWarnings": [{"category": "string", "deltaPct": number, "explanation": "string"}, ...],
-  "newSubscriptions": [{"merchant": "string", "amount": number, "firstSeen": "YYYY-MM-DD"}, ...],
-  "budgetSuggestions": {
-    "notes": "string",
-    "actions": [{"title": "string", "impact": "string"}, ...]
-  },
-  "questionsForUser": ["string", ...]
-}`;
+  // Separate system and user messages
+  const systemMessage = messages.find(m => m.role === 'system');
+  const userMessages = messages.filter(m => m.role === 'user');
 
   let responseText = '';
   try {
     const message = await anthropic.messages.create({
       model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 2000,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
+      max_tokens: promptConfig.modelParameters.max_tokens,
+      system: systemMessage?.content,
+      messages: userMessages,
     });
 
     const content = message.content[0];
