@@ -12,6 +12,7 @@ import { TaskSteps } from "@/components/TaskSteps";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { TimeDisplay } from "@/components/TimeDisplay";
 import { SessionHistory } from "@/components/SessionHistory";
+import { WorkActivity } from "@/components/WorkActivity";
 import RichTextEditor from "@/components/RichTextEditor";
 import { parseNotesMetadata, getUserNotes as getTaskUserNotes } from "@/lib/utils/taskNotes";
 import Link from "next/link";
@@ -445,8 +446,8 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
             </section>
           ) : null}
 
-          {/* 4. Time Tracking & Completion History */}
-          {!isEditing && (task.actualMinutes || task.estimatedMinutes || (task.completionHistory && task.completionHistory.length > 0)) && (
+          {/* 4. Time Tracking & Work Activity */}
+          {!isEditing && (
             <section className="border-t-2 border-dashed border-purple-200 dark:border-purple-800 pt-4 space-y-4">
               <h3 className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide flex items-center gap-2">
                 <Clock className="h-4 w-4" />
@@ -475,72 +476,8 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                 </div>
               )}
 
-              {/* Completion History for Recurring Tasks */}
-              {task.completionHistory && task.completionHistory.length > 0 && (
-                <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
-                  <h4 className="text-sm font-semibold text-purple-800 dark:text-purple-200 mb-3 flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Completion History
-                    <span className="ml-auto text-xs font-normal bg-purple-200 dark:bg-purple-800 px-2 py-0.5 rounded-full">
-                      {task.completionHistory.length} {task.completionHistory.length === 1 ? 'completion' : 'completions'}
-                    </span>
-                  </h4>
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                    {task.completionHistory
-                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                      .map((completion, idx) => {
-                        const completionDate = new Date(completion.date);
-                        const completedAt = new Date(completion.completedAt);
-                        const today = new Date();
-                        const isToday = completionDate.toDateString() === today.toDateString();
-                        const yesterday = new Date(today);
-                        yesterday.setDate(yesterday.getDate() - 1);
-                        const isYesterday = completionDate.toDateString() === yesterday.toDateString();
-
-                        let dateLabel = completionDate.toLocaleDateString('en-US', {
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric',
-                          year: completionDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
-                        });
-
-                        if (isToday) dateLabel = '🎯 Today';
-                        else if (isYesterday) dateLabel = 'Yesterday';
-
-                        return (
-                          <div
-                            key={`${completion.date}-${idx}`}
-                            className={`flex items-center justify-between p-2.5 rounded-lg border transition-all ${
-                              isToday
-                                ? 'bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-700'
-                                : 'bg-white dark:bg-gray-800 border-purple-200 dark:border-purple-700'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <CheckCircle2 className={`h-3.5 w-3.5 ${isToday ? 'text-green-600' : 'text-purple-600'}`} />
-                              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                                {dateLabel}
-                              </span>
-                            </div>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {completedAt.toLocaleTimeString('en-US', {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </span>
-                          </div>
-                        );
-                      })}
-                  </div>
-                  {task.completionHistory.length > 5 && (
-                    <div className="mt-3 pt-3 border-t border-purple-200 dark:border-purple-700">
-                      <div className="text-xs text-center text-purple-600 dark:text-purple-400">
-                        Scroll to see all {task.completionHistory.length} completions
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Work Activity - Shows last 10 days of work on this task */}
+              <WorkActivity taskId={task.id} />
             </section>
           )}
 
