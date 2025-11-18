@@ -349,7 +349,7 @@ export default function Page() {
           <h2 className="text-lg font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">⚡ Quick Focus Modes</h2>
         </div>
         <div className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             <Link
               href="/tools/focus?duration=60&mode=regular"
               className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900 dark:to-emerald-900 border-2 border-green-300 dark:border-green-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
@@ -389,6 +389,19 @@ export default function Page() {
               <Heart className="h-7 w-7 text-pink-600 dark:text-pink-400" />
               <span className="text-base font-bold text-pink-600 dark:text-pink-400">Self-Care</span>
               <span className="text-xs font-medium text-gray-600 dark:text-gray-400 text-center">Wellness first</span>
+            </Link>
+            <Link
+              href="/tools/meditation"
+              className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900 dark:to-indigo-900 border-2 border-purple-300 dark:border-purple-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 relative"
+            >
+              <div className="absolute top-2 right-2 flex gap-1">
+                <span className="text-xs" title="Breathing exercises">🫁</span>
+                <span className="text-xs" title="Guided meditation">🧘</span>
+                <span className="text-xs" title="Meditation music">🎵</span>
+              </div>
+              <Brain className="h-7 w-7 text-purple-600 dark:text-purple-400" />
+              <span className="text-base font-bold text-purple-600 dark:text-purple-400">Meditation</span>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400 text-center">Mindfulness & breathing</span>
             </Link>
           </div>
         </div>
