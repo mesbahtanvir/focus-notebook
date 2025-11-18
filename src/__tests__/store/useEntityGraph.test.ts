@@ -31,7 +31,7 @@ describe('useEntityGraph store', () => {
     useEntityGraph.setState({
       relationships: [],
       isLoading: false,
-      error: null as Error | null,
+      error: null,
       isSubscribed: false,
       unsubscribe: null,
     });

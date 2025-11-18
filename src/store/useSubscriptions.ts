@@ -43,6 +43,11 @@ const getYearlyCost = (sub: Subscription): number => {
 // Extra actions specific to subscriptions
 interface SubscriptionExtraActions {
   subscriptions: Subscription[];
+  // Backward compatible methods (legacy signatures with userId)
+  addSubscription: (userId: string, subscription: Omit<Subscription, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
+  updateSubscription: (userId: string, id: string, updates: Partial<Omit<Subscription, 'id' | 'createdAt'>>) => Promise<void>;
+  deleteSubscription: (userId: string, id: string) => Promise<void>;
+  // Utility methods
   getSubscription: (id: string) => Subscription | undefined;
   getActiveSubscriptions: () => Subscription[];
   getTotalMonthlyCost: () => number;
@@ -60,6 +65,19 @@ export const useSubscriptions = createEntityStore<Subscription, Omit<Subscriptio
     // Backward compatibility
     get subscriptions() {
       return get().items;
+    },
+
+    // Backward compatible methods (legacy signatures - userId is ignored)
+    addSubscription: async (_userId: string, subscription: Omit<Subscription, 'id' | 'createdAt' | 'updatedAt'>) => {
+      return await get().add(subscription);
+    },
+
+    updateSubscription: async (_userId: string, id: string, updates: Partial<Omit<Subscription, 'id' | 'createdAt'>>) => {
+      await get().update(id, updates);
+    },
+
+    deleteSubscription: async (_userId: string, id: string) => {
+      await get().delete(id);
     },
 
     getSubscription: (id: string) => {

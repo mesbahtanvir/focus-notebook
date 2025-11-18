@@ -192,7 +192,7 @@ describe('createEntityStore', () => {
       const { result } = renderHook(() => useTestStore());
 
       await act(async () => {
-        await result.current.add({ name: 'Test' });
+        await result.current.add({ name: 'Test', value: 5 });
       });
 
       expect(createAtMock).toHaveBeenCalledWith(
@@ -200,7 +200,7 @@ describe('createEntityStore', () => {
         expect.objectContaining({
           name: 'Test',
           status: 'active',
-          value: 0,
+          value: 5, // User provided value overrides default
         })
       );
     });
@@ -339,7 +339,12 @@ describe('createEntityStore', () => {
 
   describe('Extra Actions', () => {
     it('should support custom actions via extraActions parameter', () => {
-      const useTestStore = createEntityStore<TestEntity>(
+      interface TestExtraActions {
+        getActiveItems: () => TestEntity[];
+        getTotalValue: () => number;
+      }
+
+      const useTestStore = createEntityStore<TestEntity, Omit<TestEntity, 'id' | 'createdAt'>, TestExtraActions>(
         {
           collectionName: 'testEntities',
         },
@@ -465,7 +470,12 @@ describe('createEntityStore', () => {
         priority: 'high' | 'medium' | 'low';
       }
 
-      const useGoals = createEntityStore<Goal>(
+      interface GoalExtraActions {
+        goals: Goal[];
+        toggleStatus: (id: string) => Promise<void>;
+      }
+
+      const useGoals = createEntityStore<Goal, Omit<Goal, 'id' | 'createdAt'>, GoalExtraActions>(
         {
           collectionName: 'goals',
           defaultValues: {

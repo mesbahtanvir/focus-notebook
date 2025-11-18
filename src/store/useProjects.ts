@@ -48,8 +48,14 @@ interface ProjectExtraActions {
   isLeafProject: (projectId: string) => boolean;
 }
 
+// Create type for project creation that makes fields with defaults optional
+type ProjectCreate = Omit<Project, 'id' | 'createdAt' | 'linkedThoughtIds' | 'linkedTaskIds'> & {
+  linkedThoughtIds?: string[];
+  linkedTaskIds?: string[];
+};
+
 // Create the store with project-specific actions
-export const useProjects = createEntityStore<Project, Omit<Project, 'id' | 'createdAt'>, ProjectExtraActions>(
+export const useProjects = createEntityStore<Project, ProjectCreate, ProjectExtraActions>(
   {
     collectionName: 'projects',
     defaultValues: {
