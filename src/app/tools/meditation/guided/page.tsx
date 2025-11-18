@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { 
@@ -157,7 +157,7 @@ const guidedSessions: GuidedSession[] = [
   }
 ];
 
-export default function GuidedPage() {
+function GuidedPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedSession, setSelectedSession] = useState<GuidedSession>(guidedSessions[0]);
@@ -454,14 +454,29 @@ export default function GuidedPage() {
             Meditation Tips
           </h4>
           <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-            <li>• Find a quiet space where you won't be disturbed</li>
+            <li>• Find a quiet space where you won&apos;t be disturbed</li>
             <li>• Turn off notifications on your devices</li>
             <li>• Sit or lie in a comfortable but alert position</li>
-            <li>• It's normal for your mind to wander - gently return to the guidance</li>
+            <li>• It&apos;s normal for your mind to wander - gently return to the guidance</li>
             <li>• Be patient and kind with yourself throughout the practice</li>
           </ul>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function GuidedPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Loading...</p>
+        </div>
+      </div>
+    }>
+      <GuidedPageContent />
+    </Suspense>
   );
 }

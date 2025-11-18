@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { 
@@ -72,7 +72,7 @@ const breathingPatterns: BreathingPattern[] = [
   }
 ];
 
-export default function BreathingPage() {
+function BreathingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedPattern, setSelectedPattern] = useState<BreathingPattern>(breathingPatterns[0]);
@@ -100,7 +100,7 @@ export default function BreathingPage() {
   }, []);
 
   // Play sound for phase transitions
-  const playPhaseSound = (phase: string) => {
+  const playPhaseSound = useCallback((phase: string) => {
     if (!soundEnabled || !audioContextRef.current) return;
 
     const ctx = audioContextRef.current;
@@ -135,10 +135,10 @@ export default function BreathingPage() {
 
     oscillator.start(ctx.currentTime);
     oscillator.stop(ctx.currentTime + 1);
-  };
+  }, [soundEnabled, volume]);
 
   // Play continuous background tone
-  const playBackgroundTone = () => {
+  const playBackgroundTone = useCallback(() => {
     if (!soundEnabled || !audioContextRef.current || !isPlaying) return;
 
     const ctx = audioContextRef.current;
@@ -157,7 +157,7 @@ export default function BreathingPage() {
 
     oscillator.start(ctx.currentTime);
     oscillator.stop(ctx.currentTime + 10);
-  };
+  }, [soundEnabled, volume, isPlaying]);
 
   // Play sound when phase changes
   useEffect(() => {
@@ -165,7 +165,7 @@ export default function BreathingPage() {
       playPhaseSound(currentPhase);
       lastPhaseRef.current = currentPhase;
     }
-  }, [currentPhase, soundEnabled, volume]);
+  }, [currentPhase, soundEnabled, volume, playPhaseSound]);
 
   // Play background tone periodically
   useEffect(() => {
@@ -179,12 +179,38 @@ export default function BreathingPage() {
     playBackgroundTone();
 
     return () => clearInterval(toneInterval);
-  }, [isPlaying, soundEnabled, volume]);
+  }, [isPlaying, soundEnabled, volume, playBackgroundTone]);
 
   // Default to box breathing for simplicity
   useEffect(() => {
     setSelectedPattern(breathingPatterns[0]);
   }, []);
+
+  const moveToNextPhase = useCallback(() => {
+    setCurrentPhase((prev) => {
+      switch (prev) {
+        case 'inhale':
+          return selectedPattern.hold1 > 0 ? 'hold1' : 'exhale';
+        case 'hold1':
+          return 'exhale';
+        case 'exhale':
+          return selectedPattern.hold2 > 0 ? 'hold2' : 'inhale';
+        case 'hold2':
+          setCurrentCycle((cycle) => {
+            const nextCycle = cycle + 1;
+            if (selectedPattern.cycles && nextCycle >= selectedPattern.cycles) {
+              setIsPlaying(false);
+              setCompletedCycles(nextCycle);
+              return 0;
+            }
+            return nextCycle;
+          });
+          return 'inhale';
+        default:
+          return 'inhale';
+      }
+    });
+  }, [selectedPattern]);
 
   // Breathing logic
   useEffect(() => {
@@ -233,33 +259,7 @@ export default function BreathingPage() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isPlaying, currentPhase, selectedPattern]);
-
-  const moveToNextPhase = () => {
-    setCurrentPhase((prev) => {
-      switch (prev) {
-        case 'inhale':
-          return selectedPattern.hold1 > 0 ? 'hold1' : 'exhale';
-        case 'hold1':
-          return 'exhale';
-        case 'exhale':
-          return selectedPattern.hold2 > 0 ? 'hold2' : 'inhale';
-        case 'hold2':
-          setCurrentCycle((cycle) => {
-            const nextCycle = cycle + 1;
-            if (selectedPattern.cycles && nextCycle >= selectedPattern.cycles) {
-              setIsPlaying(false);
-              setCompletedCycles(nextCycle);
-              return 0;
-            }
-            return nextCycle;
-          });
-          return 'inhale';
-        default:
-          return 'inhale';
-      }
-    });
-  };
+  }, [isPlaying, currentPhase, selectedPattern, moveToNextPhase]);
 
   const handleStart = () => {
     setIsPlaying(true);
@@ -498,5 +498,20 @@ export default function BreathingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function BreathingPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Loading...</p>
+        </div>
+      </div>
+    }>
+      <BreathingPageContent />
+    </Suspense>
   );
 }
