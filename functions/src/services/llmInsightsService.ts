@@ -222,7 +222,10 @@ async function callClaudeForInsights(
 
   // Separate system and user messages
   const systemMessage = messages.find(m => m.role === 'system');
-  const userMessages = messages.filter(m => m.role === 'user');
+  const userMessages = messages.filter(m => m.role !== 'system').map(msg => ({
+    role: msg.role as 'user' | 'assistant',
+    content: msg.content
+  }));
 
   let responseText = '';
   try {
