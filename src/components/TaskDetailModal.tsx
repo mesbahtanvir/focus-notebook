@@ -465,6 +465,8 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                     estimated={task.estimatedMinutes}
                     variant="detailed"
                     showProgressBar={true}
+                    isRecurring={task.recurrence?.type !== 'none'}
+                    completionCount={task.completionHistory?.length || 0}
                   />
 
                   {/* Session History */}
