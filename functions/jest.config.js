@@ -16,10 +16,6 @@ module.exports = {
     '!src/stripeBilling.ts',
     '!src/utils/encryption.ts',
     '!src/types/spending-tool.ts',
-    // Exclude additional untested features (tests to be added later)
-    '!src/spendingMaintenance.ts',
-    '!src/visaDataUpdater.ts',
-    '!src/utils/aiPromptLogger.ts',
   ],
   coverageThreshold: {
     global: {
