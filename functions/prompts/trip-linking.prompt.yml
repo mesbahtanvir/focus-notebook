@@ -1,0 +1,119 @@
+name: Trip-Transaction Linking
+description: Matches bank transactions to user trips based on currency, timing, and merchant/location signals with confidence-based linking decisions
+
+model: anthropic/claude-3-5-sonnet-20241022
+
+modelParameters:
+  temperature: 0
+  max_tokens: 1500
+
+messages:
+  - role: user
+    content: |
+      You match bank transactions to user trips. Only link a transaction to a trip when currency, timing, and merchant/location strongly indicate they belong together.
+      Return structured JSON and never invent trips.
+
+      Trips:
+      {{tripBlock}}
+
+      Transactions:
+      {{transactionBlock}}
+
+      For each transaction respond with JSON matching:
+      {
+        "results": [
+          {
+            "transactionId": "",
+            "decision": "link" | "suggest" | "skip",
+            "tripId": "trip-id-or-null",
+            "confidence": 0.0-1.0,
+            "reasoning": "string"
+          }
+        ]
+      }
+      Rules:
+      - Use "link" only when confidence >= 0.8.
+      - Use "suggest" for confidence between 0.6 and 0.79.
+      - Otherwise "skip" with null tripId.
+      - Confidence must be numeric 0-1.
+      - Each transaction appears exactly once.
+
+testData:
+  - tripBlock: |
+      - [trip-1] Tokyo Adventure (Japan) from 2025-11-01 to 2025-11-10 in JPY
+      - [trip-2] Paris Vacation (France) from 2025-11-15 to 2025-11-22 in EUR
+    transactionBlock: |
+      - [txn-1] 2025-11-03 • JPY 5000.00 @ Lawson Convenience Store | location: Tokyo, Kanto, Japan | LAWSON SHIBUYA
+      - [txn-2] 2025-11-05 • JPY 12500.00 @ Tokyo Metro | location: Tokyo, Kanto, Japan | PASMO CHARGE
+      - [txn-3] 2025-10-28 • USD 45.00 @ Amazon | AMAZON.COM ORDER
+      - [txn-4] 2025-11-16 • EUR 85.50 @ Cafe de Flore | location: Paris, Ile-de-France, France | CAFE DE FLORE PARIS
+    expected: |
+      {
+        "results": [
+          {
+            "transactionId": "txn-1",
+            "decision": "link",
+            "tripId": "trip-1",
+            "confidence": 0.95,
+            "reasoning": "Currency (JPY), location (Tokyo), and date (2025-11-03) all strongly match Tokyo Adventure trip"
+          },
+          {
+            "transactionId": "txn-2",
+            "decision": "link",
+            "tripId": "trip-1",
+            "confidence": 0.92,
+            "reasoning": "Tokyo Metro transaction in JPY during trip dates matches Tokyo Adventure trip"
+          },
+          {
+            "transactionId": "txn-3",
+            "decision": "skip",
+            "tripId": null,
+            "confidence": 0.1,
+            "reasoning": "Amazon purchase before any trip dates, no location match"
+          },
+          {
+            "transactionId": "txn-4",
+            "decision": "link",
+            "tripId": "trip-2",
+            "confidence": 0.93,
+            "reasoning": "EUR currency, Paris location, and date during Paris Vacation trip period"
+          }
+        ]
+      }
+
+evaluators:
+  - name: Response is valid JSON
+    string:
+      matchesRegex: '^\{.*\}$'
+
+  - name: Contains results array
+    string:
+      contains: '"results":'
+
+  - name: Has transactionId field
+    string:
+      contains: '"transactionId":'
+
+  - name: Has decision field
+    string:
+      contains: '"decision":'
+
+  - name: Has confidence field
+    string:
+      contains: '"confidence":'
+
+  - name: Has reasoning field
+    string:
+      contains: '"reasoning":'
+
+  - name: Decision values are valid
+    string:
+      matchesRegex: '"decision":\s*"(link|suggest|skip)"'
+
+  - name: Confidence is numeric 0-1
+    string:
+      matchesRegex: '"confidence":\s*(0(\.\d+)?|1(\.0+)?)'
+
+  - name: tripId exists for all entries
+    string:
+      matchesRegex: '"tripId":\s*("[\w-]+"|\s*null)'

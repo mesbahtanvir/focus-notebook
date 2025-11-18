@@ -1,6 +1,9 @@
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import { Anthropic } from '@anthropic-ai/sdk';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as yaml from 'yaml';
 
 const db = admin.firestore();
 
@@ -12,6 +15,47 @@ const anthropic = anthropicApiKey
 const MAX_TRANSACTIONS_GLOBAL = parseInt(process.env.TRIP_LINK_BATCH_LIMIT || '60', 10);
 const MAX_TRANSACTIONS_PER_USER = parseInt(process.env.TRIP_LINK_BATCH_PER_USER || '12', 10);
 const MODEL_NAME = process.env.TRIP_LINK_MODEL || 'claude-3-5-sonnet-20241022';
+
+const PROMPT_FILE_NAME = 'trip-linking.prompt.yml';
+
+interface PromptConfig {
+  name: string;
+  model: string;
+  modelParameters: {
+    temperature: number;
+    max_tokens: number;
+  };
+  messages: Array<{
+    role: string;
+    content: string;
+  }>;
+}
+
+function resolvePromptPath(): string {
+  const candidatePaths = [
+    path.join(__dirname, '../../prompts', PROMPT_FILE_NAME),
+    path.join(__dirname, '../../../prompts', PROMPT_FILE_NAME),
+    path.join(__dirname, '../../../../functions/prompts', PROMPT_FILE_NAME),
+    path.join(process.cwd(), 'functions', 'prompts', PROMPT_FILE_NAME),
+    path.join(process.cwd(), 'prompts', PROMPT_FILE_NAME),
+  ];
+
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    `Prompt file "${PROMPT_FILE_NAME}" not found. Checked: ${candidatePaths.join(', ')}`
+  );
+}
+
+function loadPromptConfig(): PromptConfig {
+  const promptPath = resolvePromptPath();
+  const fileContents = fs.readFileSync(promptPath, 'utf8');
+  return yaml.parse(fileContents);
+}
 
 interface TransactionCandidate {
   id: string;
@@ -264,8 +308,7 @@ async function inferTripLinks(trips: TripCandidate[], transactions: TransactionC
     return [];
   }
 
-const systemPrompt = `You match bank transactions to user trips. Only link a transaction to a trip when currency, timing, and merchant/location strongly indicate they belong together.
-Return structured JSON and never invent trips.`;
+  const promptConfig = loadPromptConfig();
 
   const tripBlock = trips
     .map((trip) =>
@@ -284,30 +327,20 @@ Return structured JSON and never invent trips.`;
     })
     .join('\n');
 
-  const userPrompt = `Trips:\n${tripBlock || 'None'}\n\nTransactions:\n${transactionBlock || 'None'}\n\nFor each transaction respond with JSON matching:
-{
-  "results": [
-    {
-      "transactionId": "",
-      "decision": "link" | "suggest" | "skip",
-      "tripId": "trip-id-or-null",
-      "confidence": 0.0-1.0,
-      "reasoning": "string"
-    }
-  ]
-}
-Rules:
-- Use "link" only when confidence >= 0.8.
-- Use "suggest" for confidence between 0.6 and 0.79.
-- Otherwise "skip" with null tripId.
-- Confidence must be numeric 0-1.
-- Each transaction appears exactly once.`;
+  // The prompt uses a single user message with variables
+  const userMessage = promptConfig.messages.find(msg => msg.role === 'user');
+  if (!userMessage) {
+    throw new Error('User message not found in prompt config');
+  }
+
+  const userPrompt = userMessage.content
+    .replace(/\{\{tripBlock\}\}/g, tripBlock || 'None')
+    .replace(/\{\{transactionBlock\}\}/g, transactionBlock || 'None');
 
   const message = await anthropic.messages.create({
     model: MODEL_NAME,
-    max_tokens: 1500,
-    temperature: 0,
-    system: systemPrompt,
+    max_tokens: promptConfig.modelParameters.max_tokens,
+    temperature: promptConfig.modelParameters.temperature,
     messages: [
       {
         role: 'user',

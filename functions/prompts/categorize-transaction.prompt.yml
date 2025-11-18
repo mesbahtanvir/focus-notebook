@@ -1,0 +1,119 @@
+name: Categorize Transaction
+description: Categorizes individual bank transactions into hierarchical categories with subcategories and confidence scores
+
+model: anthropic/claude-3-5-haiku-20241022
+
+modelParameters:
+  temperature: 0
+  max_tokens: 150
+
+messages:
+  - role: user
+    content: |
+      Categorize this transaction into one of the premium categories:
+
+      Merchant: {{merchant}}
+      Description: {{description}}
+      Amount: ${{amount}}
+
+      Categories:
+      - Food & Drink (subcategories: Cafe, Casual Dining, Fine Dining, Groceries, Fast Food, Alcohol & Bars)
+      - Transport (subcategories: Ridehail, Public Transit, Fuel, Parking, Auto Maintenance)
+      - Shopping (subcategories: Clothes, Electronics, Home Décor, General, Online Shopping)
+      - Travel (subcategories: Flights, Hotels, Airbnb, Tours, Car Rental)
+      - Entertainment
+      - Fitness
+      - Wellness
+      - Utilities
+      - Rent/Mortgage
+      - Fees/Interest
+      - Income
+      - Education
+      - Other
+
+      Return ONLY a JSON object with this exact format:
+      {
+        "level1": "category name",
+        "level2": "subcategory name or null",
+        "confidence": 0.85
+      }
+
+testData:
+  - merchant: "Starbucks"
+    description: "STARBUCKS STORE #12345 SAN FRANCISCO CA"
+    amount: "8.75"
+    expected: |
+      {
+        "level1": "Food & Drink",
+        "level2": "Cafe",
+        "confidence": 0.98
+      }
+
+  - merchant: "Shell"
+    description: "SHELL OIL 57452935 SAN FRANCISCO CA"
+    amount: "52.00"
+    expected: |
+      {
+        "level1": "Transport",
+        "level2": "Fuel",
+        "confidence": 0.95
+      }
+
+  - merchant: "Amazon"
+    description: "AMZN Mktp US*2X4Y8Z Seattle WA"
+    amount: "45.32"
+    expected: |
+      {
+        "level1": "Shopping",
+        "level2": "Online Shopping",
+        "confidence": 0.90
+      }
+
+  - merchant: "Delta Airlines"
+    description: "DELTA AIR 00623456789 ATLANTA GA"
+    amount: "450.00"
+    expected: |
+      {
+        "level1": "Travel",
+        "level2": "Flights",
+        "confidence": 0.99
+      }
+
+  - merchant: "LA Fitness"
+    description: "LA FITNESS #0234 MEMBERSHIP"
+    amount: "45.00"
+    expected: |
+      {
+        "level1": "Fitness",
+        "level2": null,
+        "confidence": 0.97
+      }
+
+evaluators:
+  - name: Response is valid JSON
+    string:
+      matchesRegex: '^\{.*\}$'
+
+  - name: Contains level1 field
+    string:
+      contains: '"level1":'
+
+  - name: Contains level2 field
+    string:
+      contains: '"level2":'
+
+  - name: Contains confidence field
+    string:
+      contains: '"confidence":'
+
+  - name: level1 is from allowed categories
+    string:
+      matchesRegex: '"level1":\s*"(Food & Drink|Transport|Shopping|Travel|Entertainment|Fitness|Wellness|Utilities|Rent/Mortgage|Fees/Interest|Income|Education|Other)"'
+
+  - name: confidence is numeric 0-1
+    string:
+      matchesRegex: '"confidence":\s*(0(\.\d+)?|1(\.0+)?)'
+
+  - name: level2 is string or null
+    string:
+      matchesRegex: '"level2":\s*("[\w\s&]+"|null)'

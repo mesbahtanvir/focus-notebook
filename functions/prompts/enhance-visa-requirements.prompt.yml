@@ -1,0 +1,129 @@
+name: Enhance Visa Requirements
+description: Generates comprehensive visa requirement information for citizens of a source country traveling to destination countries in batches
+
+model: openai/gpt-4o-mini
+
+modelParameters:
+  temperature: 0.3
+  max_tokens: 16384
+
+messages:
+  - role: system
+    content: |
+      You are a visa requirements expert. Always respond with valid JSON only. Be accurate and concise.
+
+  - role: user
+    content: |
+      You are a visa requirements expert. Provide accurate visa requirements for citizens of {{sourceCountryName}} ({{sourceCountryCode}}) traveling to the following countries.
+
+      For each destination, provide:
+      1. Visa type: "visa-free", "e-visa", "visa-on-arrival", or "visa-required"
+      2. Duration allowed (e.g., "90 days", "30 days", "N/A" for visa-required)
+      3. Brief description (25-35 words highlighting key attractions, culture, or features)
+      4. Region (use: "Africa", "Asia", "Europe", "North America", "South America", or "Oceania")
+      5. Basic requirements (e.g., ["Valid passport", "Return ticket"])
+
+      Destinations: {{destinations}}
+
+      IMPORTANT: Respond ONLY with valid JSON. No additional text.
+
+      JSON format:
+      {
+        "destinations": [
+          {
+            "countryCode": "JP",
+            "countryName": "Japan",
+            "visaType": "visa-free",
+            "duration": "90 days",
+            "description": "Island nation known for cherry blossoms, ancient temples, cutting-edge technology, anime culture, hot springs, and world-class cuisine including sushi and ramen.",
+            "region": "Asia",
+            "requirements": ["Valid passport with 6 months validity", "Return or onward ticket", "Proof of sufficient funds"],
+            "notes": "For tourism, business, or visiting friends/family"
+          }
+        ]
+      }
+
+testData:
+  - sourceCountryName: "United States"
+    sourceCountryCode: "US"
+    destinations: "Japan (JP), United Kingdom (GB), Thailand (TH)"
+    expected: |
+      {
+        "destinations": [
+          {
+            "countryCode": "JP",
+            "countryName": "Japan",
+            "visaType": "visa-free",
+            "duration": "90 days",
+            "description": "Island nation known for cherry blossoms, ancient temples, cutting-edge technology, anime culture, hot springs, and world-class cuisine including sushi and ramen.",
+            "region": "Asia",
+            "requirements": ["Valid passport with 6 months validity", "Return or onward ticket", "Proof of sufficient funds"],
+            "notes": "For tourism, business, or visiting friends/family"
+          },
+          {
+            "countryCode": "GB",
+            "countryName": "United Kingdom",
+            "visaType": "visa-free",
+            "duration": "180 days",
+            "description": "Historic kingdom featuring royal palaces, iconic landmarks like Big Ben, diverse culture, world-class museums, beautiful countryside, and rich literary heritage.",
+            "region": "Europe",
+            "requirements": ["Valid passport for duration of stay", "Proof of accommodation", "Return ticket"],
+            "notes": "For tourism and short business trips"
+          },
+          {
+            "countryCode": "TH",
+            "countryName": "Thailand",
+            "visaType": "visa-free",
+            "duration": "30 days",
+            "description": "Southeast Asian destination famous for tropical beaches, ornate temples, vibrant street food, bustling Bangkok, elephant sanctuaries, and warm hospitality.",
+            "region": "Asia",
+            "requirements": ["Valid passport with 6 months validity", "Proof of onward travel", "Proof of accommodation"],
+            "notes": "Can be extended for 30 more days at immigration office"
+          }
+        ]
+      }
+
+evaluators:
+  - name: Response is valid JSON
+    string:
+      matchesRegex: '^\{.*\}$'
+
+  - name: Contains destinations array
+    string:
+      contains: '"destinations":'
+
+  - name: Has countryCode field
+    string:
+      contains: '"countryCode":'
+
+  - name: Has countryName field
+    string:
+      contains: '"countryName":'
+
+  - name: Has visaType field
+    string:
+      contains: '"visaType":'
+
+  - name: Has duration field
+    string:
+      contains: '"duration":'
+
+  - name: Has description field
+    string:
+      contains: '"description":'
+
+  - name: Has region field
+    string:
+      contains: '"region":'
+
+  - name: Has requirements array
+    string:
+      contains: '"requirements":'
+
+  - name: visaType values are valid
+    string:
+      matchesRegex: '"visaType":\s*"(visa-free|e-visa|visa-on-arrival|visa-required)"'
+
+  - name: region values are valid
+    string:
+      matchesRegex: '"region":\s*"(Africa|Asia|Europe|North America|South America|Oceania)"'

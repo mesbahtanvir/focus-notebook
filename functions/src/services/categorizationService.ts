@@ -4,10 +4,54 @@
  */
 
 import { Anthropic } from '@anthropic-ai/sdk';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as yaml from 'yaml';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
+
+const PROMPT_FILE_NAME = 'categorize-transaction.prompt.yml';
+
+interface PromptConfig {
+  name: string;
+  model: string;
+  modelParameters: {
+    temperature: number;
+    max_tokens: number;
+  };
+  messages: Array<{
+    role: string;
+    content: string;
+  }>;
+}
+
+function resolvePromptPath(): string {
+  const candidatePaths = [
+    path.join(__dirname, '../../../prompts', PROMPT_FILE_NAME),
+    path.join(__dirname, '../../prompts', PROMPT_FILE_NAME),
+    path.join(__dirname, '../../../../functions/prompts', PROMPT_FILE_NAME),
+    path.join(process.cwd(), 'functions', 'prompts', PROMPT_FILE_NAME),
+    path.join(process.cwd(), 'prompts', PROMPT_FILE_NAME),
+  ];
+
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    `Prompt file "${PROMPT_FILE_NAME}" not found. Checked: ${candidatePaths.join(', ')}`
+  );
+}
+
+function loadPromptConfig(): PromptConfig {
+  const promptPath = resolvePromptPath();
+  const fileContents = fs.readFileSync(promptPath, 'utf8');
+  return yaml.parse(fileContents);
+}
 
 // ============================================================================
 // Premium Taxonomy
@@ -177,37 +221,23 @@ export async function categorizeLowConfidenceTransaction(
   amount: number
 ): Promise<CategoryMapping> {
   try {
-    const prompt = `Categorize this transaction into one of the premium categories:
+    const promptConfig = loadPromptConfig();
 
-Merchant: ${merchant}
-Description: ${description}
-Amount: $${amount}
+    // Get the user message template
+    const userMessage = promptConfig.messages.find(msg => msg.role === 'user');
+    if (!userMessage) {
+      throw new Error('User message not found in prompt config');
+    }
 
-Categories:
-- Food & Drink (subcategories: Cafe, Casual Dining, Fine Dining, Groceries, Fast Food, Alcohol & Bars)
-- Transport (subcategories: Ridehail, Public Transit, Fuel, Parking, Auto Maintenance)
-- Shopping (subcategories: Clothes, Electronics, Home Décor, General, Online Shopping)
-- Travel (subcategories: Flights, Hotels, Airbnb, Tours, Car Rental)
-- Entertainment
-- Fitness
-- Wellness
-- Utilities
-- Rent/Mortgage
-- Fees/Interest
-- Income
-- Education
-- Other
-
-Return ONLY a JSON object with this exact format:
-{
-  "level1": "category name",
-  "level2": "subcategory name or null",
-  "confidence": 0.85
-}`;
+    // Replace template variables
+    const prompt = userMessage.content
+      .replace(/\{\{merchant\}\}/g, merchant)
+      .replace(/\{\{description\}\}/g, description)
+      .replace(/\{\{amount\}\}/g, amount.toString());
 
     const message = await anthropic.messages.create({
       model: 'claude-3-5-haiku-20241022',
-      max_tokens: 150,
+      max_tokens: promptConfig.modelParameters.max_tokens,
       messages: [
         {
           role: 'user',
