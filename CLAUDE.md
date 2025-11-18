@@ -71,32 +71,12 @@ npx tsc
 
 ### Quick Pre-Push Checklist
 
-For **basic changes** (bug fixes, logic updates):
+For **all changes** (always run before pushing):
 ```bash
 npm run lint && npm test && npm run build
 ```
 
-For **UI changes**:
-```bash
-npm run lint && npm test && npm run build
-npm run test:screenshots  # Visual regression tests
-```
-
-For **major features**:
-```bash
-# Run all tests
-npm test
-npm run test:screenshots
-
-# Start Firebase emulators and test
-firebase emulators:start --only auth,firestore,functions
-
-# Verify production build
-npm run build
-
-# Optional: Run Lighthouse for performance
-npx lighthouse http://localhost:3000 --view
-```
+**Note**: Screenshot tests are NOT required for every push. They are resource-intensive and should only be run on releases or when explicitly needed for visual regression testing.
 
 ---
 
@@ -565,13 +545,16 @@ npx playwright test --headed
 - Lint: `npm run lint`
 - Build: `npm run build`
 
-**For UI changes**:
+**Only for releases**:
 - Screenshot tests: `npm run test:screenshots`
+- E2E visual regression tests
 
-**For major features**:
+**For major features (optional)**:
 - Integration tests with Firebase emulators
-- E2E tests: `npm run test:screenshots`
 - Manual testing in multiple browsers
+- Lighthouse performance audits
+
+**Important**: Screenshot tests are time-consuming and UI changes frequently. Run them only when preparing for a release, not for every PR or commit.
 
 ---
 
