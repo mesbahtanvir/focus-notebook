@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { db as firestore } from "@/lib/firebaseClient";
 import { collection, getDocs } from "firebase/firestore";
+import { DataDiagnostics } from "@/components/DataDiagnostics";
 
 export default function AdminPage() {
   return (
@@ -269,6 +270,9 @@ function AdminPageContent() {
           </p>
         </div>
       </div>
+
+      {/* Data Diagnostics & Migration */}
+      <DataDiagnostics />
 
       {/* Request Queue */}
       {(pendingRequests.length > 0 || inProgressRequests.length > 0) && (
