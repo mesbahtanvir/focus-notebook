@@ -13,6 +13,7 @@ import { useThoughts } from '@/store/useThoughts';
 import { useMoods } from '@/store/useMoods';
 import { useFocus } from '@/store/useFocus';
 import { EnhancedDataManagement } from '@/components/EnhancedDataManagement';
+import { DataDiagnostics } from '@/components/DataDiagnostics';
 import { ArrowLeft, Database, ShieldCheck, Zap } from 'lucide-react';
 
 export default function DataManagementPage() {
@@ -139,6 +140,9 @@ export default function DataManagementPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Data Diagnostics & Migration */}
+      <DataDiagnostics />
 
       {/* Enhanced Data Management Component */}
       <EnhancedDataManagement onDataChanged={refreshAllStores} />

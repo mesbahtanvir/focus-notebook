@@ -210,10 +210,10 @@ export const useFocus = create<State>((set, get) => ({
       currentUnsub()
     }
 
-    // Subscribe to completed sessions only
+    // Subscribe to ALL sessions (including active ones)
+    // This fixes the issue where session notes disappear when sessions are stuck in active state
     const sessionsQuery = query(
       collection(db, `users/${userId}/focusSessions`),
-      where('isActive', '==', false),
       orderBy('startTime', 'desc')
     )
 
@@ -310,6 +310,7 @@ export const useFocus = create<State>((set, get) => ({
     onProgress?.('saving-notes', 'completed')
 
     // Step 2: Update Firestore - mark session as completed
+    // CRITICAL: Always mark session as inactive to prevent stuck sessions
     onProgress?.('updating-session', 'in-progress')
     try {
       await updateAt(`users/${userId}/focusSessions/${completedSession.id}`, {
@@ -324,6 +325,16 @@ export const useFocus = create<State>((set, get) => ({
       onProgress?.('updating-session', 'completed')
     } catch (error) {
       console.error('Failed to save focus session:', error)
+      // Even if the full update fails, try to at least mark as inactive to prevent stuck sessions
+      try {
+        await updateAt(`users/${userId}/focusSessions/${completedSession.id}`, {
+          isActive: false,
+          endTime: completedSession.endTime || new Date().toISOString(),
+        })
+        console.warn('Session marked as inactive despite update error')
+      } catch (fallbackError) {
+        console.error('Failed to mark session as inactive:', fallbackError)
+      }
       onProgress?.('updating-session', 'error', undefined, undefined, 'Failed to save session')
       throw error // This is critical, don't continue
     }
@@ -355,18 +366,20 @@ export const useFocus = create<State>((set, get) => ({
             const todayCompletion = completionHistory.find((c: any) => c.date === today)
 
             if (!todayCompletion) {
+              const newHistory = [
+                ...completionHistory,
+                {
+                  date: today,
+                  completedAt: new Date().toISOString(),
+                  note: 'Completed during focus session'
+                }
+              ]
               await updateAt(`users/${userId}/tasks/${focusTask.task.id}`, {
                 done: true,
                 completedAt: new Date().toISOString(),
-                completionHistory: [
-                  ...completionHistory,
-                  {
-                    date: today,
-                    completedAt: new Date().toISOString(),
-                    note: 'Completed during focus session'
-                  }
-                ],
-                completionCount: (focusTask.task.completionCount || 0) + 1,
+                completionHistory: newHistory,
+                // Derive completionCount from array length to ensure consistency
+                completionCount: newHistory.length,
               })
             }
           } else {

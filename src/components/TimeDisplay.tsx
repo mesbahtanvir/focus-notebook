@@ -8,6 +8,8 @@ interface TimeDisplayProps {
   variant?: 'inline' | 'badge' | 'detailed';
   showProgressBar?: boolean;
   className?: string;
+  isRecurring?: boolean; // Whether this is a recurring task
+  completionCount?: number; // Number of completions for recurring tasks
 }
 
 export function TimeDisplay({
@@ -16,17 +18,24 @@ export function TimeDisplay({
   variant = 'inline',
   showProgressBar = true,
   className = '',
+  isRecurring = false,
+  completionCount = 0,
 }: TimeDisplayProps) {
   // Don't show anything if no time data
   if (actual === 0 && !estimated) {
     return null;
   }
 
-  const efficiency = estimated ? TimeTrackingService.calculateEfficiency(actual, estimated) : undefined;
+  // For recurring tasks, show average time instead of total
+  const displayTime = isRecurring && completionCount > 0
+    ? Math.round(actual / completionCount)
+    : actual;
+
+  const efficiency = estimated ? TimeTrackingService.calculateEfficiency(displayTime, estimated) : undefined;
   const status = TimeTrackingService.getEfficiencyStatus(efficiency);
   const color = TimeTrackingService.getEfficiencyColor(status);
 
-  const actualFormatted = TimeTrackingService.formatTime(actual);
+  const actualFormatted = TimeTrackingService.formatTime(displayTime);
   const estimatedFormatted = estimated ? TimeTrackingService.formatTime(estimated) : null;
 
   // Inline variant - compact display for task lists
@@ -53,7 +62,7 @@ export function TimeDisplay({
           )}
         </div>
         {showProgressBar && estimated && (
-          <TimeProgressBar actual={actual} estimated={estimated} height="sm" />
+          <TimeProgressBar actual={displayTime} estimated={estimated} height="sm" />
         )}
       </div>
     );
@@ -83,17 +92,24 @@ export function TimeDisplay({
 
   // Detailed variant - full breakdown
   if (variant === 'detailed') {
-    const variance = estimated ? actual - estimated : undefined;
+    const variance = estimated ? displayTime - estimated : undefined;
     const varianceFormatted = variance ? TimeTrackingService.formatTime(Math.abs(variance)) : null;
 
     return (
       <div className={`space-y-3 ${className}`}>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Actual Time</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+              {isRecurring ? 'Average Time' : 'Actual Time'}
+            </div>
             <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {actualFormatted}
             </div>
+            {isRecurring && completionCount > 0 && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Per completion ({completionCount} total)
+              </div>
+            )}
           </div>
           {estimatedFormatted && (
             <div>
@@ -107,7 +123,7 @@ export function TimeDisplay({
 
         {estimated && (
           <>
-            <TimeProgressBar actual={actual} estimated={estimated} height="md" />
+            <TimeProgressBar actual={displayTime} estimated={estimated} height="md" />
 
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">

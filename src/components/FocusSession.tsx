@@ -1136,31 +1136,37 @@ function FocusSessionContent({
                         {/* Time Context */}
                         {(currentFocusTask.task.actualMinutes || currentFocusTask.task.estimatedMinutes) && (
                           <div className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 flex-wrap">
                               {currentFocusTask.task.actualMinutes && (
                                 <span>
                                   📊 Total: {TimeTrackingService.formatTime(currentFocusTask.task.actualMinutes + Math.floor(currentFocusTask.timeSpent / 60))}
                                 </span>
                               )}
+                              {(() => {
+                                // Calculate average time per session for this task
+                                const sessionsWithTask = sessions.filter(s =>
+                                  !s.isActive && s.tasks?.some(t => t.task.id === currentFocusTask.task.id && t.timeSpent > 0)
+                                );
+                                if (sessionsWithTask.length > 0) {
+                                  const totalSessionTime = sessionsWithTask.reduce((sum, session) => {
+                                    const taskInSession = session.tasks.find(t => t.task.id === currentFocusTask.task.id);
+                                    return sum + (taskInSession ? Math.floor(taskInSession.timeSpent / 60) : 0);
+                                  }, 0);
+                                  const avgMinutes = Math.round(totalSessionTime / sessionsWithTask.length);
+                                  return (
+                                    <span>
+                                      📈 Avg: {TimeTrackingService.formatTime(avgMinutes)}/session
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
                               {currentFocusTask.task.estimatedMinutes && (
                                 <span>
-                                  🎯 Est: {TimeTrackingService.formatTime(currentFocusTask.task.estimatedMinutes)}
+                                  🎯 Planned: {TimeTrackingService.formatTime(currentFocusTask.task.estimatedMinutes)}
                                 </span>
                               )}
                             </div>
-                            {currentFocusTask.task.estimatedMinutes && (
-                              <div className="text-gray-500 dark:text-gray-500">
-                                {(() => {
-                                  const totalMinutes = (currentFocusTask.task.actualMinutes || 0) + Math.floor(currentFocusTask.timeSpent / 60);
-                                  const efficiency = TimeTrackingService.calculateEfficiency(totalMinutes, currentFocusTask.task.estimatedMinutes);
-                                  const status = TimeTrackingService.getEfficiencyStatus(efficiency);
-
-                                  if (status === 'on-track') return '✨ Right on track!';
-                                  if (status === 'warning') return '⚠️ Slightly over estimate';
-                                  return '🔴 Over budget';
-                                })()}
-                              </div>
-                            )}
                           </div>
                         )}
                       </div>

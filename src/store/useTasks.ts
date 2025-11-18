@@ -266,28 +266,32 @@ export const useTasks = create<State>((set, get) => ({
       // For recurring tasks, track completion by date
       const completionHistory = task.completionHistory || []
       const todayCompletion = completionHistory.find(c => c.date === today)
-      
+
       if (nowDone && !todayCompletion) {
         // Add today's completion
+        const newHistory = [
+          ...completionHistory,
+          {
+            date: today,
+            completedAt: new Date().toISOString(),
+          }
+        ]
         updates = {
           done: true, // Mark as done for today
           completedAt: new Date().toISOString(),
-          completionHistory: [
-            ...completionHistory,
-            {
-              date: today,
-              completedAt: new Date().toISOString(),
-            }
-          ],
-          completionCount: (task.completionCount || 0) + 1,
+          completionHistory: newHistory,
+          // Derive completionCount from array length to ensure consistency
+          completionCount: newHistory.length,
         }
       } else if (!nowDone && todayCompletion) {
         // Remove today's completion
+        const newHistory = completionHistory.filter(c => c.date !== today)
         updates = {
           done: false,
           completedAt: undefined,
-          completionHistory: completionHistory.filter(c => c.date !== today),
-          completionCount: Math.max(0, (task.completionCount || 0) - 1),
+          completionHistory: newHistory,
+          // Derive completionCount from array length to ensure consistency
+          completionCount: newHistory.length,
         }
       }
     } else {
