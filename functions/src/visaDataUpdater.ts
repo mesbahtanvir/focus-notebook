@@ -34,93 +34,14 @@ interface OpenAIVisaResponse {
   }>;
 }
 
-// Comprehensive country list
+// Comprehensive country list (temporarily limited to a small subset to reduce cost)
 const COUNTRIES: Country[] = [
-  // Africa
-  { code: 'DZ', name: 'Algeria', flag: '🇩🇿', region: 'Africa' },
-  { code: 'EG', name: 'Egypt', flag: '🇪🇬', region: 'Africa' },
-  { code: 'ET', name: 'Ethiopia', flag: '🇪🇹', region: 'Africa' },
-  { code: 'GH', name: 'Ghana', flag: '🇬🇭', region: 'Africa' },
-  { code: 'KE', name: 'Kenya', flag: '🇰🇪', region: 'Africa' },
-  { code: 'MA', name: 'Morocco', flag: '🇲🇦', region: 'Africa' },
-  { code: 'NG', name: 'Nigeria', flag: '🇳🇬', region: 'Africa' },
-  { code: 'ZA', name: 'South Africa', flag: '🇿🇦', region: 'Africa' },
-  { code: 'TZ', name: 'Tanzania', flag: '🇹🇿', region: 'Africa' },
-  { code: 'TN', name: 'Tunisia', flag: '🇹🇳', region: 'Africa' },
-
-  // Asia
-  { code: 'CN', name: 'China', flag: '🇨🇳', region: 'Asia' },
-  { code: 'IN', name: 'India', flag: '🇮🇳', region: 'Asia' },
-  { code: 'ID', name: 'Indonesia', flag: '🇮🇩', region: 'Asia' },
-  { code: 'IL', name: 'Israel', flag: '🇮🇱', region: 'Asia' },
-  { code: 'JP', name: 'Japan', flag: '🇯🇵', region: 'Asia' },
-  { code: 'JO', name: 'Jordan', flag: '🇯🇴', region: 'Asia' },
-  { code: 'MY', name: 'Malaysia', flag: '🇲🇾', region: 'Asia' },
-  { code: 'MV', name: 'Maldives', flag: '🇲🇻', region: 'Asia' },
-  { code: 'PH', name: 'Philippines', flag: '🇵🇭', region: 'Asia' },
-  { code: 'SG', name: 'Singapore', flag: '🇸🇬', region: 'Asia' },
-  { code: 'KR', name: 'South Korea', flag: '🇰🇷', region: 'Asia' },
-  { code: 'LK', name: 'Sri Lanka', flag: '🇱🇰', region: 'Asia' },
-  { code: 'TW', name: 'Taiwan', flag: '🇹🇼', region: 'Asia' },
-  { code: 'TH', name: 'Thailand', flag: '🇹🇭', region: 'Asia' },
-  { code: 'TR', name: 'Turkey', flag: '🇹🇷', region: 'Asia' },
-  { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪', region: 'Asia' },
-  { code: 'VN', name: 'Vietnam', flag: '🇻🇳', region: 'Asia' },
-
-  // Europe
-  { code: 'AT', name: 'Austria', flag: '🇦🇹', region: 'Europe' },
-  { code: 'BE', name: 'Belgium', flag: '🇧🇪', region: 'Europe' },
-  { code: 'HR', name: 'Croatia', flag: '🇭🇷', region: 'Europe' },
-  { code: 'CZ', name: 'Czech Republic', flag: '🇨🇿', region: 'Europe' },
-  { code: 'DK', name: 'Denmark', flag: '🇩🇰', region: 'Europe' },
-  { code: 'FI', name: 'Finland', flag: '🇫🇮', region: 'Europe' },
-  { code: 'FR', name: 'France', flag: '🇫🇷', region: 'Europe' },
-  { code: 'DE', name: 'Germany', flag: '🇩🇪', region: 'Europe' },
-  { code: 'GR', name: 'Greece', flag: '🇬🇷', region: 'Europe' },
-  { code: 'HU', name: 'Hungary', flag: '🇭🇺', region: 'Europe' },
-  { code: 'IS', name: 'Iceland', flag: '🇮🇸', region: 'Europe' },
-  { code: 'IE', name: 'Ireland', flag: '🇮🇪', region: 'Europe' },
-  { code: 'IT', name: 'Italy', flag: '🇮🇹', region: 'Europe' },
-  { code: 'NL', name: 'Netherlands', flag: '🇳🇱', region: 'Europe' },
-  { code: 'NO', name: 'Norway', flag: '🇳🇴', region: 'Europe' },
-  { code: 'PL', name: 'Poland', flag: '🇵🇱', region: 'Europe' },
-  { code: 'PT', name: 'Portugal', flag: '🇵🇹', region: 'Europe' },
-  { code: 'RU', name: 'Russia', flag: '🇷🇺', region: 'Europe' },
-  { code: 'ES', name: 'Spain', flag: '🇪🇸', region: 'Europe' },
-  { code: 'SE', name: 'Sweden', flag: '🇸🇪', region: 'Europe' },
-  { code: 'CH', name: 'Switzerland', flag: '🇨🇭', region: 'Europe' },
-  { code: 'UA', name: 'Ukraine', flag: '🇺🇦', region: 'Europe' },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', region: 'Europe' },
-
-  // North America
-  { code: 'CA', name: 'Canada', flag: '🇨🇦', region: 'North America' },
-  { code: 'CR', name: 'Costa Rica', flag: '🇨🇷', region: 'North America' },
-  { code: 'CU', name: 'Cuba', flag: '🇨🇺', region: 'North America' },
-  { code: 'DO', name: 'Dominican Republic', flag: '🇩🇴', region: 'North America' },
-  { code: 'MX', name: 'Mexico', flag: '🇲🇽', region: 'North America' },
-  { code: 'PA', name: 'Panama', flag: '🇵🇦', region: 'North America' },
-  { code: 'US', name: 'United States', flag: '🇺🇸', region: 'North America' },
-
-  // South America
-  { code: 'AR', name: 'Argentina', flag: '🇦🇷', region: 'South America' },
-  { code: 'BO', name: 'Bolivia', flag: '🇧🇴', region: 'South America' },
-  { code: 'BR', name: 'Brazil', flag: '🇧🇷', region: 'South America' },
-  { code: 'CL', name: 'Chile', flag: '🇨🇱', region: 'South America' },
-  { code: 'CO', name: 'Colombia', flag: '🇨🇴', region: 'South America' },
-  { code: 'EC', name: 'Ecuador', flag: '🇪🇨', region: 'South America' },
-  { code: 'PE', name: 'Peru', flag: '🇵🇪', region: 'South America' },
-
-  // Oceania
-  { code: 'AU', name: 'Australia', flag: '🇦🇺', region: 'Oceania' },
-  { code: 'FJ', name: 'Fiji', flag: '🇫🇯', region: 'Oceania' },
-  { code: 'NZ', name: 'New Zealand', flag: '🇳🇿', region: 'Oceania' },
+  { code: 'BD', name: 'Bangladesh', flag: '\uD83C\uDDE7\uD83C\uDDE9', region: 'Asia' },
+  { code: 'CA', name: 'Canada', flag: '\uD83C\uDDE8\uD83C\uDDE6', region: 'North America' },
+  { code: 'US', name: 'United States', flag: '\uD83C\uDDFA\uD83C\uDDF8', region: 'North America' },
 ];
 
-// Top priority countries for more frequent updates
-const PRIORITY_COUNTRIES = [
-  'US', 'GB', 'DE', 'FR', 'CA', 'AU', 'JP', 'CN', 'IN', 'BR',
-  'IT', 'ES', 'KR', 'MX', 'SG', 'AE', 'NL', 'CH', 'SE', 'NO',
-];
+const SOURCE_COUNTRY_CODES = ['BD'];
 
 /**
  * Sleep utility for rate limiting
@@ -307,16 +228,14 @@ export const updateVisaDataWeekly = onSchedule({
       lastUpdateStarted: Timestamp.now(),
     }, { merge: true });
 
-    // Incremental update strategy: Update 1/4 of countries each week
-    // This means full refresh every 4 weeks (28 days)
-    const weekNumber = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)) % 4;
-    const countriesPerWeek = Math.ceil(COUNTRIES.length / 4);
-    const startIndex = weekNumber * countriesPerWeek;
-    const endIndex = Math.min(startIndex + countriesPerWeek, COUNTRIES.length);
+    // Incremental update strategy (temporarily restricted to specific source countries)
+    const weekNumber = 0;
 
-    const countriesToUpdate = COUNTRIES.slice(startIndex, endIndex);
+    const countriesToUpdate = COUNTRIES.filter(c =>
+      SOURCE_COUNTRY_CODES.includes(c.code)
+    );
 
-    logger.info(`Week ${weekNumber + 1}/4: Updating ${countriesToUpdate.length} countries (${startIndex}-${endIndex})`);
+    logger.info(`Restricted update: Updating ${countriesToUpdate.length} source countries`);
 
     let processedCount = 0;
     let errorCount = 0;
@@ -385,14 +304,20 @@ export const updateVisaDataManual = onCall({
     let countriesToProcess: Country[];
 
     if (fullUpdate) {
-      // Full update of all countries
-      countriesToProcess = COUNTRIES;
+      // Restricted full update: only configured source countries
+      countriesToProcess = COUNTRIES.filter(c =>
+        SOURCE_COUNTRY_CODES.includes(c.code)
+      );
     } else if (sourceCountries && sourceCountries.length > 0) {
-      // Update specific countries
-      countriesToProcess = COUNTRIES.filter(c => sourceCountries.includes(c.code));
+      // Update specific countries, but restricted to configured source countries
+      countriesToProcess = COUNTRIES.filter(
+        c => sourceCountries.includes(c.code) && SOURCE_COUNTRY_CODES.includes(c.code)
+      );
     } else {
-      // Default: Update priority countries only
-      countriesToProcess = COUNTRIES.filter(c => PRIORITY_COUNTRIES.includes(c.code));
+      // Default: update configured source countries only
+      countriesToProcess = COUNTRIES.filter(c =>
+        SOURCE_COUNTRY_CODES.includes(c.code)
+      );
     }
 
     logger.info(`Processing ${countriesToProcess.length} countries`);

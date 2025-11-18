@@ -23,17 +23,24 @@ export default function VisaFinderForm() {
 
   // Additional visa form state
   const [visaCountry, setVisaCountry] = useState('');
-  const [visaType, setVisaType] = useState<AdditionalVisaType>('tourist');
+  const [visaType, setVisaType] = useState<AdditionalVisaType>('residence');
   const [visaCountrySearch, setVisaCountrySearch] = useState('');
   const [showVisaCountryDropdown, setShowVisaCountryDropdown] = useState(false);
 
+  const allowedNationalityCodes = ['BD'];
+  const allowedVisaCountryCodes = ['CA', 'US'];
+
   const filteredCountries = nationalitySearch
-    ? searchCountries(nationalitySearch)
-    : COUNTRIES;
+    ? searchCountries(nationalitySearch).filter((country) =>
+        allowedNationalityCodes.includes(country.code)
+      )
+    : COUNTRIES.filter((country) => allowedNationalityCodes.includes(country.code));
 
   const filteredVisaCountries = visaCountrySearch
-    ? searchCountries(visaCountrySearch)
-    : COUNTRIES;
+    ? searchCountries(visaCountrySearch).filter((country) =>
+        allowedVisaCountryCodes.includes(country.code)
+      )
+    : COUNTRIES.filter((country) => allowedVisaCountryCodes.includes(country.code));
 
   const selectedNationalityCountry = COUNTRIES.find(c => c.code === nationality);
 
@@ -57,7 +64,7 @@ export default function VisaFinderForm() {
 
     // Reset form
     setVisaCountry('');
-    setVisaType('tourist');
+    setVisaType('residence');
     setVisaCountrySearch('');
     setShowAddVisaForm(false);
   };
@@ -250,12 +257,8 @@ export default function VisaFinderForm() {
                 onChange={(e) => setVisaType(e.target.value as AdditionalVisaType)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
               >
-                <option value="tourist">Tourist</option>
                 <option value="business">Business</option>
-                <option value="work">Work</option>
                 <option value="residence">Residence</option>
-                <option value="student">Student</option>
-                <option value="other">Other</option>
               </select>
             </div>
 
