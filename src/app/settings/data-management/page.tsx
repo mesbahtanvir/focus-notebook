@@ -22,6 +22,7 @@ export default function DataManagementPage() {
   const { user } = useAuth();
   const { loadLibrary, library, libraryLoading, deleteAllLibraryPhotos } = usePhotoFeedback();
   const [isClearingGallery, setIsClearingGallery] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 
   const tasksSubscribe = useTasks((s) => s.subscribe);
   const goalsSubscribe = useGoals((s) => s.subscribe);
@@ -56,11 +57,6 @@ export default function DataManagementPage() {
       return;
     }
 
-    const confirmed = window.confirm(
-      'Delete every dating photo and its stored file? This removes them from Firebase Storage and Firestore forever.'
-    );
-    if (!confirmed) return;
-
     setIsClearingGallery(true);
     try {
       await deleteAllLibraryPhotos();
@@ -68,6 +64,7 @@ export default function DataManagementPage() {
         title: 'Gallery cleared',
         description: 'All dating photos have been removed from your account.',
       });
+      setShowDeleteAllConfirm(false);
     } catch (error) {
       toastError({
         title: 'Could not delete photos',
@@ -207,22 +204,47 @@ export default function DataManagementPage() {
             </Badge>
           </div>
           <Button
-            onClick={handleDeleteAllPhotos}
+            onClick={() => setShowDeleteAllConfirm(true)}
             disabled={libraryLoading || isClearingGallery || library.length === 0}
             className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white gap-2"
           >
-            {isClearingGallery ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Deleting all photos…
-              </>
-            ) : (
-              <>
-                <Trash2 className="h-4 w-4" />
-                Delete all dating photos
-              </>
-            )}
+            <Trash2 className="h-4 w-4" />
+            Delete all dating photos
           </Button>
+          {showDeleteAllConfirm && (
+            <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10 p-4 space-y-3">
+              <p className="text-sm text-red-800 dark:text-red-200">
+                This permanently removes every uploaded dating photo and their stats. Your friends&apos; results will keep their votes, but
+                the gallery will be empty.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowDeleteAllConfirm(false)}
+                  disabled={isClearingGallery}
+                >
+                  Keep photos
+                </Button>
+                <Button
+                  type="button"
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  onClick={handleDeleteAllPhotos}
+                  disabled={isClearingGallery}
+                >
+                  {isClearingGallery ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Deleting…
+                    </>
+                  ) : (
+                    'Yes, delete everything'
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
           <p className="text-xs text-gray-600 dark:text-gray-400">
             Tip: export your data first if you might need these photos later. Deleting the gallery also removes their stats inside
             the Photo Feedback tool.

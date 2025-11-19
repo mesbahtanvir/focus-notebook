@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePhotoFeedback } from "@/store/usePhotoFeedback";
-import { Upload, ArrowRight, Heart, Loader2, Copy, ExternalLink, CheckCircle, Shuffle, Trash2 } from "lucide-react";
+import type { PhotoLibraryItem } from "@/store/usePhotoFeedback";
+import { Upload, ArrowRight, Heart, Loader2, Copy, ExternalLink, CheckCircle, Shuffle, Trash2, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
@@ -98,6 +99,8 @@ export default function PhotoFeedbackPage() {
   const [uploadStatus, setUploadStatus] = useState<{ current: number; total: number } | null>(null);
   const [galleryPage, setGalleryPage] = useState(0);
   const galleryRef = useRef<HTMLDivElement>(null);
+  const [photoPendingDelete, setPhotoPendingDelete] = useState<PhotoLibraryItem | null>(null);
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
 
   const canCreateSession = !!user && !isAnonymous;
 
@@ -149,9 +152,7 @@ export default function PhotoFeedbackPage() {
   });
 
   const handleDeletePhoto = async (photoId: string) => {
-    const confirmDelete = window.confirm("Remove this photo from your gallery? This cannot be undone.");
-    if (!confirmDelete) return;
-
+    setDeletingPhotoId(photoId);
     try {
       await deleteLibraryPhoto(photoId);
       toastSuccess({ title: "Photo removed", description: "This image has been removed from your gallery." });
@@ -160,6 +161,9 @@ export default function PhotoFeedbackPage() {
         title: "Could not delete photo",
         description: error instanceof Error ? error.message : "Please try again.",
       });
+    } finally {
+      setDeletingPhotoId(null);
+      setPhotoPendingDelete(null);
     }
   };
 
@@ -341,7 +345,7 @@ export default function PhotoFeedbackPage() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDeletePhoto(item.id);
+                          setPhotoPendingDelete(item);
                         }}
                         className="absolute top-2 left-2 z-10 inline-flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 w-7 h-7 transition"
                         aria-label="Remove photo from gallery"
@@ -555,6 +559,72 @@ export default function PhotoFeedbackPage() {
           </Link>
         </div>
       </div>
+      {photoPendingDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setPhotoPendingDelete(null)} />
+          <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-6 shadow-2xl">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Remove photo?</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  This deletes the image and its stats everywhere. You can&apos;t undo this action.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPhotoPendingDelete(null)}
+                className="text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+                aria-label="Close delete dialog"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="rounded-lg overflow-hidden mb-4 border border-gray-200 dark:border-gray-700">
+              <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-800">
+                <NextImage
+                  src={photoPendingDelete.url}
+                  alt="Photo selected for deletion"
+                  fill
+                  sizes="300px"
+                  className="object-cover"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  if (deletingPhotoId) return;
+                  setPhotoPendingDelete(null);
+                }}
+                disabled={!!deletingPhotoId}
+              >
+                Keep photo
+              </Button>
+              <Button
+                type="button"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2"
+                onClick={() => {
+                  if (!photoPendingDelete || deletingPhotoId) return;
+                  void handleDeletePhoto(photoPendingDelete.id);
+                }}
+                disabled={!!deletingPhotoId}
+              >
+                {deletingPhotoId === photoPendingDelete.id ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Deleting…
+                  </>
+                ) : (
+                  "Delete photo"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
