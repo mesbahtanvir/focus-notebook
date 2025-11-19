@@ -27,7 +27,8 @@ export type ToolName =
   | 'asset-horizon'
   | 'admired-people'
   | 'places'
-  | 'body-progress';
+  | 'body-progress'
+  | 'calendar';
 
 type FirestoreToolName = ToolName | 'vacation-packing';
 

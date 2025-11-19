@@ -3,6 +3,7 @@ import { getToolSpecById, type ToolSpec, type ToolSpecId } from './toolSpecs';
 type ThoughtLike = {
   tags?: string[];
   sourceToolId?: string | null;
+  text?: string;
 };
 
 interface ResolveOptions {
@@ -36,6 +37,23 @@ export function resolveToolSpecIds(
       candidates.add('goals');
       continue;
     }
+  }
+
+  // Check for calendar-related keywords in thought text
+  const text = thought?.text?.toLowerCase() || '';
+  const calendarKeywords = [
+    'appointment', 'meeting', 'schedule', 'tomorrow', 'today', 'next week',
+    'next month', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday',
+    'saturday', 'sunday', 'am', 'pm', 'o\'clock', 'deadline', 'due date',
+    'conference', 'call', 'interview', 'doctor', 'dentist', 'class',
+    'workshop', 'event', 'ceremony', 'party', 'lunch', 'dinner', 'breakfast'
+  ];
+  
+  const hasCalendarKeyword = calendarKeywords.some(keyword => text.includes(keyword));
+  const hasTimeReference = /\b(\d{1,2}(:\d{2})?\s?(am|pm)|\d{1,2}\s*o'clock)\b/i.test(text);
+  
+  if (hasCalendarKeyword || hasTimeReference) {
+    candidates.add('calendar');
   }
 
   // Always consider baseline thought processing

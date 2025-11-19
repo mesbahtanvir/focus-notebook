@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart, DollarSign, MapPin } from "lucide-react";
+import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart, DollarSign, MapPin, Calendar as CalendarIcon } from "lucide-react";
 
 const TOOLS = [
   {
@@ -212,6 +212,28 @@ const TOOLS = [
     emoji: "🗺️",
     gradient: "from-blue-400 to-cyan-500",
     bgGradient: "from-blue-50 to-cyan-50",
+    borderColor: "border-blue-300",
+    priority: "medium" as const,
+  },
+  {
+    key: "calendar",
+    title: "Calendar",
+    description: "Smart calendar with AI-powered event creation from your thoughts.",
+    icon: CalendarIcon,
+    emoji: "📅",
+    gradient: "from-indigo-400 to-purple-500",
+    bgGradient: "from-indigo-50 to-purple-50",
+    borderColor: "border-indigo-300",
+    priority: "high" as const,
+  },
+  {
+    key: "meditation",
+    title: "Meditation",
+    description: "Guided meditation sessions with breathing exercises and calming music.",
+    icon: Brain,
+    emoji: "🧘‍♀️",
+    gradient: "from-blue-400 to-purple-500",
+    bgGradient: "from-blue-50 to-purple-50",
     borderColor: "border-blue-300",
     priority: "medium" as const,
   },

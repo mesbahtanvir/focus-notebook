@@ -1,5 +1,6 @@
 import { useThoughts, AISuggestion, Thought } from '@/store/useThoughts';
 import { useTasks } from '@/store/useTasks';
+import { useCalendar } from '@/store/useCalendar';
 import { useProjects } from '@/store/useProjects';
 import { useGoals } from '@/store/useGoals';
 import { useMoods } from '@/store/useMoods';
@@ -155,6 +156,7 @@ export class ThoughtProcessingService {
 
   static async executeActions(thoughtId: string, actions: Array<{ type: string; data: any; reasoning: string; confidence: number }>) {
     const updateThought = useThoughts.getState().updateThought;
+    const addCalendarEvent = useCalendar.getState().addEvent;
 
     // Filter actions by confidence
     const autoApplyActions = actions.filter(a => a.confidence >= 99);
@@ -206,6 +208,30 @@ export class ThoughtProcessingService {
               }
             );
             break;
+
+          case 'createCalendarEvent': {
+            const fallbackDate = new Date().toISOString().split('T')[0];
+            const category = action.data.category || 'Work';
+            const colorMap: Record<string, string> = {
+              Work: 'from-blue-500 to-cyan-500',
+              Personal: 'from-emerald-500 to-lime-500',
+              Health: 'from-rose-500 to-red-500',
+              Social: 'from-purple-500 to-indigo-500',
+              Learning: 'from-amber-500 to-yellow-500',
+            };
+
+            addCalendarEvent({
+              title: action.data.title || 'Untitled event',
+              date: action.data.date || fallbackDate,
+              time: action.data.time,
+              location: action.data.location,
+              description: action.data.description,
+              category,
+              color: colorMap[category] || 'from-blue-500 to-cyan-500',
+              thoughtId: thoughtId,
+            });
+            break;
+          }
 
           case 'enhanceTask':
             // Update existing task

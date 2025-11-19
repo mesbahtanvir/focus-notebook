@@ -898,6 +898,68 @@ export const toolSpecs: Record<string, ToolSpec> = {
       },
     ],
   },
+  calendar: {
+    id: 'calendar',
+    title: 'Calendar Events',
+    tagline: 'Convert thoughts into scheduled calendar events.',
+    category: 'Productivity',
+    benefits: [
+      'Automatically create calendar events from scheduling thoughts',
+      'Extract dates, times, locations, and categories using AI',
+      'Integrate with existing thought processing workflow',
+    ],
+    description:
+      'Convert thoughts containing scheduling information into structured calendar events. Handles appointments, meetings, deadlines, and scheduled activities.',
+    primaryTags: ['calendar', 'scheduled'],
+    expectedCapabilities: ['createsEntries'],
+    guidance: [
+      ...baseGuidance,
+      'Only create calendar events when specific time information is mentioned.',
+      'Extract dates, times, locations, and appropriate categories.',
+      'Use high confidence (90+) only when scheduling details are clear.',
+      'Categorize events as Work, Personal, Health, Social, or Learning.',
+    ],
+    positiveExamples: [
+      {
+        thought: 'Doctor appointment tomorrow at 2pm, need to remember to bring insurance card',
+        rationale:
+          'Contains specific appointment time and reminder information suitable for calendar event.',
+        recommendedActions: [
+          {
+            type: 'createCalendarEvent',
+            confidence: 95,
+            dataSummary: 'Doctor Appointment on 2024-01-16 at 14:00 (Health)',
+          },
+        ],
+      },
+      {
+        thought: 'Team meeting next Monday at 10am in the conference room',
+        rationale:
+          'Clear meeting details with time, location, and work context.',
+        recommendedActions: [
+          {
+            type: 'createCalendarEvent',
+            confidence: 90,
+            dataSummary: 'Team Meeting on 2024-01-22 at 10:00 at conference room (Work)',
+          },
+        ],
+      },
+    ],
+    negativeExamples: [
+      {
+        thought: 'Should schedule a meeting sometime next week',
+        rationale: 'Too vague - no specific date or time provided.',
+        recommendedActions: [],
+      },
+      {
+        thought: 'Remember to call mom',
+        rationale: 'No scheduling information - better suited for tasks tool.',
+        recommendedActions: [
+          { type: 'addTag', dataSummary: 'tool-tasks' },
+        ],
+      },
+    ],
+  },
 };
 
 export type ToolSpecId = keyof typeof toolSpecs;

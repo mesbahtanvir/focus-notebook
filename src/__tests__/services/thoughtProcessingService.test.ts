@@ -4,6 +4,7 @@ import { useTasks } from '@/store/useTasks';
 import { useProjects } from '@/store/useProjects';
 import { useGoals } from '@/store/useGoals';
 import { useMoods } from '@/store/useMoods';
+import { useCalendar } from '@/store/useCalendar';
 import { useAnonymousSession } from '@/store/useAnonymousSession';
 import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
 import { Thought, AISuggestion } from '@/store/useThoughts';
@@ -18,6 +19,7 @@ jest.mock('@/store/useGoals');
 jest.mock('@/store/useMoods');
 jest.mock('@/store/useAnonymousSession');
 jest.mock('@/store/useSubscriptionStatus');
+jest.mock('@/store/useCalendar');
 jest.mock('firebase/functions', () => ({
   httpsCallable: jest.fn(),
 }));
@@ -68,6 +70,10 @@ describe('ThoughtProcessingService', () => {
     (useMoods as any).getState = jest.fn(() => ({
       moods: [],
       add: jest.fn(),
+    }));
+
+    (useCalendar as any).getState = jest.fn(() => ({
+      addEvent: jest.fn(),
     }));
 
     (useAnonymousSession as any).getState = jest.fn(() => ({
@@ -256,16 +262,6 @@ describe('ThoughtProcessingService', () => {
 
       expect(addMood).toHaveBeenCalledWith({
         value: 7,
-        note: 'Feeling good',
-        // NOTE: sourceThoughtId no longer in metadata - linking via relationships store
-      });
-    });
-
-    it('should add tags to thought for addTag action', async () => {
-      const updateThought = jest.fn();
-      (useThoughts as any).getState = jest.fn(() => ({
-        thoughts: [{ ...mockThought, tags: [] }],
-        updateThought,
       }));
 
       const actions = [

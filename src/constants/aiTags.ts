@@ -41,6 +41,7 @@ export const ACTION_TYPES = {
   ENHANCE_THOUGHT: 'enhanceThought',
   ADD_TAG: 'addTag',
   CREATE_TASK: 'createTask',
+  CREATE_CALENDAR_EVENT: 'createCalendarEvent',
   CREATE_PROJECT: 'createProject',
   CREATE_GOAL: 'createGoal',
   LINK_TO_GOAL: 'linkToGoal',

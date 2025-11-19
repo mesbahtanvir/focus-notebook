@@ -25,6 +25,7 @@ messages:
       - createNote: Save thought as a reference note
       - createErrand: Create a to-do errand from the thought
       - createRelationship: Add a new person relationship mentioned in the thought
+      - createCalendarEvent: Create a calendar event from scheduling-related thoughts
 
       **Entity Linking (creating relationships):**
       - linkToTask: Connect thought to an existing task (provide taskId)
@@ -63,6 +64,7 @@ messages:
          - Emotional states (mood)
          - Information to save (notes)
          - Errands or chores
+         - Calendar events (appointments, meetings, deadlines, scheduled activities)
 
       2. **Match to Existing Data**: Review the user's current context:
          - Does this relate to an existing goal? → Use linkToGoal
@@ -97,6 +99,20 @@ messages:
             "relationship": "This task directly addresses the action mentioned in the thought"
           },
           {
+            "type": "createCalendarEvent",
+            "confidence": 90,
+            "data": {
+              "title": "Doctor Appointment",
+              "date": "2024-01-16",
+              "time": "14:00",
+              "location": "Medical Center",
+              "description": "Annual checkup",
+              "category": "Health"
+            },
+            "reasoning": "Thought contains specific scheduling information with date, time, and location",
+            "relationship": "Creates a time-based reminder for the appointment mentioned in the thought"
+          },
+          {
             "type": "linkToGoal",
             "confidence": 92,
             "data": {
@@ -115,10 +131,11 @@ messages:
       - **Use Context from Existing Data**: Reference specific goals, projects, tasks, or people by their IDs when creating links
       - **Create Meaningful Connections**: Each relationship should add value - don't link just for the sake of linking
       - **Conservative Creation**: Only create new entities when clearly warranted, not for vague thoughts
-      - **Appropriate Categories**: Use health, wealth, mastery, connection for tasks/goals
+      - **Appropriate Categories**: Use health, wealth, mastery, connection for tasks/goals; Work, Personal, Health, Social, Learning for calendar events
       - **Accurate Confidence**: High confidence (99-100) only when the relationship is obvious and unambiguous
       - **Include Context**: For link actions, always include "context" explaining what information this adds
       - **No Tag Actions**: Never use "addTag" - use specific entity creation or linking actions instead
+      - **Calendar Event Creation**: Use createCalendarEvent for thoughts with specific time references, appointments, meetings, deadlines, or scheduled activities. Include date (YYYY-MM-DD), time (HH:MM), location, description, and category (Work, Personal, Health, Social, Learning).
 
 testData:
   - thoughtText: I need to learn React hooks and build a personal portfolio website. Also feeling stressed about the upcoming deadline.
@@ -189,6 +206,34 @@ testData:
             },
             "reasoning": "Thought expresses clear emotional state about deadline pressure",
             "relationship": "Captures stress related to portfolio project timeline"
+          }
+        ]
+      }
+
+  - thoughtText: Doctor appointment tomorrow at 2pm, need to remember to bring insurance card
+    thoughtType: reminder
+    thoughtTags: ""
+    thoughtCreatedAt: "2025-11-07T05:00:00Z"
+    toolReference: "(Tool specs would be dynamically loaded based on enrolled tools)"
+    context: |
+      (User context would be dynamically loaded)
+
+    expected: |
+      {
+        "actions": [
+          {
+            "type": "createCalendarEvent",
+            "confidence": 95,
+            "data": {
+              "title": "Doctor Appointment",
+              "date": "2025-11-08",
+              "time": "14:00",
+              "location": null,
+              "description": "Remember to bring insurance card",
+              "category": "Health"
+            },
+            "reasoning": "Thought contains specific appointment time and reminder information",
+            "relationship": "Creates time-based reminder for medical appointment with preparation notes"
           }
         ]
       }
