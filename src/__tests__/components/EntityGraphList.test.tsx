@@ -87,8 +87,8 @@ describe('EntityGraphList Component', () => {
     status: 'active' as const,
     priority: 'high' as const,
     category: 'mastery' as const,
-    linkedThoughtIds: [],
-    linkedTaskIds: [],
+    timeframe: 'short-term' as const,
+    createdAt: new Date().toISOString(),
   };
 
   const mockToolRelationship: Relationship = {

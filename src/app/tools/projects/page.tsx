@@ -114,9 +114,8 @@ export default function ProjectsPage() {
     const map = new Map<string, Thought[]>();
 
     projects.forEach((project) => {
-      const additionalThoughtIds = [...(project.linkedThoughtIds || [])];
       const sourceThoughtId = getSourceThoughtIdFromNotes(project.notes);
-      if (sourceThoughtId) additionalThoughtIds.push(sourceThoughtId);
+      const additionalThoughtIds = sourceThoughtId ? [sourceThoughtId] : [];
 
       map.set(project.id, getLinkedThoughtsForEntity({
         relationships,
@@ -135,9 +134,7 @@ export default function ProjectsPage() {
   };
 
   const getProjectTasks = (projectId: string) => {
-    const project = projects.find(p => p.id === projectId);
-    if (!project) return [];
-    return tasks.filter(t => project.linkedTaskIds.includes(t.id));
+    return tasks.filter(t => t.projectId === projectId);
   };
 
   const theme = toolThemes.green;
@@ -343,7 +340,6 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
   const [timeframe, setTimeframe] = useState<ProjectTimeframe>('short-term');
   const [category, setCategory] = useState<'health' | 'wealth' | 'mastery' | 'connection'>('mastery');
   const [priority, setPriority] = useState<'urgent' | 'high' | 'medium' | 'low'>('medium');
-  const [targetDate, setTargetDate] = useState("");
   const [goalId, setGoalId] = useState<string>("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -359,7 +355,6 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
       category,
       priority,
       status: 'active',
-      targetDate: targetDate || undefined,
       progress: 0,
       goalId: goalId || undefined,
     });
@@ -515,15 +510,6 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Target Date</label>
-              <input
-                type="date"
-                value={targetDate}
-                onChange={(e) => setTargetDate(e.target.value)}
-                className="input w-full"
-              />
-            </div>
           </div>
 
           <div className="flex gap-3 pt-4 border-t-2 border-green-200 dark:border-green-800">
@@ -551,9 +537,8 @@ function ProjectDetailModal({ project, onClose }: { project: Project; onClose: (
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const linkedThoughts = useMemo(() => {
-    const additionalThoughtIds = [...(project.linkedThoughtIds || [])];
     const sourceThoughtId = getSourceThoughtIdFromNotes(project.notes);
-    if (sourceThoughtId) additionalThoughtIds.push(sourceThoughtId);
+    const additionalThoughtIds = sourceThoughtId ? [sourceThoughtId] : [];
 
     return getLinkedThoughtsForEntity({
       relationships,
@@ -563,7 +548,7 @@ function ProjectDetailModal({ project, onClose }: { project: Project; onClose: (
       additionalThoughtIds,
     });
   }, [project, relationships, thoughts]);
-  const linkedTasks = tasks.filter(t => project.linkedTaskIds.includes(t.id));
+  const linkedTasks = tasks.filter(t => t.projectId === project.id);
 
   const handleDelete = () => {
     deleteProject(project.id);

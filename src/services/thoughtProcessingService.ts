@@ -268,8 +268,6 @@ export class ThoughtProcessingService {
                 status: 'active',
                 priority: action.data.priority || 'medium',
                 category: action.data.category || 'mastery',
-                linkedThoughtIds: [], // Managed via relationships
-                linkedTaskIds: [], // Managed via relationships
               },
               {
                 sourceEntity: { type: 'thought', id: thoughtId },

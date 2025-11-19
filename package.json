@@ -45,9 +45,6 @@
     "framer-motion": "11.0.0",
     "lucide-react": "^0.545.0",
     "next": "^14.2.33",
-    "next-pwa": "^5.6.0",
-    "next-themes": "^0.4.6",
-    "plaid": "^39.1.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-hook-form": "7.53.0",
@@ -60,10 +57,10 @@
     "zustand": "4.5.4"
   },
   "devDependencies": {
+    "@jest/globals": "^30.2.0",
     "@playwright/test": "^1.56.1",
     "@testing-library/jest-dom": "6.6.3",
     "@testing-library/react": "14.3.1",
-    "@testing-library/user-event": "14.5.2",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.10.0",
     "@types/react": "18.3.12",
@@ -72,14 +69,10 @@
     "autoprefixer": "10.4.20",
     "eslint": "8.57.0",
     "eslint-config-next": "14.2.14",
-    "identity-obj-proxy": "3.0.0",
     "jest": "29.7.0",
-    "jest-environment-jsdom": "29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
     "postcss": "8.4.41",
-    "puppeteer": "^24.26.1",
     "tailwindcss": "3.4.10",
-    "ts-jest": "29.2.4",
-    "ts-node": "^10.9.2",
     "typescript": "5.6.3"
   }
 }

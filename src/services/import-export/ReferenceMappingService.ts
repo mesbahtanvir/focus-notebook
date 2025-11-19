@@ -56,15 +56,9 @@ export class ReferenceMappingService {
     // No linkedXIds arrays to process
 
     // Build people relationships
+    // NOTE: Person linking now uses relationships store, not linkedThoughtIds array
     if (entities.people) {
-      for (const person of entities.people) {
-        if (person.linkedThoughtIds) {
-          for (const thoughtId of person.linkedThoughtIds) {
-            const existing = thoughtToPeople.get(thoughtId) || [];
-            thoughtToPeople.set(thoughtId, [...existing, person.id]);
-          }
-        }
-      }
+      // People validation - relationships are managed via Entity Graph
     }
 
     // Build dependency graph
@@ -276,12 +270,6 @@ export class ReferenceMappingService {
         parentProjectId: project.parentProjectId
           ? idMapping.oldToNew.get(project.parentProjectId) || project.parentProjectId
           : project.parentProjectId,
-        linkedTaskIds: project.linkedTaskIds
-          ? project.linkedTaskIds.map(id => idMapping.oldToNew.get(id) || id)
-          : project.linkedTaskIds,
-        linkedThoughtIds: project.linkedThoughtIds
-          ? project.linkedThoughtIds.map(id => idMapping.oldToNew.get(id) || id)
-          : project.linkedThoughtIds,
       }));
     }
 
@@ -333,9 +321,6 @@ export class ReferenceMappingService {
       updated.people = entities.people.map(person => ({
         ...person,
         id: idMapping.oldToNew.get(person.id) || person.id,
-        linkedThoughtIds: person.linkedThoughtIds
-          ? person.linkedThoughtIds.map(id => idMapping.oldToNew.get(id) || id)
-          : person.linkedThoughtIds,
       }));
     }
 

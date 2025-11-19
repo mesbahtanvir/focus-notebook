@@ -16,9 +16,6 @@ export const ServiceKeys = {
   PROJECT_REPOSITORY: 'ProjectRepository',
   FRIEND_REPOSITORY: 'FriendRepository',
   TOOL_USAGE_REPOSITORY: 'ToolUsageRepository',
-
-  // Services
-  RECURRING_TASK_SERVICE: 'RecurringTaskService',
 } as const;
 
 export type ServiceKey = typeof ServiceKeys[keyof typeof ServiceKeys];

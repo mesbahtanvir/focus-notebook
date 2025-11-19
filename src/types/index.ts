@@ -4,8 +4,6 @@ export interface Task {
   category: 'mastery' | 'pleasure'
   completed: boolean
   createdAt: number
-  isBacklog?: boolean
-  estimatedPleasure?: number // 0-100 percentage
 }
 
 export interface MoodEntry {

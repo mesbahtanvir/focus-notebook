@@ -359,8 +359,6 @@ export async function createProject(
     };
     const validatedData: Omit<Project, 'id' | 'createdAt'> = {
       ...projectData,
-      linkedThoughtIds: projectData.linkedThoughtIds || [], // Use relationships instead
-      linkedTaskIds: projectData.linkedTaskIds || [], // Use relationships instead
       source: sourceMapping[options.createdBy || 'user'],
       status: projectData.status || 'active',
     };

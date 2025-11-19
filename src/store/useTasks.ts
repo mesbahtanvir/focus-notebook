@@ -58,7 +58,6 @@ export interface Task {
   estimatedMinutes?: number
   actualMinutes?: number
   recurrence?: RecurrenceConfig
-  parentTaskId?: string // DEPRECATED - For backward compatibility with old recurring task instances
   completionCount?: number // Track how many times completed this period
   completionHistory?: TaskCompletion[] // Track when task was completed (for recurring tasks)
   projectId?: string // Link to project
@@ -75,81 +74,7 @@ export interface Task {
 }
 
 // Helper functions for recurring tasks
-
-// Check if we need to create a recurring task instance for today
-function shouldCreateTaskForToday(task: Task, existingTasks: Task[]): boolean {
-  if (!task.recurrence || task.recurrence.type === 'none') return false
-  
-  const today = getLocalDateString(new Date())
-  const { type } = task.recurrence
-  
-  // For workweek tasks, only create on weekdays
-  if (type === 'workweek' && !isWorkday()) return false
-  
-  // Check if there's already a task for today (completed or active)
-  const hasTaskForToday = existingTasks.some(t => 
-    (t.id === task.id || t.parentTaskId === task.id || t.parentTaskId === task.parentTaskId) &&
-    t.dueDate === today
-  )
-  
-  if (hasTaskForToday) return false
-  
-  // Check if this task should have an instance for today
-  const taskDueDate = task.dueDate
-  if (!taskDueDate) return true // No due date, create for today
-  
-  const taskDate = new Date(taskDueDate)
-  const nowDate = new Date()
-  
-  // If task's due date is in the past or today, and it's completed, create new instance
-  if (task.done && taskDate <= nowDate) {
-    return true
-  }
-  
-  return false
-}
-
-// Create a task instance for today
-function createTaskForToday(task: Task): Omit<Task, 'id'> {
-  const today = getLocalDateString(new Date())
-  
-  return {
-    title: task.title,
-    done: false,
-    status: 'active',
-    priority: task.priority,
-    category: task.category,
-    createdAt: new Date().toISOString(),
-    completedAt: undefined,
-    completionCount: 0,
-    dueDate: today,
-    notes: task.notes,
-    tags: task.tags,
-    estimatedMinutes: task.estimatedMinutes,
-    recurrence: task.recurrence,
-    parentTaskId: task.parentTaskId || task.id,
-    projectId: task.projectId,
-    focusEligible: task.focusEligible,
-  }
-}
-
-// Generate missing recurring task instances
-async function generateMissingRecurringTasks(tasks: Task[], userId: string): Promise<void> {
-  // Find all recurring task templates (original tasks with recurrence)
-  const recurringTemplates = tasks.filter(t => 
-    t.recurrence && 
-    t.recurrence.type !== 'none' &&
-    !t.parentTaskId // Only look at parent tasks, not instances
-  )
-  
-  for (const template of recurringTemplates) {
-    if (shouldCreateTaskForToday(template, tasks)) {
-      const newTask = createTaskForToday(template)
-      const taskId = Date.now().toString() + Math.random().toString(36).substring(2)
-      await createAt(`users/${userId}/tasks/${taskId}`, newTask)
-    }
-  }
-}
+// Note: Recurring tasks use completionHistory to track completions, not child task instances
 
 type State = {
   tasks: Task[]

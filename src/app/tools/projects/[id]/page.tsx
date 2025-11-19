@@ -36,28 +36,6 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import Link from "next/link";
 import RichTextEditor from "@/components/RichTextEditor";
 
-// Helper function to format time until deadline
-function formatTimeUntil(targetDate: string): { value: number; unit: string; isOverdue: boolean } {
-  const target = new Date(targetDate);
-  const today = new Date();
-  const diffTime = target.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
-  const isOverdue = diffDays < 0;
-  const absDays = Math.abs(diffDays);
-  
-  // Calculate years, months, days
-  if (absDays >= 365) {
-    const years = Math.floor(absDays / 365);
-    return { value: years, unit: years === 1 ? 'year' : 'years', isOverdue };
-  } else if (absDays >= 30) {
-    const months = Math.floor(absDays / 30);
-    return { value: months, unit: months === 1 ? 'month' : 'months', isOverdue };
-  } else {
-    return { value: absDays, unit: absDays === 1 ? 'day' : 'days', isOverdue };
-  }
-}
-
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -69,7 +47,6 @@ export default function ProjectDetailPage() {
   const subscribe = useProjects((s) => s.subscribe);
   const updateProject = useProjects((s) => s.update);
   const deleteProject = useProjects((s) => s.delete);
-  const linkTask = useProjects((s) => s.linkTask);
 
   const tasks = useTasks((s) => s.tasks);
   const subscribeTasks = useTasks((s) => s.subscribe);
@@ -93,7 +70,6 @@ export default function ProjectDetailPage() {
     priority: 'low' | 'medium' | 'high' | 'urgent';
     timeframe: 'short-term' | 'long-term';
     category: 'mastery' | 'health' | 'wealth' | 'connection';
-    targetDate: string;
   }>({
     title: '',
     description: '',
@@ -102,7 +78,6 @@ export default function ProjectDetailPage() {
     priority: 'medium',
     timeframe: 'short-term',
     category: 'mastery',
-    targetDate: '',
   });
 
   useEffect(() => {
@@ -127,17 +102,14 @@ export default function ProjectDetailPage() {
         priority: project.priority,
         timeframe: project.timeframe,
         category: project.category,
-        targetDate: project.targetDate || '',
       });
     }
   }, [project, isEditing]);
 
   const linkedTasks = useMemo(() => {
     if (!project) return [];
-    // Include tasks that are either in linkedTaskIds OR have projectId matching this project
-    return tasks.filter((t) =>
-      project.linkedTaskIds.includes(t.id) || t.projectId === project.id
-    );
+    // Include tasks that have projectId matching this project
+    return tasks.filter((t) => t.projectId === project.id);
   }, [project, tasks]);
 
   const linkedGoal = useMemo(() => {
@@ -157,8 +129,7 @@ export default function ProjectDetailPage() {
 
   const linkedThoughts = useMemo(() => {
     if (!project) return [];
-    const additionalThoughtIds = [...(project.linkedThoughtIds || [])];
-    if (sourceThoughtId) additionalThoughtIds.push(sourceThoughtId);
+    const additionalThoughtIds = sourceThoughtId ? [sourceThoughtId] : [];
 
     return getLinkedThoughtsForEntity({
       relationships,
@@ -183,15 +154,6 @@ export default function ProjectDetailPage() {
     const estimatedHours = Math.floor(estimatedMinutes / 60);
     const remainingMinutes = estimatedMinutes % 60;
 
-    // Days until target date
-    let daysUntilTarget: number | null = null;
-    if (project?.targetDate) {
-      const target = new Date(project.targetDate);
-      const today = new Date();
-      const diffTime = target.getTime() - today.getTime();
-      daysUntilTarget = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    }
-
     return {
       totalTasks,
       completedTasks,
@@ -200,7 +162,6 @@ export default function ProjectDetailPage() {
       estimatedMinutes,
       estimatedHours,
       remainingMinutes,
-      daysUntilTarget,
     };
   }, [linkedTasks, project]);
 
@@ -209,8 +170,7 @@ export default function ProjectDetailPage() {
   };
 
   const handleTaskCreated = async (taskId: string) => {
-    // Link the newly created task to this project
-    await linkTask(projectId, taskId);
+    // Task is already linked via projectId field, no additional action needed
   };
 
   const handleDeleteProject = async () => {
@@ -238,7 +198,6 @@ export default function ProjectDetailPage() {
       priority: editForm.priority,
       timeframe: editForm.timeframe,
       category: editForm.category,
-      targetDate: editForm.targetDate || undefined,
     });
 
     setIsEditing(false);
@@ -491,31 +450,12 @@ export default function ProjectDetailPage() {
         <div className="rounded-xl p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-2 border-green-200 dark:border-green-800 shadow-md">
           <div className="flex items-center gap-2 mb-2">
             <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
-            <div className="text-xs font-semibold text-green-600 dark:text-green-400">Deadline</div>
+            <div className="text-xs font-semibold text-green-600 dark:text-green-400">Timeframe</div>
           </div>
-          {project.targetDate ? (
-            (() => {
-              const timeInfo = formatTimeUntil(project.targetDate);
-              return (
-                <>
-                  <div className={`text-2xl font-bold ${
-                    timeInfo.isOverdue
-                      ? "text-red-700 dark:text-red-300"
-                      : timeInfo.value === 0 || (timeInfo.unit === 'days' && timeInfo.value < 7)
-                      ? "text-orange-700 dark:text-orange-300"
-                      : "text-green-700 dark:text-green-300"
-                  }`}>
-                    {timeInfo.value}
-                  </div>
-                  <div className="text-xs text-green-600 dark:text-green-400 mt-1">
-                    {timeInfo.unit} {timeInfo.isOverdue ? "overdue" : "left"}
-                  </div>
-                </>
-              );
-            })()
-          ) : (
-            <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">No deadline</div>
-          )}
+          <div className="text-2xl font-bold text-green-700 dark:text-green-300 capitalize">
+            {project.timeframe}
+          </div>
+          <div className="text-xs text-green-600 dark:text-green-400 mt-1">project</div>
         </div>
       </div>
 

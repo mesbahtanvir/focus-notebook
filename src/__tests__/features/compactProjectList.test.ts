@@ -158,7 +158,6 @@ describe('Compact Project List (#30)', () => {
         status: 'active',
         timeframe: 'short-term',
         category: 'mastery',
-        targetDate: '2024-12-31',
         createdAt: '2024-01-01',
       };
 
@@ -189,10 +188,9 @@ describe('Compact Project List (#30)', () => {
         'timeframe',
         'status',
         'category',
-        'targetDate',
       ];
 
-      expect(detailedBadges.length).toBeGreaterThanOrEqual(4);
+      expect(detailedBadges.length).toBeGreaterThanOrEqual(3);
     });
 
     it('should show linked items count', () => {

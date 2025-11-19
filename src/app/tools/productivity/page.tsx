@@ -281,12 +281,6 @@ export default function WorkGoalsPage() {
                 )}
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <span>{project.status}</span>
-                  {project.targetDate && (
-                    <>
-                      <span>•</span>
-                      <span>Due: {new Date(project.targetDate).toLocaleDateString()}</span>
-                    </>
-                  )}
                 </div>
               </Link>
             ))}

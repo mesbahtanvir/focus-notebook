@@ -49,7 +49,6 @@ export interface Person {
   importantDates?: ImportantDate[]
   connectionStrength: number // 1-10 scale
   trustLevel: number // 1-10 scale
-  linkedThoughtIds: string[]
   interactionLogs?: InteractionLog[]
   lastInteraction?: string // date
   communicationFrequency?: 'daily' | 'weekly' | 'monthly' | 'rarely'
@@ -65,11 +64,9 @@ interface State {
   people: Person[]
   loading: boolean
   error: string | null
-  add: (data: Omit<Person, 'id' | 'createdAt' | 'updatedAt' | 'version' | 'linkedThoughtIds'>) => Promise<string>
+  add: (data: Omit<Person, 'id' | 'createdAt' | 'updatedAt' | 'version'>) => Promise<string>
   update: (id: string, data: Partial<Omit<Person, 'id' | 'createdAt' | 'updatedAt' | 'updatedBy' | 'version'>>) => Promise<void>
   delete: (id: string) => Promise<void>
-  linkThought: (personId: string, thoughtId: string) => Promise<void>
-  unlinkThought: (personId: string, thoughtId: string) => Promise<void>
   addInteractionLog: (personId: string, log: Omit<InteractionLog, 'id'>) => Promise<void>
   subscribe: (userId: string) => (() => void) | undefined
 }
@@ -88,7 +85,6 @@ export const useRelationships = create<State>((set, get) => ({
     
     const personData: Omit<Person, 'id'> = {
       ...data,
-      linkedThoughtIds: [],
       createdAt: now,
       updatedAt: now,
       updatedBy: userId,
@@ -109,24 +105,8 @@ export const useRelationships = create<State>((set, get) => ({
   delete: async (id) => {
     const userId = auth.currentUser?.uid
     if (!userId) throw new Error('Not authenticated')
-    
+
     await deleteAt(`users/${userId}/people/${id}`)
-  },
-
-  linkThought: async (personId, thoughtId) => {
-    const person = get().people.find(p => p.id === personId)
-    if (!person) return
-
-    const linkedThoughtIds = [...(person.linkedThoughtIds || []), thoughtId]
-    await get().update(personId, { linkedThoughtIds })
-  },
-
-  unlinkThought: async (personId, thoughtId) => {
-    const person = get().people.find(p => p.id === personId)
-    if (!person) return
-
-    const linkedThoughtIds = (person.linkedThoughtIds || []).filter(id => id !== thoughtId)
-    await get().update(personId, { linkedThoughtIds })
   },
 
   addInteractionLog: async (personId, log) => {

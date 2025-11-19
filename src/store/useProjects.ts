@@ -18,13 +18,10 @@ export interface Project {
   timeframe: ProjectTimeframe;
   status: ProjectStatus;
   priority: 'urgent' | 'high' | 'medium' | 'low';
-  targetDate?: string;
   createdAt: string;
   updatedAt?: number;
   completedAt?: string;
   category: 'health' | 'wealth' | 'mastery' | 'connection';
-  linkedThoughtIds: string[]; // Thoughts attached to this project
-  linkedTaskIds: string[]; // Tasks related to this project (only for leaf projects)
   tags?: string[];
   progress?: number; // 0-100
   notes?: string;
@@ -46,13 +43,9 @@ type State = {
   hasPendingWrites: boolean;
   unsubscribe: (() => void) | null;
   subscribe: (userId: string) => void;
-  add: (data: Omit<Project, 'id' | 'createdAt' | 'linkedThoughtIds' | 'linkedTaskIds' | 'updatedAt'>) => Promise<string>;
+  add: (data: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
   update: (id: string, updates: Partial<Omit<Project, 'id'>>) => Promise<void>;
   delete: (id: string) => Promise<void>;
-  linkThought: (projectId: string, thoughtId: string) => Promise<void>;
-  unlinkThought: (projectId: string, thoughtId: string) => Promise<void>;
-  linkTask: (projectId: string, taskId: string) => Promise<void>;
-  unlinkTask: (projectId: string, taskId: string) => Promise<void>;
   getProjectsByStatus: (status: ProjectStatus) => Project[];
   getProjectsByTimeframe: (timeframe: ProjectTimeframe) => Project[];
   getProjectsByGoal: (goalId: string) => Project[];
@@ -101,8 +94,6 @@ export const useProjects = create<State>((set, get) => ({
       ...data,
       id: projectId,
       createdAt: new Date().toISOString(),
-      linkedThoughtIds: [],
-      linkedTaskIds: [],
       priority: data.priority || 'medium',
       status: data.status || 'active',
     };
@@ -126,42 +117,6 @@ export const useProjects = create<State>((set, get) => ({
     if (!userId) throw new Error('Not authenticated');
 
     await deleteAt(`users/${userId}/projects/${id}`);
-  },
-
-  linkThought: async (projectId, thoughtId) => {
-    const project = get().projects.find(p => p.id === projectId);
-    if (!project) return;
-    
-    await get().update(projectId, {
-      linkedThoughtIds: [...project.linkedThoughtIds, thoughtId],
-    });
-  },
-
-  unlinkThought: async (projectId, thoughtId) => {
-    const project = get().projects.find(p => p.id === projectId);
-    if (!project) return;
-    
-    await get().update(projectId, {
-      linkedThoughtIds: project.linkedThoughtIds.filter(id => id !== thoughtId),
-    });
-  },
-
-  linkTask: async (projectId, taskId) => {
-    const project = get().projects.find(p => p.id === projectId);
-    if (!project) return;
-    
-    await get().update(projectId, {
-      linkedTaskIds: [...project.linkedTaskIds, taskId],
-    });
-  },
-
-  unlinkTask: async (projectId, taskId) => {
-    const project = get().projects.find(p => p.id === projectId);
-    if (!project) return;
-    
-    await get().update(projectId, {
-      linkedTaskIds: project.linkedTaskIds.filter(id => id !== taskId),
-    });
   },
 
   getProjectsByStatus: (status) => {

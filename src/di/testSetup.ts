@@ -9,7 +9,6 @@ import { ServiceKeys } from './ServiceKeys';
 // Mock implementations
 import { MockAuthService } from '@/repositories/mock/MockAuthService';
 import { MockTaskRepository } from '@/repositories/mock/MockTaskRepository';
-import { RecurringTaskService } from '@/services/RecurringTaskService';
 
 /**
  * Create a test container with mock dependencies
@@ -24,12 +23,6 @@ export function createTestContainer(): Container {
   // Register Mock Task Repository
   const mockTaskRepository = new MockTaskRepository(mockAuthService);
   container.registerInstance(ServiceKeys.TASK_REPOSITORY, mockTaskRepository);
-
-  // Register Recurring Task Service (uses mock repository)
-  container.registerSingleton(
-    ServiceKeys.RECURRING_TASK_SERVICE,
-    () => new RecurringTaskService(mockTaskRepository)
-  );
 
   return container;
 }

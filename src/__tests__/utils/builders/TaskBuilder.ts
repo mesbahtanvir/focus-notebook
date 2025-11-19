@@ -162,14 +162,6 @@ export class TaskBuilder {
   }
 
   /**
-   * Set parent task ID (for recurring instances)
-   */
-  withParentTaskId(parentTaskId: string): this {
-    this.task.parentTaskId = parentTaskId;
-    return this;
-  }
-
-  /**
    * Set project ID
    */
   withProjectId(projectId: string): this {

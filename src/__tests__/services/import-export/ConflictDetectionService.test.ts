@@ -288,7 +288,8 @@ describe('ConflictDetectionService', () => {
       expect(brokenMoodRefs.length).toBeGreaterThan(0);
     });
 
-    it('should detect broken linkedThoughtIds in people', async () => {
+    it.skip('should detect broken linkedThoughtIds in people', async () => {
+      // NOTE: Person linking now uses relationships store, not linkedThoughtIds array
       // Create person with broken thought reference
       const dataWithBrokenRefs = {
         tasks: [],
@@ -446,8 +447,6 @@ describe('ConflictDetectionService', () => {
             parentProjectId: 'project-b',
             status: 'active' as const,
             priority: 'medium' as const,
-            linkedThoughtIds: [],
-            linkedTaskIds: [],
             createdAt: '2025-01-01T00:00:00.000Z',
             updatedAt: Date.parse('2025-01-01T00:00:00.000Z'),
           },
@@ -461,8 +460,6 @@ describe('ConflictDetectionService', () => {
             parentProjectId: 'project-a',
             status: 'active' as const,
             priority: 'medium' as const,
-            linkedThoughtIds: [],
-            linkedTaskIds: [],
             createdAt: '2025-01-01T00:00:00.000Z',
             updatedAt: Date.parse('2025-01-01T00:00:00.000Z'),
           },
@@ -491,7 +488,6 @@ describe('ConflictDetectionService', () => {
         thoughts: [{
           id: 'thought-empty-arrays',
           text: 'Test',
-          linkedTaskIds: [],
           linkedProjectIds: [],
           linkedMoodIds: [],
           createdAt: '2025-01-01T00:00:00.000Z',

@@ -193,31 +193,10 @@ export class ConflictDetectionService {
     // No need to check linkedXIds arrays as they no longer exist
 
     // Check people
+    // NOTE: Person linking now uses relationships store, not linkedThoughtIds array
     if (importedEntities.people) {
-      for (const person of importedEntities.people) {
-        // Check linkedThoughtIds
-        if (person.linkedThoughtIds) {
-          for (const thoughtId of person.linkedThoughtIds) {
-            if (!importedIds.thoughts.has(thoughtId)) {
-              conflicts.push({
-                id: `person-${person.id}-thought-ref-${thoughtId}`,
-                type: ConflictType.BROKEN_REFERENCE,
-                entityType: 'people',
-                entityId: person.id,
-                itemTitle: person.name,
-                importedItem: person,
-                message: `Person "${person.name}" references non-existent thought (${thoughtId})`,
-                suggestedResolution: ConflictResolution.ASK_USER,
-                details: {
-                  referencedEntity: 'thoughts',
-                  referencedId: thoughtId,
-                  fieldName: 'linkedThoughtIds'
-                }
-              });
-            }
-          }
-        }
-      }
+      // People validation - currently no direct reference fields to check
+      // Relationships are managed via Entity Graph
     }
 
     return conflicts;

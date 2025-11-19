@@ -19,9 +19,6 @@ export interface Goal {
   updatedAt?: number;
   completedAt?: string;
   source?: 'manual' | 'ai' | 'thought';
-  // Legacy fields (kept for backward compatibility)
-  actionPlan?: string[];
-  targetDate?: string;
 }
 
 type State = {

@@ -1,7 +1,6 @@
 "use client";
 
 import { Flag, Brain, Target, Calendar } from "lucide-react";
-import { formatTimeUntil } from "@/lib/utils/date";
 import type { Goal } from "@/store/useGoals";
 
 interface GoalStatisticsProps {
@@ -48,44 +47,18 @@ export function GoalStatistics({ goal, projectCount, thoughtCount }: GoalStatist
         <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">level</div>
       </div>
 
-      {/* Target Date or Timeframe */}
+      {/* Timeframe */}
       <div className="rounded-xl p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-2 border-green-200 dark:border-green-800 shadow-md">
         <div className="flex items-center gap-2 mb-2">
           <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
           <div className="text-xs font-semibold text-green-600 dark:text-green-400">
-            {goal.targetDate ? 'Deadline' : 'Timeframe'}
+            Timeframe
           </div>
         </div>
-        {goal.targetDate ? (
-          (() => {
-            const timeInfo = formatTimeUntil(goal.targetDate);
-            return (
-              <>
-                <div
-                  className={`text-2xl font-bold ${
-                    timeInfo.isOverdue
-                      ? "text-red-700 dark:text-red-300"
-                      : timeInfo.value === 0 || (timeInfo.unit === 'days' && timeInfo.value < 7)
-                      ? "text-orange-700 dark:text-orange-300"
-                      : "text-green-700 dark:text-green-300"
-                  }`}
-                >
-                  {timeInfo.value}
-                </div>
-                <div className="text-xs text-green-600 dark:text-green-400 mt-1">
-                  {timeInfo.unit} {timeInfo.isOverdue ? "overdue" : "left"}
-                </div>
-              </>
-            );
-          })()
-        ) : (
-          <>
-            <div className="text-2xl font-bold text-green-700 dark:text-green-300">
-              {goal.timeframe || 'short-term'}
-            </div>
-            <div className="text-xs text-green-600 dark:text-green-400 mt-1">goal</div>
-          </>
-        )}
+        <div className="text-2xl font-bold text-green-700 dark:text-green-300 capitalize">
+          {goal.timeframe || 'short-term'}
+        </div>
+        <div className="text-xs text-green-600 dark:text-green-400 mt-1">goal</div>
       </div>
     </div>
   );

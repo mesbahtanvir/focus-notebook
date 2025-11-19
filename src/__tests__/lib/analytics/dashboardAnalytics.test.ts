@@ -40,8 +40,6 @@ function createProject(overrides: Partial<Project> = {}): Project {
     status: overrides.status ?? "active",
     priority: overrides.priority ?? "medium",
     category: overrides.category ?? "mastery",
-    linkedThoughtIds: overrides.linkedThoughtIds ?? [],
-    linkedTaskIds: overrides.linkedTaskIds ?? [],
     createdAt: overrides.createdAt ?? new Date().toISOString(),
     ...overrides,
   } as Project;

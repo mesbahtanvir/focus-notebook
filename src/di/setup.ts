@@ -12,9 +12,6 @@ import { FirebaseAuthService } from '@/repositories/firebase/FirebaseAuthService
 // Repositories
 import { FirebaseTaskRepository } from '@/repositories/firebase/FirebaseTaskRepository';
 
-// Services
-import { RecurringTaskService } from '@/services/RecurringTaskService';
-
 /**
  * Setup production dependencies
  */
@@ -34,15 +31,6 @@ export function setupProductionDependencies(): void {
     () => {
       const authService = appContainer.resolve<FirebaseAuthService>(ServiceKeys.AUTH_SERVICE);
       return new FirebaseTaskRepository(authService);
-    }
-  );
-
-  // Register Recurring Task Service (singleton)
-  appContainer.registerSingleton(
-    ServiceKeys.RECURRING_TASK_SERVICE,
-    () => {
-      const taskRepository = appContainer.resolve<FirebaseTaskRepository>(ServiceKeys.TASK_REPOSITORY);
-      return new RecurringTaskService(taskRepository);
     }
   );
 
