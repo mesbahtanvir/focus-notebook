@@ -123,7 +123,10 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         const snaps = await Promise.all(refs.map(r => getDoc(r)));
         const loaded = snaps
           .filter(s => s.exists())
-          .map(s => ({ id: s.id, ...(s.data() as PhotoLibraryItem) }));
+          .map(s => {
+            const data = s.data() as PhotoLibraryItem;
+            return { ...data, id: s.id };
+          });
         library = [...library, ...loaded];
       }
 

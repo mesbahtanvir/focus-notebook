@@ -13,19 +13,19 @@ const mockUpdateDoc = jest.fn();
 
 jest.mock("firebase/firestore", () => ({
   collection: jest.fn(() => "collection-ref"),
-  doc: jest.fn((...segments) => ({ path: segments.join("/") })),
+  doc: jest.fn((...segments: string[]) => ({ path: segments.join("/") })),
   query: jest.fn(() => "query-ref"),
   where: jest.fn(() => "where-ref"),
   orderBy: jest.fn(() => "order-ref"),
-  getDocs: (...args) => mockGetDocs(...args),
-  setDoc: (...args) => mockSetDoc(...args),
-  getDoc: (...args) => mockGetDoc(...args),
+  getDocs: (...args: unknown[]) => mockGetDocs(...args),
+  setDoc: (...args: unknown[]) => mockSetDoc(...args),
+  getDoc: (...args: unknown[]) => mockGetDoc(...args),
   Timestamp: {
     fromDate: () => ({ seconds: 0, nanoseconds: 0 }),
   },
-  updateDoc: (...args) => mockUpdateDoc(...args),
+  updateDoc: (...args: unknown[]) => mockUpdateDoc(...args),
   increment: (val: number) => ({ __op: "increment", val }),
-  arrayUnion: (...values: string[]) => values,
+  arrayUnion: (...values: unknown[]) => values,
 }));
 
 const mockUploadBytes = jest.fn();
@@ -33,8 +33,8 @@ const mockGetDownloadURL = jest.fn();
 
 jest.mock("firebase/storage", () => ({
   ref: jest.fn((_storage, path) => ({ path })),
-  uploadBytes: (...args) => mockUploadBytes(...args),
-  getDownloadURL: (...args) => mockGetDownloadURL(...args),
+  uploadBytes: (...args: unknown[]) => mockUploadBytes(...args),
+  getDownloadURL: (...args: unknown[]) => mockGetDownloadURL(...args),
 }));
 
 import { auth } from "@/lib/firebaseClient";
@@ -58,7 +58,7 @@ describe("usePhotoFeedback gallery + session flow", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     resetStore();
-    auth.currentUser = { uid: "user-123", isAnonymous: false } as any;
+    (auth as { currentUser: any }).currentUser = { uid: "user-123", isAnonymous: false };
   });
 
   it("uploads images to the gallery and tracks them in state", async () => {

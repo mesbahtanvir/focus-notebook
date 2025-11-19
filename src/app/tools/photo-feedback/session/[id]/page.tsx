@@ -110,6 +110,12 @@ export default function SessionVotingPage() {
     setTouchStartX(null);
   };
 
+  const handleCommentChange = (value: string) => {
+    const current = currentSession?.photos[currentPhotoIndex];
+    if (!current) return;
+    setComments(prev => ({ ...prev, [current.id]: value }));
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-500 via-purple-500 to-blue-600 dark:from-gray-900 dark:via-purple-800/40 dark:to-gray-900 flex items-center justify-center">
@@ -343,8 +349,3 @@ export default function SessionVotingPage() {
     </div>
   );
 }
-  const handleCommentChange = (value: string) => {
-    const current = currentSession?.photos[currentPhotoIndex];
-    if (!current) return;
-    setComments(prev => ({ ...prev, [current.id]: value }));
-  };
