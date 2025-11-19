@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { collection, doc, query, where, getDocs, setDoc, getDoc, deleteDoc, Timestamp, orderBy, updateDoc, increment, arrayUnion } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { auth, db, storage } from '@/lib/firebaseClient';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { httpsCallable } from 'firebase/functions';
+import { auth, db, storage, functionsClient } from '@/lib/firebaseClient';
 
 export interface PhotoSession {
   id: string;
@@ -50,8 +51,18 @@ export interface PhotoLibraryItem {
   ownerId: string;
   url: string;
   storagePath: string;
+  thumbnailPath?: string;
+  thumbnailUrl?: string;
   createdAt: string;
   stats?: PhotoStats;
+}
+
+export interface UploadProgressEvent {
+  id: string;
+  name: string;
+  status: 'uploading' | 'completed' | 'failed';
+  progress: number;
+  error?: string;
 }
 
 type State = {
@@ -67,7 +78,11 @@ type State = {
 
   // Actions
   createSessionFromLibrary: (libraryPhotoIds: string[], creatorName?: string) => Promise<{ sessionId: string; secretKey: string }>;
-  uploadToLibrary: (photos: File[], onProgress?: (uploaded: number, total: number) => void) => Promise<PhotoLibraryItem[]>;
+  uploadToLibrary: (
+    photos: File[],
+    onProgress?: (uploaded: number, total: number) => void,
+    onFileProgress?: (event: UploadProgressEvent) => void
+  ) => Promise<PhotoLibraryItem[]>;
   loadLibrary: () => Promise<PhotoLibraryItem[]>;
   deleteLibraryPhoto: (photoId: string) => Promise<void>;
   deleteAllLibraryPhotos: () => Promise<void>;
@@ -176,7 +191,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
     }
   },
 
-  uploadToLibrary: async (photos: File[], onProgress?: (uploaded: number, total: number) => void) => {
+  uploadToLibrary: async (photos: File[], onProgress?: (uploaded: number, total: number) => void, onFileProgress?: (event: UploadProgressEvent) => void) => {
     const user = auth.currentUser;
     if (!user || user.isAnonymous) {
       throw new Error('You must be signed in to upload photos.');
@@ -185,23 +200,76 @@ export const usePhotoFeedback = create<State>((set, get) => ({
     set({ libraryLoading: true, error: null });
 
     try {
+      const signedUrlCallable = httpsCallable<{ path: string }, { url: string }>(functionsClient, 'getSignedImageUrl');
       const uploaded: PhotoLibraryItem[] = [];
       for (const file of photos) {
+        const extension = file.type?.includes('png') ? 'png' : 'jpg';
         const photoId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        const storagePath = `users/${user.uid}/photo-library/${photoId}`;
+        const storagePath = `images/original/${user.uid}/${photoId}.${extension}`;
+        const thumbnailPath = storagePath.replace('/original/', '/thumb/');
         const storageRef = ref(storage, storagePath);
+        const fileName = file.name || `Photo ${uploaded.length + 1}`;
 
-        await uploadBytes(storageRef, file, {
-          contentType: file.type || 'image/jpeg',
-        });
-        const url = await getDownloadURL(storageRef);
+        const emitProgress = (update: Partial<UploadProgressEvent>) => {
+          onFileProgress?.({
+            id: photoId,
+            name: fileName,
+            progress: update.progress ?? 0,
+            status: update.status ?? 'uploading',
+            error: update.error,
+          });
+        };
+
+        emitProgress({ progress: 0, status: 'uploading' });
+
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const task = uploadBytesResumable(storageRef, file, {
+              contentType: file.type || 'image/jpeg',
+            });
+            task.on(
+              'state_changed',
+              snapshot => {
+                const progress = snapshot.totalBytes > 0 ? snapshot.bytesTransferred / snapshot.totalBytes : 0;
+                emitProgress({ progress, status: 'uploading' });
+              },
+              error => reject(error),
+              () => resolve()
+            );
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Upload failed';
+          emitProgress({ progress: 0, status: 'failed', error: message });
+          throw error;
+        }
+
+        let signedUrl: string;
+        try {
+          const response = await signedUrlCallable({ path: storagePath });
+          signedUrl = response.data.url;
+        } catch (error) {
+          console.warn('Failed to retrieve signed URL, falling back to getDownloadURL:', error);
+          signedUrl = await getDownloadURL(storageRef);
+        }
+
+        let thumbnailUrl: string | undefined;
+        try {
+          const response = await signedUrlCallable({ path: thumbnailPath });
+          thumbnailUrl = response.data.url;
+        } catch {
+          thumbnailUrl = undefined;
+        }
+
+        emitProgress({ progress: 1, status: 'completed' });
 
         const docRef = doc(db, `users/${user.uid}/photoLibrary`, photoId);
         const item: PhotoLibraryItem = {
           id: photoId,
           ownerId: user.uid,
-          url,
+          url: signedUrl,
           storagePath,
+          thumbnailPath,
+          thumbnailUrl,
           createdAt: new Date().toISOString(),
           stats: {
             yesVotes: 0,
@@ -286,6 +354,12 @@ export const usePhotoFeedback = create<State>((set, get) => ({
       await deleteObject(storageRef).catch(error => {
         console.warn('Unable to delete photo file (continuing):', error);
       });
+      if (target.thumbnailPath) {
+        const thumbRef = ref(storage, target.thumbnailPath);
+        await deleteObject(thumbRef).catch(error => {
+          console.warn('Unable to delete thumbnail (continuing):', error);
+        });
+      }
       await deleteDoc(doc(db, `users/${user.uid}/photoLibrary`, photoId));
       set(state => ({
         library: state.library.filter(photo => photo.id !== photoId),

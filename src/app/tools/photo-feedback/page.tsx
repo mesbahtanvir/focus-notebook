@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { usePhotoFeedback } from "@/store/usePhotoFeedback";
+import { usePhotoFeedback, type UploadProgressEvent } from "@/store/usePhotoFeedback";
 import type { PhotoLibraryItem } from "@/store/usePhotoFeedback";
 import { Upload, ArrowRight, Heart, Loader2, Copy, ExternalLink, CheckCircle, Shuffle, Trash2, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -100,6 +100,7 @@ export default function PhotoFeedbackPage() {
   const [galleryPage, setGalleryPage] = useState(0);
   const [photoPendingDelete, setPhotoPendingDelete] = useState<PhotoLibraryItem | null>(null);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
+  const [uploadJobs, setUploadJobs] = useState<Record<string, UploadProgressEvent>>({});
   const galleryContainerRef = useRef<HTMLDivElement>(null);
 
   const canCreateSession = !!user && !isAnonymous;
@@ -142,6 +143,7 @@ export default function PhotoFeedbackPage() {
   const visiblePhotos = library.slice(0, Math.min(library.length, (galleryPage + 1) * PHOTOS_PER_PAGE));
   const hasMorePhotos = visiblePhotos.length < library.length;
   const hasLeaderboardData = library.some(item => (item.stats?.totalVotes ?? 0) > 0);
+  const activeUploadJobs = Object.values(uploadJobs);
 
   useInfiniteGallery({
     items: library,
@@ -185,9 +187,30 @@ export default function PhotoFeedbackPage() {
     try {
       const processed = await Promise.all(imageFiles.map(resizeImageIfNeeded));
       setUploadStatus({ current: 0, total: processed.length });
-      const uploaded = await uploadToLibrary(processed, (current, total) => {
-        setUploadStatus({ current, total });
-      });
+      const uploaded = await uploadToLibrary(
+        processed,
+        (current, total) => {
+          setUploadStatus({ current, total });
+        },
+        event => {
+          setUploadJobs(prev => ({
+            ...prev,
+            [event.id]: event,
+          }));
+
+          if (event.status === "completed") {
+            setTimeout(() => {
+              setUploadJobs(current => {
+                if (!current[event.id] || current[event.id].status !== "completed") {
+                  return current;
+                }
+                const { [event.id]: _done, ...rest } = current;
+                return rest;
+              });
+            }, 4000);
+          }
+        }
+      );
       setSelectedPhotoIds(prev => [...uploaded.map(item => item.id), ...prev]);
       toastSuccess({
         title: "Gallery updated",
@@ -428,6 +451,58 @@ export default function PhotoFeedbackPage() {
                         Load more
                       </button>
                     )}
+                  </div>
+                )}
+
+                {activeUploadJobs.length > 0 && (
+                  <div className="mt-6">
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Upload queue</p>
+                    <div className="space-y-2">
+                      {activeUploadJobs.map(job => {
+                        const progressPercent = Math.round(job.progress * 100);
+                        const statusLabel =
+                          job.status === "completed"
+                            ? "Completed"
+                            : job.status === "failed"
+                              ? "Failed"
+                              : `Uploading • ${progressPercent}%`;
+                        const statusClass =
+                          job.status === "failed"
+                            ? "text-red-600 dark:text-red-400"
+                            : job.status === "completed"
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-purple-600 dark:text-purple-300";
+
+                        return (
+                          <div
+                            key={job.id}
+                            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/40 p-3 shadow-sm"
+                          >
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-semibold text-gray-700 dark:text-gray-200 truncate pr-4">
+                                {job.name}
+                              </span>
+                              <span className={`font-medium ${statusClass}`}>{statusLabel}</span>
+                            </div>
+                            <div className="mt-2 h-1.5 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${
+                                  job.status === "failed"
+                                    ? "bg-red-500"
+                                    : job.status === "completed"
+                                      ? "bg-green-500"
+                                      : "bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500"
+                                }`}
+                                style={{ width: `${Math.min(100, progressPercent)}%` }}
+                              />
+                            </div>
+                            {job.status === "failed" && job.error && (
+                              <p className="mt-2 text-xs text-red-600 dark:text-red-400">{job.error}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </>

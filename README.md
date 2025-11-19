@@ -64,6 +64,7 @@ Next.js 14 · TypeScript · Tailwind CSS · Firebase · Zustand · Capacitor
 - **Signed URLs + CDN**: storage rules now target `/images/(original|thumb)/{uid}` with owner-only reads while `getSignedImageUrl` returns decade-long read URLs that Cloud CDN can cache.
 - **Cached rendering** (`mobile/components/CachedImage.tsx`) shows the on-device copy, then thumbnail, then the signed original, leveraging `react-native-fast-image` for disk caching and great offline scrolling.
 - **Offline-first flow**: select → compress → enqueue → display local URI → upload in background → queue resumes on next app launch; completion hook writes Firestore records with signed URLs plus thumbnail references.
+- **Reference screen**: `mobile/screens/PhotoUploaderScreen.tsx` demonstrates wiring the upload manager, queue indicators, and cached gallery rendering in React Native (using `react-native-image-picker` for sourcing photos).
 
 ---
 

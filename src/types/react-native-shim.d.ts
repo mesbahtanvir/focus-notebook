@@ -79,10 +79,16 @@ declare module 'react-native-fs' {
 }
 
 declare module 'react-native' {
-  import { ComponentType, ReactNode } from 'react';
+  import { Component, ComponentType, ReactNode } from 'react';
 
   export interface ViewStyle {
     [key: string]: unknown;
+  }
+
+  export interface TextStyle extends ViewStyle {
+    fontSize?: number;
+    fontWeight?: string;
+    color?: string;
   }
 
   export interface ImageStyle extends ViewStyle {
@@ -106,14 +112,38 @@ declare module 'react-native' {
     children?: ReactNode;
   }
 
+  export interface TextProps {
+    style?: StyleProp<TextStyle>;
+    children?: ReactNode;
+  }
+
+  export interface TouchableOpacityProps {
+    style?: StyleProp<ViewStyle>;
+    onPress?: () => void;
+    children?: ReactNode;
+  }
+
+  export interface FlatListProps<ItemT> {
+    data: ReadonlyArray<ItemT>;
+    renderItem: (info: { item: ItemT; index: number }) => ReactNode;
+    keyExtractor?: (item: ItemT, index: number) => string;
+    numColumns?: number;
+    contentContainerStyle?: StyleProp<ViewStyle>;
+    ListEmptyComponent?: ReactNode;
+  }
+
   export interface ActivityIndicatorProps {
     color?: string;
   }
 
   export const View: ComponentType<ViewProps>;
+  export const Text: ComponentType<TextProps>;
+  export const TouchableOpacity: ComponentType<TouchableOpacityProps>;
   export const ActivityIndicator: ComponentType<ActivityIndicatorProps>;
+  export class FlatList<ItemT> extends Component<FlatListProps<ItemT>> {}
   export const StyleSheet: {
     flatten<T>(style?: StyleProp<T>): T;
+    create<T extends Record<string, ViewStyle | TextStyle | ImageStyle>>(styles: T): T;
   };
 }
 
@@ -127,4 +157,27 @@ declare module '@react-native-firebase/storage' {
   }
 
   export default function storage(): FirebaseStorage;
+}
+
+declare module 'react-native-image-picker' {
+  export interface Asset {
+    uri?: string;
+    fileName?: string;
+    type?: string;
+    fileSize?: number;
+  }
+
+  export interface ImageLibraryOptions {
+    mediaType?: 'photo' | 'video' | 'mixed';
+    selectionLimit?: number;
+  }
+
+  export interface ImagePickerResponse {
+    didCancel?: boolean;
+    assets?: Asset[];
+    errorCode?: string;
+    errorMessage?: string;
+  }
+
+  export function launchImageLibrary(options: ImageLibraryOptions): Promise<ImagePickerResponse>;
 }

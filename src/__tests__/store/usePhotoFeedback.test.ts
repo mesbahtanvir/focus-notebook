@@ -4,6 +4,7 @@ jest.mock("@/lib/firebaseClient", () => ({
   auth: { currentUser: { uid: "user-123", isAnonymous: false } },
   db: {},
   storage: {},
+  functionsClient: {},
 }));
 
 const mockSetDoc = jest.fn();
@@ -29,12 +30,19 @@ jest.mock("firebase/firestore", () => ({
 }));
 
 const mockUploadBytes = jest.fn();
+const mockUploadBytesResumable = jest.fn();
 const mockGetDownloadURL = jest.fn();
+const mockHttpsCallable = jest.fn();
 
 jest.mock("firebase/storage", () => ({
   ref: jest.fn((_storage, path) => ({ path })),
   uploadBytes: (...args: unknown[]) => mockUploadBytes(...args),
+  uploadBytesResumable: (...args: unknown[]) => mockUploadBytesResumable(...args),
   getDownloadURL: (...args: unknown[]) => mockGetDownloadURL(...args),
+}));
+
+jest.mock("firebase/functions", () => ({
+  httpsCallable: (...args: unknown[]) => mockHttpsCallable(...args),
 }));
 
 import { auth } from "@/lib/firebaseClient";
@@ -59,6 +67,22 @@ describe("usePhotoFeedback gallery + session flow", () => {
     jest.clearAllMocks();
     resetStore();
     (auth as { currentUser: any }).currentUser = { uid: "user-123", isAnonymous: false };
+
+    mockUploadBytesResumable.mockImplementation((_ref, file: File) => {
+      return {
+        on: (_event: string, progress?: (snapshot: { bytesTransferred: number; totalBytes: number }) => void, error?: (err: Error) => void, complete?: () => void) => {
+          progress?.({ bytesTransferred: file.size || 1, totalBytes: file.size || 1 });
+          complete?.();
+          return () => {};
+        },
+      };
+    });
+
+    mockHttpsCallable.mockImplementation(() => {
+      return jest.fn(async ({ path }: { path: string }) => ({
+        data: { url: `https://signed.example.com/${path}` },
+      }));
+    });
   });
 
   it("uploads images to the gallery and tracks them in state", async () => {
@@ -71,12 +95,12 @@ describe("usePhotoFeedback gallery + session flow", () => {
       await usePhotoFeedback.getState().uploadToLibrary([file]);
     });
 
-    expect(mockUploadBytes).toHaveBeenCalledTimes(1);
+    expect(mockUploadBytesResumable).toHaveBeenCalledTimes(1);
     expect(mockSetDoc).toHaveBeenCalledTimes(1);
     const [latest] = usePhotoFeedback.getState().library;
     expect(latest).toMatchObject({
       ownerId: "user-123",
-      url: "https://example.com/gallery-photo.jpg",
+      url: expect.stringContaining("https://signed.example.com/images/original"),
     });
   });
 
