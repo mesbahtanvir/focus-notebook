@@ -292,18 +292,6 @@ export default function PhotoFeedbackPage() {
                     Uploading {uploadStatus.current}/{uploadStatus.total}
                   </p>
                 )}
-                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                  Selected: {selectedPhotoIds.length}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleSelectRandom}
-                  disabled={library.length === 0}
-                  aria-label="Randomly select photos"
-                  className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-200 transition disabled:opacity-40"
-                >
-                  <Shuffle className="w-4 h-4" />
-                </button>
               </div>
             </div>
 
@@ -537,7 +525,7 @@ export default function PhotoFeedbackPage() {
           )}
           {canCreateSession && (
             <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
-              Launching a battle will include your entire gallery automatically. Selecting photos above simply adds them sooner.
+              Launching a battle will include every uploaded photo. If you toggle selections above, they’ll be prioritized but not required.
             </p>
           )}
 
@@ -564,8 +552,8 @@ export default function PhotoFeedbackPage() {
           <Card className="p-6 bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-800 mt-8">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Your Photo Battles</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Keep these links handy to share or review rankings.</p>
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Your Photo Battle Link</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">One link per account. Share it anytime for fresh matchups.</p>
               </div>
             {sessionsLoading && (
               <div className="text-sm text-gray-500 dark:text-gray-400">Loading…</div>
@@ -586,13 +574,13 @@ export default function PhotoFeedbackPage() {
                   return (
                     <div key={session.id} className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Session</p>
-                          <p className="font-semibold text-gray-800 dark:text-gray-100">{session.creatorName || 'Your photos'}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Created {new Date(session.createdAt).toLocaleString()} • Battle stays active
-                        </p>
-                        </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Battle link</p>
+                  <p className="font-semibold text-gray-800 dark:text-gray-100">{session.creatorName || 'Your photos'}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Created {new Date(session.createdAt).toLocaleString()} • Battle stays active
+                  </p>
+                </div>
                         <div className="flex gap-2">
                           <Link
                             href={`/tools/photo-feedback/share?sessionId=${session.id}&secretKey=${session.secretKey}`}
@@ -616,7 +604,7 @@ export default function PhotoFeedbackPage() {
 
         {/* Privacy Notice */}
         <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>🔒 Sign-in required to create • Voters don&apos;t need accounts • Links expire in 3 days</p>
+          <p>🔒 Sign-in required to create • Voters don&apos;t need accounts • Battle links never expire</p>
         </div>
 
         <div className="mt-4 text-center">
