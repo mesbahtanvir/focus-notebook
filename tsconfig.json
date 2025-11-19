@@ -19,6 +19,9 @@
     "paths": {
       "@/*": [
         "src/*"
+      ],
+      "@/mobile/*": [
+        "mobile/*"
       ]
     },
     "types": [

@@ -51,6 +51,7 @@ import {
   updateVisaDataManual,
   getVisaRequirements,
 } from './visaDataUpdater';
+import { generatePhotoThumbnail, getSignedImageUrl } from './photoThumbnails';
 
 // Export cloud functions
 export {
@@ -94,4 +95,7 @@ export {
   updateVisaDataWeekly,
   updateVisaDataManual,
   getVisaRequirements,
+  // Photos
+  generatePhotoThumbnail,
+  getSignedImageUrl,
 };

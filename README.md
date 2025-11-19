@@ -57,6 +57,14 @@ For cloud sync, see [Setup Guide](docs/guides/setup.md).
 
 Next.js 14 · TypeScript · Tailwind CSS · Firebase · Zustand · Capacitor
 
+## Mobile Photo Upload Pipeline (React Native)
+
+- **Upload manager + queue** (`mobile/upload/*`) keeps a persistent SQLite/AsyncStorage-backed backlog so users see local previews instantly while uploads retry with exponential backoff and resumable Firebase Storage transfers.
+- **Compression & thumbnails** reduce every image to ≤1080px @ ~75% quality (`mobile/upload/imageProcessor.ts`), while a Cloud Function (`functions/src/photoThumbnails.ts`) mirrors originals to `/images/thumb/*` for fast lists.
+- **Signed URLs + CDN**: storage rules now target `/images/(original|thumb)/{uid}` with owner-only reads while `getSignedImageUrl` returns decade-long read URLs that Cloud CDN can cache.
+- **Cached rendering** (`mobile/components/CachedImage.tsx`) shows the on-device copy, then thumbnail, then the signed original, leveraging `react-native-fast-image` for disk caching and great offline scrolling.
+- **Offline-first flow**: select → compress → enqueue → display local URI → upload in background → queue resumes on next app launch; completion hook writes Firestore records with signed URLs plus thumbnail references.
+
 ---
 
 ## Documentation
