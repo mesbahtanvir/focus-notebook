@@ -7,7 +7,7 @@ import Image from "next/image";
 import { Heart, X, ChevronLeft, ChevronRight, Loader2, CheckCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
-import { useToast } from "@/hooks/use-toast";
+import { toastError } from "@/lib/toast-presets";
 
 export default function SessionVotingPage() {
   const params = useParams();
@@ -18,7 +18,6 @@ export default function SessionVotingPage() {
   const [voterId, setVoterId] = useState('');
   const [completedVotes, setCompletedVotes] = useState<Set<string>>(new Set());
   const [isVoting, setIsVoting] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => {
     if (sessionId) {
@@ -46,10 +45,9 @@ export default function SessionVotingPage() {
       }, 300);
     } catch (error) {
       console.error('Error submitting vote:', error);
-      toast({
+      toastError({
         title: "Vote not recorded",
         description: "Please try again.",
-        variant: "destructive",
       });
       setIsVoting(false);
     }

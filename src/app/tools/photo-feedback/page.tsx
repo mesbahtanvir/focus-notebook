@@ -8,13 +8,14 @@ import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import Image from "next/image";
-import { useToast } from "@/hooks/use-toast";
+import { toastError, toastSuccess, toastWarning } from "@/lib/toast-presets";
 
 export default function PhotoFeedbackPage() {
   const router = useRouter();
   const { createSession, isLoading } = usePhotoFeedback();
   const { user, isAnonymous, loading: authLoading } = useAuth();
-  const { toast } = useToast();
+
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per storage.rules
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -27,11 +28,20 @@ export default function PhotoFeedbackPage() {
     // Filter for images only
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
 
+    // Enforce per-file size before hitting Storage rules
+    const oversized = imageFiles.filter(file => file.size > MAX_FILE_SIZE);
+    if (oversized.length > 0) {
+      toastError({
+        title: "Photo too large",
+        description: "Each photo must be under 10MB.",
+      });
+      return;
+    }
+
     if (imageFiles.length + selectedFiles.length > 10) {
-      toast({
+      toastError({
         title: "Too many photos",
         description: "You can upload up to 10 photos for a feedback session.",
-        variant: "destructive",
       });
       return;
     }
@@ -55,19 +65,17 @@ export default function PhotoFeedbackPage() {
 
   const handleCreateSession = async () => {
     if (!canCreateSession) {
-      toast({
+      toastWarning({
         title: "Sign in required",
         description: "Sign in to create a feedback session. Friends can still vote without accounts.",
-        variant: "destructive",
       });
       return;
     }
 
     if (selectedFiles.length === 0) {
-      toast({
+      toastWarning({
         title: "Add a photo",
         description: "Upload at least one photo to start a feedback session.",
-        variant: "destructive",
       });
       return;
     }
@@ -85,14 +93,13 @@ export default function PhotoFeedbackPage() {
       const description =
         code === 'storage/unauthenticated'
           ? "Sign in again to upload your photos."
-          : code === 'storage/unauthorized'
-            ? "You don't have permission to upload these photos. Try signing in again."
+        : code === 'storage/unauthorized'
+            ? "Upload blocked by rules (likely over 10MB per photo or missing auth). Check file sizes and sign in again."
             : "Please try again in a moment.";
 
-      toast({
+      toastError({
         title: "Could not create session",
         description,
-        variant: "destructive",
       });
     }
   };

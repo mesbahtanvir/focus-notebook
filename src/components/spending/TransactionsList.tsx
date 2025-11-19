@@ -22,14 +22,13 @@ import {
 import { useSpendingTool } from '@/store/useSpendingTool';
 import { useTrips } from '@/store/useTrips';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { toastError, toastSuccess } from '@/lib/toast-presets';
 import { Button } from '@/components/ui/button';
 import type { PlaidTransaction, Account } from '@/types/spending-tool';
 import type { Trip } from '@/store/useTrips';
 
 export default function TransactionsList() {
   const { user } = useAuth();
-  const { toast } = useToast();
   const { transactions, accounts, selectedAccountId, setSelectedAccount, linkTransactionToTrip } = useSpendingTool();
   const trips = useTrips((state) => state.trips);
   const subscribeTrips = useTrips((state) => state.subscribe);
@@ -255,7 +254,7 @@ export default function TransactionsList() {
         linkTransactionToTrip={linkTransactionToTrip}
         accounts={accounts}
         onLinked={() =>
-          toast({
+          toastSuccess({
             title: 'Transaction linked',
             description: 'This transaction is now connected to your trip.',
           })
@@ -433,7 +432,6 @@ function TransactionDetailModal({
   accounts,
   onLinked,
 }: TransactionDetailModalProps) {
-  const { toast } = useToast();
   const [selectedTripId, setSelectedTripId] = useState('');
   const [isLinking, setIsLinking] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
@@ -465,10 +463,9 @@ function TransactionDetailModal({
 
   const linkWithTrip = async (tripId?: string) => {
     if (!transaction.id) {
-      toast({
+      toastError({
         title: 'Unable to link',
         description: 'Missing transaction identifier.',
-        variant: 'destructive',
       });
       return;
     }
@@ -488,7 +485,7 @@ function TransactionDetailModal({
     } catch (error: any) {
       const message = error?.message || 'Failed to link transaction to trip.';
       setLinkError(message);
-      toast({ title: 'Link failed', description: message, variant: 'destructive' });
+      toastError({ title: 'Link failed', description: message });
     } finally {
       setIsLinking(false);
     }

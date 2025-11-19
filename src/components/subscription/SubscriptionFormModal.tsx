@@ -21,7 +21,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
+import { toastError, toastSuccess, toastWarning } from '@/lib/toast-presets';
 
 interface SubscriptionFormData {
   name: string;
@@ -51,7 +51,6 @@ export function SubscriptionFormModal({
   const { user } = useAuth();
   const { add, update } = useSubscriptions();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
 
   const {
     register,
@@ -126,7 +125,7 @@ export function SubscriptionFormModal({
 
   const onSubmit = async (data: SubscriptionFormData) => {
     if (!user?.uid) {
-      toast({ title: 'Error', description: 'You must be logged in', variant: 'destructive' });
+      toastWarning({ title: 'You must be logged in', description: 'Sign in to manage subscriptions.' });
       return;
     }
 
@@ -146,7 +145,7 @@ export function SubscriptionFormModal({
           paymentMethod: data.paymentMethod,
           notes: data.notes,
         });
-        toast({ title: 'Success', description: 'Subscription updated successfully!' });
+        toastSuccess({ title: 'Success', description: 'Subscription updated successfully!' });
       } else {
         await add(user.uid, {
           name: data.name,
@@ -161,13 +160,13 @@ export function SubscriptionFormModal({
           paymentMethod: data.paymentMethod,
           notes: data.notes,
         });
-        toast({ title: 'Success', description: 'Subscription added successfully!' });
+        toastSuccess({ title: 'Success', description: 'Subscription added successfully!' });
       }
       reset();
       onClose();
     } catch (error) {
       console.error('Error saving subscription:', error);
-      toast({ title: 'Error', description: 'Failed to save subscription', variant: 'destructive' });
+      toastError({ title: 'Error', description: 'Failed to save subscription' });
     } finally {
       setIsSubmitting(false);
     }

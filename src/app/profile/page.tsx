@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FirebaseError } from "firebase/app";
 import { httpsCallable } from "firebase/functions";
-import { useToast } from "@/hooks/use-toast";
+import { toastError, toastInfo, toastSuccess, toastWarning } from "@/lib/toast-presets";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { functionsClient, auth } from "@/lib/firebaseClient";
@@ -35,7 +35,6 @@ const ENTITLEMENT_MESSAGES: Record<string, string> = {
 
 function ProfilePageContent() {
   const { user, loading: authLoading, isAnonymous } = useAuth();
-  const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const pendingSessionIdRef = useRef<string | null>(null);
@@ -80,7 +79,7 @@ function ProfilePageContent() {
     }
 
     if (upgradeStatus === "cancelled") {
-      toast({
+      toastInfo({
         title: "Checkout cancelled",
         description: "No changes were made to your plan.",
       });
@@ -91,10 +90,9 @@ function ProfilePageContent() {
     if (upgradeStatus === "success") {
       const sessionId = searchParams.get("session_id");
       if (!sessionId) {
-        toast({
+        toastError({
           title: "Verification pending",
           description: "We could not locate the Stripe session. Contact support if this persists.",
-          variant: "destructive",
         });
         clearUpgradeQuery();
         return;
@@ -110,69 +108,65 @@ function ProfilePageContent() {
 
       pendingSessionIdRef.current = sessionId;
 
-      const verifyCheckout = httpsCallable(functionsClient, "syncStripeSubscription");
-      void verifyCheckout({ sessionId })
-        .then(() => {
-          toast({
-            title: "Welcome to Focus Notebook Pro",
-            description: "Your membership is active and ready to use.",
-          });
-        })
-        .catch((error) => {
-          let message = "We could not verify your subscription. Please try again or contact support.";
-          if (error instanceof FirebaseError && typeof error.message === "string") {
-            message = error.message.replace(/^FunctionsError:\s*/, "");
-          }
-          toast({
-            title: "Verification failed",
-            description: message,
-            variant: "destructive",
-          });
-        })
-        .finally(() => {
-          pendingSessionIdRef.current = null;
+        const verifyCheckout = httpsCallable(functionsClient, "syncStripeSubscription");
+        void verifyCheckout({ sessionId })
+          .then(() => {
+            toastSuccess({
+              title: "Welcome to Focus Notebook Pro",
+              description: "Your membership is active and ready to use.",
+            });
+          })
+          .catch((error) => {
+            let message = "We could not verify your subscription. Please try again or contact support.";
+            if (error instanceof FirebaseError && typeof error.message === "string") {
+              message = error.message.replace(/^FunctionsError:\s*/, "");
+            }
+            toastError({
+              title: "Verification failed",
+              description: message,
+            });
+          })
+          .finally(() => {
+            pendingSessionIdRef.current = null;
           clearUpgradeQuery();
         });
       return;
     }
 
     clearUpgradeQuery();
-  }, [searchParams, user, toast, clearUpgradeQuery]);
+  }, [searchParams, user, clearUpgradeQuery]);
 
   const isUpgradeLoading = billingAction === "upgrade";
   const isPortalLoading = billingAction === "portal";
   const billingButtonDisabled = subscriptionLoading || (hasProAccess ? isPortalLoading : isUpgradeLoading);
 
-  const handleBillingRedirect = useCallback(
-    async (action: "upgrade" | "portal") => {
-      if (!user) {
-        toast({
-          title: "Sign in required",
-          description: "Please sign in to manage your membership.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (action === "upgrade") {
-        if (isAnonymous) {
-          toast({
-            title: "Create a permanent account",
-            description: "Upgrade requires a permanent account. Link your email or continue with Google before upgrading.",
-            variant: "destructive",
+    const handleBillingRedirect = useCallback(
+      async (action: "upgrade" | "portal") => {
+        if (!user) {
+          toastWarning({
+            title: "Sign in required",
+            description: "Please sign in to manage your membership.",
           });
           return;
         }
 
-        if (!user.email) {
-          toast({
-            title: "Email required",
-            description: "Please add an email address to your profile before upgrading.",
-            variant: "destructive",
-          });
-          return;
+        if (action === "upgrade") {
+          if (isAnonymous) {
+            toastWarning({
+              title: "Create a permanent account",
+              description: "Upgrade requires a permanent account. Link your email or continue with Google before upgrading.",
+            });
+            return;
+          }
+
+          if (!user.email) {
+            toastWarning({
+              title: "Email required",
+              description: "Please add an email address to your profile before upgrading.",
+            });
+            return;
+          }
         }
-      }
 
       try {
         setBillingAction(action);
@@ -181,39 +175,37 @@ function ProfilePageContent() {
         const result = await callable({
           origin: typeof window !== "undefined" ? window.location.origin : undefined,
         });
-        const data = result.data as { url?: string; error?: string };
-        if (!data?.url) {
-          const fallbackMessage =
-            data?.error ||
-            (action === "upgrade"
-              ? "Unable to start checkout. Please try again shortly."
-              : "Unable to open the billing portal right now.");
-          toast({
-            title: "Billing unavailable",
-            description: fallbackMessage,
-            variant: "destructive",
-          });
-          return;
-        }
+          const data = result.data as { url?: string; error?: string };
+          if (!data?.url) {
+            const fallbackMessage =
+              data?.error ||
+              (action === "upgrade"
+                ? "Unable to start checkout. Please try again shortly."
+                : "Unable to open the billing portal right now.");
+            toastError({
+              title: "Billing unavailable",
+              description: fallbackMessage,
+            });
+            return;
+          }
 
-        window.location.assign(data.url);
-      } catch (error) {
-        console.error("Billing redirect failed", error);
-        let message = "Something went wrong while contacting Stripe. Please try again shortly.";
-        if (error instanceof FirebaseError && typeof error.message === "string") {
-          message = error.message.replace(/^FunctionsError:\s*/, "");
+          window.location.assign(data.url);
+        } catch (error) {
+          console.error("Billing redirect failed", error);
+          let message = "Something went wrong while contacting Stripe. Please try again shortly.";
+          if (error instanceof FirebaseError && typeof error.message === "string") {
+            message = error.message.replace(/^FunctionsError:\s*/, "");
+          }
+          toastError({
+            title: "Billing unavailable",
+            description: message,
+          });
+        } finally {
+          setBillingAction(null);
         }
-        toast({
-          title: "Billing unavailable",
-          description: message,
-          variant: "destructive",
-        });
-      } finally {
-        setBillingAction(null);
-      }
-    },
-    [user, toast, isAnonymous]
-  );
+      },
+      [user, isAnonymous]
+    );
 
   const formatDate = useCallback((value: unknown) => {
     if (!value) return null;
@@ -258,26 +250,25 @@ function ProfilePageContent() {
         });
       } catch (e) {
         console.error("Failed to load profile:", e);
-        toast({
+        toastError({
           title: "Error",
           description: "Failed to load profile data.",
-          variant: "destructive",
         });
       } finally {
         setIsLoading(false);
       }
     }
-  }, [user, authLoading, toast]);
+  }, [user, authLoading]);
 
   const onSubmit = (data: ProfileForm) => {
     if (!user) return;
     
     try {
       localStorage.setItem("profile", JSON.stringify(data));
-      toast({ title: "Profile saved", description: "Your profile has been updated." });
+      toastSuccess({ title: "Profile saved", description: "Your profile has been updated." });
     } catch (e) {
       console.error("Failed to save profile:", e);
-      toast({ title: "Error", description: "Could not save profile.", variant: "destructive" });
+      toastError({ title: "Error", description: "Could not save profile." });
     }
   };
 
@@ -361,17 +352,16 @@ function ProfilePageContent() {
               onClick={async () => {
                 try {
                   await signOut(auth);
-                  toast({
+                  toastSuccess({
                     title: "Signed out",
                     description: "You have been signed out successfully.",
                   });
                   window.location.href = '/login';
                 } catch (error) {
                   console.error("Error signing out:", error);
-                  toast({
+                  toastError({
                     title: "Error",
                     description: "Failed to sign out. Please try again.",
-                    variant: "destructive",
                   });
                 }
               }}

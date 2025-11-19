@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
 import { useBillingData } from '@/store/useBillingData';
 import { useUsageStats } from '@/store/useUsageStats';
-import { useToast } from '@/hooks/use-toast';
+import { toastError, toastSuccess } from '@/lib/toast-presets';
 import { SubscriptionOverview } from '@/components/billing/SubscriptionOverview';
 import { CancellationBanner } from '@/components/billing/CancellationBanner';
 import { PaymentMethodCard } from '@/components/billing/PaymentMethodCard';
@@ -21,7 +21,6 @@ import { Button } from '@/components/ui/button';
 export default function BillingPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { toast } = useToast();
   const { subscription, isLoading: subscriptionLoading } = useSubscriptionStatus();
   const {
     invoices,
@@ -64,10 +63,9 @@ export default function BillingPage() {
       }
     } catch (error) {
       console.error('Failed to open billing portal:', error);
-      toast({
-        title: 'Error',
+      toastError({
+        title: 'Billing unavailable',
         description: 'Failed to open billing portal. Please try again.',
-        variant: 'destructive',
       });
     }
   };
@@ -81,7 +79,7 @@ export default function BillingPage() {
     try {
       await reactivateSubscription();
 
-      toast({
+      toastSuccess({
         title: 'Subscription Reactivated!',
         description: 'Your subscription has been successfully reactivated.',
       });
@@ -92,10 +90,9 @@ export default function BillingPage() {
       await refresh();
     } catch (error) {
       console.error('Failed to reactivate subscription:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to reactivate subscription. Please try again or contact support.',
-        variant: 'destructive',
+      toastError({
+        title: 'Failed to reactivate subscription',
+        description: 'Please try again or contact support.',
       });
     } finally {
       setIsReactivating(false);

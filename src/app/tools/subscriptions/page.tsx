@@ -11,11 +11,10 @@ import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { Card } from '@/components/ui/card';
 import { toolThemes } from '@/components/tools/themes';
 import { Calendar } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toastError, toastSuccess, toastWarning } from '@/lib/toast-presets';
 
 export default function SubscriptionsPage() {
   const { user } = useAuth();
-  const { toast } = useToast();
   const {
     subscriptions,
     isLoading,
@@ -68,16 +67,16 @@ export default function SubscriptionsPage() {
 
   const handleDelete = async (id: string) => {
     if (!user?.uid) {
-      toast({ title: 'Error', description: 'You must be logged in', variant: 'destructive' });
+      toastWarning({ title: 'You must be logged in', description: 'Sign in to manage subscriptions.' });
       return;
     }
 
     if (confirm('Are you sure you want to delete this subscription?')) {
       try {
         await deleteSubscription(user.uid, id);
-        toast({ title: 'Success', description: 'Subscription deleted' });
+        toastSuccess({ title: 'Success', description: 'Subscription deleted' });
       } catch (error) {
-        toast({ title: 'Error', description: 'Failed to delete subscription', variant: 'destructive' });
+        toastError({ title: 'Error', description: 'Failed to delete subscription' });
       }
     }
   };

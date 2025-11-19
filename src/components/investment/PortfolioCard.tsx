@@ -8,6 +8,7 @@ import { Portfolio, useInvestments } from '@/store/useInvestments';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BASE_CURRENCY, convertCurrency, SupportedCurrency } from '@/lib/utils/currency';
+import { useConfirm } from '@/hooks/useConfirm';
 
 interface PortfolioCardProps {
   portfolio: Portfolio;
@@ -23,6 +24,7 @@ export function PortfolioCard({ portfolio, index, currency }: PortfolioCardProps
     getPortfolioROI,
     deletePortfolio,
   } = useInvestments();
+  const { confirm, ConfirmDialog } = useConfirm();
 
   const totalValue = getTotalPortfolioValue(portfolio.id, currency);
   const totalInvested = getTotalInvested(portfolio.id, currency);
@@ -59,22 +61,32 @@ export function PortfolioCard({ portfolio, index, currency }: PortfolioCardProps
 
   const handleDelete = async (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    if (confirm(`Delete portfolio "${portfolio.name}"? This cannot be undone.`)) {
+    const shouldDelete = await confirm({
+      title: `Delete "${portfolio.name}"?`,
+      message: "This action cannot be undone and will remove all related data for this portfolio.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "danger",
+    });
+
+    if (shouldDelete) {
       await deletePortfolio(portfolio.id);
     }
   };
 
   return (
-    <motion.div
-      className="h-full"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
-    >
-      <Card
-        className="p-5 sm:p-6 hover:shadow-xl transition-all cursor-pointer border border-gray-100 bg-white/95 dark:bg-gray-900/80 h-full flex flex-col"
-        onClick={() => router.push(`/tools/investments/${portfolio.id}`)}
+    <>
+      {ConfirmDialog}
+      <motion.div
+        className="h-full"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
       >
+        <Card
+          className="p-5 sm:p-6 hover:shadow-xl transition-all cursor-pointer border border-gray-100 bg-white/95 dark:bg-gray-900/80 h-full flex flex-col"
+          onClick={() => router.push(`/tools/investments/${portfolio.id}`)}
+        >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
@@ -203,5 +215,6 @@ export function PortfolioCard({ portfolio, index, currency }: PortfolioCardProps
         </div>
       </Card>
     </motion.div>
+    </>
   );
 }

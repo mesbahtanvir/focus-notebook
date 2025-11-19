@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
+import { toastError, toastSuccess } from '@/lib/toast-presets';
 
 interface TripFormData {
   name: string;
@@ -29,7 +29,6 @@ interface TripFormModalProps {
 export function TripFormModal({ isOpen, onClose, trip }: TripFormModalProps) {
   const { addTrip, updateTrip } = useTrips();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
 
   const {
     register,
@@ -67,7 +66,7 @@ export function TripFormModal({ isOpen, onClose, trip }: TripFormModalProps) {
           currency: data.currency,
           notes: data.notes,
         });
-        toast({ title: 'Success', description: 'Trip updated successfully!' });
+        toastSuccess({ title: 'Success', description: 'Trip updated successfully!' });
       } else {
         await addTrip({
           name: data.name,
@@ -78,13 +77,13 @@ export function TripFormModal({ isOpen, onClose, trip }: TripFormModalProps) {
           currency: data.currency,
           notes: data.notes,
         });
-        toast({ title: 'Success', description: 'Trip created successfully!' });
+        toastSuccess({ title: 'Success', description: 'Trip created successfully!' });
       }
       reset();
       onClose();
     } catch (error) {
       console.error('Error saving trip:', error);
-      toast({ title: 'Error', description: 'Failed to save trip', variant: 'destructive' });
+      toastError({ title: 'Error', description: 'Failed to save trip' });
     } finally {
       setIsSubmitting(false);
     }

@@ -88,7 +88,9 @@ export const usePhotoFeedback = create<State>((set, get) => ({
           const storagePath = `photo-feedback/${sessionId}/${photoId}`;
           const storageRef = ref(storage, storagePath);
 
-          await uploadBytes(storageRef, file);
+          await uploadBytes(storageRef, file, {
+            contentType: file.type || 'image/jpeg',
+          });
           const url = await getDownloadURL(storageRef);
 
           return {

@@ -15,7 +15,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { convertCurrency, normalizeCurrencyCode, SupportedCurrency } from '@/lib/utils/currency';
 import { Download, Upload } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toastError, toastSuccess, toastWarning } from '@/lib/toast-presets';
 import { AssetHorizonPanel } from '@/components/investment/AssetHorizonPanel';
 
 export default function InvestmentsPage() {
@@ -54,7 +54,6 @@ function InvestmentsPageContent() {
     searchParams.get('view') === 'dashboards' ? 'dashboards' : 'overview'
   );
   const { currency, setCurrency } = useCurrency();
-  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -119,16 +118,15 @@ function InvestmentsPageContent() {
       document.body.removeChild(anchor);
       URL.revokeObjectURL(url);
 
-      toast({
+      toastSuccess({
         title: 'Portfolios exported',
         description: `Exported ${exportData.length} portfolio${exportData.length === 1 ? '' : 's'}.`,
       });
     } catch (error) {
       console.error('Portfolio export failed', error);
-      toast({
+      toastError({
         title: 'Export failed',
         description: error instanceof Error ? error.message : 'Unable to export portfolios.',
-        variant: 'destructive',
       });
     } finally {
       setIsExporting(false);
@@ -169,15 +167,14 @@ function InvestmentsPageContent() {
       const importedCount = result.created + result.updated;
 
       if (importedCount > 0) {
-        toast({
+        toastSuccess({
           title: 'Portfolios imported',
           description: `Imported ${importedCount} portfolio${importedCount === 1 ? '' : 's'}.`,
         });
       } else {
-        toast({
+        toastWarning({
           title: 'No portfolios imported',
           description: result.errors[0] ?? 'No new portfolios were imported.',
-          variant: 'destructive',
         });
       }
 
@@ -186,10 +183,9 @@ function InvestmentsPageContent() {
       }
     } catch (error) {
       console.error('Portfolio import failed', error);
-      toast({
+      toastError({
         title: 'Import failed',
         description: error instanceof Error ? error.message : 'Unable to import portfolios.',
-        variant: 'destructive',
       });
     } finally {
       setIsImporting(false);

@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CategoryBudgetInput } from './CategoryBudgetInput';
 import { Edit2, Save, X } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toastError, toastSuccess } from '@/lib/toast-presets';
 
 interface BudgetBreakdownCardProps {
   trip: Trip;
@@ -25,7 +25,6 @@ const EXPENSE_CATEGORIES: ExpenseCategory[] = [
 
 export function BudgetBreakdownCard({ trip }: BudgetBreakdownCardProps) {
   const { updateBudgetBreakdown, getTotalPlannedBudget, getPlannedBudgetByCategory } = useTrips();
-  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [budgetBreakdown, setBudgetBreakdown] = useState<Partial<Record<ExpenseCategory, number>>>(
@@ -45,14 +44,13 @@ export function BudgetBreakdownCard({ trip }: BudgetBreakdownCardProps) {
     setIsSaving(true);
     try {
       await updateBudgetBreakdown(trip.id, budgetBreakdown);
-      toast({ title: 'Success', description: 'Budget breakdown updated successfully!' });
+      toastSuccess({ title: 'Success', description: 'Budget breakdown updated successfully!' });
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating budget breakdown:', error);
-      toast({
+      toastError({
         title: 'Error',
         description: 'Failed to update budget breakdown',
-        variant: 'destructive',
       });
     } finally {
       setIsSaving(false);

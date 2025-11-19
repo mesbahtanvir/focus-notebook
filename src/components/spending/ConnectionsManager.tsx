@@ -8,6 +8,7 @@
 import { Building, CreditCard, RefreshCw, Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useSpendingTool } from '@/store/useSpendingTool';
 import PlaidLinkButton from './PlaidLinkButton';
+import { ErrorCallout } from '@/components/ui/ErrorCallout';
 import type { ItemStatus } from '@/types/spending-tool';
 
 export default function ConnectionsManager() {
@@ -147,11 +148,12 @@ export default function ConnectionsManager() {
 
             {/* Error message */}
             {connection.error && (
-              <div className="mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-                <p className="text-sm text-red-700 dark:text-red-400">
-                  {connection.error.message}
-                </p>
-              </div>
+              <ErrorCallout
+                className="mt-3"
+                title="Sync error"
+                message={connection.error.message}
+                tone="destructive"
+              />
             )}
           </div>
         );

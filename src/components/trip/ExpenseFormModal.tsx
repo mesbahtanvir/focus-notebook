@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
+import { toastError, toastSuccess } from '@/lib/toast-presets';
 
 interface ExpenseFormData {
   category: ExpenseCategory;
@@ -42,7 +42,6 @@ export function ExpenseFormModal({
   const { addExpense, updateExpense, addStandaloneExpense, updateStandaloneExpense, getTrip } =
     useTrips();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
 
   const trip = tripId ? getTrip(tripId) : null;
   const defaultCurrency = trip?.currency || 'USD';
@@ -102,7 +101,7 @@ export function ExpenseFormModal({
             tags,
           });
         }
-        toast({ title: 'Success', description: 'Expense updated successfully!' });
+        toastSuccess({ title: 'Success', description: 'Expense updated successfully!' });
       } else {
         // Adding new expense
         if (tripId) {
@@ -124,13 +123,13 @@ export function ExpenseFormModal({
             tags,
           });
         }
-        toast({ title: 'Success', description: 'Expense added successfully!' });
+        toastSuccess({ title: 'Success', description: 'Expense added successfully!' });
       }
       reset();
       onClose();
     } catch (error) {
       console.error('Error saving expense:', error);
-      toast({ title: 'Error', description: 'Failed to save expense', variant: 'destructive' });
+      toastError({ title: 'Error', description: 'Failed to save expense' });
     } finally {
       setIsSubmitting(false);
     }

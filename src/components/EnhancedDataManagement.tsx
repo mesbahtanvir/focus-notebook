@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { toastError, toastInfo, toastSuccess } from '@/lib/toast-presets';
 import { Download, Upload, Database, Trash2, AlertTriangle } from 'lucide-react';
 import { useImportExport } from '@/hooks/useImportExport';
 import { ImportPreviewModal } from '@/components/import-export/ImportPreviewModal';
@@ -16,7 +16,6 @@ interface EnhancedDataManagementProps {
 }
 
 export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagementProps) {
-  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -68,10 +67,9 @@ export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagement
     if (!file) return;
 
     if (!file.type.includes('json') && !file.name.endsWith('.json')) {
-      toast({
+      toastError({
         title: 'Invalid File Type',
         description: 'Please select a JSON file.',
-        variant: 'destructive',
       });
       return;
     }
@@ -82,10 +80,9 @@ export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagement
       // Show preview modal
       setShowImportPreview(true);
     } catch (error) {
-      toast({
+      toastError({
         title: 'Failed to Parse File',
         description: error instanceof Error ? error.message : 'Could not read the file.',
-        variant: 'destructive',
       });
     }
 
@@ -109,20 +106,19 @@ export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagement
       const result = await executeImport(parsedData, selection, options);
 
       if (result.success) {
-        toast({
+        toastSuccess({
           title: 'Import Successful',
           description: `Successfully imported ${result.totalImported} items.`,
         });
       } else if (result.cancelled) {
-        toast({
+        toastInfo({
           title: 'Import Cancelled',
           description: 'Import was cancelled by user.',
         });
       } else {
-        toast({
+        toastError({
           title: 'Import Completed with Errors',
           description: `Imported ${result.totalImported} items with ${result.errors.length} errors.`,
-          variant: 'destructive',
         });
       }
 
@@ -130,10 +126,9 @@ export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagement
         onDataChanged?.();
       }
     } catch (error) {
-      toast({
+      toastError({
         title: 'Import Failed',
         description: error instanceof Error ? error.message : 'An error occurred during import.',
-        variant: 'destructive',
       });
     }
   };
@@ -143,15 +138,14 @@ export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagement
     try {
       await exportData(filters);
       setShowExportOptions(false);
-      toast({
+      toastSuccess({
         title: 'Export Successful',
         description: 'Your data has been exported successfully.',
       });
     } catch (error) {
-      toast({
+      toastError({
         title: 'Export Failed',
         description: error instanceof Error ? error.message : 'Failed to export data.',
-        variant: 'destructive',
       });
     }
   };
@@ -160,15 +154,14 @@ export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagement
   const handleQuickExportAll = async () => {
     try {
       await exportAll();
-      toast({
+      toastSuccess({
         title: 'Export Successful',
         description: 'All your data has been exported successfully.',
       });
     } catch (error) {
-      toast({
+      toastError({
         title: 'Export Failed',
         description: error instanceof Error ? error.message : 'Failed to export data.',
-        variant: 'destructive',
       });
     }
   };
@@ -177,17 +170,16 @@ export function EnhancedDataManagement({ onDataChanged }: EnhancedDataManagement
     try {
       setIsDeleting(true);
       await deleteAllUserData();
-      toast({
+      toastSuccess({
         title: 'All Data Deleted',
         description: 'Your workspace has been cleared. You can restore from a backup at any time.',
       });
       setShowDeleteConfirm(false);
       onDataChanged?.();
     } catch (error) {
-      toast({
+      toastError({
         title: 'Delete Failed',
         description: error instanceof Error ? error.message : 'Failed to delete data. Please try again.',
-        variant: 'destructive',
       });
     } finally {
       setIsDeleting(false);

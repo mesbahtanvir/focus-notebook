@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
+import { toastWarning } from '@/lib/toast-presets';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTasks } from '@/store/useTasks';
 import { useGoals } from '@/store/useGoals';
@@ -49,7 +49,6 @@ const ENTITLEMENT_MESSAGES: Record<string, string> = {
 
 export default function SettingsPage() {
   const { user } = useAuth();
-  const { toast } = useToast();
 
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [allowBackgroundProcessing, setAllowBackgroundProcessing] = useState(false);
@@ -128,7 +127,7 @@ export default function SettingsPage() {
 
   const handleBackgroundToggle = (checked: boolean) => {
     if (!hasProAccess) {
-      toast({
+      toastWarning({
         title: 'Focus Notebook Pro required',
         description: 'Upgrade to Pro to unlock automatic background processing.',
       });
