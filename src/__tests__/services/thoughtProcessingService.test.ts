@@ -262,6 +262,50 @@ describe('ThoughtProcessingService', () => {
 
       expect(addMood).toHaveBeenCalledWith({
         value: 7,
+        note: 'Feeling good',
+      });
+    });
+
+    it('should create calendar event for createCalendarEvent action', async () => {
+      const addEvent = jest.fn();
+      (useCalendar as any).getState = jest.fn(() => ({
+        addEvent,
+      }));
+
+      const actions = [
+        {
+          type: 'createCalendarEvent',
+          data: {
+            title: 'Doctor visit',
+            date: '2025-02-15',
+            time: '14:00',
+            location: 'Clinic',
+            category: 'Health',
+          },
+          reasoning: 'Clear appointment',
+          confidence: 99,
+        },
+      ];
+
+      await ThoughtProcessingService.executeActions('thought-1', actions);
+
+      expect(addEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Doctor visit',
+          date: '2025-02-15',
+          time: '14:00',
+          location: 'Clinic',
+          category: 'Health',
+          thoughtId: 'thought-1',
+        })
+      );
+    });
+
+    it('should add tags to thought for addTag action', async () => {
+      const updateThought = jest.fn();
+      (useThoughts as any).getState = jest.fn(() => ({
+        thoughts: [{ ...mockThought, tags: [] }],
+        updateThought,
       }));
 
       const actions = [

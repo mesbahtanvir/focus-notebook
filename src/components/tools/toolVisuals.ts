@@ -3,6 +3,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
+  Calendar,
   BarChart3,
   Brain,
   CheckSquare,
@@ -40,6 +41,7 @@ export const toolVisuals: Record<ToolName, ToolVisual> = {
   focus: { icon: Zap, gradient: "from-indigo-500 to-purple-500", label: "Focus" },
   brainstorming: { icon: Lightbulb, gradient: "from-yellow-500 to-orange-500", label: "Brainstorming" },
   notes: { icon: StickyNote, gradient: "from-teal-500 to-green-500", label: "Notes" },
+  calendar: { icon: Calendar, gradient: "from-blue-500 to-indigo-500", label: "Calendar" },
   relationships: { icon: Users, gradient: "from-pink-500 to-rose-500", label: "People" },
   moodtracker: { icon: Smile, gradient: "from-amber-500 to-yellow-500", label: "Mood" },
   cbt: { icon: Heart, gradient: "from-red-500 to-pink-500", label: "CBT" },
