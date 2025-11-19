@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,10 +14,14 @@ import { useMoods } from '@/store/useMoods';
 import { useFocus } from '@/store/useFocus';
 import { EnhancedDataManagement } from '@/components/EnhancedDataManagement';
 import { DataDiagnostics } from '@/components/DataDiagnostics';
-import { ArrowLeft, Database, ShieldCheck, Zap } from 'lucide-react';
+import { ArrowLeft, Database, ShieldCheck, Zap, Trash2, Loader2 } from 'lucide-react';
+import { usePhotoFeedback } from '@/store/usePhotoFeedback';
+import { toastError, toastSuccess } from '@/lib/toast-presets';
 
 export default function DataManagementPage() {
   const { user } = useAuth();
+  const { loadLibrary, library, libraryLoading, deleteAllLibraryPhotos } = usePhotoFeedback();
+  const [isClearingGallery, setIsClearingGallery] = useState(false);
 
   const tasksSubscribe = useTasks((s) => s.subscribe);
   const goalsSubscribe = useGoals((s) => s.subscribe);
@@ -25,6 +29,11 @@ export default function DataManagementPage() {
   const thoughtsSubscribe = useThoughts((s) => s.subscribe);
   const moodsSubscribe = useMoods((s) => s.subscribe);
   const focusSubscribe = useFocus((s) => s.subscribe);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    void loadLibrary();
+  }, [user?.uid, loadLibrary]);
 
   const refreshAllStores = () => {
     if (!user?.uid) {
@@ -36,6 +45,37 @@ export default function DataManagementPage() {
     thoughtsSubscribe(user.uid);
     moodsSubscribe(user.uid);
     focusSubscribe(user.uid);
+  };
+
+  const handleDeleteAllPhotos = async () => {
+    if (!user?.uid) {
+      toastError({
+        title: 'Sign in required',
+        description: 'You need to be signed in to manage your dating photo gallery.',
+      });
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Delete every dating photo and its stored file? This removes them from Firebase Storage and Firestore forever.'
+    );
+    if (!confirmed) return;
+
+    setIsClearingGallery(true);
+    try {
+      await deleteAllLibraryPhotos();
+      toastSuccess({
+        title: 'Gallery cleared',
+        description: 'All dating photos have been removed from your account.',
+      });
+    } catch (error) {
+      toastError({
+        title: 'Could not delete photos',
+        description: error instanceof Error ? error.message : 'Please try again.',
+      });
+    } finally {
+      setIsClearingGallery(false);
+    }
   };
 
   return (
@@ -146,6 +186,49 @@ export default function DataManagementPage() {
 
       {/* Enhanced Data Management Component */}
       <EnhancedDataManagement onDataChanged={refreshAllStores} />
+
+      {/* Photo Feedback Cleanup */}
+      <Card className="border-2 border-red-200 dark:border-red-800 bg-white dark:bg-gray-900/60">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl font-semibold text-red-700 dark:text-red-300">
+            Dating Photo Gallery
+          </CardTitle>
+          <CardDescription className="text-sm text-red-700/80 dark:text-red-200/80">
+            Remove the entire gallery, including Storage files and library stats. This action cannot be undone.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <span>
+              {libraryLoading ? 'Checking your gallery…' : `${library.length} photo${library.length === 1 ? '' : 's'} currently stored.`}
+            </span>
+            <Badge variant="outline" className="border-red-200 text-red-700 dark:border-red-700 dark:text-red-200">
+              Destructive action
+            </Badge>
+          </div>
+          <Button
+            onClick={handleDeleteAllPhotos}
+            disabled={libraryLoading || isClearingGallery || library.length === 0}
+            className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white gap-2"
+          >
+            {isClearingGallery ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Deleting all photos…
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4" />
+                Delete all dating photos
+              </>
+            )}
+          </Button>
+          <p className="text-xs text-gray-600 dark:text-gray-400">
+            Tip: export your data first if you might need these photos later. Deleting the gallery also removes their stats inside
+            the Photo Feedback tool.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

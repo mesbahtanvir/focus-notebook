@@ -778,7 +778,8 @@ import { TaskCard } from './TaskCard';
 2. **Never mutate stores directly**: Use store actions
 3. **Use entity service**: For entity creation with relationships
 4. **Subscribe in useEffect**: Real-time subscriptions in effects
-5. **Unsubscribe properly**: Return cleanup function from useEffect
+5. **No undefined writes**: Sanitize payloads so Firestore/Storage never receives `undefined` fields (trim strings, omit optional fields when empty)
+6. **Unsubscribe properly**: Return cleanup function from useEffect
 
 ### Testing Requirements
 

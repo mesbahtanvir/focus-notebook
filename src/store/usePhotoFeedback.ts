@@ -69,6 +69,7 @@ type State = {
   uploadToLibrary: (photos: File[], onProgress?: (uploaded: number, total: number) => void) => Promise<PhotoLibraryItem[]>;
   loadLibrary: () => Promise<PhotoLibraryItem[]>;
   deleteLibraryPhoto: (photoId: string) => Promise<void>;
+  deleteAllLibraryPhotos: () => Promise<void>;
   loadSession: (sessionId: string) => Promise<PhotoSession | null>;
   submitVote: (sessionId: string, photoId: string, vote: 'yes' | 'no', voterId: string, comment?: string) => Promise<void>;
   loadResults: (sessionId: string, secretKey: string) => Promise<VoteResults[]>;
@@ -268,6 +269,37 @@ export const usePhotoFeedback = create<State>((set, get) => ({
       }));
     } catch (error) {
       console.error('Failed to delete gallery photo:', error);
+      throw error;
+    }
+  },
+
+  deleteAllLibraryPhotos: async () => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) {
+      throw new Error('You must be signed in to delete gallery photos.');
+    }
+
+    set({ libraryLoading: true, error: null });
+
+    try {
+      const libraryRef = collection(db, `users/${user.uid}/photoLibrary`);
+      const snaps = await getDocs(libraryRef);
+      const photos = snaps.docs.map(item => item.data() as PhotoLibraryItem);
+
+      for (const photo of photos) {
+        try {
+          const storageRef = ref(storage, photo.storagePath);
+          await deleteObject(storageRef);
+        } catch (fileError) {
+          console.warn('Unable to delete photo file (continuing):', fileError);
+        }
+        await deleteDoc(doc(db, `users/${user.uid}/photoLibrary`, photo.id));
+      }
+
+      set({ library: [], libraryLoading: false });
+    } catch (error) {
+      console.error('Failed to delete gallery', error);
+      set({ libraryLoading: false });
       throw error;
     }
   },

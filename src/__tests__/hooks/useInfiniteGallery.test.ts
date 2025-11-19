@@ -1,5 +1,14 @@
 import { renderHook } from "@testing-library/react";
 import { useInfiniteGallery } from "@/hooks/useInfiniteGallery";
+import { PhotoLibraryItem } from "@/store/usePhotoFeedback";
+
+const buildPhoto = (id: string): PhotoLibraryItem => ({
+  id,
+  ownerId: "test-user",
+  url: `https://example.com/${id}.jpg`,
+  storagePath: `users/test-user/photo-library/${id}`,
+  createdAt: new Date().toISOString(),
+});
 
 function createContainer() {
   const div = document.createElement("div");
@@ -22,7 +31,7 @@ describe("useInfiniteGallery", () => {
 
     renderHook(() =>
       useInfiniteGallery({
-        items: Array.from({ length: 20 }, (_, i) => ({ id: `photo-${i}` })),
+        items: Array.from({ length: 20 }, (_, i) => buildPhoto(`photo-${i}`)),
         pageSize: 8,
         currentPage: 0,
         setCurrentPage,
@@ -44,7 +53,7 @@ describe("useInfiniteGallery", () => {
 
     renderHook(() =>
       useInfiniteGallery({
-        items: Array.from({ length: 10 }, (_, i) => ({ id: `photo-${i}` })),
+        items: Array.from({ length: 10 }, (_, i) => buildPhoto(`photo-${i}`)),
         pageSize: 8,
         currentPage: 1,
         setCurrentPage,
