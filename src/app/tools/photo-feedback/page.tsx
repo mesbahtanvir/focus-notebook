@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { usePhotoFeedback } from "@/store/usePhotoFeedback";
 import type { PhotoLibraryItem } from "@/store/usePhotoFeedback";
@@ -11,9 +11,9 @@ import Link from "next/link";
 import NextImage from "next/image";
 import { toastError, toastSuccess, toastWarning } from "@/lib/toast-presets";
 import { Button } from "@/components/ui/button";
-import { pickRandomPhotoIds, paginateItems } from "@/lib/photoGallery";
-import { useRef } from "react";
+import { pickRandomPhotoIds } from "@/lib/photoGallery";
 import { useInfiniteGallery } from "@/hooks/useInfiniteGallery";
+import { PhotoLeaderboard } from "@/components/photo-feedback/PhotoLeaderboard";
 
 const PHOTOS_PER_PAGE = 8;
 const MAX_IMAGE_DIMENSION = 1024;
@@ -98,9 +98,9 @@ export default function PhotoFeedbackPage() {
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
   const [uploadStatus, setUploadStatus] = useState<{ current: number; total: number } | null>(null);
   const [galleryPage, setGalleryPage] = useState(0);
-  const galleryRef = useRef<HTMLDivElement>(null);
   const [photoPendingDelete, setPhotoPendingDelete] = useState<PhotoLibraryItem | null>(null);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
+  const galleryContainerRef = useRef<HTMLDivElement>(null);
 
   const canCreateSession = !!user && !isAnonymous;
 
@@ -138,17 +138,17 @@ export default function PhotoFeedbackPage() {
     });
   };
 
-  const { slice: paginatedPhotos, totalPages, currentPage: visiblePage } = paginateItems(
-    library,
-    galleryPage,
-    PHOTOS_PER_PAGE
-  );
+  const totalPages = Math.max(1, Math.ceil(Math.max(library.length, 1) / PHOTOS_PER_PAGE));
+  const visiblePhotos = library.slice(0, Math.min(library.length, (galleryPage + 1) * PHOTOS_PER_PAGE));
+  const hasMorePhotos = visiblePhotos.length < library.length;
+  const hasLeaderboardData = library.some(item => (item.stats?.totalVotes ?? 0) > 0);
+
   useInfiniteGallery({
     items: library,
     pageSize: PHOTOS_PER_PAGE,
     currentPage: galleryPage,
     setCurrentPage: setGalleryPage,
-    containerRef: galleryRef,
+    containerRef: galleryContainerRef,
   });
 
   const handleDeletePhoto = async (photoId: string) => {
@@ -321,120 +321,123 @@ export default function PhotoFeedbackPage() {
               </div>
             ) : (
               <>
-                <div ref={galleryRef} className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-[520px] overflow-auto pr-1">
-                  {paginatedPhotos.map(item => {
-                    const selected = selectedPhotoIds.includes(item.id);
-                    return (
-                    <div
-                      key={item.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => togglePhotoSelection(item.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          togglePhotoSelection(item.id);
-                        }
-                      }}
-                      className={`rounded-lg border overflow-hidden text-left transition-all relative group cursor-pointer ${selected
-                        ? "border-pink-500 ring-2 ring-pink-300 dark:ring-pink-500/50"
-                        : "border-gray-200 dark:border-gray-700 hover:border-pink-300 dark:hover:border-pink-500/40"
-                        }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPhotoPendingDelete(item);
-                        }}
-                        className="absolute top-2 left-2 z-10 inline-flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 w-7 h-7 transition"
-                        aria-label="Remove photo from gallery"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                        <div className="relative aspect-square bg-gray-100 dark:bg-gray-900">
-                        <NextImage
-                          src={item.url}
-                          alt="Gallery photo"
-                          fill
-                          sizes="(max-width: 768px) 25vw, 150px"
-                          className="object-cover"
-                          />
-                          <div className="absolute inset-0 pointer-events-none flex items-end justify-center pb-2">
-                            {!selected && (
-                              <span className="text-[11px] font-semibold text-white/0 group-hover:text-white bg-black/0 group-hover:bg-black/40 px-2 py-1 rounded-full transition-all">
-                                Tap to select
+                <div
+                  ref={galleryContainerRef}
+                  className="max-h-[520px] overflow-y-auto pr-1 md:max-h-[640px] lg:max-h-[720px]"
+                >
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {visiblePhotos.map(item => {
+                      const selected = selectedPhotoIds.includes(item.id);
+                      return (
+                        <div
+                          key={item.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => togglePhotoSelection(item.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              togglePhotoSelection(item.id);
+                            }
+                          }}
+                          className={`rounded-lg border overflow-hidden text-left transition-all relative group cursor-pointer ${selected
+                            ? "border-pink-500 ring-2 ring-pink-300 dark:ring-pink-500/50"
+                            : "border-gray-200 dark:border-gray-700 hover:border-pink-300 dark:hover:border-pink-500/40"
+                            }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPhotoPendingDelete(item);
+                            }}
+                            className="absolute top-2 left-2 z-10 inline-flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 w-7 h-7 transition"
+                            aria-label="Remove photo from gallery"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <div className="relative aspect-square bg-gray-100 dark:bg-gray-900">
+                            <NextImage
+                              src={item.url}
+                              alt="Gallery photo"
+                              fill
+                              sizes="(max-width: 768px) 25vw, 150px"
+                              className="object-cover"
+                            />
+                            <div className="absolute inset-0 pointer-events-none flex items-end justify-center pb-2">
+                              {!selected && (
+                                <span className="text-[11px] font-semibold text-white/0 group-hover:text-white bg-black/0 group-hover:bg-black/40 px-2 py-1 rounded-full transition-all">
+                                  Tap to select
+                                </span>
+                              )}
+                            </div>
+                            {selected && (
+                              <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-pink-500 text-white text-xs font-semibold px-2 py-1">
+                                <CheckCircle className="w-3 h-3" />
+                                Selected
                               </span>
                             )}
                           </div>
-                          {selected && (
-                            <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-pink-500 text-white text-xs font-semibold px-2 py-1">
-                              <CheckCircle className="w-3 h-3" />
-                              Selected
-                            </span>
-                          )}
+                          <div className="p-3 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                            <p>Uploaded {new Date(item.createdAt).toLocaleDateString()}</p>
+                            {item.stats && (
+                              <p className="text-gray-700 dark:text-gray-300">
+                                👍 {item.stats.yesVotes} / {item.stats.totalVotes} votes
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div className="p-3 text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                          <p>Uploaded {new Date(item.createdAt).toLocaleDateString()}</p>
-                          {item.stats && (
-                            <p className="text-gray-700 dark:text-gray-300">
-                              👍 {item.stats.yesVotes} / {item.stats.totalVotes} votes
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
 
-                  <label
-                    htmlFor="gallery-upload"
-                    className="flex flex-col items-center justify-center border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-lg cursor-pointer bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all"
-                  >
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
-                      <Upload className="w-8 h-8 text-purple-500 mb-2" />
-                      <p className="text-sm text-gray-700 dark:text-gray-300 font-semibold">
-                        Add more photos
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG, GIF up to 10MB each</p>
-                    </div>
-                    <input
-                      id="gallery-upload"
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      multiple
-                      onChange={handleGalleryUpload}
-                      disabled={libraryLoading}
-                    />
-                  </label>
+                    <label
+                      htmlFor="gallery-upload"
+                      className="flex flex-col items-center justify-center border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-lg cursor-pointer bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all"
+                    >
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
+                        <Upload className="w-8 h-8 text-purple-500 mb-2" />
+                        <p className="text-sm text-gray-700 dark:text-gray-300 font-semibold">
+                          Add more photos
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG, GIF up to 10MB each</p>
+                      </div>
+                      <input
+                        id="gallery-upload"
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        multiple
+                        onChange={handleGalleryUpload}
+                        disabled={libraryLoading}
+                      />
+                    </label>
+                  </div>
                 </div>
 
-                {totalPages > 1 && (
+                {library.length > PHOTOS_PER_PAGE && (
                   <div className="flex items-center justify-between mt-4 text-sm text-gray-700 dark:text-gray-300">
-                    <span>Page {visiblePage + 1} of {totalPages}</span>
-                    <div className="flex gap-2">
+                    <span>
+                      Showing {visiblePhotos.length} of {library.length} photos
+                    </span>
+                    {hasMorePhotos && (
                       <button
                         type="button"
-                        onClick={() => setGalleryPage(Math.max(0, visiblePage - 1))}
-                        disabled={visiblePage === 0}
-                        className="px-3 py-1 rounded-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 disabled:opacity-40"
+                        onClick={() => setGalleryPage(Math.min(totalPages - 1, galleryPage + 1))}
+                        className="px-3 py-1 rounded-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
                       >
-                        Previous
+                        Load more
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setGalleryPage(Math.min(totalPages - 1, visiblePage + 1))}
-                        disabled={visiblePage >= totalPages - 1}
-                        className="px-3 py-1 rounded-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 disabled:opacity-40"
-                      >
-                        Next
-                      </button>
-                    </div>
+                    )}
                   </div>
                 )}
               </>
             )}
           </Card>
+        )}
+        {canCreateSession && hasLeaderboardData && (
+          <div className="mt-8">
+            <PhotoLeaderboard photos={library} />
+          </div>
         )}
         <Card className="p-6 bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-800">
           <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">Ready to share</h2>

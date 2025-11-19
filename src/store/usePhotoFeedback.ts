@@ -42,6 +42,7 @@ export interface PhotoStats {
   yesVotes: number;
   totalVotes: number;
   sessionCount: number;
+  lastVotedAt?: string;
 }
 
 export interface PhotoLibraryItem {
@@ -238,7 +239,30 @@ export const usePhotoFeedback = create<State>((set, get) => ({
     try {
       const libraryRef = collection(db, `users/${user.uid}/photoLibrary`);
       const snaps = await getDocs(query(libraryRef, orderBy('createdAt', 'desc')));
-      const items = snaps.docs.map(doc => doc.data() as PhotoLibraryItem);
+      const items = snaps.docs.map(doc => {
+        const data = doc.data() as PhotoLibraryItem & {
+          totalVotes?: number;
+          yesVotes?: number;
+          sessionCount?: number;
+          lastVotedAt?: Timestamp | string;
+        };
+        const rawStats = (data.stats || {}) as PhotoStats & { lastVotedAt?: Timestamp | string };
+        const stats: PhotoStats = {
+          yesVotes: rawStats.yesVotes ?? data.yesVotes ?? 0,
+          totalVotes: rawStats.totalVotes ?? data.totalVotes ?? 0,
+          sessionCount: rawStats.sessionCount ?? data.sessionCount ?? 0,
+        };
+        const lastVoteSource = rawStats.lastVotedAt ?? data.lastVotedAt;
+        if (lastVoteSource) {
+          stats.lastVotedAt =
+            lastVoteSource instanceof Timestamp
+              ? lastVoteSource.toDate().toISOString()
+              : typeof lastVoteSource === 'string'
+                ? lastVoteSource
+                : undefined;
+        }
+        return { ...data, stats };
+      });
       set({ library: items, libraryLoading: false });
       return items;
     } catch (error) {
@@ -487,14 +511,14 @@ async function updateLibraryStats(ownerId: string, libraryId: string, vote: 'yes
     const sessionIds = (data as any).sessionIds || [];
     const alreadyCounted = sessionIds.includes(sessionId);
 
-    const updates: any = {
-      totalVotes: increment(1),
-      yesVotes: vote === 'yes' ? increment(1) : increment(0),
-      lastVotedAt: Timestamp.fromDate(new Date()),
+    const updates: Record<string, any> = {
+      "stats.totalVotes": increment(1),
+      "stats.yesVotes": vote === 'yes' ? increment(1) : increment(0),
+      "stats.lastVotedAt": Timestamp.fromDate(new Date()),
     };
 
     if (!alreadyCounted) {
-      updates.sessionCount = increment(1);
+      updates["stats.sessionCount"] = increment(1);
       updates.sessionIds = arrayUnion(sessionId);
     }
 
