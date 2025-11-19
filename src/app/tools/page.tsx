@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart, DollarSign, MapPin, Calendar as CalendarIcon } from "lucide-react";
+import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart, DollarSign, MapPin, Calendar as CalendarIcon, TrendingUp } from "lucide-react";
 
 const TOOLS = [
   {
@@ -117,7 +117,7 @@ const TOOLS = [
     priority: "low" as const,
   },
   {
-    key: "relationships",
+    key: "friends",
     title: "Relationships",
     description: "Reflect on your connections to prioritize aligned relationships and personal growth.",
     icon: Users,
@@ -161,6 +161,17 @@ const TOOLS = [
     priority: "high" as const,
   },
   {
+    key: "travel/visa-finder",
+    title: "Visa Destination Finder",
+    description: "Discover where you can travel visa-free or with easy visa access based on nationality.",
+    icon: Plane,
+    emoji: "🌍",
+    gradient: "from-teal-400 to-cyan-500",
+    bgGradient: "from-teal-50 to-cyan-50",
+    borderColor: "border-teal-300",
+    priority: "medium" as const,
+  },
+  {
     key: "subscriptions",
     title: "Subscriptions",
     description: "Track recurring expenses, renewals, and subscription services.",
@@ -183,7 +194,7 @@ const TOOLS = [
     priority: "low" as const,
   },
   {
-    key: "spending-unified",
+    key: "spending",
     title: "Spending Tracker",
     description: "Track expenses and analyze spending patterns with AI-powered insights.",
     icon: DollarSign,
@@ -235,6 +246,17 @@ const TOOLS = [
     gradient: "from-blue-400 to-purple-500",
     bgGradient: "from-blue-50 to-purple-50",
     borderColor: "border-blue-300",
+    priority: "medium" as const,
+  },
+  {
+    key: "body-progress",
+    title: "Body Progress Tracker",
+    description: "Track body composition changes with Dexa scan analysis and visualize progress over time.",
+    icon: TrendingUp,
+    emoji: "💪",
+    gradient: "from-orange-400 to-red-500",
+    bgGradient: "from-orange-50 to-red-50",
+    borderColor: "border-orange-300",
     priority: "medium" as const,
   },
 ];
