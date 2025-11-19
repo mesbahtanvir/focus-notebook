@@ -262,7 +262,7 @@ const TOOLS = [
   {
     key: "photo-feedback",
     title: "Dating Photo Feedback",
-    description: "Get honest feedback from friends on which photos to use for your dating profile. No login required!",
+    description: "Sign in to create a voting link, then share so friends can rate your dating photos.",
     icon: Heart,
     emoji: "💕",
     gradient: "from-pink-400 to-purple-500",

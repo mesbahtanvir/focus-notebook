@@ -60,13 +60,13 @@ service cloud.firestore {
       allow write: if false; // Only cloud functions can write
     }
 
-    // Photo Feedback Sessions - Anonymous access allowed
+    // Photo Feedback Sessions - Creation requires authentication, voting is open
     match /photoSessions/{sessionId} {
       // Anyone can read sessions (for voting)
       allow read: if true;
 
-      // Anyone can create sessions (no login required)
-      allow create: if true;
+      // Only authenticated users can create sessions and must set themselves as owner
+      allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;
 
       // No updates or deletes allowed (sessions are immutable)
       allow update, delete: if false;

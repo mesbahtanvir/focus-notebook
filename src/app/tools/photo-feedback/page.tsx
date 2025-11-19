@@ -3,16 +3,22 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePhotoFeedback } from "@/store/usePhotoFeedback";
-import { Upload, Image as ImageIcon, X, ArrowRight, Heart, Loader2 } from "lucide-react";
+import { Upload, X, ArrowRight, Heart, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import Link from "next/link";
+import Image from "next/image";
 
 export default function PhotoFeedbackPage() {
   const router = useRouter();
   const { createSession, isLoading } = usePhotoFeedback();
+  const { user, isAnonymous, loading: authLoading } = useAuth();
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [creatorName, setCreatorName] = useState("");
   const [previews, setPreviews] = useState<string[]>([]);
+
+  const canCreateSession = !!user && !isAnonymous;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -43,6 +49,11 @@ export default function PhotoFeedbackPage() {
   };
 
   const handleCreateSession = async () => {
+    if (!canCreateSession) {
+      alert('Please sign in to create a feedback session.');
+      return;
+    }
+
     if (selectedFiles.length === 0) {
       alert('Please select at least one photo');
       return;
@@ -117,6 +128,20 @@ export default function PhotoFeedbackPage() {
         <Card className="p-6 bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-800">
           <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">Upload Your Photos</h2>
 
+          {!authLoading && !canCreateSession && (
+            <Card className="p-4 mb-6 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700">
+              <p className="text-sm text-purple-800 dark:text-purple-100 mb-2">
+                You need to be signed in to create a feedback link. Voting stays open to anyone with the link.
+              </p>
+              <Link
+                href="/login"
+                className="inline-block text-sm font-semibold text-purple-700 dark:text-purple-200 hover:underline"
+              >
+                Go to login
+              </Link>
+            </Card>
+          )}
+
           {/* Optional Name */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -170,9 +195,11 @@ export default function PhotoFeedbackPage() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {previews.map((preview, index) => (
                   <div key={index} className="relative group">
-                    <img
+                    <Image
                       src={preview}
                       alt={`Preview ${index + 1}`}
+                      width={320}
+                      height={200}
                       className="w-full h-32 object-cover rounded-lg border-2 border-gray-200 dark:border-gray-700"
                     />
                     <button
@@ -192,7 +219,7 @@ export default function PhotoFeedbackPage() {
           <div className="mt-8">
             <button
               onClick={handleCreateSession}
-              disabled={selectedFiles.length === 0 || isLoading}
+              disabled={!canCreateSession || selectedFiles.length === 0 || isLoading}
               className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white py-4 px-6 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
@@ -207,12 +234,17 @@ export default function PhotoFeedbackPage() {
                 </>
               )}
             </button>
+            {!canCreateSession && (
+              <p className="mt-2 text-sm text-center text-gray-600 dark:text-gray-400">
+                Sign in to create a session, then share the link so friends can vote without logging in.
+              </p>
+            )}
           </div>
         </Card>
 
         {/* Privacy Notice */}
         <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>🔒 No login required • Links expire in 3 days • Photos are stored securely</p>
+          <p>🔒 Sign-in required to create • Voters don&apos;t need accounts • Links expire in 3 days</p>
         </div>
       </div>
     </div>

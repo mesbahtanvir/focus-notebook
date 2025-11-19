@@ -163,7 +163,7 @@ export default function ProjectDetailPage() {
       estimatedHours,
       remainingMinutes,
     };
-  }, [linkedTasks, project]);
+  }, [linkedTasks]);
 
   const handleToggleTaskComplete = async (taskId: string, done: boolean) => {
     await updateTask(taskId, { done: !done });

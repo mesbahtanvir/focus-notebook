@@ -6,6 +6,7 @@ import { usePhotoFeedback } from "@/store/usePhotoFeedback";
 import { Trophy, TrendingUp, ThumbsUp, ThumbsDown, Users, Loader2, Share2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
+import Image from "next/image";
 
 function ResultsPageContent() {
   const params = useParams();
@@ -19,7 +20,7 @@ function ResultsPageContent() {
     if (sessionId && secretKey) {
       loadResults(sessionId, secretKey);
     }
-  }, [sessionId, secretKey]);
+  }, [sessionId, secretKey, loadResults]);
 
   if (!secretKey) {
     return (
@@ -148,11 +149,14 @@ function ResultsPageContent() {
                 <div className="flex flex-col md:flex-row gap-6">
                   {/* Photo */}
                   <div className="flex-shrink-0">
-                    <div className="relative">
-                      <img
+                    <div className="relative w-full md:w-48 h-64">
+                      <Image
                         src={result.photoUrl}
                         alt={`Photo ${index + 1}`}
-                        className="w-full md:w-48 h-64 object-cover rounded-lg"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 192px"
+                        className="object-cover rounded-lg"
+                        priority={index === 0}
                       />
                       {index === 0 && (
                         <div className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 rounded-full p-2">

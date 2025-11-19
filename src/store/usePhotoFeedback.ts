@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { collection, doc, query, where, getDocs, setDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@/lib/firebaseClient';
+import { auth, db, storage } from '@/lib/firebaseClient';
 
 export interface PhotoSession {
   id: string;
+  ownerId: string;
   creatorName?: string; // Optional
   photos: {
     id: string;
@@ -67,6 +68,11 @@ export const usePhotoFeedback = create<State>((set, get) => ({
   error: null,
 
   createSession: async (photos: File[], creatorName?: string) => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) {
+      throw new Error('You must be signed in to create a photo feedback session.');
+    }
+
     set({ isLoading: true, error: null });
 
     try {
@@ -96,6 +102,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
       // Create session document
       const session: PhotoSession = {
         id: sessionId,
+        ownerId: user.uid,
         creatorName,
         photos: uploadedPhotos,
         secretKey,

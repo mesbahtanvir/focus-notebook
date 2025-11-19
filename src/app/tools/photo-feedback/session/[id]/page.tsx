@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { usePhotoFeedback, getOrCreateVoterId } from "@/store/usePhotoFeedback";
+import Image from "next/image";
 import { Heart, X, ChevronLeft, ChevronRight, Loader2, CheckCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
@@ -22,7 +23,7 @@ export default function SessionVotingPage() {
       loadSession(sessionId);
       setVoterId(getOrCreateVoterId());
     }
-  }, [sessionId]);
+  }, [sessionId, loadSession]);
 
   const handleVote = async (vote: 'yes' | 'no') => {
     if (!currentSession || isVoting) return;
@@ -156,10 +157,13 @@ export default function SessionVotingPage() {
         {/* Photo Card */}
         <Card className="relative overflow-hidden bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-800 mb-6">
           <div className="relative aspect-[3/4] bg-gray-100 dark:bg-gray-900">
-            <img
+            <Image
               src={currentPhoto.url}
               alt={`Photo ${currentPhotoIndex + 1}`}
-              className="w-full h-full object-contain"
+              fill
+              sizes="(max-width: 768px) 100vw, 640px"
+              className="object-contain"
+              priority={currentPhotoIndex === 0}
             />
 
             {/* Vote Status Overlay */}

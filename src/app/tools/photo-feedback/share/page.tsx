@@ -78,7 +78,7 @@ function SharePageContent() {
             </h2>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-            Your friends can vote on your photos using this link. No login required!
+            Your friends can vote on your photos using this link. No login required for them!
           </p>
           <div className="flex gap-2">
             <input
