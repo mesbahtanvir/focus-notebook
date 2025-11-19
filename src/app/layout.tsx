@@ -6,6 +6,7 @@ import Layout from '@/components/Layout'
 import { FirestoreSubscriber } from '@/components/FirestoreSubscriber'
 import { initializeContainer } from '@/di/setup'
 import { initializeFirebaseResilience } from '@/lib/firebase/initialize-resilience'
+import { Toaster } from '@/components/ui/toaster'
 
 // Initialize dependency injection container
 if (typeof window !== 'undefined') {
@@ -46,6 +47,7 @@ export default function RootLayout({
             <Layout>
               {children}
             </Layout>
+            <Toaster />
           </AuthProvider>
         </DIProvider>
       </body>

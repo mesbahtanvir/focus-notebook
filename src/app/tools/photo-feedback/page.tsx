@@ -8,14 +8,15 @@ import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import Image from "next/image";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PhotoFeedbackPage() {
   const router = useRouter();
   const { createSession, isLoading } = usePhotoFeedback();
   const { user, isAnonymous, loading: authLoading } = useAuth();
+  const { toast } = useToast();
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [creatorName, setCreatorName] = useState("");
   const [previews, setPreviews] = useState<string[]>([]);
 
   const canCreateSession = !!user && !isAnonymous;
@@ -27,7 +28,11 @@ export default function PhotoFeedbackPage() {
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
 
     if (imageFiles.length + selectedFiles.length > 10) {
-      alert('Maximum 10 photos allowed');
+      toast({
+        title: "Too many photos",
+        description: "You can upload up to 10 photos for a feedback session.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -50,25 +55,45 @@ export default function PhotoFeedbackPage() {
 
   const handleCreateSession = async () => {
     if (!canCreateSession) {
-      alert('Please sign in to create a feedback session.');
+      toast({
+        title: "Sign in required",
+        description: "Sign in to create a feedback session. Friends can still vote without accounts.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (selectedFiles.length === 0) {
-      alert('Please select at least one photo');
+      toast({
+        title: "Add a photo",
+        description: "Upload at least one photo to start a feedback session.",
+        variant: "destructive",
+      });
       return;
     }
 
     try {
       const { sessionId, secretKey } = await createSession(
         selectedFiles,
-        creatorName.trim() || undefined
+        user?.displayName || undefined
       );
 
       // Navigate to share page with session info
       router.push(`/tools/photo-feedback/share?sessionId=${sessionId}&secretKey=${secretKey}`);
     } catch (error) {
-      alert('Failed to create session. Please try again.');
+      const code = (error as { code?: string })?.code;
+      const description =
+        code === 'storage/unauthenticated'
+          ? "Sign in again to upload your photos."
+          : code === 'storage/unauthorized'
+            ? "You don't have permission to upload these photos. Try signing in again."
+            : "Please try again in a moment.";
+
+      toast({
+        title: "Could not create session",
+        description,
+        variant: "destructive",
+      });
     }
   };
 
@@ -142,22 +167,12 @@ export default function PhotoFeedbackPage() {
             </Card>
           )}
 
-          {/* Optional Name */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Your Name (Optional)
-            </label>
-            <input
-              type="text"
-              value={creatorName}
-              onChange={(e) => setCreatorName(e.target.value)}
-              placeholder="e.g., Alex"
-              className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              This helps your friends know whose photos they&apos;re voting on
-            </p>
-          </div>
+          {/* Creator name info */}
+          {canCreateSession && user?.displayName && (
+            <div className="mb-6 rounded-lg border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 px-4 py-3 text-sm text-purple-800 dark:text-purple-100">
+              We&apos;ll show this as the session owner: <strong>{user.displayName}</strong>
+            </div>
+          )}
 
           {/* File Upload */}
           <div className="mb-6">
