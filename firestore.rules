@@ -60,6 +60,30 @@ service cloud.firestore {
       allow write: if false; // Only cloud functions can write
     }
 
+    // Photo Feedback Sessions - Anonymous access allowed
+    match /photoSessions/{sessionId} {
+      // Anyone can read sessions (for voting)
+      allow read: if true;
+
+      // Anyone can create sessions (no login required)
+      allow create: if true;
+
+      // No updates or deletes allowed (sessions are immutable)
+      allow update, delete: if false;
+
+      // Votes subcollection - anonymous voting allowed
+      match /votes/{voteId} {
+        // Anyone can read votes (for results)
+        allow read: if true;
+
+        // Anyone can create votes (for voting)
+        allow create: if true;
+
+        // No updates or deletes (votes are final)
+        allow update, delete: if false;
+      }
+    }
+
     // Deny all other access
     match /{document=**} {
       allow read, write: if false;

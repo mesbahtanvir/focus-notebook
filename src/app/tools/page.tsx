@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart, DollarSign, MapPin, Calendar as CalendarIcon, TrendingUp } from "lucide-react";
+import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart, DollarSign, MapPin, Calendar as CalendarIcon, TrendingUp, Heart } from "lucide-react";
 
 const TOOLS = [
   {
@@ -258,6 +258,17 @@ const TOOLS = [
     bgGradient: "from-orange-50 to-red-50",
     borderColor: "border-orange-300",
     priority: "medium" as const,
+  },
+  {
+    key: "photo-feedback",
+    title: "Dating Photo Feedback",
+    description: "Get honest feedback from friends on which photos to use for your dating profile. No login required!",
+    icon: Heart,
+    emoji: "💕",
+    gradient: "from-pink-400 to-purple-500",
+    bgGradient: "from-pink-50 to-purple-50",
+    borderColor: "border-pink-300",
+    priority: "low" as const,
   },
 ];
 
