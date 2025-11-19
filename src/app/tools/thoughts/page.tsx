@@ -163,7 +163,6 @@ function ThoughtsPageContent() {
     );
   }, [thoughts]);
 
-  const renderTag = (tag: string) => <span key={tag}>{tag}</span>;
 
 
   // Approval is no longer needed - actions are executed instantly
@@ -298,12 +297,14 @@ function ThoughtsPageContent() {
                           )}
                           
                           {thought.tags && Array.isArray(thought.tags) && thought.tags.filter((t) => t && t !== 'processed').length > 0 && (
-                            <span className="text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
-                              <Tag className="h-3 w-3" />
-                              <span className="flex flex-wrap gap-1">
-                                {thought.tags.filter((t) => t && t !== 'processed').map((t) => renderTag(t))}
-                              </span>
-                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {thought.tags.filter((t) => t && t !== 'processed').map((tag) => (
+                                <span key={tag} className="px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-medium flex items-center gap-1">
+                                  <Tag className="h-3 w-3" />
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
                           )}
                           
                           {thought.tags && Array.isArray(thought.tags) && thought.tags.includes('processed') && (

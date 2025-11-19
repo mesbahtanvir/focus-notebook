@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, MapPin, Tag, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, MapPin, Tag, Plus, ChevronDown, Download, Upload } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useCalendar } from "@/store/useCalendar";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
+import { useToast } from "@/hooks/use-toast";
 
 const CATEGORY_META = {
   Work: { pill: "from-blue-500 to-cyan-500", bg: "bg-blue-50 dark:bg-blue-900/20" },
@@ -47,6 +48,11 @@ function CalendarTool() {
   const events = useCalendar((state) => state.events);
   const addEvent = useCalendar((state) => state.addEvent);
   const getEventsForDate = useCalendar((state) => state.getEventsForDate);
+  const exportToICS = useCalendar((state) => state.exportToICS);
+  const importFromICS = useCalendar((state) => state.importFromICS);
+  const { toast } = useToast();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
@@ -57,6 +63,7 @@ function CalendarTool() {
   const [draft, setDraft] = useState<EventDraft>(() => makeDraft());
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
+  const [showMoreDetails, setShowMoreDetails] = useState(false);
 
   const monthLabel = currentMonth.toLocaleDateString("en-US", {
     month: "long",
@@ -91,6 +98,7 @@ function CalendarTool() {
     setComposerOpen(false);
     setDraft(makeDraft(selectedDateKey));
     setError(null);
+    setShowMoreDetails(false);
   };
 
   const handleSaveEvent = () => {
@@ -113,6 +121,62 @@ function CalendarTool() {
     });
 
     closeComposer();
+  };
+
+  const handleExportToICS = () => {
+    try {
+      const icsContent = exportToICS();
+      const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `focus-notebook-calendar-${new Date().toISOString().split('T')[0]}.ics`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Calendar exported',
+        description: `${events.length} event(s) exported to .ics file`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Export failed',
+        description: 'Failed to export calendar events',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFromICS = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const content = await file.text();
+      const imported = await importFromICS(content);
+
+      toast({
+        title: 'Calendar imported',
+        description: `${imported} event(s) imported from .ics file`,
+      });
+
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      toast({
+        title: 'Import failed',
+        description: 'Failed to import calendar events. Please check the file format.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const selectedDayEvents = getEventsForDate(selectedDateKey);
@@ -143,6 +207,15 @@ function CalendarTool() {
 
   return (
     <div className="container max-w-6xl py-6 space-y-6">
+      {/* Hidden file input for importing .ics files */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept=".ics,.ical"
+        onChange={handleImportFromICS}
+        className="hidden"
+      />
+
       <Card className="border-2 border-slate-100 dark:border-slate-800 shadow-sm">
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
@@ -154,7 +227,15 @@ function CalendarTool() {
               Organize upcoming commitments and turn meaningful thoughts into events.
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="ghost" size="sm" onClick={handleImportClick} title="Import .ics file">
+              <Upload className="h-4 w-4 mr-1" />
+              Import
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleExportToICS} disabled={events.length === 0} title="Export to .ics file">
+              <Download className="h-4 w-4 mr-1" />
+              Export
+            </Button>
             <Button variant="secondary" onClick={() => openComposer()}>
               <Plus className="h-4 w-4 mr-1" />
               New Event
@@ -443,105 +524,148 @@ function CalendarTool() {
               exit={{ scale: 0.97, opacity: 0 }}
               onClick={(event) => event.stopPropagation()}
             >
-              <div className="mb-4">
-                <p className="text-lg font-semibold">Create calendar event</p>
-                <p className="text-sm text-slate-500">
-                  Fill in the details below. Title and date are required.
+              <div className="mb-6">
+                <p className="text-xl font-semibold text-slate-900 dark:text-slate-50">Create calendar event</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Add a new event to your calendar
                 </p>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-5">
+                {/* Primary Fields - Always Visible */}
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-600" htmlFor="event-title">
-                    Title
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="event-title">
+                    Event Title
                   </label>
                   <input
                     id="event-title"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-purple-400 focus:outline-none"
+                    className="w-full rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-base text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-purple-400 dark:focus:border-purple-500 focus:outline-none transition-colors"
                     value={draft.title}
                     onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
                     placeholder="e.g. Project sync with team"
+                    autoFocus
                   />
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 grid-cols-2">
                   <div className="space-y-1">
-                    <label className="text-sm font-medium text-slate-600" htmlFor="event-date">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1" htmlFor="event-date">
+                      <CalendarIcon className="h-3.5 w-3.5" />
                       Date
                     </label>
                     <input
                       type="date"
                       id="event-date"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-purple-400 focus:outline-none"
+                      className="w-full rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-purple-400 dark:focus:border-purple-500 focus:outline-none transition-colors"
                       value={draft.date}
                       onChange={(e) => setDraft((prev) => ({ ...prev, date: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium text-slate-600" htmlFor="event-time">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1" htmlFor="event-time">
+                      <Clock className="h-3.5 w-3.5" />
                       Time
                     </label>
                     <input
                       type="time"
                       id="event-time"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-purple-400 focus:outline-none"
+                      className="w-full rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-purple-400 dark:focus:border-purple-500 focus:outline-none transition-colors"
                       value={draft.time}
                       onChange={(e) => setDraft((prev) => ({ ...prev, time: e.target.value }))}
                     />
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-600" htmlFor="event-location">
-                    Location
-                  </label>
-                  <input
-                    id="event-location"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-purple-400 focus:outline-none"
-                    value={draft.location}
-                    onChange={(e) => setDraft((prev) => ({ ...prev, location: e.target.value }))}
-                    placeholder="Optional"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-600" htmlFor="event-description">
-                    Notes
-                  </label>
-                  <textarea
-                    id="event-description"
-                    className="min-h-[80px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-purple-400 focus:outline-none"
-                    value={draft.description}
-                    onChange={(e) => setDraft((prev) => ({ ...prev, description: e.target.value }))}
-                    placeholder="Context, agenda, prep reminders..."
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-600" htmlFor="event-category">
-                    Category
-                  </label>
-                  <select
-                    id="event-category"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-purple-400 focus:outline-none"
-                    value={draft.category}
-                    onChange={(e) => setDraft((prev) => ({ ...prev, category: e.target.value as CategoryName }))}
+                {/* More Details - Collapsible */}
+                <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowMoreDetails(!showMoreDetails)}
+                    className="flex items-center justify-between w-full text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
                   >
-                    {Object.keys(CATEGORY_META).map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
+                    <span>More details</span>
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${showMoreDetails ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+
+                  <AnimatePresence>
+                    {showMoreDetails && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-4 pt-4">
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1" htmlFor="event-location">
+                              <MapPin className="h-3.5 w-3.5" />
+                              Location
+                            </label>
+                            <input
+                              id="event-location"
+                              className="w-full rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-purple-400 dark:focus:border-purple-500 focus:outline-none transition-colors"
+                              value={draft.location}
+                              onChange={(e) => setDraft((prev) => ({ ...prev, location: e.target.value }))}
+                              placeholder="Optional"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="event-description">
+                              Notes
+                            </label>
+                            <textarea
+                              id="event-description"
+                              className="min-h-[80px] w-full rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-purple-400 dark:focus:border-purple-500 focus:outline-none transition-colors resize-none"
+                              value={draft.description}
+                              onChange={(e) => setDraft((prev) => ({ ...prev, description: e.target.value }))}
+                              placeholder="Context, agenda, prep reminders..."
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1" htmlFor="event-category">
+                              <Tag className="h-3.5 w-3.5" />
+                              Category
+                            </label>
+                            <select
+                              id="event-category"
+                              className="w-full rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 focus:border-purple-400 dark:focus:border-purple-500 focus:outline-none transition-colors"
+                              value={draft.category}
+                              onChange={(e) => setDraft((prev) => ({ ...prev, category: e.target.value as CategoryName }))}
+                            >
+                              {Object.keys(CATEGORY_META).map((category) => (
+                                <option key={category} value={category}>
+                                  {category}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                {error && <p className="text-sm text-red-500">{error}</p>}
+                {error && (
+                  <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3">
+                    <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                  </div>
+                )}
 
                 <div className="flex justify-end gap-3 pt-2">
                   <Button variant="ghost" onClick={closeComposer}>
                     Cancel
                   </Button>
-                  <Button onClick={handleSaveEvent}>Save event</Button>
+                  <Button
+                    onClick={handleSaveEvent}
+                    className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                  >
+                    Save event
+                  </Button>
                 </div>
               </div>
             </motion.div>

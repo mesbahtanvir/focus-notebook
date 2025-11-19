@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { Place } from "@/store/usePlaces";
 import { MapPin, Edit3, Trash2, Sparkles, ExternalLink, Tag, DollarSign, Cloud, Shield, Heart } from "lucide-react";
 
@@ -30,13 +31,14 @@ export function PlaceCard({ place, onEdit, onDelete }: {
   };
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      className={`card p-5 border-2 ${typeColors[config.color]} hover:shadow-lg transition-all`}
-    >
+    <Link href={`/tools/places/${place.id}`}>
+      <motion.div
+        layout
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        className={`card p-5 border-2 ${typeColors[config.color]} hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer`}
+      >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
@@ -204,6 +206,7 @@ export function PlaceCard({ place, onEdit, onDelete }: {
           </p>
         </div>
       )}
-    </motion.div>
+      </motion.div>
+    </Link>
   );
 }

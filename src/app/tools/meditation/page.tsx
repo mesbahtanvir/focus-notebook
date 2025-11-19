@@ -2,87 +2,99 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Sparkles, ChevronLeft } from "lucide-react";
+import { Sparkles, Wind, Music, PlayCircle } from "lucide-react";
+import { ToolPageLayout, ToolHeader, toolThemes } from "@/components/tools";
+import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 
 export default function MeditationPage() {
-  return (
-    <div className="w-full max-w-none px-4 py-4 md:py-8">
-      {/* Main Content */}
-      <div className="flex flex-col items-center text-center max-w-2xl mx-auto">
-        {/* Back Button */}
-        <div className="flex items-center justify-between w-full mb-16">
-          <Link
-            href="/tools"
-            className="p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            <ChevronLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-          </Link>
-          <div className="w-9" />
-        </div>
+  useTrackToolUsage('meditation');
 
+  const theme = toolThemes.blue;
+
+  return (
+    <ToolPageLayout>
+      <ToolHeader
+        title="Meditation"
+        emoji="🧘"
+        subtitle="Mindful breathing • Guided meditation • Inner peace"
+        showBackButton
+        theme={theme}
+      />
+
+      {/* Main Content */}
+      <div className="flex flex-col items-center text-center max-w-3xl mx-auto px-6 py-12 space-y-12">
         {/* Animated Icon */}
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 shadow-xl flex items-center justify-center mb-8"
+          className="w-32 h-32 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 shadow-2xl flex items-center justify-center"
         >
-          <Sparkles className="h-12 w-12 text-white" />
+          <Sparkles className="h-16 w-16 text-white" />
         </motion.div>
 
-        {/* Title */}
-        <motion.h1
+        {/* Description */}
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-4xl md:text-5xl font-light text-gray-900 dark:text-gray-100 mb-4"
+          className="space-y-4"
         >
-          Meditation
-        </motion.h1>
-
-        {/* Subtitle */}
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-lg text-gray-600 dark:text-gray-400 mb-16 max-w-md"
-        >
-          10 minutes of guided breathing and body scan meditation
-        </motion.p>
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+            Find Your Inner Calm
+          </h2>
+          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-lg">
+            Take 10 minutes for guided breathing and body scan meditation
+          </p>
+        </motion.div>
 
         {/* Start Button */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.1 }}
         >
           <Link
             href="/tools/meditation/session"
-            className="inline-block px-16 py-5 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-light text-xl shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
+            className="inline-flex items-center gap-3 px-12 py-6 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold text-xl shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
           >
+            <PlayCircle className="h-6 w-6" />
             Begin Meditation
           </Link>
         </motion.div>
 
-        {/* Additional Options */}
+        {/* Additional Options Grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="flex items-center gap-8 mt-12"
+          transition={{ delay: 0.2 }}
+          className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl mt-16"
         >
           <Link
             href="/tools/meditation/breathing"
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors font-light"
+            className="card p-6 border-2 border-blue-200 dark:border-blue-800 hover:shadow-lg transition-all group"
           >
-            Breathing
+            <Wind className="h-8 w-8 text-blue-600 dark:text-blue-400 mb-3 group-hover:scale-110 transition-transform" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Breathing Exercises
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Focused breathing techniques for relaxation
+            </p>
           </Link>
+
           <Link
             href="/tools/meditation/music"
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors font-light"
+            className="card p-6 border-2 border-cyan-200 dark:border-cyan-800 hover:shadow-lg transition-all group"
           >
-            Music
+            <Music className="h-8 w-8 text-cyan-600 dark:text-cyan-400 mb-3 group-hover:scale-110 transition-transform" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Meditation Music
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Calming soundscapes and ambient music
+            </p>
           </Link>
         </motion.div>
       </div>
-    </div>
+    </ToolPageLayout>
   );
 }

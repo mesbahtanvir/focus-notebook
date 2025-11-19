@@ -57,6 +57,7 @@ export const toolVisuals: Record<ToolName, ToolVisual> = {
   "admired-people": { icon: Sparkles, gradient: "from-purple-400 to-indigo-500", label: "People I Admire" },
   places: { icon: MapPin, gradient: "from-blue-400 to-cyan-500", label: "Places" },
   "body-progress": { icon: Activity, gradient: "from-blue-500 to-cyan-500", label: "Body Progress" },
+  meditation: { icon: Sparkles, gradient: "from-blue-500 to-cyan-500", label: "Meditation" },
 };
 
 export function getToolVisual(toolId: string) {

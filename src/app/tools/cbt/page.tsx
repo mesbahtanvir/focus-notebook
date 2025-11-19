@@ -376,15 +376,16 @@ export default function CBTPage() {
   return content;
 }
 
-function CBTProcessing({ 
-  thought, 
-  onBack, 
-  onComplete 
-}: { 
-  thought: Thought; 
+function CBTProcessing({
+  thought,
+  onBack,
+  onComplete
+}: {
+  thought: Thought;
   onBack: () => void;
   onComplete: (thought: Thought, cbtData: any) => void;
 }) {
+  const [currentStep, setCurrentStep] = useState(0);
   const [situation, setSituation] = useState("");
   const [automaticThought, setAutomaticThought] = useState(thought.text);
   const [emotions, setEmotions] = useState("");
@@ -413,9 +414,34 @@ function CBTProcessing({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const totalSteps = 5;
 
+  const canProceed = () => {
+    switch (currentStep) {
+      case 0: return situation.trim().length > 0;
+      case 1: return automaticThought.trim().length > 0;
+      case 2: return emotions.trim().length > 0;
+      case 3: return cognitiveDistortions.length > 0;
+      case 4: return rationalResponse.trim().length > 0;
+      default: return false;
+    }
+  };
+
+  const handleNext = () => {
+    if (canProceed() && currentStep < totalSteps - 1) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    } else {
+      onBack();
+    }
+  };
+
+  const handleComplete = () => {
     const cbtData = {
       situation,
       automaticThought,
@@ -429,189 +455,224 @@ function CBTProcessing({
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 p-6 rounded-2xl border-4 border-purple-200 shadow-lg">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-purple-600 hover:text-purple-800 font-semibold mb-4 transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          Back to List
-        </button>
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-lg">
-            <Brain className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              CBT Framework Processing
-            </h1>
-            <p className="text-sm text-gray-600">Compact format from &quot;Feeling Good&quot; by Dr. David Burns</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Original Thought */}
-      <div className="rounded-xl p-6 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200">
-        <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2">
-          <Lightbulb className="h-5 w-5" />
-          Original Thought
-        </h3>
-        <p className="text-gray-800 italic">&quot;{thought.text}&quot;</p>
-      </div>
-
-      {/* CBT Form - Compact Layout */}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* 1. Situation */}
-        <div className="rounded-xl p-6 bg-white border-2 border-purple-200 shadow-md">
-          <label className="block mb-2">
-            <span className="text-lg font-bold text-purple-600 flex items-center gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-500 text-white text-sm">1</span>
-              📍 Situation
-            </span>
-            <span className="text-sm text-gray-600 mt-1 block">
-              Briefly describe the upsetting event
-            </span>
-          </label>
-          <textarea
-            value={situation}
-            onChange={(e) => setSituation(e.target.value)}
-            className="w-full mt-2 px-4 py-3 rounded-lg border-2 border-purple-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none"
-            rows={2}
-            placeholder="e.g., My boss criticized my work in front of colleagues"
-            required
-          />
-        </div>
-
-        {/* 2. Automatic Thought */}
-        <div className="rounded-xl p-6 bg-white border-2 border-pink-200 shadow-md">
-          <label className="block mb-2">
-            <span className="text-lg font-bold text-pink-600 flex items-center gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-pink-500 text-white text-sm">2</span>
-              💭 Automatic Thought(s)
-            </span>
-            <span className="text-sm text-gray-600 mt-1 block">
-              What negative thoughts went through your mind?
-            </span>
-          </label>
-          <textarea
-            value={automaticThought}
-            onChange={(e) => setAutomaticThought(e.target.value)}
-            className="w-full mt-2 px-4 py-3 rounded-lg border-2 border-pink-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none"
-            rows={2}
-            placeholder="e.g., I'm incompetent. I'll get fired."
-            required
-          />
-        </div>
-
-        {/* 3. Emotions */}
-        <div className="rounded-xl p-6 bg-white border-2 border-red-200 shadow-md">
-          <label className="block mb-2">
-            <span className="text-lg font-bold text-red-600 flex items-center gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500 text-white text-sm">3</span>
-              ❤️ Emotions
-            </span>
-            <span className="text-sm text-gray-600 mt-1 block">
-              What emotions did you feel? Rate 0-100%
-            </span>
-          </label>
-          <textarea
-            value={emotions}
-            onChange={(e) => setEmotions(e.target.value)}
-            className="w-full mt-2 px-4 py-3 rounded-lg border-2 border-red-200 focus:border-red-400 focus:ring-2 focus:ring-red-100 outline-none"
-            rows={2}
-            placeholder="e.g., Sad 80%, Anxious 90%, Ashamed 75%"
-            required
-          />
-        </div>
-
-        {/* 4. Cognitive Distortions */}
-        <div className="rounded-xl p-6 bg-white border-2 border-orange-200 shadow-md lg:col-span-2">
-          <label className="block mb-3">
-            <span className="text-lg font-bold text-orange-600 flex items-center gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-500 text-white text-sm">4</span>
-              🧩 Cognitive Distortions
-            </span>
-            <span className="text-sm text-gray-600 mt-1 block">
-              Which thinking errors are present? (Select all that apply)
-            </span>
-          </label>
-          
-          {/* Learn About Cognitive Distortions */}
-          <div className="rounded-lg p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 mb-4">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-gray-700">
-                <strong className="text-blue-600">New to cognitive distortions?</strong>{' '}
-                <a 
-                  href="https://positivepsychology.com/cognitive-distortions/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 underline font-semibold"
-                >
-                  Learn about the 10 common thinking errors →
-                </a>
-              </p>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-gray-900 dark:via-purple-950 dark:to-indigo-950 py-8 px-4">
+      <div className="max-w-2xl mx-auto space-y-6">
+        {/* Progress Header */}
+        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-2 text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 font-medium transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              {currentStep === 0 ? 'Back' : 'Previous'}
+            </button>
+            <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              Step {currentStep + 1} of {totalSteps}
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
-            {distortionsList.map((distortion) => (
-              <button
-                key={distortion}
-                type="button"
-                onClick={() => toggleDistortion(distortion)}
-                className={`px-4 py-3 rounded-lg border-2 text-sm font-semibold transition-all text-left ${
-                  cognitiveDistortions.includes(distortion)
-                    ? 'bg-orange-500 border-orange-600 text-white shadow-lg'
-                    : 'bg-white border-orange-200 text-orange-700 hover:border-orange-400'
-                }`}
-              >
-                {cognitiveDistortions.includes(distortion) && '✓ '}{distortion}
-              </button>
-            ))}
+
+          {/* Progress Bar */}
+          <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+              initial={{ width: 0 }}
+              animate={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
+              transition={{ duration: 0.3 }}
+            />
           </div>
         </div>
 
-        {/* 5. Rational Response */}
-        <div className="rounded-xl p-6 bg-white border-2 border-green-200 shadow-md lg:col-span-2">
-          <label className="block mb-2">
-            <span className="text-lg font-bold text-green-600 flex items-center gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-green-500 text-white text-sm">5</span>
-              💡 Rational Response
-            </span>
-            <span className="text-sm text-gray-600 mt-1 block">
-              Write a more balanced, realistic response to the automatic thought
-            </span>
-          </label>
-          <textarea
-            value={rationalResponse}
-            onChange={(e) => setRationalResponse(e.target.value)}
-            className="w-full mt-2 px-4 py-3 rounded-lg border-2 border-green-200 focus:border-green-400 focus:ring-2 focus:ring-green-100 outline-none"
-            rows={4}
-            placeholder="e.g., Making mistakes is human. My boss gave feedback to help me improve, not to attack me personally. I've done good work before and can learn from this."
-            required
-          />
+        {/* Original Thought - Always visible */}
+        <div className="bg-blue-50/80 dark:bg-blue-950/30 backdrop-blur-sm rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 text-sm font-medium mb-2">
+            <Lightbulb className="h-4 w-4" />
+            Your Thought
+          </div>
+          <p className="text-gray-800 dark:text-gray-200 italic">&quot;{thought.text}&quot;</p>
         </div>
 
-        {/* Submit Button */}
-        <div className="flex gap-4 justify-end pt-4 lg:col-span-2">
-          <button
-            type="button"
-            onClick={onBack}
-            className="px-6 py-3 rounded-full bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition-colors"
+        {/* Step Content */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
+            className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl space-y-6"
           >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="flex items-center gap-2 px-8 py-3 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-          >
-            <CheckCircle className="h-5 w-5" />
-            Complete Processing
-          </button>
-        </div>
-      </form>
+            {/* Step 0: Situation */}
+            {currentStep === 0 && (
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-2">
+                    What happened?
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    Briefly describe the situation that triggered these thoughts
+                  </p>
+                </div>
+                <textarea
+                  value={situation}
+                  onChange={(e) => setSituation(e.target.value)}
+                  className="w-full px-4 py-4 rounded-xl border-2 border-purple-200 dark:border-purple-800 focus:border-purple-400 dark:focus:border-purple-600 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 outline-none bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 transition-colors"
+                  rows={4}
+                  placeholder="e.g., My boss criticized my work in front of colleagues..."
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-500 italic">
+                  Example: &quot;I received critical feedback during a team meeting&quot;
+                </p>
+              </div>
+            )}
+
+            {/* Step 1: Automatic Thought */}
+            {currentStep === 1 && (
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-pink-600 dark:text-pink-400 mb-2">
+                    What went through your mind?
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    What negative or distressing thoughts did you have?
+                  </p>
+                </div>
+                <textarea
+                  value={automaticThought}
+                  onChange={(e) => setAutomaticThought(e.target.value)}
+                  className="w-full px-4 py-4 rounded-xl border-2 border-pink-200 dark:border-pink-800 focus:border-pink-400 dark:focus:border-pink-600 focus:ring-2 focus:ring-pink-100 dark:focus:ring-pink-900 outline-none bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 transition-colors"
+                  rows={4}
+                  placeholder="e.g., I'm incompetent. I'll probably get fired..."
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-500 italic">
+                  Example: &quot;I&apos;m not good enough. Everyone thinks I&apos;m a failure.&quot;
+                </p>
+              </div>
+            )}
+
+            {/* Step 2: Emotions */}
+            {currentStep === 2 && (
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">
+                    How did you feel?
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    Name your emotions and rate their intensity (0-100%)
+                  </p>
+                </div>
+                <textarea
+                  value={emotions}
+                  onChange={(e) => setEmotions(e.target.value)}
+                  className="w-full px-4 py-4 rounded-xl border-2 border-red-200 dark:border-red-800 focus:border-red-400 dark:focus:border-red-600 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-900 outline-none bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 transition-colors"
+                  rows={4}
+                  placeholder="e.g., Anxious 90%, Sad 75%, Ashamed 60%..."
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-500 italic">
+                  Example: &quot;Anxious 85%, Sad 70%, Frustrated 60%&quot;
+                </p>
+              </div>
+            )}
+
+            {/* Step 3: Cognitive Distortions */}
+            {currentStep === 3 && (
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-2">
+                    What thinking errors are present?
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                    Select all cognitive distortions that apply
+                  </p>
+                  <div className="rounded-lg p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 mb-4">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-gray-700 dark:text-gray-300">
+                        <strong className="text-blue-600 dark:text-blue-400">Need help?</strong>{' '}
+                        <a
+                          href="https://positivepsychology.com/cognitive-distortions/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
+                        >
+                          Learn about cognitive distortions →
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {distortionsList.map((distortion) => (
+                    <button
+                      key={distortion}
+                      type="button"
+                      onClick={() => toggleDistortion(distortion)}
+                      className={`px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all text-left ${
+                        cognitiveDistortions.includes(distortion)
+                          ? 'bg-orange-500 border-orange-600 text-white shadow-lg'
+                          : 'bg-white dark:bg-gray-800 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-400 hover:border-orange-400 dark:hover:border-orange-600'
+                      }`}
+                    >
+                      {cognitiveDistortions.includes(distortion) && '✓ '}{distortion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Rational Response */}
+            {currentStep === 4 && (
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-green-600 dark:text-green-400 mb-2">
+                    What&apos;s a more balanced perspective?
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    Challenge the automatic thought with a rational, compassionate response
+                  </p>
+                </div>
+                <textarea
+                  value={rationalResponse}
+                  onChange={(e) => setRationalResponse(e.target.value)}
+                  className="w-full px-4 py-4 rounded-xl border-2 border-green-200 dark:border-green-800 focus:border-green-400 dark:focus:border-green-600 focus:ring-2 focus:ring-green-100 dark:focus:ring-green-900 outline-none bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 transition-colors"
+                  rows={6}
+                  placeholder="e.g., Mistakes are opportunities to learn. My boss gave feedback to help me improve, not to attack me. I've succeeded before and can grow from this experience..."
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-500 italic">
+                  Example: &quot;Everyone makes mistakes. This is one setback, not a pattern. I can learn from this.&quot;
+                </p>
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="flex gap-3 pt-4">
+              {currentStep < totalSteps - 1 ? (
+                <button
+                  onClick={handleNext}
+                  disabled={!canProceed()}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg"
+                >
+                  Continue
+                  <ArrowLeft className="h-5 w-5 rotate-180" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleComplete}
+                  disabled={!canProceed()}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg"
+                >
+                  <CheckCircle className="h-5 w-5" />
+                  Complete
+                </button>
+              )}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

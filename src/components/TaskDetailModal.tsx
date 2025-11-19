@@ -341,113 +341,84 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
             </section>
           ) : null}
 
-          {/* CTA Button - Right after Notes/Description */}
-          <section className="border-t-2 border-dashed border-purple-200 dark:border-purple-800 pt-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">🎯 Quick Action Button</label>
-              {isEditing ? (
-                <div className="space-y-3">
-                  <select
-                    value={ctaButtonType}
-                    onChange={(e) => setCtaButtonType(e.target.value as CTAButtonType | 'none')}
-                    className="input w-full"
-                  >
-                    <option value="none">No button</option>
-                    <option value="leetcode">LeetCode</option>
-                    <option value="chess">Chess.com</option>
-                    <option value="headspace">Headspace</option>
-                    <option value="focus">Focus Session</option>
-                    <option value="brainstorming">Brainstorming</option>
-                    <option value="notes">Notes</option>
-                    <option value="custom">Custom URL</option>
-                  </select>
+          {/* CTA Button - Only show if button exists or in edit mode */}
+          {(isEditing || task.ctaButton) && (
+            <section className="border-t-2 border-dashed border-purple-200 dark:border-purple-800 pt-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">🎯 Quick Action</label>
+                {isEditing ? (
+                  <div className="space-y-3">
+                    <select
+                      value={ctaButtonType}
+                      onChange={(e) => setCtaButtonType(e.target.value as CTAButtonType | 'none')}
+                      className="input w-full"
+                    >
+                      <option value="none">No button</option>
+                      <option value="leetcode">LeetCode</option>
+                      <option value="chess">Chess.com</option>
+                      <option value="headspace">Headspace</option>
+                      <option value="focus">Focus Session</option>
+                      <option value="brainstorming">Brainstorming</option>
+                      <option value="notes">Notes</option>
+                      <option value="custom">Custom URL</option>
+                    </select>
 
-                  {ctaButtonType !== 'none' && (
-                    <>
-                      <input
-                        type="text"
-                        value={ctaButtonLabel}
-                        onChange={(e) => setCtaButtonLabel(e.target.value)}
-                        placeholder="Button label (optional)"
-                        className="input w-full"
-                      />
-
-                      {ctaButtonType === 'custom' && (
-                        <input
-                          type="url"
-                          value={ctaButtonUrl}
-                          onChange={(e) => setCtaButtonUrl(e.target.value)}
-                          placeholder="https://example.com"
-                          className="input w-full"
-                        />
-                      )}
-
-                      {(ctaButtonType === 'focus' || ctaButtonType === 'brainstorming' || ctaButtonType === 'notes') && (
+                    {ctaButtonType !== 'none' && (
+                      <>
                         <input
                           type="text"
-                          value={ctaButtonToolPath}
-                          onChange={(e) => setCtaButtonToolPath(e.target.value)}
-                          placeholder="/tools/brainstorming (optional)"
+                          value={ctaButtonLabel}
+                          onChange={(e) => setCtaButtonLabel(e.target.value)}
+                          placeholder="Button label (optional)"
                           className="input w-full"
                         />
-                      )}
-                    </>
-                  )}
-                </div>
-              ) : task.ctaButton ? (
-                <CTAButtonDisplay task={task} />
-              ) : (
-                <span className="text-sm text-gray-400 dark:text-gray-500">No quick action</span>
-              )}
-            </div>
-          </section>
 
-          {/* Create Subtask Button */}
-          {!isEditing && (
-            <section className="border-t-2 border-dashed border-purple-200 dark:border-purple-800 pt-4">
-              <button
-                onClick={() => {
-                  const subtaskTitle = prompt("Enter subtask title:");
-                  if (subtaskTitle && subtaskTitle.trim()) {
-                    addTask({
-                      title: `${task.title} → ${subtaskTitle.trim()}`,
-                      priority: task.priority,
-                      category: task.category,
-                      status: 'active',
-                      projectId: task.projectId,
-                      thoughtId: task.thoughtId,
-                      notes: `Subtask of: ${task.title}`,
-                    });
-                    onClose();
-                  }
-                }}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-lg font-semibold shadow-md transition-all"
-              >
-                <Plus className="h-5 w-5" />
-                Create Subtask
-              </button>
+                        {ctaButtonType === 'custom' && (
+                          <input
+                            type="url"
+                            value={ctaButtonUrl}
+                            onChange={(e) => setCtaButtonUrl(e.target.value)}
+                            placeholder="https://example.com"
+                            className="input w-full"
+                          />
+                        )}
+
+                        {(ctaButtonType === 'focus' || ctaButtonType === 'brainstorming' || ctaButtonType === 'notes') && (
+                          <input
+                            type="text"
+                            value={ctaButtonToolPath}
+                            onChange={(e) => setCtaButtonToolPath(e.target.value)}
+                            placeholder="/tools/brainstorming (optional)"
+                            className="input w-full"
+                          />
+                        )}
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <CTAButtonDisplay task={task} />
+                )}
+              </div>
             </section>
           )}
 
-          {/* 3. Task Steps */}
-          {(!isEditing && steps.length > 0) || isEditing ? (
-            <section className="border-t-2 border-dashed border-purple-200 dark:border-purple-800 pt-4">
-              <h3 className="text-xs font-semibold text-green-600 dark:text-green-400 uppercase tracking-wide mb-3 flex items-center gap-2">
-                <ListChecks className="h-4 w-4" />
-                ✅ Task Steps
-              </h3>
-              <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                <TaskSteps
-                  steps={steps}
-                  onUpdate={setSteps}
-                  editable={isEditing || true}
-                />
-              </div>
-            </section>
-          ) : null}
+          {/* Task Steps - Always visible and editable */}
+          <section className="border-t-2 border-dashed border-purple-200 dark:border-purple-800 pt-4">
+            <h3 className="text-xs font-semibold text-green-600 dark:text-green-400 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <ListChecks className="h-4 w-4" />
+              ✅ Task Steps
+            </h3>
+            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <TaskSteps
+                steps={steps}
+                onUpdate={setSteps}
+                editable={true}
+              />
+            </div>
+          </section>
 
-          {/* 4. Time Tracking & Work Activity */}
-          {!isEditing && (
+          {/* Time Tracking & Work Activity - Only show if there's actual data */}
+          {!isEditing && (task.actualMinutes || task.estimatedMinutes) && (
             <section className="border-t-2 border-dashed border-purple-200 dark:border-purple-800 pt-4 space-y-4">
               <h3 className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide flex items-center gap-2">
                 <Clock className="h-4 w-4" />
@@ -455,28 +426,26 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
               </h3>
 
               {/* Time Tracking */}
-              {(task.actualMinutes || task.estimatedMinutes) && (
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800 space-y-4">
-                  <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                    Time Tracking
-                  </h4>
-                  <TimeDisplay
-                    actual={task.actualMinutes}
-                    estimated={task.estimatedMinutes}
-                    variant="detailed"
-                    showProgressBar={true}
-                    isRecurring={task.recurrence?.type !== 'none'}
-                    completionCount={task.completionHistory?.length || 0}
-                  />
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800 space-y-4">
+                <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                  Time Tracking
+                </h4>
+                <TimeDisplay
+                  actual={task.actualMinutes}
+                  estimated={task.estimatedMinutes}
+                  variant="detailed"
+                  showProgressBar={true}
+                  isRecurring={task.recurrence?.type !== 'none'}
+                  completionCount={task.completionHistory?.length || 0}
+                />
 
-                  {/* Session History */}
-                  {task.actualMinutes && task.actualMinutes > 0 && (
-                    <div className="pt-3 border-t border-blue-200 dark:border-blue-800">
-                      <SessionHistory taskId={task.id} />
-                    </div>
-                  )}
-                </div>
-              )}
+                {/* Session History */}
+                {task.actualMinutes && task.actualMinutes > 0 && (
+                  <div className="pt-3 border-t border-blue-200 dark:border-blue-800">
+                    <SessionHistory taskId={task.id} />
+                  </div>
+                )}
+              </div>
 
               {/* Work Activity - Shows last 10 days of work on this task */}
               <WorkActivity taskId={task.id} />
@@ -665,41 +634,42 @@ export function TaskDetailModal({ task, onClose }: TaskDetailModalProps) {
                 )}
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">📅 Due Date</label>
-                {isEditing ? (
-                  <input
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="input w-full"
-                  />
-                ) : task.dueDate ? (
-                  <span className="text-sm font-semibold">{new Date(task.dueDate).toLocaleDateString()}</span>
-                ) : (
-                  <span className="text-sm text-gray-400 dark:text-gray-500">Not set</span>
-                )}
-              </div>
-            </div>
-
-            {/* Estimated Time */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">⏱️ Estimated Time</label>
-              {isEditing ? (
-                <input
-                  type="number"
-                  value={estimatedMinutes}
-                  onChange={(e) => setEstimatedMinutes(parseInt(e.target.value) || 0)}
-                  className="input w-full"
-                  min="0"
-                  placeholder="Minutes"
-                />
-              ) : task.estimatedMinutes ? (
-                <span className="text-sm font-semibold">{task.estimatedMinutes} minutes</span>
-              ) : (
-                <span className="text-sm text-gray-400 dark:text-gray-500">Not set</span>
+              {/* Due Date - Only show if set or editing */}
+              {(isEditing || task.dueDate) && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">📅 Due Date</label>
+                  {isEditing ? (
+                    <input
+                      type="date"
+                      value={dueDate}
+                      onChange={(e) => setDueDate(e.target.value)}
+                      className="input w-full"
+                    />
+                  ) : (
+                    <span className="text-sm font-semibold">{new Date(task.dueDate!).toLocaleDateString()}</span>
+                  )}
+                </div>
               )}
             </div>
+
+            {/* Estimated Time - Only show if set or editing */}
+            {(isEditing || task.estimatedMinutes) && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">⏱️ Estimated Time</label>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={estimatedMinutes}
+                    onChange={(e) => setEstimatedMinutes(parseInt(e.target.value) || 0)}
+                    className="input w-full"
+                    min="0"
+                    placeholder="Minutes"
+                  />
+                ) : (
+                  <span className="text-sm font-semibold">{task.estimatedMinutes} minutes</span>
+                )}
+              </div>
+            )}
 
             {/* Recurrence */}
             <div>

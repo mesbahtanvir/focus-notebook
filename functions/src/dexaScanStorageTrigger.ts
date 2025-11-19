@@ -9,7 +9,6 @@ import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
-const pdfParse = require('pdf-parse');
 import { CONFIG } from './config';
 
 const PROMPT_FILE_NAME = 'parse-dexa-scan.prompt.yml';
@@ -90,6 +89,7 @@ async function loadPrompt(): Promise<any> {
 
 /**
  * Parse Dexa scan file using AI vision/text analysis
+ * Now supports PDFs, images, and text files using OpenAI's vision capabilities
  */
 async function parseDexaScan(fileBuffer: Buffer, contentType: string): Promise<DexaScanData> {
   const prompt = await loadPrompt();
@@ -102,22 +102,12 @@ async function parseDexaScan(fileBuffer: Buffer, contentType: string): Promise<D
   const systemMessage = prompt.messages.find((m: any) => m.role === 'system')?.content;
   const userMessage = prompt.messages.find((m: any) => m.role === 'user')?.content;
 
-  // Prepare the message content based on file type
+  // Prepare the message content - use vision API for all file types
   let messageContent: any[];
 
-  if (contentType === 'application/pdf') {
-    // For PDFs, extract text first
-    const pdfData = await pdfParse(fileBuffer);
-    const textContent = pdfData.text;
-
-    messageContent = [
-      {
-        type: 'text',
-        text: `${userMessage}\n\nDexa Scan Document Text:\n${textContent}`,
-      },
-    ];
-  } else if (contentType.startsWith('image/')) {
-    // For images, use vision API
+  if (contentType === 'application/pdf' || contentType.startsWith('image/')) {
+    // For PDFs and images, use vision API with base64 encoding
+    // OpenAI's gpt-4o can process PDF pages as images
     const base64Data = fileBuffer.toString('base64');
     const dataUrl = `data:${contentType};base64,${base64Data}`;
 
@@ -130,11 +120,12 @@ async function parseDexaScan(fileBuffer: Buffer, contentType: string): Promise<D
         type: 'image_url',
         image_url: {
           url: dataUrl,
+          detail: 'high', // Request high-detail processing for better text extraction
         },
       },
     ];
   } else {
-    // Fallback to text analysis
+    // Fallback to text analysis for other formats
     const textContent = fileBuffer.toString('utf8');
     messageContent = [
       {

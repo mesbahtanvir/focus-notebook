@@ -28,7 +28,8 @@ export type ToolName =
   | 'admired-people'
   | 'places'
   | 'body-progress'
-  | 'calendar';
+  | 'calendar'
+  | 'meditation';
 
 type FirestoreToolName = ToolName | 'vacation-packing';
 

@@ -81,9 +81,9 @@ export default function AdmiredPeoplePage() {
   return (
     <ToolPageLayout>
       <ToolHeader
-        title="People I Admire"
+        title="Inspiring People"
         emoji="✨"
-        subtitle="Learn from inspiring people • Understand their perspectives • Get inspired"
+        subtitle="Learn from role models • Discover their wisdom • Find inspiration"
         showBackButton
         stats={[
           { label: 'total', value: stats.total, variant: 'info' },
@@ -134,10 +134,10 @@ export default function AdmiredPeoplePage() {
         <div className="text-center py-16">
           <Sparkles className="h-16 w-16 mx-auto text-gray-300 dark:text-gray-700 mb-4" />
           <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">
-            No admired people added yet
+            No inspiring people added yet
           </h3>
           <p className="text-gray-500 dark:text-gray-500 mb-6">
-            Add people who inspire you and learn from their perspectives
+            Add people who inspire you and discover their wisdom
           </p>
           <button
             onClick={() => setShowModal(true)}

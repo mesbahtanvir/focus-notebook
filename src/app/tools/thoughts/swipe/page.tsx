@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X, RefreshCcw } from "lucide-react";
 import { useThoughts, AISuggestion, Thought } from "@/store/useThoughts";
@@ -91,16 +91,16 @@ export default function ThoughtSuggestionSwipePage() {
 
   const activeCard = queue[currentIndex] || null;
 
-  const markProcessed = (card: SuggestionCard) => {
+  const markProcessed = useCallback((card: SuggestionCard) => {
     setProcessedIds((prev) => {
       const next = new Set(prev);
       next.add(`${card.thoughtId}:${card.suggestion.id}`);
       return next;
     });
     setCurrentIndex((prev) => (queue.length <= 1 ? 0 : Math.min(prev, queue.length - 2)));
-  };
+  }, [queue.length]);
 
-  const handleDecision = async (decision: "accept" | "reject") => {
+  const handleDecision = useCallback(async (decision: "accept" | "reject") => {
     if (!activeCard || isProcessing) return;
     setIsProcessing(true);
     setError(null);
@@ -123,7 +123,7 @@ export default function ThoughtSuggestionSwipePage() {
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [activeCard, isProcessing, toast, markProcessed]);
 
   const handleDragEnd = (_: any, info: { offset: { x: number } }) => {
     if (!activeCard || isProcessing) return;
@@ -133,6 +133,24 @@ export default function ThoughtSuggestionSwipePage() {
       handleDecision("reject");
     }
   };
+
+  // Add keyboard support for arrow keys
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!activeCard || isProcessing) return;
+
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleDecision('accept');
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handleDecision('reject');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeCard, isProcessing, handleDecision]);
 
   return (
     <ToolPageLayout>
@@ -171,7 +189,7 @@ export default function ThoughtSuggestionSwipePage() {
       ) : (
         <div className="px-6 max-w-3xl mx-auto space-y-6">
           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-            Tip: drag right to accept or left to reject, or use the buttons below.
+            Use <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs font-mono">←</kbd> to reject, <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs font-mono">→</kbd> to accept, or drag the card
           </p>
 
           <AnimatePresence mode="wait">
