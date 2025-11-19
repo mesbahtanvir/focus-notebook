@@ -242,14 +242,6 @@ export default function PhotoFeedbackPage() {
       return;
     }
 
-    if (selectedPhotoIds.length === 0) {
-      toastWarning({
-        title: "Select photos",
-        description: "Choose photos from your gallery to start a feedback session.",
-      });
-      return;
-    }
-
     try {
       const { sessionId, secretKey } = await createSessionFromLibrary(
         selectedPhotoIds,
@@ -291,7 +283,7 @@ export default function PhotoFeedbackPage() {
               <div>
                 <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Your gallery</h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Tap photos to include them. Use the shuffle icon for a random mix.
+                  Your battle automatically uses every photo in your gallery. Selecting is optional if you want to spotlight a subset first.
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -543,15 +535,15 @@ export default function PhotoFeedbackPage() {
               </span>
             </div>
           )}
-          {canCreateSession && selectedPhotoIds.length === 0 && (
+          {canCreateSession && (
             <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
-              Pick at least one gallery photo above to enable session creation.
+              Launching a battle will include your entire gallery automatically. Selecting photos above simply adds them sooner.
             </p>
           )}
 
           <button
             onClick={handleCreateSession}
-            disabled={!canCreateSession || selectedPhotoIds.length === 0 || isLoading}
+            disabled={!canCreateSession || isLoading}
             className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white py-4 px-6 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (

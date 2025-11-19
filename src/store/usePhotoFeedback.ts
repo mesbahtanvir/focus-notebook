@@ -51,6 +51,19 @@ export interface UploadProgressEvent {
   error?: string;
 }
 
+function convertLibraryItemToBattlePhoto(item: PhotoLibraryItem): BattlePhoto {
+  return {
+    id: item.id,
+    url: item.url,
+    storagePath: item.storagePath,
+    libraryId: item.id,
+    rating: 1200,
+    wins: 0,
+    losses: 0,
+    totalVotes: 0,
+  };
+}
+
 type State = {
   currentSession: PhotoBattle | null;
   results: BattlePhoto[];
@@ -104,52 +117,66 @@ export const usePhotoFeedback = create<State>((set, get) => ({
       throw new Error('You must be signed in to create a photo feedback session.');
     }
 
-    if (libraryPhotoIds.length === 0) {
-      throw new Error('Select at least one photo to create a session.');
-    }
-
     set({ isLoading: true, error: null });
 
     try {
-      const sessionId = Date.now().toString();
-      const secretKey = generateSecretKey();
+      const sessionId = user.uid;
+      const sessionRef = doc(db, 'photoBattles', sessionId);
+      const sessionLibrary = get().library.length > 0 ? get().library : await get().loadLibrary();
 
-      // Ensure library photos are loaded
-      let library = get().library;
-      const missingIds = libraryPhotoIds.filter(id => !library.find(item => item.id === id));
-      if (missingIds.length > 0) {
-        const refs = missingIds.map(id => doc(db, `users/${user.uid}/photoLibrary`, id));
-        const snaps = await Promise.all(refs.map(r => getDoc(r)));
-        const loaded = snaps
-          .filter(s => s.exists())
-          .map(s => {
-            const data = s.data() as PhotoLibraryItem;
-            return { ...data, id: s.id };
-          });
-        library = [...library, ...loaded];
+      if (sessionLibrary.length === 0) {
+        throw new Error('Upload at least one photo to start a battle.');
       }
 
-      const selectedItems = libraryPhotoIds
-        .map(id => library.find(item => item.id === id))
-        .filter(Boolean) as PhotoLibraryItem[];
+      const selectionSet = new Set(libraryPhotoIds);
+      const selectedItems =
+        selectionSet.size > 0
+          ? sessionLibrary.filter(item => selectionSet.has(item.id))
+          : sessionLibrary;
 
       if (selectedItems.length === 0) {
         throw new Error('No valid photos found in your gallery.');
       }
 
-      const sessionPhotos: BattlePhoto[] = selectedItems.map((item, index) => ({
-        id: `${sessionId}_${index}`,
-        url: item.url,
-        storagePath: item.storagePath,
-        libraryId: item.id,
-        rating: 1200,
-        wins: 0,
-        losses: 0,
-        totalVotes: 0,
-      }));
+      const existing = await getDoc(sessionRef);
 
-      // Create session document
-      const session: PhotoBattle = {
+      let session: PhotoBattle;
+      if (existing.exists()) {
+        const data = existing.data() as PhotoBattle;
+        const existingPhotos = data.photos || [];
+        const missing = selectedItems.filter(item => !existingPhotos.some(photo => photo.libraryId === item.id));
+        if (missing.length > 0 || (creatorName && creatorName !== data.creatorName)) {
+          const payload: Partial<PhotoBattle> = {};
+          if (missing.length > 0) {
+            payload.photos = [...existingPhotos, ...missing.map(convertLibraryItemToBattlePhoto)];
+          }
+          if (creatorName && creatorName !== data.creatorName) {
+            payload.creatorName = creatorName;
+          }
+          await setDoc(sessionRef, payload, { merge: true });
+          session = {
+            ...data,
+            id: sessionId,
+            photos: payload.photos ?? existingPhotos,
+            creatorName: payload.creatorName ?? data.creatorName,
+          };
+        } else {
+          session = { ...data, id: sessionId };
+        }
+        set(state => ({
+          currentSession: session,
+          isLoading: false,
+          userSessions: [
+            session,
+            ...state.userSessions.filter(entry => entry.id !== session.id),
+          ],
+        }));
+        return { sessionId, secretKey: session.secretKey };
+      }
+
+      const secretKey = generateSecretKey();
+      const sessionPhotos: BattlePhoto[] = selectedItems.map(convertLibraryItemToBattlePhoto);
+      session = {
         id: sessionId,
         ownerId: user.uid,
         creatorName,
@@ -158,8 +185,6 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         createdAt: new Date().toISOString(),
         isPublic: false,
       };
-
-      const sessionRef = doc(db, 'photoBattles', sessionId);
       await setDoc(sessionRef, session);
 
       set(state => ({
@@ -263,6 +288,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         };
         await setDoc(docRef, item);
         uploaded.push(item);
+        void appendPhotoToBattle(user.uid, convertLibraryItemToBattlePhoto(item));
         onProgress?.(uploaded.length, photos.length);
       }
 
@@ -398,7 +424,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         return null;
       }
 
-      const session = sessionDoc.data() as PhotoBattle;
+      const session = { ...(sessionDoc.data() as PhotoBattle), id: sessionDoc.id };
 
       set({ currentSession: session, isLoading: false });
       return session;
@@ -466,7 +492,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         return [];
       }
 
-      const session = sessionDoc.data() as PhotoBattle;
+      const session = { ...(sessionDoc.data() as PhotoBattle), id: sessionDoc.id };
 
       if (session.secretKey !== secretKey) {
         set({ error: 'Invalid secret key', isLoading: false });
@@ -499,7 +525,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         orderBy('createdAt', 'desc')
       );
       const snapshot = await getDocs(q);
-      const sessions = snapshot.docs.map(doc => doc.data() as PhotoBattle);
+      const sessions = snapshot.docs.map(doc => ({ ...(doc.data() as PhotoBattle), id: doc.id }));
       set({ userSessions: sessions, sessionsLoading: false });
       return sessions;
     } catch (error) {
@@ -561,5 +587,23 @@ async function updateLibraryStats(ownerId: string, libraryId: string, result: 'w
     await updateDoc(statsRef, updates);
   } catch (error) {
     console.error('Failed to update library stats', error);
+  }
+}
+
+async function appendPhotoToBattle(ownerId: string, photo: BattlePhoto) {
+  const battleRef = doc(db, 'photoBattles', ownerId);
+  try {
+    await runTransaction(db, async transaction => {
+      const snap = await transaction.get(battleRef);
+      if (!snap.exists()) return;
+      const data = snap.data() as PhotoBattle;
+      const photos = data.photos || [];
+      if (photos.some(existing => existing.libraryId === photo.libraryId)) {
+        return;
+      }
+      transaction.update(battleRef, { photos: [...photos, photo] });
+    });
+  } catch (error) {
+    console.warn('Unable to append photo to battle session', error);
   }
 }
