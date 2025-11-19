@@ -11,6 +11,7 @@ const mockSetDoc = jest.fn();
 const mockGetDocs = jest.fn();
 const mockGetDoc = jest.fn();
 const mockUpdateDoc = jest.fn();
+const mockRunTransaction = jest.fn();
 
 jest.mock("firebase/firestore", () => ({
   collection: jest.fn(() => "collection-ref"),
@@ -27,6 +28,7 @@ jest.mock("firebase/firestore", () => ({
   updateDoc: (...args: unknown[]) => mockUpdateDoc(...args),
   increment: (val: number) => ({ __op: "increment", val }),
   arrayUnion: (...values: unknown[]) => values,
+  runTransaction: (...args: unknown[]) => mockRunTransaction(...args),
 }));
 
 const mockUploadBytes = jest.fn();
@@ -52,7 +54,6 @@ describe("usePhotoFeedback gallery + session flow", () => {
   const resetStore = () => {
     usePhotoFeedback.setState({
       currentSession: null,
-      votes: [],
       results: [],
       isLoading: false,
       sessionsLoading: false,
@@ -82,6 +83,23 @@ describe("usePhotoFeedback gallery + session flow", () => {
       return jest.fn(async ({ path }: { path: string }) => ({
         data: { url: `https://signed.example.com/${path}` },
       }));
+    });
+
+    mockRunTransaction.mockImplementation(async (_db, updater: any) => {
+      const transaction = {
+        get: jest.fn().mockResolvedValue({
+          exists: () => true,
+          data: () => ({
+            ownerId: "user-123",
+            photos: [
+              { id: "winner", rating: 1200, wins: 0, losses: 0, totalVotes: 0 },
+              { id: "loser", rating: 1200, wins: 0, losses: 0, totalVotes: 0 },
+            ],
+          }),
+        }),
+        update: jest.fn(),
+      };
+      return updater(transaction);
     });
   });
 
@@ -127,7 +145,7 @@ describe("usePhotoFeedback gallery + session flow", () => {
 
     expect(sessionResult).toBeDefined();
     expect(mockSetDoc).toHaveBeenCalledWith(
-      expect.objectContaining({ path: expect.stringContaining("photoSessions") }),
+      expect.objectContaining({ path: expect.stringContaining("photoBattles") }),
       expect.objectContaining({
         creatorName: "Alex",
         isPublic: false,
@@ -135,6 +153,7 @@ describe("usePhotoFeedback gallery + session flow", () => {
           expect.objectContaining({
             libraryId: "lib-photo-1",
             url: "https://example.com/photo-1.jpg",
+            rating: 1200,
           }),
         ],
       })
@@ -177,7 +196,6 @@ describe("usePhotoFeedback gallery + session flow", () => {
           creatorName: "Alex",
           photos: [],
           secretKey: "secret",
-          expiresAt: new Date().toISOString(),
           createdAt: new Date().toISOString(),
           isPublic: false,
         },
@@ -189,34 +207,66 @@ describe("usePhotoFeedback gallery + session flow", () => {
     });
 
     expect(mockUpdateDoc).toHaveBeenCalledWith(
-      expect.objectContaining({ path: expect.stringContaining("photoSessions/session-abc") }),
+      expect.objectContaining({ path: expect.stringContaining("photoBattles/session-abc") }),
       { isPublic: true }
     );
     expect(usePhotoFeedback.getState().userSessions[0].isPublic).toBe(true);
   });
 
-  it("stores comments when submitting votes", async () => {
-    mockSetDoc.mockResolvedValue(undefined);
-    usePhotoFeedback.setState(state => ({
-      ...state,
-      currentSession: {
-        id: "session-1",
-        ownerId: "user-123",
-        creatorName: "Alex",
-        photos: [{ id: "photo-1", url: "https://example.com/photo.jpg", storagePath: "path/photo-1" }],
-        secretKey: "secret",
-        expiresAt: new Date(Date.now() + 1000 * 60).toISOString(),
-        createdAt: new Date().toISOString(),
-      },
-    }));
-
-    await act(async () => {
-      await usePhotoFeedback.getState().submitVote("session-1", "photo-1", "yes", "voter-9", "Great smile!");
+  it("updates ratings via submitVote transactions", async () => {
+    let updatedPayload: any = null;
+    mockRunTransaction.mockImplementation(async (_db, updater: any) => {
+      const transaction = {
+        get: jest.fn().mockResolvedValue({
+          exists: () => true,
+          data: () => ({
+            id: "session-1",
+            ownerId: "user-123",
+            photos: [
+              { id: "winner", rating: 1200, wins: 2, losses: 1, totalVotes: 3 },
+              { id: "loser", rating: 1200, wins: 1, losses: 2, totalVotes: 3 },
+            ],
+          }),
+        }),
+        update: jest.fn((_, payload) => {
+          updatedPayload = payload;
+        }),
+      };
+      await updater(transaction);
     });
 
-    expect(mockSetDoc).toHaveBeenCalledWith(
-      expect.objectContaining({ path: expect.stringContaining("photoSessions/session-1/votes") }),
-      expect.objectContaining({ comment: "Great smile!" })
-    );
+    await act(async () => {
+      await usePhotoFeedback.getState().submitVote("session-1", "winner", "loser");
+    });
+
+    expect(mockRunTransaction).toHaveBeenCalled();
+    expect(updatedPayload).not.toBeNull();
+    const winner = updatedPayload.photos.find((photo: any) => photo.id === "winner");
+    const loser = updatedPayload.photos.find((photo: any) => photo.id === "loser");
+    expect(winner.rating).toBeGreaterThan(1200);
+    expect(loser.rating).toBeLessThan(1200);
+    expect(winner.wins).toBe(3);
+    expect(loser.losses).toBe(3);
+  });
+
+  it("returns sorted results for a valid secret key", async () => {
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({
+        secretKey: "abc",
+        photos: [
+          { id: "photo-a", url: "a.jpg", rating: 1400, wins: 4, losses: 1, totalVotes: 5 },
+          { id: "photo-b", url: "b.jpg", rating: 1000, wins: 1, losses: 4, totalVotes: 5 },
+        ],
+      }),
+    });
+
+    let results: any;
+    await act(async () => {
+      results = await usePhotoFeedback.getState().loadResults("session-1", "abc");
+    });
+
+    expect(results[0].rating).toBeGreaterThan(results[1].rating);
+    expect(usePhotoFeedback.getState().results[0].id).toBe("photo-a");
   });
 });

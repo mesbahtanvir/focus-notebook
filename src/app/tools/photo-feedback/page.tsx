@@ -282,7 +282,7 @@ export default function PhotoFeedbackPage() {
             Dating Photo Feedback
           </h1>
           <p className="text-gray-600 dark:text-gray-400 text-lg">
-            Get honest feedback from friends on which photos to use for your dating profile
+            Friends will see two of your photos at a time and choose the stronger one—automated ELO rankings keep score.
           </p>
         </div>
         {canCreateSession && (
@@ -403,11 +403,11 @@ export default function PhotoFeedbackPage() {
                           </div>
                           <div className="p-3 text-xs text-gray-600 dark:text-gray-400 space-y-1">
                             <p>Uploaded {new Date(item.createdAt).toLocaleDateString()}</p>
-                            {item.stats && (
-                              <p className="text-gray-700 dark:text-gray-300">
-                                👍 {item.stats.yesVotes} / {item.stats.totalVotes} votes
-                              </p>
-                            )}
+                          {item.stats && item.stats.totalVotes > 0 && (
+                            <p className="text-gray-700 dark:text-gray-300">
+                              Wins {item.stats.yesVotes} / {item.stats.totalVotes} battles
+                            </p>
+                          )}
                           </div>
                         </div>
                       );
@@ -561,7 +561,7 @@ export default function PhotoFeedbackPage() {
               </>
             ) : (
               <>
-                Create Feedback Session
+                Launch Photo Battle
                 <ArrowRight className="w-5 h-5" />
               </>
             )}
@@ -572,8 +572,8 @@ export default function PhotoFeedbackPage() {
           <Card className="p-6 bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-800 mt-8">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Your Feedback Links</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Quickly revisit or share past sessions.</p>
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Your Photo Battles</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Keep these links handy to share or review rankings.</p>
               </div>
             {sessionsLoading && (
               <div className="text-sm text-gray-500 dark:text-gray-400">Loading…</div>
@@ -583,7 +583,7 @@ export default function PhotoFeedbackPage() {
               <div className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</div>
             )}
             {userSessions.length === 0 && !sessionsLoading ? (
-              <p className="text-sm text-gray-600 dark:text-gray-400">No sessions yet. Create one above to see it here.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">No battles yet. Launch one above to see it here.</p>
             ) : (
               <div className="space-y-4">
                 {userSessions.map((session) => {
@@ -597,9 +597,9 @@ export default function PhotoFeedbackPage() {
                         <div>
                           <p className="text-sm text-gray-500 dark:text-gray-400">Session</p>
                           <p className="font-semibold text-gray-800 dark:text-gray-100">{session.creatorName || 'Your photos'}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Created {new Date(session.createdAt).toLocaleString()} • Expires {new Date(session.expiresAt).toLocaleDateString()}
-                          </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Created {new Date(session.createdAt).toLocaleString()} • Battle stays active
+                        </p>
                         </div>
                         <div className="flex gap-2">
                           <Link

@@ -1,350 +1,189 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { usePhotoFeedback, getOrCreateVoterId } from "@/store/usePhotoFeedback";
 import Image from "next/image";
-import { Heart, X, ChevronLeft, ChevronRight, Loader2, CheckCircle } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import Link from "next/link";
+import { Award, Loader2, Shuffle } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { usePhotoFeedback, type BattlePhoto } from "@/store/usePhotoFeedback";
 import { toastError } from "@/lib/toast-presets";
 
-export default function SessionVotingPage() {
+interface Pair {
+  left: BattlePhoto;
+  right: BattlePhoto;
+}
+
+export default function PhotoBattleVotingPage() {
   const params = useParams();
   const sessionId = params.id as string;
-
   const { currentSession, loadSession, submitVote, isLoading, error } = usePhotoFeedback();
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [voterId, setVoterId] = useState('');
-  const [completedVotes, setCompletedVotes] = useState<Set<string>>(new Set());
-  const [isVoting, setIsVoting] = useState(false);
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const [voteHistory, setVoteHistory] = useState<{ photoId: string; vote: 'yes' | 'no'; photoUrl: string; comment?: string }[]>([]);
-  const [comments, setComments] = useState<Record<string, string>>({});
+  const [pair, setPair] = useState<Pair | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [recentWinner, setRecentWinner] = useState<BattlePhoto | null>(null);
 
   useEffect(() => {
     if (sessionId) {
-      loadSession(sessionId);
-      setVoterId(getOrCreateVoterId());
+      void loadSession(sessionId);
     }
   }, [sessionId, loadSession]);
 
-  const handleVote = useCallback(async (vote: 'yes' | 'no') => {
-    if (!currentSession || isVoting || completedVotes.has(currentSession.photos[currentPhotoIndex].id)) return;
+  const canVote = currentSession && currentSession.photos.length >= 2;
 
-    const currentPhoto = currentSession.photos[currentPhotoIndex];
-    const comment = comments[currentPhoto.id]?.trim();
-    setIsVoting(true);
-
-    try {
-      await submitVote(sessionId, currentPhoto.id, vote, voterId, comment);
-      setCompletedVotes(prev => new Set([...prev, currentPhoto.id]));
-      setVoteHistory(prev => [...prev, { photoId: currentPhoto.id, vote, photoUrl: currentPhoto.url, comment }]);
-      if (comment) {
-        setComments(prev => {
-          const updated = { ...prev };
-          delete updated[currentPhoto.id];
-          return updated;
-        });
-      }
-
-      // Move to next photo after a short delay
-      setTimeout(() => {
-        if (currentPhotoIndex < currentSession.photos.length - 1) {
-          setCurrentPhotoIndex(prev => prev + 1);
-        }
-        setIsVoting(false);
-      }, 300);
-    } catch (error) {
-      console.error('Error submitting vote:', error);
-      toastError({
-        title: "Vote not recorded",
-        description: "Please try again.",
-      });
-      setIsVoting(false);
+  const pickNextPair = useCallback(() => {
+    if (!currentSession || currentSession.photos.length < 2) {
+      setPair(null);
+      return;
     }
-  }, [comments, completedVotes, currentPhotoIndex, currentSession, isVoting, sessionId, submitVote, voterId]);
+    const pool = [...currentSession.photos];
+    pool.sort(() => Math.random() - 0.5);
+    const [left, rightCandidate] = pool;
+    const right = rightCandidate?.id === left.id ? pool[1] : rightCandidate;
+    if (!left || !right) {
+      setPair(null);
+      return;
+    }
+    setPair({ left, right });
+  }, [currentSession]);
 
-  // Keyboard arrows to vote (left = no, right = yes)
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        handleVote('no');
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        handleVote('yes');
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [handleVote]);
+    pickNextPair();
+  }, [pickNextPair]);
 
-  const goToPrevious = () => {
-    if (currentPhotoIndex > 0) {
-      setCurrentPhotoIndex(prev => prev - 1);
+  const handleVote = async (winner: BattlePhoto, loser: BattlePhoto) => {
+    if (!currentSession) return;
+    setIsSubmitting(true);
+    try {
+      await submitVote(currentSession.id, winner.id, loser.id);
+      setRecentWinner(winner);
+      pickNextPair();
+    } catch (err) {
+      console.error(err);
+      toastError({
+        title: "Vote failed",
+        description: "Unable to record your choice. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const goToNext = () => {
-    if (currentSession && currentPhotoIndex < currentSession.photos.length - 1) {
-      setCurrentPhotoIndex(prev => prev + 1);
-    }
-  };
+  const leaderboard = useMemo(() => {
+    if (!currentSession) return [];
+    return [...currentSession.photos].sort((a, b) => b.rating - a.rating).slice(0, 3);
+  }, [currentSession]);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStartX(e.touches[0].clientX);
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX === null) return;
-    const deltaX = e.changedTouches[0].clientX - touchStartX;
-    const threshold = 50; // minimal swipe distance
-    if (Math.abs(deltaX) < threshold) return;
-
-    if (deltaX > 0) {
-      void handleVote('yes'); // swipe right to like
-    } else {
-      void handleVote('no'); // swipe left to nope
-    }
-    setTouchStartX(null);
-  };
-
-  const handleCommentChange = (value: string) => {
-    const current = currentSession?.photos[currentPhotoIndex];
-    if (!current) return;
-    setComments(prev => ({ ...prev, [current.id]: value }));
-  };
-
-  if (isLoading) {
+  if (isLoading || !currentSession) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-500 via-purple-500 to-blue-600 dark:from-gray-900 dark:via-purple-800/40 dark:to-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-white animate-spin mx-auto mb-4" />
-          <p className="text-white/80">Loading session...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !currentSession) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-500 via-purple-500 to-blue-600 dark:from-gray-900 dark:via-purple-800/40 dark:to-gray-900 flex items-center justify-center p-4">
-        <Card className="p-8 max-w-md text-center bg-white/90 dark:bg-gray-900/90 backdrop-blur">
-          <div className="text-6xl mb-4">😕</div>
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">
-            {error || 'Session Not Found'}
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            This session may have expired or doesn&apos;t exist.
-          </p>
-          <Link
-            href="/tools/photo-feedback"
-            className="inline-block px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-all"
-          >
-            Create Your Own Session
-          </Link>
-        </Card>
-      </div>
-    );
-  }
-
-  const currentPhoto = currentSession.photos[currentPhotoIndex];
-  const totalPhotos = currentSession.photos.length;
-  const allVotesComplete = completedVotes.size === totalPhotos;
-  const currentComment = comments[currentPhoto.id] || '';
-
-  if (allVotesComplete) {
-    const yesVotes = voteHistory.filter(v => v.vote === 'yes').length;
-    const noVotes = voteHistory.filter(v => v.vote === 'no').length;
-    const totalVotes = voteHistory.length;
-
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20 flex items-center justify-center p-4">
-        <Card className="p-8 max-w-2xl w-full">
-          <div className="text-center mb-6">
-            <div className="flex justify-center mb-4">
-              <div className="p-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full">
-                <CheckCircle className="w-12 h-12 text-white" />
-              </div>
-            </div>
-            <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-2">
-              All Done!
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Thanks for helping your friend pick their best photos. Here’s a recap of your choices.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Votes</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalVotes}</p>
-            </div>
-            <div className="rounded-lg border border-green-200 dark:border-green-800 p-4 text-center bg-green-50 dark:bg-green-900/20">
-              <p className="text-sm text-green-600 dark:text-green-300">Swipe Right</p>
-              <p className="text-2xl font-bold text-green-700 dark:text-green-200">{yesVotes}</p>
-            </div>
-            <div className="rounded-lg border border-red-200 dark:border-red-800 p-4 text-center bg-red-50 dark:bg-red-900/20">
-              <p className="text-sm text-red-600 dark:text-red-300">Swipe Left</p>
-              <p className="text-2xl font-bold text-red-700 dark:text-red-200">{noVotes}</p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {voteHistory.map((vote, index) => (
-              <div
-                key={vote.photoId}
-                className="flex items-center gap-4 rounded-lg border border-gray-200 dark:border-gray-700 p-3"
-              >
-                <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-900">
-                  <Image
-                    src={vote.photoUrl}
-                    alt={`Photo ${index + 1}`}
-                    fill
-                    sizes="80px"
-                    className="object-cover"
-                  />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Photo {index + 1}</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 capitalize">
-                    {vote.vote === 'yes' ? 'Loved it' : 'Not quite'}
-                  </p>
-                  {vote.comment && (
-                    <p className="mt-1 text-sm italic text-gray-600 dark:text-gray-300">
-                      “{vote.comment}”
-                    </p>
-                  )}
-                </div>
-                <div
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    vote.vote === 'yes'
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                  }`}
-                >
-                  {vote.vote === 'yes' ? '❤️ Swipe Right' : '👎 Swipe Left'}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 text-center space-y-2">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              You can close this page now. Feel free to vote on more sessions anytime!
-            </p>
-            <Link
-              href="/tools/photo-feedback"
-              className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-pink-500 hover:bg-pink-600 rounded-full transition-colors"
-            >
-              Create your own feedback session
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex flex-col items-center justify-center gap-4 p-6">
+        {error ? (
+          <Card className="p-8 bg-white/10 border border-white/20 text-center max-w-md">
+            <p className="text-lg font-semibold mb-4">{error}</p>
+            <Link href="/tools/photo-feedback" className="text-purple-200 underline">
+              Go back
             </Link>
-          </div>
-        </Card>
+          </Card>
+        ) : (
+          <>
+            <Loader2 className="w-10 h-10 animate-spin text-purple-300" />
+            <p className="text-sm text-purple-100">Loading showdown…</p>
+          </>
+        )}
       </div>
     );
   }
 
-  const hasVotedOnCurrent = completedVotes.has(currentPhoto.id);
+  if (!canVote || !pair) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <p className="text-xl font-semibold">Need at least two photos to start the battle.</p>
+        <Link href="/tools/photo-feedback" className="text-purple-200 underline">
+          Upload more photos
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-500 via-purple-500 to-blue-600 dark:from-gray-900 dark:via-purple-800/40 dark:to-gray-900">
-      <div className="max-w-xl mx-auto px-4 py-10 flex flex-col gap-6">
-        <div className="flex items-center justify-between text-white">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-white/80">Photo Feedback</p>
-            <h1 className="text-2xl font-bold">
-              {currentSession.creatorName ? `${currentSession.creatorName}'s photos` : 'Rate these photos'}
-            </h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-4 md:p-10">
+      <div className="max-w-5xl mx-auto space-y-6">
+        <header className="text-center space-y-2">
+          <p className="text-sm uppercase tracking-widest text-purple-200">Photo Battle</p>
+          <h1 className="text-3xl md:text-4xl font-bold">Pick the stronger photo</h1>
+          <p className="text-sm text-purple-100">Tap the card that best represents {currentSession.creatorName || "this person"}.</p>
+        </header>
+
+        {recentWinner && (
+          <div className="text-center bg-white/10 border border-white/20 rounded-2xl py-3 px-4 text-sm text-purple-100">
+            <span className="font-semibold text-white">Nice! </span> You boosted one of the photos. Keep going to refine the ranking.
           </div>
-          <div className="text-sm bg-white/20 px-3 py-1 rounded-full">
-            {currentPhotoIndex + 1}/{totalPhotos}
-          </div>
-        </div>
+        )}
 
-        <Card className="relative overflow-hidden border-none shadow-2xl">
-          <div
-            className="relative aspect-[3/4] bg-black"
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-          >
-            <Image
-              src={currentPhoto.url}
-              alt={`Photo ${currentPhotoIndex + 1}`}
-              fill
-              sizes="(max-width: 768px) 100vw, 640px"
-              className="object-contain"
-              priority={currentPhotoIndex === 0}
-            />
-
-            <div className="absolute top-3 left-3 flex items-center gap-2 text-xs px-3 py-1 rounded-full bg-white/80 text-gray-900">
-              {completedVotes.size} voted
-            </div>
-
-            {hasVotedOnCurrent && (
-              <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
-                <div className="bg-white/90 dark:bg-gray-800/90 px-6 py-3 rounded-full shadow-lg">
-                  <p className="text-green-700 dark:text-green-400 font-semibold flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5" />
-                    Voted
-                  </p>
-                </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {[{ side: "left" as const, card: pair.left }, { side: "right" as const, card: pair.right }].map(({ side, card }) => (
+            <Card
+              key={card.id}
+              className={`cursor-pointer overflow-hidden border-2 transition-all bg-white/5 border-white/10 hover:border-white/40 ${
+                isSubmitting ? "pointer-events-none opacity-70" : ""
+              }`}
+              onClick={() => handleVote(card, side === "left" ? pair.right : pair.left)}
+            >
+              <div className="relative aspect-[3/4]">
+                <Image src={card.url} alt="Photo option" fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
               </div>
-            )}
-          </div>
-
-          <div className="absolute top-1/2 -translate-y-1/2 left-2 right-2 flex justify-between pointer-events-none">
-            <button
-              onClick={goToPrevious}
-              disabled={currentPhotoIndex === 0}
-              className="pointer-events-auto p-2 bg-black/50 text-white rounded-full shadow-lg disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/70 transition-all"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-            <button
-              onClick={goToNext}
-              disabled={currentPhotoIndex === totalPhotos - 1}
-              className="pointer-events-auto p-2 bg-black/50 text-white rounded-full shadow-lg disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/70 transition-all"
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
-          </div>
-        </Card>
-
-        <div className="grid grid-cols-2 gap-4">
-          <button
-            onClick={() => handleVote('no')}
-            disabled={isVoting || hasVotedOnCurrent}
-            className="flex items-center justify-center gap-2 px-8 py-5 bg-white/20 hover:bg-white/30 text-white rounded-xl font-bold text-lg shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur"
-          >
-            <X className="w-6 h-6" />
-            Nope
-          </button>
-          <button
-            onClick={() => handleVote('yes')}
-            disabled={isVoting || hasVotedOnCurrent}
-            className="flex items-center justify-center gap-2 px-8 py-5 bg-white text-pink-600 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Heart className="w-6 h-6" />
-            Love it!
-          </button>
+              <div className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-purple-200">Pick this</p>
+                  <p className="text-lg font-semibold text-white">Looks better</p>
+                </div>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-white text-purple-600 text-sm font-semibold"
+                >
+                  Choose
+                </button>
+              </div>
+            </Card>
+          ))}
         </div>
 
-        <div className="mt-6">
-          <label htmlFor="comment" className="text-sm font-semibold text-white/80 block mb-2">
-            Leave a quick comment (optional)
-          </label>
-          <textarea
-            id="comment"
-            value={currentComment}
-            onChange={(e) => handleCommentChange(e.target.value)}
-            disabled={hasVotedOnCurrent || isVoting}
-            rows={3}
-            className="w-full rounded-xl border border-white/30 bg-white/10 text-white placeholder-white/70 focus:ring-2 focus:ring-white/60 focus:outline-none px-4 py-3"
-            placeholder="Tell them why you swiped right or left..."
-          />
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-purple-100">
+          <button
+            type="button"
+            onClick={pickNextPair}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-white/10 border border-white/20 hover:bg-white/20"
+          >
+            <Shuffle className="w-4 h-4" />
+            New pair
+          </button>
+          <Link href="/tools/photo-feedback" className="underline text-purple-200">
+            Start your own battle
+          </Link>
         </div>
+
+        {leaderboard.length > 0 && (
+          <Card className="bg-white/5 border-white/10 p-5">
+            <div className="flex items-center gap-2 text-purple-100 mb-4">
+              <Award className="w-5 h-5" />
+              <p className="text-sm uppercase tracking-widest">Live leaderboard</p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              {leaderboard.map((photo, index) => (
+                <div key={photo.id} className="rounded-2xl bg-white/10 border border-white/10 overflow-hidden">
+                  <div className="relative h-32">
+                    <Image src={photo.url} alt={`Rank ${index + 1}`} fill className="object-cover" sizes="200px" />
+                  </div>
+                  <div className="p-3 space-y-1 text-sm">
+                    <p className="text-purple-200 font-semibold">#{index + 1} • {photo.rating} pts</p>
+                    <p className="text-xs text-purple-100">
+                      {photo.wins} wins • {photo.losses} losses
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );

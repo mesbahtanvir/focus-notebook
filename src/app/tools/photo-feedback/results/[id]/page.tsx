@@ -14,7 +14,7 @@ function ResultsPageContent() {
   const sessionId = params.id as string;
   const secretKey = searchParams.get('key');
 
-  const { loadResults, results, votes, isLoading, error } = usePhotoFeedback();
+  const { loadResults, results, isLoading, error } = usePhotoFeedback();
 
   useEffect(() => {
     if (sessionId && secretKey) {
@@ -55,7 +55,7 @@ function ResultsPageContent() {
             href="/tools/photo-feedback"
             className="inline-block text-purple-600 hover:text-purple-700 font-semibold"
           >
-            Create New Session
+            Create New Battle
           </Link>
         </Card>
       </div>
@@ -115,9 +115,9 @@ function ResultsPageContent() {
                 <Trophy className="w-6 h-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Top Photo</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Top Rating</p>
                 <p className="text-2xl font-bold text-gray-800 dark:text-gray-200">
-                  {results[0]?.percentage || 0}% liked
+                  {results[0]?.rating ?? 0} pts
                 </p>
               </div>
             </div>
@@ -138,23 +138,21 @@ function ResultsPageContent() {
         ) : (
           <div className="space-y-4">
             {results.map((result, index) => {
-              const photoComments = votes.filter(
-                vote => vote.photoId === result.photoId && vote.comment && vote.comment.trim().length > 0
-              );
+              const winRate = result.totalVotes > 0 ? Math.round((result.wins / result.totalVotes) * 100) : 0;
               return (
                 <Card
-                  key={result.photoId}
+                  key={result.id}
                   className={`p-6 bg-white dark:bg-gray-800 border-2 transition-all ${
                     index === 0
-                      ? 'border-yellow-400 dark:border-yellow-600 shadow-lg'
-                      : 'border-purple-200 dark:border-purple-800'
+                      ? "border-yellow-400 dark:border-yellow-600 shadow-lg"
+                      : "border-purple-200 dark:border-purple-800"
                   }`}
                 >
                   <div className="flex flex-col md:flex-row gap-6">
                     <div className="flex-shrink-0">
                       <div className="relative w-full md:w-48 h-64">
                         <Image
-                          src={result.photoUrl}
+                          src={result.url}
                           alt={`Photo ${index + 1}`}
                           fill
                           sizes="(max-width: 768px) 100vw, 192px"
@@ -172,99 +170,35 @@ function ResultsPageContent() {
                       </div>
                     </div>
 
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">
-                          Photo {index + 1}
-                        </h3>
+                    <div className="flex-1 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">Photo #{index + 1}</h3>
                         <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                          {result.percentage}%
+                          {result.rating} pts
                         </div>
                       </div>
 
-                      <div className="mb-4">
-                        <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
-                          <span>Approval Rating</span>
-                          <span>{result.totalVotes} total votes</span>
+                      <div className="grid grid-cols-3 gap-3">
+                        <StatCard label="Wins" value={result.wins} accent="green" />
+                        <StatCard label="Losses" value={result.losses} accent="red" />
+                        <StatCard label="Battles" value={result.totalVotes} accent="purple" />
+                      </div>
+
+                      <div className="p-4 bg-gray-50 dark:bg-gray-900/30 rounded-xl">
+                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Win rate</p>
+                        <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
+                          <span>{winRate}%</span>
+                          <span>
+                            {result.wins} / {result.totalVotes} duels
+                          </span>
                         </div>
-                        <div className="relative w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                        <div className="mt-2 h-2 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
                           <div
-                            className="absolute left-0 top-0 h-full bg-gradient-to-r from-green-500 to-emerald-500 transition-all duration-500"
-                            style={{ width: `${result.percentage}%` }}
+                            className="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500"
+                            style={{ width: `${winRate}%` }}
                           />
                         </div>
                       </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                          <div className="p-2 bg-green-500 rounded-lg">
-                            <ThumbsUp className="w-5 h-5 text-white" />
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Love it</p>
-                            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                              {result.yesVotes}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                          <div className="p-2 bg-red-500 rounded-lg">
-                            <ThumbsDown className="w-5 h-5 text-white" />
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Not so much</p>
-                            <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                              {result.noVotes}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {photoComments.length > 0 && (
-                        <div className="mt-4">
-                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                            Recent comments
-                          </p>
-                          <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
-                            {photoComments.slice(0, 3).map(comment => (
-                              <p
-                                key={comment.id}
-                                className="text-sm italic text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-900/40 rounded-lg px-3 py-2"
-                              >
-                                “{comment.comment}”
-                              </p>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {result.totalVotes >= 3 && (
-                        <div className="mt-4">
-                          {result.percentage >= 70 ? (
-                            <div className="flex items-center gap-2 p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                              <Trophy className="w-5 h-5 text-green-600 dark:text-green-400" />
-                              <span className="text-sm font-semibold text-green-700 dark:text-green-300">
-                                Definitely use this one!
-                              </span>
-                            </div>
-                          ) : result.percentage >= 50 ? (
-                            <div className="flex items-center gap-2 p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                              <TrendingUp className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-                              <span className="text-sm font-semibold text-yellow-700 dark:text-yellow-300">
-                                Could work, but not your strongest
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2 p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                              <ThumbsDown className="w-5 h-5 text-red-600 dark:text-red-400" />
-                              <span className="text-sm font-semibold text-red-700 dark:text-red-300">
-                                Consider skipping this one
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </Card>
@@ -278,10 +212,24 @@ function ResultsPageContent() {
             href="/tools/photo-feedback"
             className="inline-block px-8 py-4 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 hover:shadow-lg text-white rounded-lg font-semibold transition-all"
           >
-            Create New Session
+            Create New Battle
           </Link>
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, accent }: { label: string; value: number; accent: "green" | "red" | "purple" }) {
+  const accentMap = {
+    green: "text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30",
+    red: "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30",
+    purple: "text-purple-600 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30",
+  };
+  return (
+    <div className={`rounded-xl px-4 py-3 ${accentMap[accent]} bg-opacity-30`}>
+      <p className="text-xs uppercase tracking-widest">{label}</p>
+      <p className="text-2xl font-semibold">{value}</p>
     </div>
   );
 }

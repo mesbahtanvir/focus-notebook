@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Copy, Check, ExternalLink, BarChart3, Share2, Clock, Loader2 } from "lucide-react";
+import { Copy, Check, ExternalLink, BarChart3, Share2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { usePhotoFeedback } from "@/store/usePhotoFeedback";
@@ -36,9 +36,6 @@ function SharePageContent() {
       console.error('Failed to copy:', error);
     }
   };
-
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 3);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -81,12 +78,12 @@ function SharePageContent() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20 flex items-center justify-center p-4">
         <Card className="p-8 max-w-md text-center">
-          <p className="text-red-600 dark:text-red-400">Invalid session. Please create a new one.</p>
+          <p className="text-red-600 dark:text-red-400">Invalid battle link. Please create a new one.</p>
           <Link
             href="/tools/photo-feedback"
             className="mt-4 inline-block text-purple-600 hover:text-purple-700 font-semibold"
           >
-            Create New Session
+            Create New Battle
           </Link>
         </Card>
       </div>
@@ -104,10 +101,10 @@ function SharePageContent() {
             </div>
           </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
-            Session Created!
+            Battle Link Ready!
           </h1>
           <p className="text-gray-600 dark:text-gray-400 text-lg">
-            Share the voting link with your friends
+            Share this link so friends can pick the better photo in each matchup
           </p>
         </div>
 
@@ -120,7 +117,7 @@ function SharePageContent() {
             </h2>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-            Your friends can vote on your photos using this link. No login required for them!
+            Your friends will see two of your photos at a time and tap the stronger one. No login required!
           </p>
           <div className="flex gap-2">
             <input
@@ -145,10 +142,6 @@ function SharePageContent() {
                 </>
               )}
             </button>
-          </div>
-          <div className="mt-3 flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400">
-            <Clock className="w-4 h-4" />
-            <span>Link expires on {expiresAt.toLocaleDateString()} at {expiresAt.toLocaleTimeString()}</span>
           </div>
         </Card>
 

@@ -1,42 +1,28 @@
 import { create } from 'zustand';
-import { collection, doc, query, where, getDocs, setDoc, getDoc, deleteDoc, Timestamp, orderBy, updateDoc, increment, arrayUnion } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, setDoc, getDoc, deleteDoc, Timestamp, orderBy, updateDoc, increment, arrayUnion, runTransaction } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
 import { auth, db, storage, functionsClient } from '@/lib/firebaseClient';
 
-export interface PhotoSession {
+export interface BattlePhoto {
+  id: string;
+  url: string;
+  storagePath: string;
+  libraryId?: string;
+  rating: number;
+  wins: number;
+  losses: number;
+  totalVotes: number;
+}
+
+export interface PhotoBattle {
   id: string;
   ownerId: string;
-  creatorName?: string; // Optional
+  creatorName?: string;
+  photos: BattlePhoto[];
+  secretKey: string;
+  createdAt: string;
   isPublic?: boolean;
-  photos: {
-    id: string;
-    url: string;
-    storagePath: string;
-    libraryId?: string;
-  }[];
-  secretKey: string; // For accessing results
-  expiresAt: string; // ISO date
-  createdAt: string;
-}
-
-export interface PhotoVote {
-  id: string;
-  sessionId: string;
-  photoId: string;
-  vote: 'yes' | 'no';
-  voterId: string; // Anonymous ID
-  createdAt: string;
-  comment?: string;
-}
-
-export interface VoteResults {
-  photoId: string;
-  photoUrl: string;
-  yesVotes: number;
-  noVotes: number;
-  totalVotes: number;
-  percentage: number; // Percentage of yes votes
 }
 
 export interface PhotoStats {
@@ -66,14 +52,13 @@ export interface UploadProgressEvent {
 }
 
 type State = {
-  currentSession: PhotoSession | null;
-  votes: PhotoVote[];
-  results: VoteResults[];
+  currentSession: PhotoBattle | null;
+  results: BattlePhoto[];
   isLoading: boolean;
   sessionsLoading: boolean;
   libraryLoading: boolean;
   error: string | null;
-  userSessions: PhotoSession[];
+  userSessions: PhotoBattle[];
   library: PhotoLibraryItem[];
 
   // Actions
@@ -86,11 +71,10 @@ type State = {
   loadLibrary: () => Promise<PhotoLibraryItem[]>;
   deleteLibraryPhoto: (photoId: string) => Promise<void>;
   deleteAllLibraryPhotos: () => Promise<void>;
-  loadSession: (sessionId: string) => Promise<PhotoSession | null>;
-  submitVote: (sessionId: string, photoId: string, vote: 'yes' | 'no', voterId: string, comment?: string) => Promise<void>;
-  loadResults: (sessionId: string, secretKey: string) => Promise<VoteResults[]>;
-  checkSessionExpired: (session: PhotoSession) => boolean;
-  loadUserSessions: () => Promise<PhotoSession[]>;
+  loadSession: (sessionId: string) => Promise<PhotoBattle | null>;
+  submitVote: (sessionId: string, winnerId: string, loserId: string) => Promise<void>;
+  loadResults: (sessionId: string, secretKey: string) => Promise<BattlePhoto[]>;
+  loadUserSessions: () => Promise<PhotoBattle[]>;
   setSessionPublic: (sessionId: string, isPublic: boolean) => Promise<void>;
 };
 
@@ -106,7 +90,6 @@ function generateVoterId(): string {
 
 export const usePhotoFeedback = create<State>((set, get) => ({
   currentSession: null,
-  votes: [],
   results: [],
   isLoading: false,
   sessionsLoading: false,
@@ -130,8 +113,6 @@ export const usePhotoFeedback = create<State>((set, get) => ({
     try {
       const sessionId = Date.now().toString();
       const secretKey = generateSecretKey();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 3); // 3 days from now
 
       // Ensure library photos are loaded
       let library = get().library;
@@ -156,26 +137,29 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         throw new Error('No valid photos found in your gallery.');
       }
 
-      const sessionPhotos = selectedItems.map((item, index) => ({
+      const sessionPhotos: BattlePhoto[] = selectedItems.map((item, index) => ({
         id: `${sessionId}_${index}`,
         url: item.url,
         storagePath: item.storagePath,
         libraryId: item.id,
+        rating: 1200,
+        wins: 0,
+        losses: 0,
+        totalVotes: 0,
       }));
 
       // Create session document
-      const session: PhotoSession = {
+      const session: PhotoBattle = {
         id: sessionId,
         ownerId: user.uid,
         creatorName,
         photos: sessionPhotos,
         secretKey,
-        expiresAt: expiresAt.toISOString(),
         createdAt: new Date().toISOString(),
         isPublic: false,
       };
 
-      const sessionRef = doc(db, 'photoSessions', sessionId);
+      const sessionRef = doc(db, 'photoBattles', sessionId);
       await setDoc(sessionRef, session);
 
       set(state => ({
@@ -406,7 +390,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const sessionRef = doc(db, 'photoSessions', sessionId);
+      const sessionRef = doc(db, 'photoBattles', sessionId);
       const sessionDoc = await getDoc(sessionRef);
 
       if (!sessionDoc.exists()) {
@@ -414,13 +398,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         return null;
       }
 
-      const session = sessionDoc.data() as PhotoSession;
-
-      // Check if expired
-      if (get().checkSessionExpired(session)) {
-        set({ error: 'This session has expired', isLoading: false });
-        return null;
-      }
+      const session = sessionDoc.data() as PhotoBattle;
 
       set({ currentSession: session, isLoading: false });
       return session;
@@ -431,31 +409,44 @@ export const usePhotoFeedback = create<State>((set, get) => ({
     }
   },
 
-  submitVote: async (sessionId: string, photoId: string, vote: 'yes' | 'no', voterId: string, comment?: string) => {
+  submitVote: async (sessionId: string, winnerId: string, loserId: string) => {
     try {
-      const voteId = `${sessionId}_${photoId}_${voterId}`;
-      const voteRef = doc(db, 'photoSessions', sessionId, 'votes', voteId);
+      await runTransaction(db, async transaction => {
+        const sessionRef = doc(db, 'photoBattles', sessionId);
+        const snap = await transaction.get(sessionRef);
+        if (!snap.exists()) {
+          throw new Error('Session not found');
+        }
 
-      const voteData: PhotoVote = {
-        id: voteId,
-        sessionId,
-        photoId,
-        vote,
-        voterId,
-        createdAt: new Date().toISOString(),
-      };
-      if (comment && comment.trim()) {
-        voteData.comment = comment.trim();
-      }
+        const session = snap.data() as PhotoBattle;
+        const photos = session.photos.map(photo => ({ ...photo }));
+        const winner = photos.find(photo => photo.id === winnerId);
+        const loser = photos.find(photo => photo.id === loserId);
 
-      await setDoc(voteRef, voteData);
+        if (!winner || !loser) {
+          throw new Error('Invalid photos selected');
+        }
 
-      const session = get().currentSession;
-      const photo = session?.photos.find(p => p.id === photoId);
-      const ownerId = session?.ownerId;
-      if (photo?.libraryId && ownerId) {
-        await updateLibraryStats(ownerId, photo.libraryId, vote, sessionId);
-      }
+        const K = 32;
+        const expectedWinner = 1 / (1 + Math.pow(10, (loser.rating - winner.rating) / 400));
+        const expectedLoser = 1 / (1 + Math.pow(10, (winner.rating - loser.rating) / 400));
+
+        winner.rating = Math.max(0, Math.round(winner.rating + K * (1 - expectedWinner)));
+        loser.rating = Math.max(0, Math.round(loser.rating + K * (0 - expectedLoser)));
+        winner.wins += 1;
+        winner.totalVotes += 1;
+        loser.losses += 1;
+        loser.totalVotes += 1;
+
+        transaction.update(sessionRef, { photos, updatedAt: new Date().toISOString() });
+
+        if (winner.libraryId) {
+          void updateLibraryStats(session.ownerId, winner.libraryId, 'win', sessionId);
+        }
+        if (loser.libraryId) {
+          void updateLibraryStats(session.ownerId, loser.libraryId, 'loss', sessionId);
+        }
+      });
     } catch (error) {
       console.error('Error submitting vote:', error);
       throw error;
@@ -467,7 +458,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
 
     try {
       // Verify secret key
-      const sessionRef = doc(db, 'photoSessions', sessionId);
+      const sessionRef = doc(db, 'photoBattles', sessionId);
       const sessionDoc = await getDoc(sessionRef);
 
       if (!sessionDoc.exists()) {
@@ -475,50 +466,21 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         return [];
       }
 
-      const session = sessionDoc.data() as PhotoSession;
+      const session = sessionDoc.data() as PhotoBattle;
 
       if (session.secretKey !== secretKey) {
         set({ error: 'Invalid secret key', isLoading: false });
         return [];
       }
 
-      // Load all votes
-      const votesRef = collection(db, 'photoSessions', sessionId, 'votes');
-      const votesSnapshot = await getDocs(votesRef);
-      const votes = votesSnapshot.docs.map(doc => doc.data() as PhotoVote);
-
-      // Calculate results for each photo
-      const results: VoteResults[] = session.photos.map(photo => {
-        const photoVotes = votes.filter(v => v.photoId === photo.id);
-        const yesVotes = photoVotes.filter(v => v.vote === 'yes').length;
-        const noVotes = photoVotes.filter(v => v.vote === 'no').length;
-        const totalVotes = photoVotes.length;
-        const percentage = totalVotes > 0 ? Math.round((yesVotes / totalVotes) * 100) : 0;
-
-        return {
-          photoId: photo.id,
-          photoUrl: photo.url,
-          yesVotes,
-          noVotes,
-          totalVotes,
-          percentage,
-        };
-      });
-
-      // Sort by percentage (highest first)
-      results.sort((a, b) => b.percentage - a.percentage);
-
-      set({ results, votes, isLoading: false });
-      return results;
+      const sorted = [...session.photos].sort((a, b) => b.rating - a.rating);
+      set({ results: sorted, isLoading: false });
+      return sorted;
     } catch (error) {
       console.error('Error loading results:', error);
       set({ error: 'Failed to load results', isLoading: false });
       return [];
     }
-  },
-
-  checkSessionExpired: (session: PhotoSession) => {
-    return new Date(session.expiresAt) < new Date();
   },
 
   loadUserSessions: async () => {
@@ -530,14 +492,14 @@ export const usePhotoFeedback = create<State>((set, get) => ({
     set({ sessionsLoading: true, error: null });
 
     try {
-      const sessionsRef = collection(db, 'photoSessions');
+      const sessionsRef = collection(db, 'photoBattles');
       const q = query(
         sessionsRef,
         where('ownerId', '==', user.uid),
         orderBy('createdAt', 'desc')
       );
       const snapshot = await getDocs(q);
-      const sessions = snapshot.docs.map(doc => doc.data() as PhotoSession);
+      const sessions = snapshot.docs.map(doc => doc.data() as PhotoBattle);
       set({ userSessions: sessions, sessionsLoading: false });
       return sessions;
     } catch (error) {
@@ -549,7 +511,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
 
   setSessionPublic: async (sessionId: string, isPublic: boolean) => {
     try {
-      await updateDoc(doc(db, 'photoSessions', sessionId), { isPublic });
+      await updateDoc(doc(db, 'photoBattles', sessionId), { isPublic });
       set(state => ({
         userSessions: state.userSessions.map(session =>
           session.id === sessionId ? { ...session, isPublic } : session
@@ -574,7 +536,7 @@ export function getOrCreateVoterId(): string {
   return voterId;
 }
 
-async function updateLibraryStats(ownerId: string, libraryId: string, vote: 'yes' | 'no', sessionId: string) {
+async function updateLibraryStats(ownerId: string, libraryId: string, result: 'win' | 'loss', sessionId: string) {
   const statsRef = doc(db, `users/${ownerId}/photoLibrary/${libraryId}`);
 
   try {
@@ -587,7 +549,7 @@ async function updateLibraryStats(ownerId: string, libraryId: string, vote: 'yes
 
     const updates: Record<string, any> = {
       "stats.totalVotes": increment(1),
-      "stats.yesVotes": vote === 'yes' ? increment(1) : increment(0),
+      "stats.yesVotes": result === 'win' ? increment(1) : increment(0),
       "stats.lastVotedAt": Timestamp.fromDate(new Date()),
     };
 

@@ -11,7 +11,6 @@ interface PublicSession {
   id: string;
   creatorName?: string;
   createdAt: string;
-  expiresAt: string;
   photos: { id: string; url: string }[];
 }
 
@@ -22,12 +21,10 @@ export default function VotingMarketPage() {
   useEffect(() => {
     const fetchPublicSessions = async () => {
       try {
-        const q = query(collection(db, "photoSessions"), where("isPublic", "==", true));
+        const q = query(collection(db, "photoBattles"), where("isPublic", "==", true));
         const snapshot = await getDocs(q);
-        const now = new Date();
         const data = snapshot.docs
           .map(doc => doc.data() as PublicSession)
-          .filter(session => new Date(session.expiresAt) > now)
           .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
         setSessions(data);
       } catch (error) {
@@ -45,9 +42,9 @@ export default function VotingMarketPage() {
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
         <div className="text-center">
           <Users className="w-12 h-12 mx-auto mb-3 text-purple-600" />
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Voting Market</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Photo Battle Market</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Explore public photo sessions from other users and share your honest feedback.
+            Explore public battles from other users and pick the strongest photos.
           </p>
         </div>
 
