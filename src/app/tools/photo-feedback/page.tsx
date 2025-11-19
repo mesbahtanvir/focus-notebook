@@ -3,16 +3,78 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePhotoFeedback } from "@/store/usePhotoFeedback";
-import { Upload, ArrowRight, Heart, Loader2, Copy, ExternalLink, CheckCircle, Shuffle } from "lucide-react";
+import { Upload, ArrowRight, Heart, Loader2, Copy, ExternalLink, CheckCircle, Shuffle, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import Image from "next/image";
+import NextImage from "next/image";
 import { toastError, toastSuccess, toastWarning } from "@/lib/toast-presets";
 import { Button } from "@/components/ui/button";
 import { pickRandomPhotoIds, paginateItems } from "@/lib/photoGallery";
+import { useRef } from "react";
+import { useInfiniteGallery } from "@/hooks/useInfiniteGallery";
 
 const PHOTOS_PER_PAGE = 8;
+const MAX_IMAGE_DIMENSION = 1024;
+
+async function resizeImageIfNeeded(file: File): Promise<File> {
+  if (typeof window === "undefined") return file;
+  if (file.type === "image/gif") return file;
+
+  return new Promise<File>((resolve, reject) => {
+    const img = typeof window !== "undefined" && window.Image ? new window.Image() : document.createElement("img");
+    const cleanup = () => {
+      URL.revokeObjectURL(img.src);
+    };
+
+    img.onload = () => {
+      let { width, height } = img;
+      if (width <= MAX_IMAGE_DIMENSION && height <= MAX_IMAGE_DIMENSION) {
+        cleanup();
+        resolve(file);
+        return;
+      }
+
+      if (width >= height) {
+        const scale = MAX_IMAGE_DIMENSION / width;
+        width = MAX_IMAGE_DIMENSION;
+        height = Math.round(height * scale);
+      } else {
+        const scale = MAX_IMAGE_DIMENSION / height;
+        height = MAX_IMAGE_DIMENSION;
+        width = Math.round(width * scale);
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        cleanup();
+        reject(new Error("Unable to resize image"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          cleanup();
+          if (!blob) {
+            reject(new Error("Failed to process image"));
+            return;
+          }
+          resolve(new File([blob], file.name.replace(/\.(png|jpg|jpeg)$/i, ".jpg"), { type: "image/jpeg", lastModified: Date.now() }));
+        },
+        "image/jpeg",
+        0.9
+      );
+    };
+    img.onerror = () => {
+      cleanup();
+      reject(new Error("Unable to load image for resizing"));
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
 
 export default function PhotoFeedbackPage() {
   const router = useRouter();
@@ -22,6 +84,7 @@ export default function PhotoFeedbackPage() {
     loadLibrary,
     library,
     libraryLoading,
+    deleteLibraryPhoto,
     isLoading,
     userSessions,
     sessionsLoading,
@@ -32,7 +95,9 @@ export default function PhotoFeedbackPage() {
 
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per storage.rules
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
+  const [uploadStatus, setUploadStatus] = useState<{ current: number; total: number } | null>(null);
   const [galleryPage, setGalleryPage] = useState(0);
+  const galleryRef = useRef<HTMLDivElement>(null);
 
   const canCreateSession = !!user && !isAnonymous;
 
@@ -75,6 +140,28 @@ export default function PhotoFeedbackPage() {
     galleryPage,
     PHOTOS_PER_PAGE
   );
+  useInfiniteGallery({
+    items: library,
+    pageSize: PHOTOS_PER_PAGE,
+    currentPage: galleryPage,
+    setCurrentPage: setGalleryPage,
+    containerRef: galleryRef,
+  });
+
+  const handleDeletePhoto = async (photoId: string) => {
+    const confirmDelete = window.confirm("Remove this photo from your gallery? This cannot be undone.");
+    if (!confirmDelete) return;
+
+    try {
+      await deleteLibraryPhoto(photoId);
+      toastSuccess({ title: "Photo removed", description: "This image has been removed from your gallery." });
+    } catch (error) {
+      toastError({
+        title: "Could not delete photo",
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    }
+  };
 
   const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -92,11 +179,15 @@ export default function PhotoFeedbackPage() {
     }
 
     try {
-      const uploaded = await uploadToLibrary(imageFiles);
+      const processed = await Promise.all(imageFiles.map(resizeImageIfNeeded));
+      setUploadStatus({ current: 0, total: processed.length });
+      const uploaded = await uploadToLibrary(processed, (current, total) => {
+        setUploadStatus({ current, total });
+      });
       setSelectedPhotoIds(prev => [...uploaded.map(item => item.id), ...prev]);
       toastSuccess({
         title: "Gallery updated",
-        description: `${imageFiles.length} photo${imageFiles.length > 1 ? 's' : ''} added.`,
+        description: `${processed.length} photo${processed.length > 1 ? 's' : ''} added.`,
       });
     } catch (err) {
       const description =
@@ -108,6 +199,7 @@ export default function PhotoFeedbackPage() {
         description,
       });
     } finally {
+      setUploadStatus(null);
       if (e.target) {
         e.target.value = "";
       }
@@ -176,7 +268,11 @@ export default function PhotoFeedbackPage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                {libraryLoading && <p className="text-xs text-gray-500 dark:text-gray-400">Uploading…</p>}
+                {uploadStatus && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Uploading {uploadStatus.current}/{uploadStatus.total}
+                  </p>
+                )}
                 <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Selected: {selectedPhotoIds.length}
                 </span>
@@ -221,27 +317,44 @@ export default function PhotoFeedbackPage() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-h-[520px] overflow-auto pr-1">
+                <div ref={galleryRef} className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-[520px] overflow-auto pr-1">
                   {paginatedPhotos.map(item => {
                     const selected = selectedPhotoIds.includes(item.id);
                     return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => togglePhotoSelection(item.id)}
-                        className={`rounded-lg border overflow-hidden text-left transition-all relative group ${
-                          selected
-                            ? "border-pink-500 ring-2 ring-pink-300 dark:ring-pink-500/50"
-                            : "border-gray-200 dark:border-gray-700 hover:border-pink-300 dark:hover:border-pink-500/40"
+                    <div
+                      key={item.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => togglePhotoSelection(item.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          togglePhotoSelection(item.id);
+                        }
+                      }}
+                      className={`rounded-lg border overflow-hidden text-left transition-all relative group cursor-pointer ${selected
+                        ? "border-pink-500 ring-2 ring-pink-300 dark:ring-pink-500/50"
+                        : "border-gray-200 dark:border-gray-700 hover:border-pink-300 dark:hover:border-pink-500/40"
                         }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePhoto(item.id);
+                        }}
+                        className="absolute top-2 left-2 z-10 inline-flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 w-7 h-7 transition"
+                        aria-label="Remove photo from gallery"
                       >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                         <div className="relative aspect-square bg-gray-100 dark:bg-gray-900">
-                          <Image
-                            src={item.url}
-                            alt="Gallery photo"
-                            fill
-                            sizes="(max-width: 768px) 25vw, 150px"
-                            className="object-cover"
+                        <NextImage
+                          src={item.url}
+                          alt="Gallery photo"
+                          fill
+                          sizes="(max-width: 768px) 25vw, 150px"
+                          className="object-cover"
                           />
                           <div className="absolute inset-0 pointer-events-none flex items-end justify-center pb-2">
                             {!selected && (
@@ -265,7 +378,7 @@ export default function PhotoFeedbackPage() {
                             </p>
                           )}
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
 

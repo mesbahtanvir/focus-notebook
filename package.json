@@ -19,7 +19,8 @@
     "test:screenshots": "playwright test",
     "test:screenshots:ui": "playwright test --ui",
     "test:screenshots:debug": "playwright test --debug",
-    "test:screenshots:update": "playwright test --update-snapshots"
+    "test:screenshots:update": "playwright test --update-snapshots",
+    "validate": "npm run lint && npm run test && npm run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",

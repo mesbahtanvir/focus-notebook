@@ -29,6 +29,24 @@ npm run dev
 # 3. Open http://localhost:3000
 ```
 
+## Validation & Deploy Checklist
+
+To reproduce CI locally, run:
+
+```bash
+npm run validate
+```
+
+This validates lint, tests, and the production build. For a full pipeline (install → lint → test → build → optional deploy), use the helper script:
+
+```bash
+./scripts/validate-and-deploy.sh
+# optionally specify a deploy command
+DEPLOY_COMMAND="npx vercel --prod" ./scripts/validate-and-deploy.sh
+```
+
+The shell script uses `npm ci`, runs the validation steps, and executes the deploy command only if `DEPLOY_COMMAND` is provided.
+
 **That's it!** The app works locally without any setup.
 
 For cloud sync, see [Setup Guide](docs/guides/setup.md).

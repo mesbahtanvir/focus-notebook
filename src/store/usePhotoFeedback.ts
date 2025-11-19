@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { collection, doc, query, where, getDocs, setDoc, getDoc, Timestamp, orderBy, updateDoc, increment, arrayUnion } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, doc, query, where, getDocs, setDoc, getDoc, deleteDoc, Timestamp, orderBy, updateDoc, increment, arrayUnion } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebaseClient';
 
 export interface PhotoSession {
@@ -66,8 +66,9 @@ type State = {
 
   // Actions
   createSessionFromLibrary: (libraryPhotoIds: string[], creatorName?: string) => Promise<{ sessionId: string; secretKey: string }>;
-  uploadToLibrary: (photos: File[]) => Promise<PhotoLibraryItem[]>;
+  uploadToLibrary: (photos: File[], onProgress?: (uploaded: number, total: number) => void) => Promise<PhotoLibraryItem[]>;
   loadLibrary: () => Promise<PhotoLibraryItem[]>;
+  deleteLibraryPhoto: (photoId: string) => Promise<void>;
   loadSession: (sessionId: string) => Promise<PhotoSession | null>;
   submitVote: (sessionId: string, photoId: string, vote: 'yes' | 'no', voterId: string, comment?: string) => Promise<void>;
   loadResults: (sessionId: string, secretKey: string) => Promise<VoteResults[]>;
@@ -173,7 +174,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
     }
   },
 
-  uploadToLibrary: async (photos: File[]) => {
+  uploadToLibrary: async (photos: File[], onProgress?: (uploaded: number, total: number) => void) => {
     const user = auth.currentUser;
     if (!user || user.isAnonymous) {
       throw new Error('You must be signed in to upload photos.');
@@ -182,34 +183,34 @@ export const usePhotoFeedback = create<State>((set, get) => ({
     set({ libraryLoading: true, error: null });
 
     try {
-      const uploaded = await Promise.all(
-        photos.map(async (file) => {
-          const photoId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-          const storagePath = `users/${user.uid}/photo-library/${photoId}`;
-          const storageRef = ref(storage, storagePath);
+      const uploaded: PhotoLibraryItem[] = [];
+      for (const file of photos) {
+        const photoId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const storagePath = `users/${user.uid}/photo-library/${photoId}`;
+        const storageRef = ref(storage, storagePath);
 
-          await uploadBytes(storageRef, file, {
-            contentType: file.type || 'image/jpeg',
-          });
-          const url = await getDownloadURL(storageRef);
+        await uploadBytes(storageRef, file, {
+          contentType: file.type || 'image/jpeg',
+        });
+        const url = await getDownloadURL(storageRef);
 
-          const docRef = doc(db, `users/${user.uid}/photoLibrary`, photoId);
-          const item: PhotoLibraryItem = {
-            id: photoId,
-            ownerId: user.uid,
-            url,
-            storagePath,
-            createdAt: new Date().toISOString(),
-            stats: {
-              yesVotes: 0,
-              totalVotes: 0,
-              sessionCount: 0,
-            },
-          };
-          await setDoc(docRef, item);
-          return item;
-        })
-      );
+        const docRef = doc(db, `users/${user.uid}/photoLibrary`, photoId);
+        const item: PhotoLibraryItem = {
+          id: photoId,
+          ownerId: user.uid,
+          url,
+          storagePath,
+          createdAt: new Date().toISOString(),
+          stats: {
+            yesVotes: 0,
+            totalVotes: 0,
+            sessionCount: 0,
+          },
+        };
+        await setDoc(docRef, item);
+        uploaded.push(item);
+        onProgress?.(uploaded.length, photos.length);
+      }
 
       set(state => ({
         library: [...uploaded, ...state.library].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
@@ -243,6 +244,31 @@ export const usePhotoFeedback = create<State>((set, get) => ({
       console.error('Error loading library:', error);
       set({ libraryLoading: false, error: 'Failed to load your gallery' });
       return [];
+    }
+  },
+
+  deleteLibraryPhoto: async (photoId: string) => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) {
+      throw new Error('You must be signed in to delete gallery photos.');
+    }
+
+    const target = get().library.find(photo => photo.id === photoId);
+    if (!target) return;
+
+    try {
+      const storageRef = ref(storage, target.storagePath);
+      await deleteObject(storageRef).catch(error => {
+        console.warn('Unable to delete photo file (continuing):', error);
+      });
+      await deleteDoc(doc(db, `users/${user.uid}/photoLibrary`, photoId));
+      set(state => ({
+        library: state.library.filter(photo => photo.id !== photoId),
+        userSessions: state.userSessions,
+      }));
+    } catch (error) {
+      console.error('Failed to delete gallery photo:', error);
+      throw error;
     }
   },
 
@@ -287,8 +313,10 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         vote,
         voterId,
         createdAt: new Date().toISOString(),
-        comment,
       };
+      if (comment && comment.trim()) {
+        voteData.comment = comment.trim();
+      }
 
       await setDoc(voteRef, voteData);
 
