@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { collection, doc, query, where, getDocs, setDoc, getDoc, Timestamp } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, setDoc, getDoc, Timestamp, orderBy, updateDoc, increment, arrayUnion } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebaseClient';
 
@@ -7,10 +7,12 @@ export interface PhotoSession {
   id: string;
   ownerId: string;
   creatorName?: string; // Optional
+  isPublic?: boolean;
   photos: {
     id: string;
     url: string;
     storagePath: string;
+    libraryId?: string;
   }[];
   secretKey: string; // For accessing results
   expiresAt: string; // ISO date
@@ -24,6 +26,7 @@ export interface PhotoVote {
   vote: 'yes' | 'no';
   voterId: string; // Anonymous ID
   createdAt: string;
+  comment?: string;
 }
 
 export interface VoteResults {
@@ -35,19 +38,42 @@ export interface VoteResults {
   percentage: number; // Percentage of yes votes
 }
 
+export interface PhotoStats {
+  yesVotes: number;
+  totalVotes: number;
+  sessionCount: number;
+}
+
+export interface PhotoLibraryItem {
+  id: string;
+  ownerId: string;
+  url: string;
+  storagePath: string;
+  createdAt: string;
+  stats?: PhotoStats;
+}
+
 type State = {
   currentSession: PhotoSession | null;
   votes: PhotoVote[];
   results: VoteResults[];
   isLoading: boolean;
+  sessionsLoading: boolean;
+  libraryLoading: boolean;
   error: string | null;
+  userSessions: PhotoSession[];
+  library: PhotoLibraryItem[];
 
   // Actions
-  createSession: (photos: File[], creatorName?: string) => Promise<{ sessionId: string; secretKey: string }>;
+  createSessionFromLibrary: (libraryPhotoIds: string[], creatorName?: string) => Promise<{ sessionId: string; secretKey: string }>;
+  uploadToLibrary: (photos: File[]) => Promise<PhotoLibraryItem[]>;
+  loadLibrary: () => Promise<PhotoLibraryItem[]>;
   loadSession: (sessionId: string) => Promise<PhotoSession | null>;
-  submitVote: (sessionId: string, photoId: string, vote: 'yes' | 'no', voterId: string) => Promise<void>;
+  submitVote: (sessionId: string, photoId: string, vote: 'yes' | 'no', voterId: string, comment?: string) => Promise<void>;
   loadResults: (sessionId: string, secretKey: string) => Promise<VoteResults[]>;
   checkSessionExpired: (session: PhotoSession) => boolean;
+  loadUserSessions: () => Promise<PhotoSession[]>;
+  setSessionPublic: (sessionId: string, isPublic: boolean) => Promise<void>;
 };
 
 // Generate a random secret key
@@ -65,12 +91,20 @@ export const usePhotoFeedback = create<State>((set, get) => ({
   votes: [],
   results: [],
   isLoading: false,
+  sessionsLoading: false,
+  libraryLoading: false,
   error: null,
+  userSessions: [],
+  library: [],
 
-  createSession: async (photos: File[], creatorName?: string) => {
+  createSessionFromLibrary: async (libraryPhotoIds: string[], creatorName?: string) => {
     const user = auth.currentUser;
     if (!user || user.isAnonymous) {
       throw new Error('You must be signed in to create a photo feedback session.');
+    }
+
+    if (libraryPhotoIds.length === 0) {
+      throw new Error('Select at least one photo to create a session.');
     }
 
     set({ isLoading: true, error: null });
@@ -81,11 +115,74 @@ export const usePhotoFeedback = create<State>((set, get) => ({
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 3); // 3 days from now
 
-      // Upload photos to Firebase Storage
-      const uploadedPhotos = await Promise.all(
-        photos.map(async (file, index) => {
-          const photoId = `${sessionId}_${index}`;
-          const storagePath = `photo-feedback/${sessionId}/${photoId}`;
+      // Ensure library photos are loaded
+      let library = get().library;
+      const missingIds = libraryPhotoIds.filter(id => !library.find(item => item.id === id));
+      if (missingIds.length > 0) {
+        const refs = missingIds.map(id => doc(db, `users/${user.uid}/photoLibrary`, id));
+        const snaps = await Promise.all(refs.map(r => getDoc(r)));
+        const loaded = snaps
+          .filter(s => s.exists())
+          .map(s => ({ id: s.id, ...(s.data() as PhotoLibraryItem) }));
+        library = [...library, ...loaded];
+      }
+
+      const selectedItems = libraryPhotoIds
+        .map(id => library.find(item => item.id === id))
+        .filter(Boolean) as PhotoLibraryItem[];
+
+      if (selectedItems.length === 0) {
+        throw new Error('No valid photos found in your gallery.');
+      }
+
+      const sessionPhotos = selectedItems.map((item, index) => ({
+        id: `${sessionId}_${index}`,
+        url: item.url,
+        storagePath: item.storagePath,
+        libraryId: item.id,
+      }));
+
+      // Create session document
+      const session: PhotoSession = {
+        id: sessionId,
+        ownerId: user.uid,
+        creatorName,
+        photos: sessionPhotos,
+        secretKey,
+        expiresAt: expiresAt.toISOString(),
+        createdAt: new Date().toISOString(),
+        isPublic: false,
+      };
+
+      const sessionRef = doc(db, 'photoSessions', sessionId);
+      await setDoc(sessionRef, session);
+
+      set(state => ({
+        currentSession: session,
+        isLoading: false,
+        userSessions: [session, ...state.userSessions],
+      }));
+      return { sessionId, secretKey };
+    } catch (error) {
+      console.error('Error creating session:', error);
+      set({ error: 'Failed to create session', isLoading: false });
+      throw error;
+    }
+  },
+
+  uploadToLibrary: async (photos: File[]) => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) {
+      throw new Error('You must be signed in to upload photos.');
+    }
+
+    set({ libraryLoading: true, error: null });
+
+    try {
+      const uploaded = await Promise.all(
+        photos.map(async (file) => {
+          const photoId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          const storagePath = `users/${user.uid}/photo-library/${photoId}`;
           const storageRef = ref(storage, storagePath);
 
           await uploadBytes(storageRef, file, {
@@ -93,34 +190,56 @@ export const usePhotoFeedback = create<State>((set, get) => ({
           });
           const url = await getDownloadURL(storageRef);
 
-          return {
+          const docRef = doc(db, `users/${user.uid}/photoLibrary`, photoId);
+          const item: PhotoLibraryItem = {
             id: photoId,
+            ownerId: user.uid,
             url,
             storagePath,
+            createdAt: new Date().toISOString(),
+            stats: {
+              yesVotes: 0,
+              totalVotes: 0,
+              sessionCount: 0,
+            },
           };
+          await setDoc(docRef, item);
+          return item;
         })
       );
 
-      // Create session document
-      const session: PhotoSession = {
-        id: sessionId,
-        ownerId: user.uid,
-        creatorName,
-        photos: uploadedPhotos,
-        secretKey,
-        expiresAt: expiresAt.toISOString(),
-        createdAt: new Date().toISOString(),
-      };
+      set(state => ({
+        library: [...uploaded, ...state.library].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+        libraryLoading: false,
+      }));
 
-      const sessionRef = doc(db, 'photoSessions', sessionId);
-      await setDoc(sessionRef, session);
-
-      set({ currentSession: session, isLoading: false });
-      return { sessionId, secretKey };
+      return uploaded;
     } catch (error) {
-      console.error('Error creating session:', error);
-      set({ error: 'Failed to create session', isLoading: false });
+      console.error('Error uploading to library:', error);
+      set({ libraryLoading: false, error: 'Failed to upload photos' });
       throw error;
+    }
+  },
+
+  loadLibrary: async () => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) {
+      set({ library: [] });
+      return [];
+    }
+
+    set({ libraryLoading: true, error: null });
+
+    try {
+      const libraryRef = collection(db, `users/${user.uid}/photoLibrary`);
+      const snaps = await getDocs(query(libraryRef, orderBy('createdAt', 'desc')));
+      const items = snaps.docs.map(doc => doc.data() as PhotoLibraryItem);
+      set({ library: items, libraryLoading: false });
+      return items;
+    } catch (error) {
+      console.error('Error loading library:', error);
+      set({ libraryLoading: false, error: 'Failed to load your gallery' });
+      return [];
     }
   },
 
@@ -153,7 +272,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
     }
   },
 
-  submitVote: async (sessionId: string, photoId: string, vote: 'yes' | 'no', voterId: string) => {
+  submitVote: async (sessionId: string, photoId: string, vote: 'yes' | 'no', voterId: string, comment?: string) => {
     try {
       const voteId = `${sessionId}_${photoId}_${voterId}`;
       const voteRef = doc(db, 'photoSessions', sessionId, 'votes', voteId);
@@ -165,9 +284,17 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         vote,
         voterId,
         createdAt: new Date().toISOString(),
+        comment,
       };
 
       await setDoc(voteRef, voteData);
+
+      const session = get().currentSession;
+      const photo = session?.photos.find(p => p.id === photoId);
+      const ownerId = session?.ownerId;
+      if (photo?.libraryId && ownerId) {
+        await updateLibraryStats(ownerId, photo.libraryId, vote, sessionId);
+      }
     } catch (error) {
       console.error('Error submitting vote:', error);
       throw error;
@@ -232,6 +359,46 @@ export const usePhotoFeedback = create<State>((set, get) => ({
   checkSessionExpired: (session: PhotoSession) => {
     return new Date(session.expiresAt) < new Date();
   },
+
+  loadUserSessions: async () => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) {
+      return [];
+    }
+
+    set({ sessionsLoading: true, error: null });
+
+    try {
+      const sessionsRef = collection(db, 'photoSessions');
+      const q = query(
+        sessionsRef,
+        where('ownerId', '==', user.uid),
+        orderBy('createdAt', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      const sessions = snapshot.docs.map(doc => doc.data() as PhotoSession);
+      set({ userSessions: sessions, sessionsLoading: false });
+      return sessions;
+    } catch (error) {
+      console.error('Error loading your sessions:', error);
+      set({ sessionsLoading: false, error: 'Failed to load your sessions' });
+      return [];
+    }
+  },
+
+  setSessionPublic: async (sessionId: string, isPublic: boolean) => {
+    try {
+      await updateDoc(doc(db, 'photoSessions', sessionId), { isPublic });
+      set(state => ({
+        userSessions: state.userSessions.map(session =>
+          session.id === sessionId ? { ...session, isPublic } : session
+        ),
+      }));
+    } catch (error) {
+      console.error('Failed to update session visibility', error);
+      throw error;
+    }
+  },
 }));
 
 // Helper to get/create voter ID from localStorage
@@ -244,4 +411,32 @@ export function getOrCreateVoterId(): string {
     localStorage.setItem('photoFeedbackVoterId', voterId);
   }
   return voterId;
+}
+
+async function updateLibraryStats(ownerId: string, libraryId: string, vote: 'yes' | 'no', sessionId: string) {
+  const statsRef = doc(db, `users/${ownerId}/photoLibrary/${libraryId}`);
+
+  try {
+    const snap = await getDoc(statsRef);
+    if (!snap.exists()) return;
+
+    const data = snap.data() as PhotoLibraryItem;
+    const sessionIds = (data as any).sessionIds || [];
+    const alreadyCounted = sessionIds.includes(sessionId);
+
+    const updates: any = {
+      totalVotes: increment(1),
+      yesVotes: vote === 'yes' ? increment(1) : increment(0),
+      lastVotedAt: Timestamp.fromDate(new Date()),
+    };
+
+    if (!alreadyCounted) {
+      updates.sessionCount = increment(1);
+      updates.sessionIds = arrayUnion(sessionId);
+    }
+
+    await updateDoc(statsRef, updates);
+  } catch (error) {
+    console.error('Failed to update library stats', error);
+  }
 }

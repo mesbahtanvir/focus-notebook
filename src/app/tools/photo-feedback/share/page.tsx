@@ -2,9 +2,11 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Copy, Check, ExternalLink, BarChart3, Share2, Clock } from "lucide-react";
+import { Copy, Check, ExternalLink, BarChart3, Share2, Clock, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
+import { usePhotoFeedback } from "@/store/usePhotoFeedback";
+import { toastError, toastSuccess } from "@/lib/toast-presets";
 
 function SharePageContent() {
   const searchParams = useSearchParams();
@@ -13,6 +15,9 @@ function SharePageContent() {
 
   const [copied, setCopied] = useState(false);
   const [votingLinkCopied, setVotingLinkCopied] = useState(false);
+  const [isPublic, setIsPublic] = useState<boolean | null>(null);
+  const [isUpdatingPublic, setIsUpdatingPublic] = useState(false);
+  const { userSessions, loadUserSessions, setSessionPublic } = usePhotoFeedback();
 
   const votingLink = typeof window !== 'undefined'
     ? `${window.location.origin}/tools/photo-feedback/session/${sessionId}`
@@ -34,6 +39,43 @@ function SharePageContent() {
 
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 3);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    const current = userSessions.find(session => session.id === sessionId);
+    if (current) {
+      setIsPublic(Boolean(current.isPublic));
+    } else {
+      void (async () => {
+        const sessions = await loadUserSessions();
+        const match = sessions.find(session => session.id === sessionId);
+        if (match) setIsPublic(Boolean(match.isPublic));
+      })();
+    }
+  }, [sessionId, userSessions, loadUserSessions]);
+
+  const handleTogglePublic = async () => {
+    if (!sessionId || isPublic === null) return;
+    setIsUpdatingPublic(true);
+    try {
+      await setSessionPublic(sessionId, !isPublic);
+      setIsPublic(!isPublic);
+      toastSuccess({
+        title: !isPublic ? "Now listed publicly" : "Session made private",
+        description: !isPublic
+          ? "Your session is visible on the Voting Market."
+          : "Your session has been removed from the public list.",
+      });
+    } catch (error) {
+      console.error(error);
+      toastError({
+        title: "Unable to update",
+        description: "Please try again in a moment.",
+      });
+    } finally {
+      setIsUpdatingPublic(false);
+    }
+  };
 
   if (!sessionId || !secretKey) {
     return (
@@ -164,6 +206,47 @@ function SharePageContent() {
             View Results
           </Link>
         </div>
+
+        {isPublic !== null && (
+          <Card className="mt-6 p-6 bg-white dark:bg-gray-800 border-2 border-green-100 dark:border-green-900/40">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Voting Market</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {isPublic
+                    ? "This session is listed publicly. Anyone can discover and vote on it."
+                    : "Make this session public so anyone browsing the Voting Market can vote."}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleTogglePublic}
+              disabled={isUpdatingPublic}
+              className={`w-full md:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full font-semibold transition-colors ${
+                isPublic
+                  ? "bg-gray-900 text-white hover:bg-gray-800"
+                  : "bg-green-600 text-white hover:bg-green-700"
+              } disabled:opacity-60`}
+            >
+              {isUpdatingPublic ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving…
+                </>
+              ) : isPublic ? (
+                <>
+                  <BarChart3 className="w-4 h-4" />
+                  Make Private
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-4 h-4" />
+                  List on Voting Market
+                </>
+              )}
+            </button>
+          </Card>
+        )}
 
         {/* Tips */}
         <Card className="p-6 mt-6 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800">

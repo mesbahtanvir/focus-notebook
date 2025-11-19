@@ -13,6 +13,15 @@ service firebase.storage {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Photo library for gallery uploads
+    match /users/{userId}/photo-library/{photoId} {
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow read: if request.auth != null && request.auth.uid == userId;
+    }
+
     // Photo feedback - requires authentication to create sessions
     match /photo-feedback/{sessionId}/{photoId} {
       // Only authenticated users can upload photos (for creating sessions)

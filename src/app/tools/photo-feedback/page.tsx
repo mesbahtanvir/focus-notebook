@@ -1,35 +1,72 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePhotoFeedback } from "@/store/usePhotoFeedback";
-import { Upload, X, ArrowRight, Heart, Loader2 } from "lucide-react";
+import { Upload, ArrowRight, Heart, Loader2, Copy, ExternalLink, CheckCircle, Shuffle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import Image from "next/image";
 import { toastError, toastSuccess, toastWarning } from "@/lib/toast-presets";
+import { Button } from "@/components/ui/button";
+import { pickRandomPhotoIds } from "@/lib/photoGallery";
 
 export default function PhotoFeedbackPage() {
   const router = useRouter();
-  const { createSession, isLoading } = usePhotoFeedback();
+  const {
+    createSessionFromLibrary,
+    uploadToLibrary,
+    loadLibrary,
+    library,
+    libraryLoading,
+    isLoading,
+    userSessions,
+    sessionsLoading,
+    loadUserSessions,
+    error,
+  } = usePhotoFeedback();
   const { user, isAnonymous, loading: authLoading } = useAuth();
 
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per storage.rules
-
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
 
   const canCreateSession = !!user && !isAnonymous;
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    if (canCreateSession) {
+      void loadUserSessions();
+      void loadLibrary();
+    }
+  }, [canCreateSession, loadLibrary, loadUserSessions]);
+
+  useEffect(() => {
+    setSelectedPhotoIds(prev => prev.filter(id => library.some(item => item.id === id)));
+  }, [library]);
+
+  const togglePhotoSelection = (photoId: string) => {
+    setSelectedPhotoIds(prev =>
+      prev.includes(photoId) ? prev.filter(id => id !== photoId) : [...prev, photoId]
+    );
+  };
+
+  const handleSelectRandom = () => {
+    if (library.length === 0) return;
+    const randomSelection = pickRandomPhotoIds(library, 10);
+    setSelectedPhotoIds(randomSelection);
+    toastSuccess({
+      title: "Random selection ready",
+      description: `Picked ${randomSelection.length} photo${randomSelection.length === 1 ? '' : 's'} from your gallery.`,
+    });
+  };
+
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    // Filter for images only
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
-
-    // Enforce per-file size before hitting Storage rules
     const oversized = imageFiles.filter(file => file.size > MAX_FILE_SIZE);
+
     if (oversized.length > 0) {
       toastError({
         title: "Photo too large",
@@ -38,29 +75,27 @@ export default function PhotoFeedbackPage() {
       return;
     }
 
-    if (imageFiles.length + selectedFiles.length > 10) {
-      toastError({
-        title: "Too many photos",
-        description: "You can upload up to 10 photos for a feedback session.",
+    try {
+      const uploaded = await uploadToLibrary(imageFiles);
+      setSelectedPhotoIds(prev => [...uploaded.map(item => item.id), ...prev]);
+      toastSuccess({
+        title: "Gallery updated",
+        description: `${imageFiles.length} photo${imageFiles.length > 1 ? 's' : ''} added.`,
       });
-      return;
+    } catch (err) {
+      const description =
+        err instanceof Error && err.message
+          ? err.message
+          : "Could not add photos to your gallery.";
+      toastError({
+        title: "Upload failed",
+        description,
+      });
+    } finally {
+      if (e.target) {
+        e.target.value = "";
+      }
     }
-
-    setSelectedFiles(prev => [...prev, ...imageFiles]);
-
-    // Create previews
-    imageFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviews(prev => [...prev, reader.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const removePhoto = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-    setPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleCreateSession = async () => {
@@ -72,31 +107,25 @@ export default function PhotoFeedbackPage() {
       return;
     }
 
-    if (selectedFiles.length === 0) {
+    if (selectedPhotoIds.length === 0) {
       toastWarning({
-        title: "Add a photo",
-        description: "Upload at least one photo to start a feedback session.",
+        title: "Select photos",
+        description: "Choose photos from your gallery to start a feedback session.",
       });
       return;
     }
 
     try {
-      const { sessionId, secretKey } = await createSession(
-        selectedFiles,
+      const { sessionId, secretKey } = await createSessionFromLibrary(
+        selectedPhotoIds,
         user?.displayName || undefined
       );
+      setSelectedPhotoIds([]);
 
-      // Navigate to share page with session info
       router.push(`/tools/photo-feedback/share?sessionId=${sessionId}&secretKey=${secretKey}`);
     } catch (error) {
-      const code = (error as { code?: string })?.code;
       const description =
-        code === 'storage/unauthenticated'
-          ? "Sign in again to upload your photos."
-        : code === 'storage/unauthorized'
-            ? "Upload blocked by rules (likely over 10MB per photo or missing auth). Check file sizes and sign in again."
-            : "Please try again in a moment.";
-
+        error instanceof Error && error.message ? error.message : "Please try again in a moment.";
       toastError({
         title: "Could not create session",
         description,
@@ -121,44 +150,135 @@ export default function PhotoFeedbackPage() {
             Get honest feedback from friends on which photos to use for your dating profile
           </p>
         </div>
+        {canCreateSession && (
+          <Card className="p-6 mb-8 bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-800">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Your gallery</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Tap any photo to select it. Add more photos using the upload tile.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                {libraryLoading && <p className="text-xs text-gray-500 dark:text-gray-400">Uploading…</p>}
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  Selected: {selectedPhotoIds.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleSelectRandom}
+                  disabled={library.length === 0}
+                  aria-label="Randomly select photos"
+                  className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-200 transition disabled:opacity-40"
+                >
+                  <Shuffle className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
 
-        {/* How it works */}
-        <Card className="p-6 mb-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-purple-200 dark:border-purple-800">
-          <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">How it works</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">
-                1
+            {library.length === 0 ? (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Your gallery is empty. Upload photos below to get started.
+                </p>
+                <label
+                  htmlFor="gallery-upload"
+                  className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-lg cursor-pointer bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all"
+                >
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
+                    <Upload className="w-8 h-8 text-purple-500 mb-2" />
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="font-semibold">Click to upload</span> or drag and drop
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG, GIF up to 10MB each</p>
+                  </div>
+                  <input
+                    id="gallery-upload"
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    multiple
+                    onChange={handleGalleryUpload}
+                    disabled={libraryLoading}
+                  />
+                </label>
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-800 dark:text-gray-200">Upload Photos</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Add photos you&apos;re considering for your dating profile</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">
-                2
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-800 dark:text-gray-200">Share Link</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Send the link to friends to vote (expires in 3 days)</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">
-                3
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-800 dark:text-gray-200">View Results</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">See which photos got the most positive feedback</p>
-              </div>
-            </div>
-          </div>
-        </Card>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {library.map(item => {
+                  const selected = selectedPhotoIds.includes(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => togglePhotoSelection(item.id)}
+                      className={`rounded-lg border overflow-hidden text-left transition-all relative group ${
+                        selected
+                          ? "border-pink-500 ring-2 ring-pink-300 dark:ring-pink-500/50"
+                          : "border-gray-200 dark:border-gray-700 hover:border-pink-300 dark:hover:border-pink-500/40"
+                      }`}
+                    >
+                      <div className="relative aspect-square bg-gray-100 dark:bg-gray-900">
+                        <Image
+                          src={item.url}
+                          alt="Gallery photo"
+                          fill
+                          sizes="(max-width: 768px) 50vw, 200px"
+                          className="object-cover"
+                        />
+                        <div className="absolute inset-0 pointer-events-none flex items-end justify-center pb-2">
+                          {!selected && (
+                            <span className="text-[11px] font-semibold text-white/0 group-hover:text-white bg-black/0 group-hover:bg-black/40 px-2 py-1 rounded-full transition-all">
+                              Tap to select
+                            </span>
+                          )}
+                        </div>
+                        {selected && (
+                          <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-pink-500 text-white text-xs font-semibold px-2 py-1">
+                            <CheckCircle className="w-3 h-3" />
+                            Selected
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-3 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                        <p>Uploaded {new Date(item.createdAt).toLocaleDateString()}</p>
+                        {item.stats && (
+                          <p className="text-gray-700 dark:text-gray-300">
+                            👍 {item.stats.yesVotes} / {item.stats.totalVotes} votes
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
 
-        {/* Upload Section */}
+                <label
+                  htmlFor="gallery-upload"
+                  className="flex flex-col items-center justify-center border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-lg cursor-pointer bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all"
+                >
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
+                    <Upload className="w-8 h-8 text-purple-500 mb-2" />
+                    <p className="text-sm text-gray-700 dark:text-gray-300 font-semibold">
+                      Add more photos
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG, GIF up to 10MB each</p>
+                  </div>
+                  <input
+                    id="gallery-upload"
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    multiple
+                    onChange={handleGalleryUpload}
+                    disabled={libraryLoading}
+                  />
+                </label>
+              </div>
+            )}
+          </Card>
+        )}
         <Card className="p-6 bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-800">
-          <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">Upload Your Photos</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">Ready to share</h2>
 
           {!authLoading && !canCreateSession && (
             <Card className="p-4 mb-6 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700">
@@ -174,100 +294,142 @@ export default function PhotoFeedbackPage() {
             </Card>
           )}
 
-          {/* Creator name info */}
-          {canCreateSession && user?.displayName && (
-            <div className="mb-6 rounded-lg border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 px-4 py-3 text-sm text-purple-800 dark:text-purple-100">
-              We&apos;ll show this as the session owner: <strong>{user.displayName}</strong>
-            </div>
-          )}
-
-          {/* File Upload */}
-          <div className="mb-6">
-            <label
-              htmlFor="photo-upload"
-              className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-lg cursor-pointer bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all"
-            >
-              <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <Upload className="w-12 h-12 text-purple-500 mb-3" />
-                <p className="mb-2 text-sm text-gray-700 dark:text-gray-300">
-                  <span className="font-semibold">Click to upload</span> or drag and drop
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  PNG, JPG, GIF up to 10 photos
-                </p>
-              </div>
-              <input
-                id="photo-upload"
-                type="file"
-                className="hidden"
-                accept="image/*"
-                multiple
-                onChange={handleFileSelect}
-                disabled={isLoading}
-              />
-            </label>
-          </div>
-
-          {/* Photo Previews */}
-          {previews.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">
-                Selected Photos ({previews.length}/10)
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {previews.map((preview, index) => (
-                  <div key={index} className="relative group">
-                    <Image
-                      src={preview}
-                      alt={`Preview ${index + 1}`}
-                      width={320}
-                      height={200}
-                      className="w-full h-32 object-cover rounded-lg border-2 border-gray-200 dark:border-gray-700"
-                    />
-                    <button
-                      onClick={() => removePhoto(index)}
-                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      disabled={isLoading}
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Create Button */}
-          <div className="mt-8">
-            <button
-              onClick={handleCreateSession}
-              disabled={!canCreateSession || selectedFiles.length === 0 || isLoading}
-              className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white py-4 px-6 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Creating Session...
-                </>
-              ) : (
-                <>
-                  Create Feedback Session
-                  <ArrowRight className="w-5 h-5" />
-                </>
+          {canCreateSession && (
+            <div className="mb-4 flex flex-wrap gap-2 text-xs font-semibold text-purple-700 dark:text-purple-200">
+              {user?.displayName && (
+                <span className="px-3 py-1 bg-purple-50 dark:bg-purple-900/30 rounded-full border border-purple-200 dark:border-purple-700">
+                  Owner: {user.displayName}
+                </span>
               )}
-            </button>
-            {!canCreateSession && (
-              <p className="mt-2 text-sm text-center text-gray-600 dark:text-gray-400">
-                Sign in to create a session, then share the link so friends can vote without logging in.
-              </p>
+              <span className="px-3 py-1 bg-purple-50 dark:bg-purple-900/30 rounded-full border border-purple-200 dark:border-purple-700">
+                Photos selected: {selectedPhotoIds.length}
+              </span>
+            </div>
+          )}
+          {canCreateSession && selectedPhotoIds.length === 0 && (
+            <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
+              Pick at least one gallery photo above to enable session creation.
+            </p>
+          )}
+
+          <button
+            onClick={handleCreateSession}
+            disabled={!canCreateSession || selectedPhotoIds.length === 0 || isLoading}
+            className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white py-4 px-6 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Creating Session...
+              </>
+            ) : (
+              <>
+                Create Feedback Session
+                <ArrowRight className="w-5 h-5" />
+              </>
+            )}
+          </button>
+        </Card>
+
+        {canCreateSession && (
+          <Card className="p-6 bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-800 mt-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Your Feedback Links</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Quickly revisit or share past sessions.</p>
+              </div>
+            {sessionsLoading && (
+              <div className="text-sm text-gray-500 dark:text-gray-400">Loading…</div>
             )}
           </div>
-        </Card>
+            {error && (
+              <div className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</div>
+            )}
+            {userSessions.length === 0 && !sessionsLoading ? (
+              <p className="text-sm text-gray-600 dark:text-gray-400">No sessions yet. Create one above to see it here.</p>
+            ) : (
+              <div className="space-y-4">
+                {userSessions.map((session) => {
+                  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                  const votingLink = `${origin}/tools/photo-feedback/session/${session.id}`;
+                  const resultsLink = `${origin}/tools/photo-feedback/results/${session.id}?key=${session.secretKey}`;
+
+                  return (
+                    <div key={session.id} className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Session</p>
+                          <p className="font-semibold text-gray-800 dark:text-gray-100">{session.creatorName || 'Your photos'}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Created {new Date(session.createdAt).toLocaleString()} • Expires {new Date(session.expiresAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Link
+                            href={`/tools/photo-feedback/share?sessionId=${session.id}&secretKey=${session.secretKey}`}
+                            className="text-sm text-purple-700 dark:text-purple-200 hover:underline flex items-center gap-1"
+                          >
+                            <ExternalLink className="w-4 h-4" /> Manage
+                          </Link>
+                        </div>
+                      </div>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <LinkRow label="Voting link" value={votingLink} />
+                        <LinkRow label="Results link" value={resultsLink} sensitive />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        )}
 
         {/* Privacy Notice */}
         <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
           <p>🔒 Sign-in required to create • Voters don&apos;t need accounts • Links expire in 3 days</p>
         </div>
+
+        <div className="mt-4 text-center">
+          <Link
+            href="/tools/photo-feedback/market"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-full transition-colors"
+          >
+            Browse public sessions
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LinkRow({ label, value, sensitive = false }: { label: string; value: string; sensitive?: boolean }) {
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toastSuccess({ title: "Copied", description: `${label} copied to clipboard.` });
+    } catch {
+      toastError({ title: "Copy failed", description: "Please try again." });
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{label}</span>
+        {sensitive && <span className="text-[10px] text-orange-600 dark:text-orange-400">Keep private</span>}
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          readOnly
+          value={value}
+          className="flex-1 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-gray-700 dark:text-gray-200"
+        />
+        <Button variant="outline" size="sm" onClick={copy} type="button">
+          <Copy className="w-4 h-4" />
+        </Button>
       </div>
     </div>
   );
