@@ -9,6 +9,7 @@ export interface BattlePhoto {
   url: string;
   storagePath: string;
   libraryId?: string;
+  thumbnailUrl?: string;
   rating: number;
   wins: number;
   losses: number;
@@ -66,6 +67,7 @@ function convertLibraryItemToBattlePhoto(item: PhotoLibraryItem): BattlePhoto {
     url: item.url,
     storagePath: item.storagePath,
     libraryId: item.id,
+    thumbnailUrl: item.thumbnailUrl ?? item.url,
     rating: 1200,
     wins: 0,
     losses: 0,
@@ -145,6 +147,7 @@ function normalizeBattlePhotos(photos?: BattlePhoto[]): BattlePhoto[] {
   if (!photos) return [];
   return photos.map(photo => ({
     ...photo,
+    thumbnailUrl: photo.thumbnailUrl ?? photo.url,
     rating: typeof photo.rating === 'number' ? photo.rating : 1200,
     wins: typeof photo.wins === 'number' ? photo.wins : 0,
     losses: typeof photo.losses === 'number' ? photo.losses : 0,

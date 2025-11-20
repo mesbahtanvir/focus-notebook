@@ -21,6 +21,7 @@ export default function PhotoBattleVotingPage() {
   const [pairBuffer, setPairBuffer] = useState<Pair[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
+  const [loadedPhotos, setLoadedPhotos] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (sessionId) {
@@ -108,8 +109,10 @@ export default function PhotoBattleVotingPage() {
           description: "Unable to record your choice. Please try again.",
         });
       } finally {
-        setSelectedPhotoId(null);
-        setIsSubmitting(false);
+        setTimeout(() => {
+          setSelectedPhotoId(null);
+          setIsSubmitting(false);
+        }, 200);
       }
     },
     [currentSession, submitVote, advancePairs, isSubmitting, pair]
@@ -132,6 +135,16 @@ export default function PhotoBattleVotingPage() {
 
   useEffect(() => {
     setSelectedPhotoId(null);
+    if (!pair) {
+      setLoadedPhotos({});
+      return;
+    }
+    setLoadedPhotos(prev => {
+      const next = { ...prev };
+      next[pair.left.id] = false;
+      next[pair.right.id] = false;
+      return next;
+    });
   }, [pair]);
 
   if (isLoading || !currentSession) {
@@ -175,6 +188,8 @@ export default function PhotoBattleVotingPage() {
         <div className="grid gap-3 md:grid-cols-2">
           {[{ side: "left" as const, card: pair.left }, { side: "right" as const, card: pair.right }].map(({ side, card }) => {
             const isSelected = selectedPhotoId === card.id;
+            const previewUrl = card.thumbnailUrl ?? card.url;
+            const isLoaded = loadedPhotos[card.id];
             return (
               <Card
                 key={card.id}
@@ -183,11 +198,30 @@ export default function PhotoBattleVotingPage() {
                 } ${isSubmitting ? "pointer-events-none opacity-70" : ""}`}
                 onClick={() => handleVote(card, side === "left" ? pair.right : pair.left)}
               >
-                <div className="relative aspect-[3/4]">
-                  <Image src={card.url} alt="Photo option" fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
+                <div className="relative aspect-[3/4] overflow-hidden">
+                  <div
+                    className={`absolute inset-0 bg-cover bg-center blur-xl scale-110 transition-opacity duration-200 ${
+                      isLoaded ? "opacity-0" : "opacity-100"
+                    }`}
+                    style={{ backgroundImage: `url(${previewUrl})` }}
+                    aria-hidden
+                  />
+                  <Image
+                    src={card.url}
+                    alt="Photo option"
+                    fill
+                    className={`relative object-cover transition-opacity duration-200 ${isLoaded ? "opacity-100" : "opacity-0"}`}
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    onLoadingComplete={() =>
+                      setLoadedPhotos(prev => ({
+                        ...prev,
+                        [card.id]: true,
+                      }))
+                    }
+                  />
                   {isSelected && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                      <div className="flex items-center gap-2 text-white font-semibold text-lg">
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center animate-fade-in">
+                      <div className="flex items-center gap-2 text-white font-semibold text-lg drop-shadow-lg">
                         <CheckCircle2 className="w-6 h-6" />
                         Selected
                       </div>
