@@ -185,7 +185,7 @@ export default function PhotoBattleVotingPage() {
           Click a photo or press ← / → to choose which shot looks better.
         </p>
 
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3">
           {[{ side: "left" as const, card: pair.left }, { side: "right" as const, card: pair.right }].map(({ side, card }) => {
             const isSelected = selectedPhotoId === card.id;
             const previewUrl = card.thumbnailUrl ?? card.url;
