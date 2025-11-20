@@ -563,10 +563,12 @@ export const usePhotoFeedback = create<State>((set, get) => ({
 
         transaction.update(sessionRef, { photos, updatedAt: new Date().toISOString() });
 
-        if (winner.libraryId) {
+        const currentUid = auth.currentUser?.uid;
+        const canUpdateLibraryStats = currentUid === session.ownerId;
+        if (canUpdateLibraryStats && winner.libraryId) {
           void updateLibraryStats(session.ownerId, winner.libraryId, 'win', sessionId);
         }
-        if (loser.libraryId) {
+        if (canUpdateLibraryStats && loser.libraryId) {
           void updateLibraryStats(session.ownerId, loser.libraryId, 'loss', sessionId);
         }
 

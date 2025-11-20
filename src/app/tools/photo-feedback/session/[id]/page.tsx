@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -31,13 +31,36 @@ export default function PhotoBattleVotingPage() {
     }
   }, [sessionId, loadSession]);
 
-  useEffect(() => {
-    if (!authLoading && !authUser) {
-      void signInAnonymously().catch(err => {
-        console.error("Failed to start anonymous session for voting:", err);
-      });
+  const lastSignInRef = useRef<number>(0);
+  const ensureAnonymousSession = useCallback(async () => {
+    if (authLoading) return;
+    try {
+      if (!authUser) {
+        lastSignInRef.current = Date.now();
+        await signInAnonymously();
+        return;
+      }
+      if (authUser.isAnonymous) {
+        const lastSignIn = authUser.metadata?.lastSignInTime
+          ? new Date(authUser.metadata.lastSignInTime).getTime()
+          : 0;
+        const shouldRefresh =
+          Date.now() - Math.max(lastSignIn, lastSignInRef.current) > 75 * 60 * 1000;
+        if (shouldRefresh) {
+          lastSignInRef.current = Date.now();
+          await signInAnonymously();
+        }
+      }
+    } catch (err) {
+      console.error("Failed to ensure anonymous session:", err);
     }
   }, [authLoading, authUser, signInAnonymously]);
+
+  useEffect(() => {
+    if (!authLoading) {
+      void ensureAnonymousSession();
+    }
+  }, [authLoading, ensureAnonymousSession]);
 
   const canVote = currentSession && currentSession.photos.length >= 2;
   const pair = pairBuffer[0] ?? null;
@@ -110,9 +133,8 @@ export default function PhotoBattleVotingPage() {
       }
       if (!authUser) {
         try {
-          await signInAnonymously();
-        } catch (err) {
-          console.error(err);
+          await ensureAnonymousSession();
+        } catch {
           toastError({
             title: "Unable to start session",
             description: "Refresh the page and try again.",
@@ -144,7 +166,7 @@ export default function PhotoBattleVotingPage() {
         setIsAnimating(false);
       }
     },
-    [currentSession, submitVote, advancePairs, isAnimating, pair, authLoading, authUser, signInAnonymously]
+    [currentSession, submitVote, advancePairs, isAnimating, pair, authLoading, authUser, ensureAnonymousSession]
   );
 
   useEffect(() => {
@@ -209,9 +231,12 @@ export default function PhotoBattleVotingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-4 md:p-8">
-      <div className="max-w-6xl mx-auto flex h-full min-h-[70vh] flex-col gap-4">
+      <div className="max-w-6xl mx-auto flex h-full min-h-[70vh] flex-col gap-2 md:gap-4">
         <p className="text-center text-sm text-purple-100/80">
           Click a photo or press ← / → to choose which shot looks better.
+        </p>
+        <p className="text-center text-xs text-purple-200/70">
+          Voting with {authUser?.email ? `account ${authUser.email}` : "a temporary account"}
         </p>
 
         <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2">

@@ -366,7 +366,7 @@ export default function GalleryManagerPage() {
       />
 
       <div className="flex min-h-screen flex-col">
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-gradient-to-b from-pink-50 via-purple-50 to-transparent px-6 pt-10 pb-6 dark:border-white/10 dark:from-slate-950 dark:via-purple-950/60">
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/80 backdrop-blur px-6 pt-10 pb-6 dark:border-white/10 dark:bg-slate-950/80">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
               <p className="text-sm uppercase tracking-[0.3em] text-purple-600 dark:text-purple-300/80">Gallery Manager</p>

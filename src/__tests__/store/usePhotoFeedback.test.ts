@@ -320,6 +320,70 @@ describe("usePhotoFeedback gallery + session flow", () => {
     expect(loser.losses).toBe(6);
   });
 
+  it("updates library stats when the voter owns the session", async () => {
+    mockUpdateDoc.mockClear();
+    (auth as { currentUser: any }).currentUser = { uid: "owner-123", isAnonymous: false };
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ stats: { totalVotes: 0, yesVotes: 0 }, sessionIds: [] }),
+    });
+    mockRunTransaction.mockImplementationOnce(async (_db, updater: any) => {
+      const transaction = {
+        get: jest.fn().mockResolvedValue({
+          exists: () => true,
+          data: () => ({
+            ownerId: "owner-123",
+            photos: [
+              { id: "winner", rating: 1200, wins: 0, losses: 0, totalVotes: 0, libraryId: "lib-w" },
+              { id: "loser", rating: 1200, wins: 0, losses: 0, totalVotes: 0, libraryId: "lib-l" },
+            ],
+          }),
+        }),
+        update: jest.fn(),
+        set: jest.fn(),
+      };
+      await updater(transaction);
+    });
+
+    await act(async () => {
+      await usePhotoFeedback.getState().submitVote("session-1", "winner", "loser");
+    });
+
+    expect(mockUpdateDoc).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips library stat updates for non-owners", async () => {
+    mockUpdateDoc.mockClear();
+    (auth as { currentUser: any }).currentUser = { uid: "outside-user", isAnonymous: false };
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ stats: { totalVotes: 0, yesVotes: 0 }, sessionIds: [] }),
+    });
+    mockRunTransaction.mockImplementationOnce(async (_db, updater: any) => {
+      const transaction = {
+        get: jest.fn().mockResolvedValue({
+          exists: () => true,
+          data: () => ({
+            ownerId: "owner-123",
+            photos: [
+              { id: "winner", rating: 1200, wins: 0, losses: 0, totalVotes: 0, libraryId: "lib-w" },
+              { id: "loser", rating: 1200, wins: 0, losses: 0, totalVotes: 0, libraryId: "lib-l" },
+            ],
+          }),
+        }),
+        update: jest.fn(),
+        set: jest.fn(),
+      };
+      await updater(transaction);
+    });
+
+    await act(async () => {
+      await usePhotoFeedback.getState().submitVote("session-1", "winner", "loser");
+    });
+
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
+  });
+
   it("returns sorted results for valid secret key", async () => {
     mockGetDoc.mockResolvedValueOnce({
       exists: () => true,
