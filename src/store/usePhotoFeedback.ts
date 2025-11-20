@@ -534,51 +534,11 @@ export const usePhotoFeedback = create<State>((set, get) => ({
 
   submitVote: async (sessionId: string, winnerId: string, loserId: string) => {
     try {
-      await runTransaction(db, async transaction => {
-        const sessionRef = doc(db, 'photoBattles', sessionId);
-        const snap = await transaction.get(sessionRef);
-        if (!snap.exists()) {
-          throw new Error('Session not found');
-        }
-
-        const session = snap.data() as PhotoBattle;
-        const photos = session.photos.map(photo => ({ ...photo }));
-        const winner = photos.find(photo => photo.id === winnerId);
-        const loser = photos.find(photo => photo.id === loserId);
-
-        if (!winner || !loser) {
-          throw new Error('Invalid photos selected');
-        }
-
-        const K = 32;
-        const expectedWinner = 1 / (1 + Math.pow(10, (loser.rating - winner.rating) / 400));
-        const expectedLoser = 1 / (1 + Math.pow(10, (winner.rating - loser.rating) / 400));
-
-        winner.rating = Math.max(0, Math.round(winner.rating + K * (1 - expectedWinner)));
-        loser.rating = Math.max(0, Math.round(loser.rating + K * (0 - expectedLoser)));
-        winner.wins += 1;
-        winner.totalVotes += 1;
-        loser.losses += 1;
-        loser.totalVotes += 1;
-
-        transaction.update(sessionRef, { photos, updatedAt: new Date().toISOString() });
-
-        const currentUid = auth.currentUser?.uid;
-        const canUpdateLibraryStats = currentUid === session.ownerId;
-        if (canUpdateLibraryStats && winner.libraryId) {
-          void updateLibraryStats(session.ownerId, winner.libraryId, 'win', sessionId);
-        }
-        if (canUpdateLibraryStats && loser.libraryId) {
-          void updateLibraryStats(session.ownerId, loser.libraryId, 'loss', sessionId);
-        }
-
-        const historyRef = doc(collection(sessionRef, 'history'));
-        transaction.set(historyRef, {
-          winnerId,
-          loserId,
-          createdAt: new Date().toISOString(),
-        });
-      });
+      const voteCallable = httpsCallable<
+        { sessionId: string; winnerId: string; loserId: string },
+        void
+      >(functionsClient, 'submitPhotoVote');
+      await voteCallable({ sessionId, winnerId, loserId });
     } catch (error) {
       console.error('Error submitting vote:', error);
       throw error;

@@ -285,103 +285,16 @@ describe("usePhotoFeedback gallery + session flow", () => {
     expect(usePhotoFeedback.getState().userSessions[0].isPublic).toBe(true);
   });
 
-  it("updates ratings via submitVote transactions", async () => {
-    let capturedPayload: any = null;
-    mockRunTransaction.mockImplementation(async (_db, updater: any) => {
-      const transaction = {
-        get: jest.fn().mockResolvedValue({
-          exists: () => true,
-          data: () => ({
-            ownerId: "user-123",
-            photos: [
-              { id: "winner", rating: 1200, wins: 5, losses: 2, totalVotes: 7 },
-              { id: "loser", rating: 1200, wins: 2, losses: 5, totalVotes: 7 },
-            ],
-          }),
-        }),
-        update: jest.fn((_, payload) => {
-          capturedPayload = payload;
-        }),
-        set: jest.fn(),
-      };
-      await updater(transaction);
-    });
-
-    await act(async () => {
-      await usePhotoFeedback.getState().submitVote("user-123", "winner", "loser");
-    });
-
-    expect(capturedPayload).not.toBeNull();
-    const winner = capturedPayload.photos.find((photo: any) => photo.id === "winner");
-    const loser = capturedPayload.photos.find((photo: any) => photo.id === "loser");
-    expect(winner.rating).toBeGreaterThan(1200);
-    expect(winner.wins).toBe(6);
-    expect(loser.rating).toBeLessThan(1200);
-    expect(loser.losses).toBe(6);
-  });
-
-  it("updates library stats when the voter owns the session", async () => {
-    mockUpdateDoc.mockClear();
-    (auth as { currentUser: any }).currentUser = { uid: "owner-123", isAnonymous: false };
-    mockGetDoc.mockResolvedValue({
-      exists: () => true,
-      data: () => ({ stats: { totalVotes: 0, yesVotes: 0 }, sessionIds: [] }),
-    });
-    mockRunTransaction.mockImplementationOnce(async (_db, updater: any) => {
-      const transaction = {
-        get: jest.fn().mockResolvedValue({
-          exists: () => true,
-          data: () => ({
-            ownerId: "owner-123",
-            photos: [
-              { id: "winner", rating: 1200, wins: 0, losses: 0, totalVotes: 0, libraryId: "lib-w" },
-              { id: "loser", rating: 1200, wins: 0, losses: 0, totalVotes: 0, libraryId: "lib-l" },
-            ],
-          }),
-        }),
-        update: jest.fn(),
-        set: jest.fn(),
-      };
-      await updater(transaction);
-    });
+  it("submits votes via callable function", async () => {
+    const callable = jest.fn().mockResolvedValue({ data: null });
+    mockHttpsCallable.mockReturnValueOnce(callable);
 
     await act(async () => {
       await usePhotoFeedback.getState().submitVote("session-1", "winner", "loser");
     });
 
-    expect(mockUpdateDoc).toHaveBeenCalledTimes(2);
-  });
-
-  it("skips library stat updates for non-owners", async () => {
-    mockUpdateDoc.mockClear();
-    (auth as { currentUser: any }).currentUser = { uid: "outside-user", isAnonymous: false };
-    mockGetDoc.mockResolvedValue({
-      exists: () => true,
-      data: () => ({ stats: { totalVotes: 0, yesVotes: 0 }, sessionIds: [] }),
-    });
-    mockRunTransaction.mockImplementationOnce(async (_db, updater: any) => {
-      const transaction = {
-        get: jest.fn().mockResolvedValue({
-          exists: () => true,
-          data: () => ({
-            ownerId: "owner-123",
-            photos: [
-              { id: "winner", rating: 1200, wins: 0, losses: 0, totalVotes: 0, libraryId: "lib-w" },
-              { id: "loser", rating: 1200, wins: 0, losses: 0, totalVotes: 0, libraryId: "lib-l" },
-            ],
-          }),
-        }),
-        update: jest.fn(),
-        set: jest.fn(),
-      };
-      await updater(transaction);
-    });
-
-    await act(async () => {
-      await usePhotoFeedback.getState().submitVote("session-1", "winner", "loser");
-    });
-
-    expect(mockUpdateDoc).not.toHaveBeenCalled();
+    expect(mockHttpsCallable).toHaveBeenCalledWith(expect.anything(), "submitPhotoVote");
+    expect(callable).toHaveBeenCalledWith({ sessionId: "session-1", winnerId: "winner", loserId: "loser" });
   });
 
   it("returns sorted results for valid secret key", async () => {
