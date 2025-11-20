@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { usePhotoFeedback } from "@/store/usePhotoFeedback";
-import type { LinkHistoryEntry } from "@/store/usePhotoFeedback";
 import { ArrowRight, Copy, ExternalLink, CheckCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,7 +24,6 @@ export default function PhotoFeedbackPage() {
 
   const [origin, setOrigin] = useState("");
   const [votingLinkCopied, setVotingLinkCopied] = useState(false);
-  const [resultsLinkCopied, setResultsLinkCopied] = useState(false);
 
   const canCreateSession = !!user && !isAnonymous;
 
@@ -51,9 +49,6 @@ export default function PhotoFeedbackPage() {
   const photosNeedingVotes = battle ? battle.photos.filter(photo => (photo.totalVotes ?? 0) < 5).length : 0;
   const votingLink = battle && origin ? `${origin}/tools/photo-feedback/session/${battle.id}` : "";
   const resultsLink = battle && origin ? `${origin}/tools/photo-feedback/results/${battle.id}?key=${battle.secretKey}` : "";
-  const linkHistory = (battle?.linkHistory ?? []) as LinkHistoryEntry[];
-  const linkExpiresLabel = battle?.linkExpiresAt ? new Date(battle.linkExpiresAt).toLocaleString() : "Not set";
-  const qrSrc = votingLink ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(votingLink)}` : "";
   const lastVoteLabel = battle ? (battle.updatedAt ? new Date(battle.updatedAt).toLocaleString() : "No votes yet") : "";
 
   const copyLink = async (value: string, setState?: (state: boolean) => void) => {
@@ -265,41 +260,6 @@ export default function PhotoFeedbackPage() {
         </div>
 
         {battle && (
-          <Card className="p-5 bg-white dark:bg-gray-900 border border-purple-100 dark:border-purple-900/40">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Share with friends</p>
-                <LinkRow
-                  label="Voting link"
-                  value={votingLink}
-                  copied={votingLinkCopied}
-                  onCopy={() => copyLink(votingLink, setVotingLinkCopied)}
-                />
-                <LinkRow
-                  label="Results link"
-                  value={resultsLink}
-                  sensitive
-                  copied={resultsLinkCopied}
-                  onCopy={() => copyLink(resultsLink, setResultsLinkCopied)}
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Link expires {linkExpiresLabel}. Renewing refreshes the URL without removing past votes.
-                </p>
-              </div>
-              {qrSrc && (
-                <div className="w-full sm:w-auto sm:ml-6">
-                  <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 p-4 shadow-sm">
-                    <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2 text-center">Scan to vote</p>
-                    <div className="flex justify-center">
-                      <NextImage src={qrSrc} alt="QR code for battle link" width={160} height={160} className="rounded-xl" unoptimized />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </Card>
-        )}
-        {battle && (
           <Card className="p-6 bg-white dark:bg-gray-900 border border-purple-100 dark:border-purple-900/40 mt-4">
             <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">Battle health</p>
             <div className="grid gap-4 md:grid-cols-4">
@@ -325,50 +285,6 @@ export default function PhotoFeedbackPage() {
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function LinkRow({
-  label,
-  value,
-  sensitive = false,
-  onCopy,
-  copied,
-}: {
-  label: string;
-  value: string;
-  sensitive?: boolean;
-  onCopy?: () => void;
-  copied?: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{label}</span>
-        {sensitive && <span className="text-[10px] text-orange-600 dark:text-orange-400">Keep private</span>}
-      </div>
-      <div className="flex items-center gap-2">
-        <input
-          type="text"
-          readOnly
-          value={value}
-          className="flex-1 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-gray-700 dark:text-gray-200"
-        />
-        <Button variant="outline" size="sm" onClick={onCopy} type="button" disabled={!value}>
-          {copied ? (
-            <>
-              <CheckCircle className="w-4 h-4" />
-              Copied
-            </>
-          ) : (
-            <>
-              <Copy className="w-4 h-4" />
-              Copy
-            </>
-          )}
-        </Button>
       </div>
     </div>
   );
