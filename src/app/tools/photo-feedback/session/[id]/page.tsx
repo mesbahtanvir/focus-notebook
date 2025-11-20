@@ -46,12 +46,10 @@ export default function PhotoBattleVotingPage() {
     return { left, right };
   }, [currentSession]);
 
-  const advancePairs = useCallback((): Pair | null => {
-    let consumed: Pair | null = null;
+  const advancePairs = useCallback(() => {
     setPairBuffer(prev => {
       if (prev.length === 0) return prev;
-      const [first, ...rest] = prev;
-      consumed = first ?? null;
+      const [, ...rest] = prev;
       const next = [...rest];
       while (next.length < 3) {
         const candidate = buildRandomPair();
@@ -60,7 +58,6 @@ export default function PhotoBattleVotingPage() {
       }
       return next;
     });
-    return consumed;
   }, [buildRandomPair]);
 
   useEffect(() => {
@@ -96,23 +93,26 @@ export default function PhotoBattleVotingPage() {
       if (!currentSession || isAnimating || !pair) return;
       setSelectedPhotoId(winner.id);
       setIsAnimating(true);
-      const consumedPair = advancePairs();
+      const animationDelay = new Promise<void>(resolve => {
+        window.setTimeout(resolve, 1000);
+      });
+      let shouldAdvance = false;
       try {
-        await submitVote(currentSession.id, winner.id, loser.id);
+        await Promise.all([submitVote(currentSession.id, winner.id, loser.id), animationDelay]);
+        shouldAdvance = true;
       } catch (err) {
         console.error(err);
-        if (consumedPair) {
-          setPairBuffer(prev => [consumedPair, ...prev]);
-        }
         toastError({
           title: "Vote failed",
           description: "Unable to record your choice. Please try again.",
         });
+        await animationDelay;
       } finally {
-        setTimeout(() => {
-          setSelectedPhotoId(null);
-          setIsAnimating(false);
-        }, 1000);
+        setSelectedPhotoId(null);
+        if (shouldAdvance) {
+          advancePairs();
+        }
+        setIsAnimating(false);
       }
     },
     [currentSession, submitVote, advancePairs, isAnimating, pair]
@@ -198,7 +198,7 @@ export default function PhotoBattleVotingPage() {
                 } ${isAnimating ? "pointer-events-none opacity-70" : ""}`}
                 onClick={() => handleVote(card, side === "left" ? pair.right : pair.left)}
               >
-                <div className="relative h-[46vh] min-h-[280px] w-full overflow-hidden rounded-lg md:h-[70vh]">
+                <div className="relative w-full overflow-hidden rounded-lg aspect-[3/4] min-h-[280px]">
                   <div
                     className={`absolute inset-0 bg-cover bg-center blur-xl scale-110 transition-opacity duration-200 ${
                       isLoaded ? "opacity-0" : "opacity-100"
