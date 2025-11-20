@@ -19,7 +19,7 @@ export default function PhotoBattleVotingPage() {
   const sessionId = params.id as string;
   const { currentSession, loadSession, submitVote, isLoading, error } = usePhotoFeedback();
   const [pairBuffer, setPairBuffer] = useState<Pair[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const [loadedPhotos, setLoadedPhotos] = useState<Record<string, boolean>>({});
 
@@ -93,9 +93,9 @@ export default function PhotoBattleVotingPage() {
 
   const handleVote = useCallback(
     async (winner: BattlePhoto, loser: BattlePhoto) => {
-      if (!currentSession || isSubmitting || !pair) return;
+      if (!currentSession || isAnimating || !pair) return;
       setSelectedPhotoId(winner.id);
-      setIsSubmitting(true);
+      setIsAnimating(true);
       const consumedPair = advancePairs();
       try {
         await submitVote(currentSession.id, winner.id, loser.id);
@@ -111,15 +111,15 @@ export default function PhotoBattleVotingPage() {
       } finally {
         setTimeout(() => {
           setSelectedPhotoId(null);
-          setIsSubmitting(false);
-        }, 200);
+          setIsAnimating(false);
+        }, 1000);
       }
     },
-    [currentSession, submitVote, advancePairs, isSubmitting, pair]
+    [currentSession, submitVote, advancePairs, isAnimating, pair]
   );
 
   useEffect(() => {
-    if (!pair || isSubmitting) return;
+    if (!pair || isAnimating) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "ArrowLeft") {
         event.preventDefault();
@@ -131,7 +131,7 @@ export default function PhotoBattleVotingPage() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [pair, isSubmitting, handleVote]);
+  }, [pair, isAnimating, handleVote]);
 
   useEffect(() => {
     setSelectedPhotoId(null);
@@ -195,7 +195,7 @@ export default function PhotoBattleVotingPage() {
                 key={card.id}
                 className={`group relative flex h-full cursor-pointer overflow-hidden border-2 bg-white/5 transition-all ${
                   isSelected ? "border-white ring-2 ring-white/70" : "border-white/10 hover:border-white/40"
-                } ${isSubmitting ? "pointer-events-none opacity-70" : ""}`}
+                } ${isAnimating ? "pointer-events-none opacity-70" : ""}`}
                 onClick={() => handleVote(card, side === "left" ? pair.right : pair.left)}
               >
                 <div className="relative h-[46vh] min-h-[280px] w-full overflow-hidden rounded-lg md:h-[70vh]">
