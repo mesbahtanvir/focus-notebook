@@ -26,7 +26,7 @@ service cloud.firestore {
     }
 
     function isVoteUpdate() {
-      return request.resource.data.keys().hasOnly(['photos', 'updatedAt']) &&
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly(['photos', 'updatedAt']) &&
              resource.data.keys().hasAll(['photos']) &&
              request.resource.data.photos is list &&
              resource.data.photos is list &&
