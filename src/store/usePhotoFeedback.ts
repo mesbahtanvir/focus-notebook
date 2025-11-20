@@ -23,6 +23,11 @@ export interface BattleHistoryEntry {
   createdAt: string;
 }
 
+export interface BattlePair {
+  left: BattlePhoto;
+  right: BattlePhoto;
+}
+
 export interface LinkHistoryEntry {
   secretKey: string;
   createdAt: string;
@@ -104,6 +109,7 @@ type State = {
   deleteLibraryPhoto: (photoId: string) => Promise<void>;
   deleteAllLibraryPhotos: () => Promise<void>;
   loadSession: (sessionId: string) => Promise<PhotoBattle | null>;
+  getNextPair: (sessionId: string) => Promise<BattlePair>;
   submitVote: (sessionId: string, winnerId: string, loserId: string) => Promise<void>;
   deleteSessionPhoto: (sessionId: string, photoId: string) => Promise<void>;
   mergeSessionPhotos: (sessionId: string, targetPhotoId: string, mergedPhotoId: string) => Promise<void>;
@@ -529,6 +535,25 @@ export const usePhotoFeedback = create<State>((set, get) => ({
       console.error('Error loading session:', error);
       set({ error: 'Failed to load session', isLoading: false });
       return null;
+    }
+  },
+
+  getNextPair: async (sessionId: string) => {
+    try {
+      const pairCallable = httpsCallable<
+        { sessionId: string },
+        { left: BattlePhoto; right: BattlePhoto }
+      >(functionsClient, 'getNextPhotoPair');
+      const response = await pairCallable({ sessionId });
+      const { left, right } = response.data ?? {};
+      if (!left || !right) {
+        throw new Error('No pair available for this battle.');
+      }
+      const [normalizedLeft, normalizedRight] = normalizeBattlePhotos([left, right]);
+      return { left: normalizedLeft, right: normalizedRight };
+    } catch (error) {
+      console.error('Error fetching next battle pair:', error);
+      throw error;
     }
   },
 

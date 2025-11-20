@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, Fragment } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { usePhotoFeedback } from "@/store/usePhotoFeedback";
-import { Trophy, TrendingUp, Users, Loader2, Share2, Trash2, GitMerge } from "lucide-react";
+import { usePhotoFeedback, type BattlePhoto } from "@/store/usePhotoFeedback";
+import { Trophy, TrendingUp, Users, Loader2, Share2, Trash2, GitMerge, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import Image from "next/image";
 import { toastError, toastSuccess } from "@/lib/toast-presets";
+import { Button } from "@/components/ui/button";
 
 function ResultsPageContent() {
   const params = useParams();
@@ -17,6 +18,7 @@ function ResultsPageContent() {
 
   const { loadResults, results, isLoading, error, deleteSessionPhoto, mergeSessionPhotos } = usePhotoFeedback();
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
+  const [deleteConfirmPhoto, setDeleteConfirmPhoto] = useState<BattlePhoto | null>(null);
   const [mergeSourceId, setMergeSourceId] = useState<string | null>(null);
   const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
 
@@ -35,15 +37,6 @@ function ResultsPageContent() {
 
   const handleDeletePhoto = async (photoId: string) => {
     if (!sessionId) return;
-    const confirmed =
-      typeof window === "undefined"
-        ? false
-        : window.confirm(
-            "Remove this photo from your leaderboard? This permanently deletes it from your account."
-          );
-    if (!confirmed) {
-      return;
-    }
     setDeletingPhotoId(photoId);
     try {
       await deleteSessionPhoto(sessionId, photoId);
@@ -63,6 +56,7 @@ function ResultsPageContent() {
         setMergeSourceId(null);
         setMergeTargetId(null);
       }
+      setDeleteConfirmPhoto(prev => (prev?.id === photoId ? null : prev));
     }
   };
 
@@ -150,9 +144,10 @@ function ResultsPageContent() {
   const canCombinePhotos = results.length > 1;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20">
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        {/* Header */}
+    <Fragment>
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20">
+        <div className="max-w-5xl mx-auto px-4 py-8">
+          {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <div className="p-4 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full">
@@ -275,7 +270,7 @@ function ResultsPageContent() {
                             <button
                               type="button"
                               className="inline-flex items-center gap-2 text-sm font-semibold text-red-500 hover:text-red-400 transition disabled:opacity-50"
-                              onClick={() => handleDeletePhoto(result.id)}
+                              onClick={() => setDeleteConfirmPhoto(result)}
                               disabled={deletingPhotoId === result.id || isMergeTargetPending}
                             >
                               {deletingPhotoId === result.id ? (
@@ -365,7 +360,54 @@ function ResultsPageContent() {
           </Link>
         </div>
       </div>
-    </div>
+      </div>
+
+      {deleteConfirmPhoto && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setDeleteConfirmPhoto(null)} />
+          <div className="relative z-10 w-full max-w-md rounded-2xl bg-white p-6 text-gray-900 shadow-2xl dark:bg-gray-900 dark:text-white">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold">Remove this photo?</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">This permanently deletes the image and its stats.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmPhoto(null)}
+                className="text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+                aria-label="Close dialog"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 mb-4">
+              <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-800">
+                <Image src={deleteConfirmPhoto.url} alt="Photo pending delete" fill sizes="400px" className="object-cover" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button variant="outline" className="flex-1" onClick={() => setDeleteConfirmPhoto(null)} disabled={!!deletingPhotoId}>
+                Keep photo
+              </Button>
+              <Button
+                type="button"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => deleteConfirmPhoto && handleDeletePhoto(deleteConfirmPhoto.id)}
+                disabled={!!deletingPhotoId}
+              >
+                {deletingPhotoId === deleteConfirmPhoto.id ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Deleting…
+                  </>
+                ) : (
+                  "Delete photo"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </Fragment>
   );
 }
 

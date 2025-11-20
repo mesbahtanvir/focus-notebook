@@ -89,6 +89,69 @@ export const submitPhotoVote = functions.https.onCall(async request => {
   return null;
 });
 
+function choosePairForRanking(photos: BattlePhoto[]): [BattlePhoto, BattlePhoto] {
+  if (photos.length < 2) {
+    throw new functions.https.HttpsError('failed-precondition', 'Need at least two photos for a battle.');
+  }
+
+  // Always work with copies so the original array is not mutated.
+  const ranked = [...photos].map(photo => ({
+    ...photo,
+    rating: typeof photo.rating === 'number' ? photo.rating : 1200,
+    totalVotes: typeof photo.totalVotes === 'number' ? photo.totalVotes : 0,
+  }));
+
+  // Sort by how many votes they have (lowest first) so under-sampled photos get surfaced,
+  // then by rating to keep pairs relatively close and informative for Elo.
+  ranked.sort((a, b) => {
+    if (a.totalVotes !== b.totalVotes) return a.totalVotes - b.totalVotes;
+    return Math.abs(a.rating - 1200) - Math.abs(b.rating - 1200);
+  });
+
+  const anchor = ranked[0];
+  const candidates = ranked.slice(1);
+  if (candidates.length === 1) {
+    const pair: [BattlePhoto, BattlePhoto] = Math.random() > 0.5 ? [anchor, candidates[0]] : [candidates[0], anchor];
+    return pair;
+  }
+
+  // Consider the next few lowest-voted photos and pick the one closest in rating to the anchor
+  // to quickly converge on a stable ordering.
+  const searchPool = candidates.slice(0, Math.min(5, candidates.length));
+  searchPool.sort((a, b) => {
+    const diffA = Math.abs(a.rating - anchor.rating);
+    const diffB = Math.abs(b.rating - anchor.rating);
+    if (diffA !== diffB) return diffA - diffB;
+    return a.totalVotes - b.totalVotes;
+  });
+
+  const chosen = searchPool[0];
+  const pair: [BattlePhoto, BattlePhoto] = Math.random() > 0.5 ? [anchor, chosen] : [chosen, anchor];
+  return pair;
+}
+
+export const getNextPhotoPair = functions.https.onCall(async request => {
+  const sessionId = typeof request.data?.sessionId === 'string' ? request.data.sessionId : '';
+  if (!sessionId) {
+    throw new functions.https.HttpsError('invalid-argument', 'sessionId is required.');
+  }
+
+  const sessionRef = db.collection('photoBattles').doc(sessionId);
+  const snap = await sessionRef.get();
+  if (!snap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Session not found');
+  }
+
+  const session = snap.data() as PhotoBattle;
+  const photos = session.photos ?? [];
+  if (photos.length < 2) {
+    throw new functions.https.HttpsError('failed-precondition', 'Need at least two photos for a battle.');
+  }
+
+  const [left, right] = choosePairForRanking(photos);
+  return { left, right };
+});
+
 async function updateLibraryStatsAdmin(ownerId: string, libraryId: string, result: 'win' | 'loss', sessionId: string) {
   const statsRef = db.collection('users').doc(ownerId).collection('photoLibrary').doc(libraryId);
   const snap = await statsRef.get();

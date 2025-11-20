@@ -53,7 +53,7 @@ import {
 } from './visaDataUpdater';
 import { generatePhotoThumbnail, getSignedImageUrl } from './photoThumbnails';
 import { runPlaceInsights } from './placeInsights';
-import { submitPhotoVote } from './photoVotes';
+import { submitPhotoVote, getNextPhotoPair } from './photoVotes';
 
 // Export cloud functions
 export {
@@ -101,6 +101,7 @@ export {
   generatePhotoThumbnail,
   getSignedImageUrl,
   submitPhotoVote,
+  getNextPhotoPair,
   // Places
   runPlaceInsights,
 };

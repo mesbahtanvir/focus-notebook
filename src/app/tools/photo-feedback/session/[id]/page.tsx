@@ -15,15 +15,18 @@ interface Pair {
   right: BattlePhoto;
 }
 
+const PREFETCH_TARGET = 5;
+
 export default function PhotoBattleVotingPage() {
   const params = useParams();
   const sessionId = params.id as string;
-  const { currentSession, loadSession, submitVote, isLoading, error } = usePhotoFeedback();
+  const { currentSession, loadSession, submitVote, getNextPair, isLoading, error } = usePhotoFeedback();
   const { user: authUser, loading: authLoading, signInAnonymously } = useAuth();
   const [pairBuffer, setPairBuffer] = useState<Pair[]>([]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const [loadedPhotos, setLoadedPhotos] = useState<Record<string, boolean>>({});
+  const [isFetchingPair, setIsFetchingPair] = useState(false);
 
   useEffect(() => {
     if (sessionId) {
@@ -65,49 +68,62 @@ export default function PhotoBattleVotingPage() {
   const canVote = currentSession && currentSession.photos.length >= 2;
   const pair = pairBuffer[0] ?? null;
 
-  const buildRandomPair = useCallback((): Pair | null => {
-    if (!currentSession || currentSession.photos.length < 2) return null;
-    const pool = [...currentSession.photos];
-    for (let i = pool.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
+  const fetchNextPair = useCallback(async () => {
+    if (!currentSession || currentSession.photos.length < 2 || isFetchingPair) return;
+    setIsFetchingPair(true);
+    try {
+      const next = await getNextPair(currentSession.id);
+      if (next?.left && next?.right) {
+        setPairBuffer(prev => [...prev, next]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch next pair:", err);
+    } finally {
+      setIsFetchingPair(false);
     }
-    const [left, right] = pool;
-    if (!left || !right || left.id === right.id) {
-      return null;
-    }
-    return { left, right };
-  }, [currentSession]);
+  }, [currentSession, getNextPair, isFetchingPair]);
 
   const advancePairs = useCallback(() => {
-    setPairBuffer(prev => {
-      if (prev.length === 0) return prev;
-      const [, ...rest] = prev;
-      const next = [...rest];
-      while (next.length < 3) {
-        const candidate = buildRandomPair();
-        if (!candidate) break;
-        next.push(candidate);
-      }
-      return next;
-    });
-  }, [buildRandomPair]);
+    setPairBuffer(prev => (prev.length > 0 ? prev.slice(1) : prev));
+  }, []);
 
   useEffect(() => {
     if (!currentSession || currentSession.photos.length < 2) {
       setPairBuffer([]);
       return;
     }
-    setPairBuffer(() => {
+    let cancelled = false;
+    const loadInitial = async () => {
       const initial: Pair[] = [];
-      while (initial.length < 3) {
-        const candidate = buildRandomPair();
-        if (!candidate) break;
-        initial.push(candidate);
+      for (let i = 0; i < PREFETCH_TARGET; i += 1) {
+        try {
+          const next = await getNextPair(currentSession.id);
+          if (!next) break;
+          initial.push(next);
+        } catch (err) {
+          console.error("Failed to seed pair buffer:", err);
+          break;
+        }
       }
-      return initial;
-    });
-  }, [currentSession, buildRandomPair]);
+      if (!cancelled) {
+        setPairBuffer(initial);
+      }
+    };
+    void loadInitial();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentSession, getNextPair]);
+
+  useEffect(() => {
+    if (!currentSession || currentSession.photos.length < 2) return;
+    if (pairBuffer.length < 3 && !isFetchingPair) {
+      void fetchNextPair();
+    }
+    if (pairBuffer.length + (isFetchingPair ? 1 : 0) < PREFETCH_TARGET) {
+      void fetchNextPair();
+    }
+  }, [pairBuffer.length, fetchNextPair, currentSession, isFetchingPair]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -218,13 +234,22 @@ export default function PhotoBattleVotingPage() {
     );
   }
 
-  if (!canVote || !pair) {
+  if (!canVote) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex flex-col items-center justify-center gap-4 p-6 text-center">
         <p className="text-xl font-semibold">Need at least two photos to start the battle.</p>
         <Link href="/tools/photo-feedback" className="text-purple-200 underline">
           Upload more photos
         </Link>
+      </div>
+    );
+  }
+
+  if (!pair) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <Loader2 className="w-10 h-10 animate-spin text-purple-200" />
+        <p className="text-sm text-purple-100">Picking great photos to compare…</p>
       </div>
     );
   }
