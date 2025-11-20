@@ -27,7 +27,10 @@ export function useInfiniteGallery({
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
       const cannotScroll = scrollHeight <= clientHeight + 8;
       if (distanceFromBottom < 200 || cannotScroll) {
-        setCurrentPage(prev => Math.min(prev + 1, totalPages - 1));
+        const nextPage = Math.min(currentPage + 1, totalPages - 1);
+        if (nextPage !== currentPage) {
+          setCurrentPage(nextPage);
+        }
       }
     };
 
@@ -46,5 +49,5 @@ export function useInfiniteGallery({
       container.removeEventListener("scroll", handleScroll);
       resizeObserver.disconnect();
     };
-  }, [items.length, pageSize, setCurrentPage, containerRef]);
+  }, [items.length, pageSize, currentPage, setCurrentPage, containerRef]);
 }

@@ -25,20 +25,22 @@ service firebase.storage {
                        request.resource.contentType.matches('image/.*')
                      )
                    );
-      allow read: if request.auth != null && request.auth.uid == userId;
+      // Allow authenticated users to read (for voting sessions)
+      allow read: if request.auth != null;
     }
 
     // CDN-friendly image buckets (thumbnails + originals)
     match /images/{variant}/{userId}/{photoId} {
       allow write: if request.auth != null
                    && request.auth.uid == userId
-                   && variant in ['original', 'thumb']
+                   && variant in ['original', 'thumb', 'medium']
                    && request.resource != null
                    && request.resource.size < 10 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
 
-      // Direct reads limited to owners; signed URLs (used for CDN) bypass rules.
-      allow read: if request.auth != null && request.auth.uid == userId;
+      // Allow authenticated users to read (for voting sessions)
+      // Signed URLs bypass these rules anyway
+      allow read: if request.auth != null;
     }
 
     // Photo feedback - requires authentication to create sessions

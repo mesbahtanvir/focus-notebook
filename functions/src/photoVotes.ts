@@ -3,11 +3,15 @@ import * as admin from 'firebase-admin';
 
 interface BattlePhoto {
   id: string;
+  url: string;
+  storagePath: string;
+  libraryId?: string;
+  thumbnailUrl?: string;
+  thumbnailPath?: string;
   rating: number;
   wins: number;
   losses: number;
   totalVotes: number;
-  libraryId?: string;
 }
 
 interface PhotoBattle {
@@ -149,8 +153,42 @@ export const getNextPhotoPair = functions.https.onCall(async request => {
   }
 
   const [left, right] = choosePairForRanking(photos);
-  return { left, right };
+
+  // Enrich the photos with library data if needed
+  const enrichedLeft = await enrichPhotoData(left, session.ownerId);
+  const enrichedRight = await enrichPhotoData(right, session.ownerId);
+
+  return { left: enrichedLeft, right: enrichedRight };
 });
+
+async function enrichPhotoData(photo: BattlePhoto, ownerId: string): Promise<BattlePhoto> {
+  // If photo already has url and storagePath, return as is
+  if (photo.url && photo.storagePath) {
+    return photo;
+  }
+
+  // Otherwise, fetch from library
+  if (!photo.libraryId) {
+    return photo;
+  }
+
+  const libraryRef = db.collection('users').doc(ownerId).collection('photoLibrary').doc(photo.libraryId);
+  const librarySnap = await libraryRef.get();
+
+  if (!librarySnap.exists) {
+    return photo;
+  }
+
+  const libraryData = librarySnap.data() as any;
+
+  return {
+    ...photo,
+    url: libraryData.url || photo.url || '',
+    storagePath: libraryData.storagePath || photo.storagePath || '',
+    thumbnailUrl: libraryData.thumbnailUrl || photo.thumbnailUrl,
+    thumbnailPath: libraryData.thumbnailPath || photo.thumbnailPath,
+  };
+}
 
 async function updateLibraryStatsAdmin(ownerId: string, libraryId: string, result: 'win' | 'loss', sessionId: string) {
   const statsRef = db.collection('users').doc(ownerId).collection('photoLibrary').doc(libraryId);

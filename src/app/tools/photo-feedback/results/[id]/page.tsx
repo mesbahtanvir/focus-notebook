@@ -228,7 +228,7 @@ function ResultsPageContent() {
               const isMergeBase = mergeSourceId === result.id;
               const canMergeWithBase = !!mergeSourceId && mergeSourceId !== result.id;
               const isMergeTargetPending = mergeTargetId === result.id;
-              const resultImage = result.mediumUrl ?? result.url;
+              const resultImage = result.url;
               return (
                 <Card
                   key={result.id}

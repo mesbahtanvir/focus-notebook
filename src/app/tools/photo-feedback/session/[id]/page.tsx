@@ -16,6 +16,7 @@ interface Pair {
 }
 
 const PREFETCH_TARGET = 5;
+const RECENT_PAIRS_LIMIT = 10; // Track last 10 pairs to avoid duplicates
 
 export default function PhotoBattleVotingPage() {
   const params = useParams();
@@ -27,6 +28,7 @@ export default function PhotoBattleVotingPage() {
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const [loadedPhotos, setLoadedPhotos] = useState<Record<string, boolean>>({});
   const [isFetchingPair, setIsFetchingPair] = useState(false);
+  const recentPairsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (sessionId) {
@@ -68,11 +70,55 @@ export default function PhotoBattleVotingPage() {
   const canVote = currentSession && currentSession.photos.length >= 2;
   const pair = pairBuffer[0] ?? null;
 
+  // Helper to create a unique key for a pair
+  const getPairKey = useCallback((left: BattlePhoto, right: BattlePhoto) => {
+    const ids = [left.id, right.id].sort();
+    return `${ids[0]}_${ids[1]}`;
+  }, []);
+
+  // Helper to check if pair was recently shown
+  const isRecentPair = useCallback((left: BattlePhoto, right: BattlePhoto) => {
+    const key = getPairKey(left, right);
+    return recentPairsRef.current.has(key);
+  }, [getPairKey]);
+
+  // Helper to mark pair as shown
+  const markPairAsShown = useCallback((left: BattlePhoto, right: BattlePhoto) => {
+    const key = getPairKey(left, right);
+    recentPairsRef.current.add(key);
+
+    // Keep only the last RECENT_PAIRS_LIMIT pairs
+    if (recentPairsRef.current.size > RECENT_PAIRS_LIMIT) {
+      const entries = Array.from(recentPairsRef.current);
+      recentPairsRef.current = new Set(entries.slice(-RECENT_PAIRS_LIMIT));
+    }
+  }, [getPairKey]);
+
   const fetchNextPair = useCallback(async () => {
     if (!currentSession || currentSession.photos.length < 2 || isFetchingPair) return;
     setIsFetchingPair(true);
     try {
-      const next = await getNextPair(currentSession.id);
+      // Try up to 3 times to get a non-duplicate pair
+      let attempts = 0;
+      let next = null;
+
+      while (attempts < 3) {
+        next = await getNextPair(currentSession.id);
+
+        // If we got a pair and it's not a recent duplicate, use it
+        if (next?.left && next?.right && !isRecentPair(next.left, next.right)) {
+          break;
+        }
+
+        // If all photos have been shown recently, reset the cache
+        if (attempts === 2 && recentPairsRef.current.size >= currentSession.photos.length - 1) {
+          recentPairsRef.current.clear();
+          break;
+        }
+
+        attempts++;
+      }
+
       if (next?.left && next?.right) {
         setPairBuffer(prev => [...prev, next]);
       }
@@ -81,25 +127,56 @@ export default function PhotoBattleVotingPage() {
     } finally {
       setIsFetchingPair(false);
     }
-  }, [currentSession, getNextPair, isFetchingPair]);
+  }, [currentSession, getNextPair, isFetchingPair, isRecentPair]);
 
   const advancePairs = useCallback(() => {
-    setPairBuffer(prev => (prev.length > 0 ? prev.slice(1) : prev));
-  }, []);
+    setPairBuffer(prev => {
+      if (prev.length === 0) return prev;
+
+      // Mark the current pair as shown before removing it
+      const currentPair = prev[0];
+      if (currentPair) {
+        markPairAsShown(currentPair.left, currentPair.right);
+      }
+
+      return prev.slice(1);
+    });
+  }, [markPairAsShown]);
 
   useEffect(() => {
     if (!currentSession || currentSession.photos.length < 2) {
       setPairBuffer([]);
+      recentPairsRef.current.clear();
       return;
     }
     let cancelled = false;
     const loadInitial = async () => {
       const initial: Pair[] = [];
+      const seenKeys = new Set<string>();
+
       for (let i = 0; i < PREFETCH_TARGET; i += 1) {
         try {
-          const next = await getNextPair(currentSession.id);
-          if (!next) break;
-          initial.push(next);
+          let attempts = 0;
+          let next = null;
+
+          // Try up to 3 times to get a unique pair for initial load
+          while (attempts < 3) {
+            next = await getNextPair(currentSession.id);
+            if (!next?.left || !next?.right) break;
+
+            const key = getPairKey(next.left, next.right);
+            if (!seenKeys.has(key)) {
+              seenKeys.add(key);
+              break;
+            }
+            attempts++;
+          }
+
+          if (next?.left && next?.right) {
+            initial.push(next);
+          } else {
+            break;
+          }
         } catch (err) {
           console.error("Failed to seed pair buffer:", err);
           break;
@@ -113,7 +190,7 @@ export default function PhotoBattleVotingPage() {
     return () => {
       cancelled = true;
     };
-  }, [currentSession, getNextPair]);
+  }, [currentSession, getNextPair, getPairKey]);
 
   useEffect(() => {
     if (!currentSession || currentSession.photos.length < 2) return;
@@ -267,9 +344,9 @@ export default function PhotoBattleVotingPage() {
         <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2">
           {[{ side: "left" as const, card: pair.left }, { side: "right" as const, card: pair.right }].map(({ side, card }) => {
             const isSelected = selectedPhotoId === card.id;
-            const displayUrl = card.fullUrl ?? card.url;
-            const previewUrl = card.thumbnailUrl ?? card.mediumUrl ?? displayUrl;
-            const isLoaded = loadedPhotos[card.id];
+            const displayUrl = card.url;
+            const previewUrl = card.thumbnailUrl || displayUrl;
+            const isLoaded = loadedPhotos[card.id] !== false;
             return (
               <Card
                 key={card.id}
@@ -279,21 +356,22 @@ export default function PhotoBattleVotingPage() {
                 onClick={() => handleVote(card, side === "left" ? pair.right : pair.left)}
               >
                 <div className="relative w-full overflow-hidden rounded-lg aspect-[3/4] min-h-[280px]">
-                  <div
-                    className={`absolute inset-0 bg-cover bg-center blur-xl scale-110 transition-opacity duration-200 ${
-                      isLoaded ? "opacity-0" : "opacity-100"
-                    }`}
-                    style={{ backgroundImage: `url(${previewUrl})` }}
-                    aria-hidden
-                  />
+                  {!isLoaded && previewUrl && previewUrl !== displayUrl && (
+                    <div
+                      className="absolute inset-0 bg-cover bg-center blur-sm scale-105"
+                      style={{ backgroundImage: `url(${previewUrl})` }}
+                      aria-hidden
+                    />
+                  )}
                   <Image
                     src={displayUrl}
                     alt="Photo option"
                     fill
-                    className={`relative object-contain transition-opacity duration-200 ${
-                      isLoaded ? "opacity-100" : "opacity-0"
-                    }`}
+                    className="relative object-contain"
                     sizes="(max-width: 768px) 100vw, 50vw"
+                    priority={true}
+                    quality={85}
+                    unoptimized={displayUrl.includes('googleusercontent.com') || displayUrl.includes('firebasestorage.googleapis.com')}
                     onLoadingComplete={() =>
                       setLoadedPhotos(prev => ({
                         ...prev,

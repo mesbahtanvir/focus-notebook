@@ -4,7 +4,6 @@ import sharp from 'sharp';
 
 const ORIGINAL_PREFIX = 'images/original';
 const THUMB_PREFIX = 'images/thumb';
-const MEDIUM_PREFIX = 'images/medium';
 const SIGNED_URL_TTL_DAYS = 365 * 5;
 
 function assertUserOwnsPath(uid: string, path: string) {
@@ -36,9 +35,7 @@ export const generatePhotoThumbnail = functions.storage.object().onFinalize(asyn
 
   const bucket = admin.storage().bucket(object.bucket);
   const thumbPath = filePath.replace(ORIGINAL_PREFIX, THUMB_PREFIX);
-  const mediumPath = filePath.replace(ORIGINAL_PREFIX, MEDIUM_PREFIX).replace(/\.[^/.]+$/, '.jpg');
   const thumbFile = bucket.file(thumbPath);
-  const mediumFile = bucket.file(mediumPath);
 
   const [exists] = await thumbFile.exists();
   if (exists) {
@@ -47,16 +44,8 @@ export const generatePhotoThumbnail = functions.storage.object().onFinalize(asyn
 
   const [buffer] = await bucket.file(filePath).download();
   const thumbBuffer = await sharp(buffer).resize(360, 360, { fit: 'inside' }).jpeg({ quality: 70 }).toBuffer();
-  const mediumBuffer = await sharp(buffer).resize(1024, 1024, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 82 }).toBuffer();
 
   await thumbFile.save(thumbBuffer, {
-    contentType: 'image/jpeg',
-    metadata: {
-      cacheControl: 'public,max-age=31536000,s-maxage=31536000',
-    },
-  });
-
-  await mediumFile.save(mediumBuffer, {
     contentType: 'image/jpeg',
     metadata: {
       cacheControl: 'public,max-age=31536000,s-maxage=31536000',
@@ -69,18 +58,12 @@ export const generatePhotoThumbnail = functions.storage.object().onFinalize(asyn
       action: 'read',
       expires: new Date(Date.now() + SIGNED_URL_TTL_DAYS * 24 * 60 * 60 * 1000),
     });
-    const [mediumUrl] = await mediumFile.getSignedUrl({
-      action: 'read',
-      expires: new Date(Date.now() + SIGNED_URL_TTL_DAYS * 24 * 60 * 60 * 1000),
-    });
 
     const docRef = admin.firestore().doc(`users/${ownerId}/photoLibrary/${baseName}`);
     await docRef.set(
       {
         thumbnailPath: thumbPath,
         thumbnailUrl: thumbUrl,
-        mediumPath: mediumPath,
-        mediumUrl,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true }

@@ -345,10 +345,7 @@ export default function GalleryManagerPage() {
 
     try {
       const processedPairs = await Promise.all(
-        imageFiles.map(async file => {
-          const resized = await resizeImageIfNeeded(file);
-          return { original: file, processed: resized };
-        })
+        imageFiles.map(async file => resizeImageIfNeeded(file))
       );
       setUploadStatus({ current: 0, total: processedPairs.length });
       await uploadToLibrary(
@@ -554,9 +551,7 @@ export default function GalleryManagerPage() {
                       const winRate = totalVotes > 0 ? Math.round(((item.stats?.yesVotes ?? 0) / totalVotes) * 100) : null;
                       const sessionCount = item.stats?.sessionCount ?? 0;
                       const isSelected = selectedPhotoIds.has(item.id);
-                      const gridUrl = item.thumbnailUrl ?? item.mediumUrl ?? item.url;
-                      // Consider variants "ready" if we have at least a medium or thumbnail (or legacy single URL).
-                      const variantsReady = !!(item.thumbnailUrl || item.mediumUrl || item.url);
+                      const gridUrl = item.url;
 
                       return (
                         <div
@@ -599,11 +594,6 @@ export default function GalleryManagerPage() {
                               sizes="(max-width: 768px) 50vw, 240px"
                               className="object-cover"
                             />
-                            {!variantsReady && (
-                              <span className="absolute left-3 top-3 rounded-full bg-amber-500/90 px-3 py-1 text-[11px] font-semibold text-white shadow-sm">
-                                Processing variants…
-                              </span>
-                            )}
                             {winRate !== null && (
                               <span className="absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white">
                                 {winRate}% win • {totalVotes} votes
@@ -730,7 +720,7 @@ export default function GalleryManagerPage() {
               >
                 <div className="flex h-full w-full items-center justify-center p-4" role="presentation">
                   <NextImage
-                    src={previewPhoto.fullUrl ?? previewPhoto.url}
+                    src={previewPhoto.url}
                     alt="Large preview"
                     width={1920}
                     height={1200}

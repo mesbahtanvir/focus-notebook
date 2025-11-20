@@ -7,11 +7,7 @@ import { auth, db, storage, functionsClient } from '@/lib/firebaseClient';
 export interface BattlePhoto {
   id: string;
   url: string;
-  mediumUrl?: string;
-  fullUrl?: string;
   storagePath: string;
-  mediumPath?: string;
-  fullPath?: string;
   libraryId?: string;
   thumbnailUrl?: string;
   thumbnailPath?: string;
@@ -63,14 +59,10 @@ export interface PhotoStats {
 export interface PhotoLibraryItem {
   id: string;
   ownerId: string;
-  url: string; // legacy primary URL (will typically be the medium variant)
-  storagePath: string; // original / full size
-  fullPath?: string; // alias for storagePath; kept for clarity
-  fullUrl?: string;
-  mediumPath?: string;
-  mediumUrl?: string;
-  thumbnailPath?: string;
+  url: string;
+  storagePath: string;
   thumbnailUrl?: string;
+  thumbnailPath?: string;
   createdAt: string;
   stats?: PhotoStats;
 }
@@ -86,14 +78,10 @@ export interface UploadProgressEvent {
 function convertLibraryItemToBattlePhoto(item: PhotoLibraryItem): BattlePhoto {
   return {
     id: item.id,
-    url: item.mediumUrl ?? item.url,
-    mediumUrl: item.mediumUrl,
-    fullUrl: item.fullUrl ?? item.url,
+    url: item.url,
     storagePath: item.storagePath,
-    mediumPath: item.mediumPath,
-    fullPath: item.fullPath ?? item.storagePath,
     libraryId: item.id,
-    thumbnailUrl: item.thumbnailUrl ?? item.mediumUrl ?? item.url,
+    thumbnailUrl: item.thumbnailUrl,
     thumbnailPath: item.thumbnailPath,
     rating: 1200,
     wins: 0,
@@ -115,7 +103,7 @@ type State = {
   // Actions
   createSessionFromLibrary: (libraryPhotoIds: string[], creatorName?: string) => Promise<{ sessionId: string; secretKey: string }>;
   uploadToLibrary: (
-    photos: Array<File | { original: File; processed: File }>,
+    photos: File[],
     onProgress?: (uploaded: number, total: number) => void,
     onFileProgress?: (event: UploadProgressEvent) => void
   ) => Promise<PhotoLibraryItem[]>;
@@ -177,12 +165,6 @@ function normalizeBattlePhotos(photos?: BattlePhoto[]): BattlePhoto[] {
   if (!photos) return [];
   return photos.map(photo => ({
     ...photo,
-    thumbnailUrl: photo.thumbnailUrl ?? photo.mediumUrl ?? photo.url,
-    fullUrl: photo.fullUrl ?? photo.url,
-    mediumUrl: photo.mediumUrl ?? photo.url,
-    thumbnailPath: photo.thumbnailPath,
-    mediumPath: photo.mediumPath,
-    fullPath: photo.fullPath ?? photo.storagePath,
     rating: typeof photo.rating === 'number' ? photo.rating : 1200,
     wins: typeof photo.wins === 'number' ? photo.wins : 0,
     losses: typeof photo.losses === 'number' ? photo.losses : 0,
@@ -323,7 +305,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
   },
 
   uploadToLibrary: async (
-    photos: Array<File | { original: File; processed: File }>,
+    photos: File[],
     onProgress?: (uploaded: number, total: number) => void,
     onFileProgress?: (event: UploadProgressEvent) => void
   ) => {
@@ -337,19 +319,12 @@ export const usePhotoFeedback = create<State>((set, get) => ({
     try {
       const signedUrlCallable = httpsCallable<{ path: string }, { url: string }>(functionsClient, 'getSignedImageUrl');
       const uploaded: PhotoLibraryItem[] = [];
-      for (const entry of photos) {
-        const originalFile = (entry as { original?: File }).original ?? (entry as File);
-        const processedFile = (entry as { processed?: File }).processed ?? (entry as File);
-
-        const extension = processedFile.type?.includes('png') ? 'png' : 'jpg';
+      for (const file of photos) {
+        const extension = file.type?.includes('png') ? 'png' : 'jpg';
         const photoId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        const fullPath = `images/original/${user.uid}/${photoId}.${extension}`;
-        const mediumPath = `images/medium/${user.uid}/${photoId}.jpg`;
-        const thumbnailPath = `images/thumb/${user.uid}/${photoId}.jpg`;
-
-        const fullRef = ref(storage, fullPath);
-        const mediumRef = ref(storage, mediumPath);
-        const fileName = processedFile.name || originalFile.name || `Photo ${uploaded.length + 1}`;
+        const storagePath = `images/original/${user.uid}/${photoId}.${extension}`;
+        const storageRef = ref(storage, storagePath);
+        const fileName = file.name || `Photo ${uploaded.length + 1}`;
 
         const emitProgress = (update: Partial<UploadProgressEvent>) => {
           onFileProgress?.({
@@ -363,57 +338,34 @@ export const usePhotoFeedback = create<State>((set, get) => ({
 
         emitProgress({ progress: 0, status: 'uploading' });
 
-        const uploadVariant = (refToUse: ReturnType<typeof ref>, fileToUpload: File, biasStart: number, biasSpan: number) =>
-          new Promise<void>((resolve, reject) => {
-            const task = uploadBytesResumable(refToUse, fileToUpload, {
-              contentType: fileToUpload.type || 'image/jpeg',
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const task = uploadBytesResumable(storageRef, file, {
+              contentType: file.type || 'image/jpeg',
             });
             task.on(
               'state_changed',
               snapshot => {
                 const progress = snapshot.totalBytes > 0 ? snapshot.bytesTransferred / snapshot.totalBytes : 0;
-                const weighted = biasStart + progress * biasSpan;
-                emitProgress({ progress: weighted, status: 'uploading' });
+                emitProgress({ progress, status: 'uploading' });
               },
               error => reject(error),
               () => resolve()
             );
           });
-
-        try {
-          // Prioritize medium upload for immediate usability, then full
-          await uploadVariant(mediumRef, processedFile, 0, 0.6);
-          await uploadVariant(fullRef, originalFile, 0.6, 0.4);
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Upload failed';
           emitProgress({ progress: 0, status: 'failed', error: message });
           throw error;
         }
 
-        let mediumUrl: string;
+        let signedUrl: string;
         try {
-          const response = await signedUrlCallable({ path: mediumPath });
-          mediumUrl = response.data.url;
+          const response = await signedUrlCallable({ path: storagePath });
+          signedUrl = response.data.url;
         } catch (error) {
-          console.warn('Failed to retrieve signed URL for medium, falling back to getDownloadURL:', error);
-          mediumUrl = await getDownloadURL(mediumRef);
-        }
-
-        let fullUrl: string;
-        try {
-          const response = await signedUrlCallable({ path: fullPath });
-          fullUrl = response.data.url;
-        } catch (error) {
-          console.warn('Failed to retrieve signed URL for full, falling back to getDownloadURL:', error);
-          fullUrl = await getDownloadURL(fullRef);
-        }
-
-        let thumbnailUrl: string | undefined;
-        try {
-          const response = await signedUrlCallable({ path: thumbnailPath });
-          thumbnailUrl = response.data.url;
-        } catch {
-          thumbnailUrl = undefined;
+          console.warn('Failed to retrieve signed URL, falling back to getDownloadURL:', error);
+          signedUrl = await getDownloadURL(storageRef);
         }
 
         emitProgress({ progress: 1, status: 'completed' });
@@ -422,14 +374,8 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         const item: PhotoLibraryItem = {
           id: photoId,
           ownerId: user.uid,
-          url: mediumUrl,
-          storagePath: fullPath,
-          fullPath,
-          fullUrl,
-          mediumPath,
-          mediumUrl,
-          thumbnailPath,
-          thumbnailUrl,
+          url: signedUrl,
+          storagePath,
           createdAt: new Date().toISOString(),
           stats: {
             yesVotes: 0,
@@ -490,17 +436,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
                 ? lastVoteSource
                 : undefined;
         }
-        return {
-          ...data,
-          storagePath: data.storagePath,
-          fullPath: data.fullPath ?? data.storagePath,
-          fullUrl: data.fullUrl ?? data.url,
-          mediumPath: data.mediumPath,
-          mediumUrl: data.mediumUrl ?? data.url,
-          thumbnailPath: data.thumbnailPath,
-          thumbnailUrl: data.thumbnailUrl ?? data.mediumUrl ?? data.url,
-          stats,
-        };
+        return { ...data, stats };
       });
       set({ library: items, libraryLoading: false });
       return items;
@@ -521,19 +457,10 @@ export const usePhotoFeedback = create<State>((set, get) => ({
     if (!target) return;
 
     try {
-      const deletePaths = [
-        target.storagePath,
-        target.fullPath,
-        target.mediumPath,
-        target.thumbnailPath,
-      ].filter(Boolean) as string[];
-
-      for (const path of deletePaths) {
-        const storageRef = ref(storage, path);
-        await deleteObject(storageRef).catch(error => {
-          console.warn('Unable to delete photo file (continuing):', error);
-        });
-      }
+      const storageRef = ref(storage, target.storagePath);
+      await deleteObject(storageRef).catch(error => {
+        console.warn('Unable to delete photo file (continuing):', error);
+      });
       await deleteDoc(doc(db, `users/${user.uid}/photoLibrary`, photoId));
       set(state => ({
         library: state.library.filter(photo => photo.id !== photoId),
@@ -560,15 +487,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
 
       for (const photo of photos) {
         try {
-          const deletePaths = [
-            photo.storagePath,
-            photo.fullPath,
-            photo.mediumPath,
-            photo.thumbnailPath,
-          ].filter(Boolean) as string[];
-          for (const path of deletePaths) {
-            await deleteObject(ref(storage, path));
-          }
+          await deleteObject(ref(storage, photo.storagePath));
         } catch (fileError) {
           console.warn('Unable to delete photo file (continuing):', fileError);
         }
@@ -780,18 +699,10 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         });
       });
 
-      const deleteVariantPaths = [
-        mergedPhoto.storagePath,
-        (mergedPhoto as any).fullPath,
-        (mergedPhoto as any).mediumPath,
-        (mergedPhoto as any).thumbnailPath,
-      ].filter(Boolean) as string[];
-      for (const path of deleteVariantPaths) {
-        const storageRef = ref(storage, path);
-        await deleteObject(storageRef).catch(error => {
-          console.warn('Unable to delete merged photo file (continuing):', error);
-        });
-      }
+      const storageRef = ref(storage, mergedPhoto.storagePath);
+      await deleteObject(storageRef).catch(error => {
+        console.warn('Unable to delete merged photo file (continuing):', error);
+      });
 
       if (mergedPhoto.libraryId) {
         await deleteDoc(doc(db, `users/${user.uid}/photoLibrary`, mergedPhoto.libraryId)).catch(error => {
@@ -1011,7 +922,6 @@ function replayBattleWithHistory(session: PhotoBattle, history: BattleHistoryEnt
       url: base?.url ?? '',
       storagePath: base?.storagePath ?? '',
       libraryId: base?.libraryId,
-      thumbnailUrl: base?.thumbnailUrl ?? base?.url ?? '',
       rating: 1200,
       wins: 0,
       losses: 0,
