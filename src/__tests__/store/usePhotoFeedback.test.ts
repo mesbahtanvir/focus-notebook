@@ -123,6 +123,7 @@ describe("usePhotoFeedback gallery + session flow", () => {
           }),
         }),
         update: jest.fn(),
+        set: jest.fn(),
       };
       return updater(transaction);
     });
@@ -174,6 +175,7 @@ describe("usePhotoFeedback gallery + session flow", () => {
       expect.objectContaining({
         creatorName: "Alex",
         isPublic: false,
+        photoAliases: {},
         linkExpiresAt: expect.any(String),
         linkHistory: [],
         photos: [
@@ -285,7 +287,7 @@ describe("usePhotoFeedback gallery + session flow", () => {
 
   it("updates ratings via submitVote transactions", async () => {
     let capturedPayload: any = null;
-    mockRunTransaction.mockImplementationOnce(async (_db, updater: any) => {
+    mockRunTransaction.mockImplementation(async (_db, updater: any) => {
       const transaction = {
         get: jest.fn().mockResolvedValue({
           exists: () => true,
@@ -300,6 +302,7 @@ describe("usePhotoFeedback gallery + session flow", () => {
         update: jest.fn((_, payload) => {
           capturedPayload = payload;
         }),
+        set: jest.fn(),
       };
       await updater(transaction);
     });
@@ -358,6 +361,7 @@ describe("usePhotoFeedback gallery + session flow", () => {
         ownerId: "user-123",
         creatorName: "Alex",
         photos: sessionPhotos.map(photo => ({ ...photo })),
+        photoAliases: {},
         secretKey: "secret",
         createdAt: new Date().toISOString(),
       },
@@ -368,6 +372,7 @@ describe("usePhotoFeedback gallery + session flow", () => {
           ownerId: "user-123",
           creatorName: "Alex",
           photos: sessionPhotos.map(photo => ({ ...photo })),
+          photoAliases: {},
           secretKey: "secret",
           createdAt: new Date().toISOString(),
         },
@@ -393,6 +398,7 @@ describe("usePhotoFeedback gallery + session flow", () => {
           }),
         }),
         update: jest.fn(),
+        set: jest.fn(),
       };
       await updater(transaction);
       expect(transaction.update).toHaveBeenCalled();
@@ -417,6 +423,174 @@ describe("usePhotoFeedback gallery + session flow", () => {
     expect(state.library.find(photo => photo.id === "lib-1")).toBeUndefined();
   });
 
+  it("merges battle photos and aggregates stats", async () => {
+    const buildPhoto = (id: string, overrides: Partial<any> = {}) => ({
+      id,
+      url: `${id}.jpg`,
+      storagePath: `images/original/${id}.jpg`,
+      libraryId: `lib-${id}`,
+      rating: overrides.rating ?? 1400,
+      wins: overrides.wins ?? 5,
+      losses: overrides.losses ?? 2,
+      totalVotes: overrides.totalVotes ?? 10,
+    });
+    const primary = buildPhoto("primary");
+    const duplicate = buildPhoto("duplicate", { rating: 1100, wins: 3, losses: 4, totalVotes: 5 });
+
+    usePhotoFeedback.setState(state => ({
+      ...state,
+      currentSession: {
+        id: "session-merge",
+        ownerId: "user-123",
+        creatorName: "Alex",
+        photos: [primary, duplicate],
+        photoAliases: {},
+        secretKey: "secret",
+        createdAt: new Date().toISOString(),
+      },
+      results: [primary, duplicate],
+      userSessions: [
+        {
+          id: "session-merge",
+          ownerId: "user-123",
+          creatorName: "Alex",
+          photos: [primary, duplicate],
+          photoAliases: {},
+          secretKey: "secret",
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      library: [
+        { id: primary.libraryId!, ownerId: "user-123", url: primary.url, storagePath: primary.storagePath, createdAt: new Date().toISOString() },
+        { id: duplicate.libraryId!, ownerId: "user-123", url: duplicate.url, storagePath: duplicate.storagePath, createdAt: new Date().toISOString() },
+      ],
+    }));
+
+    mockDeleteObject.mockResolvedValue(undefined);
+    mockDeleteDoc.mockResolvedValue(undefined);
+
+    const sessionPayload = {
+      id: "session-merge",
+      ownerId: "user-123",
+      creatorName: "Alex",
+      photos: [primary, duplicate],
+      photoAliases: {},
+      secretKey: "secret",
+      createdAt: new Date().toISOString(),
+      updatedAt: "2024-01-01T00:00:00.000Z",
+    };
+
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({
+        ...sessionPayload,
+      }),
+    });
+
+    const historyDocs = [
+      {
+        id: "m1",
+        data: () => ({ winnerId: "primary", loserId: "opponent", createdAt: "2024-01-01T00:00:00.000Z" }),
+      },
+      {
+        id: "m2",
+        data: () => ({ winnerId: "opponent", loserId: "duplicate", createdAt: "2024-01-01T01:00:00.000Z" }),
+      },
+      {
+        id: "m3",
+        data: () => ({ winnerId: "duplicate", loserId: "opponent", createdAt: "2024-01-01T02:00:00.000Z" }),
+      },
+    ];
+    mockGetDocs.mockImplementationOnce(() => ({ docs: historyDocs }));
+
+    mockRunTransaction.mockImplementationOnce(async (_db, updater: any) => {
+      const transaction = {
+        get: jest.fn().mockResolvedValue({
+          exists: () => true,
+          data: () => ({
+            ...sessionPayload,
+          }),
+        }),
+        update: jest.fn(),
+        set: jest.fn(),
+      };
+      await updater(transaction);
+      expect(transaction.update).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({
+          photoAliases: expect.objectContaining({ duplicate: "primary" }),
+          photos: expect.arrayContaining([expect.objectContaining({ id: "primary" })]),
+        })
+      );
+    });
+
+    await act(async () => {
+      await usePhotoFeedback.getState().mergeSessionPhotos("session-merge", "primary", "duplicate");
+    });
+
+    expect(mockDeleteObject).toHaveBeenCalledWith(expect.objectContaining({ path: "images/original/duplicate.jpg" }));
+    expect(mockDeleteDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ path: expect.stringContaining("users/user-123/photoLibrary/lib-duplicate") })
+    );
+
+    const state = usePhotoFeedback.getState();
+    expect(state.results).toHaveLength(1);
+    expect(state.currentSession?.photos).toHaveLength(1);
+    expect(state.userSessions[0].photos).toHaveLength(1);
+    expect(state.results[0].wins).toBe(2);
+    expect(state.results[0].losses).toBe(1);
+    expect(state.results[0].totalVotes).toBe(3);
+    expect(state.results[0].rating).toBe(1215);
+    expect(state.library.find(photo => photo.id === "lib-duplicate")).toBeUndefined();
+  });
+
+  it("prevents merging photos when user does not own the session", async () => {
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({
+        id: "session-merge",
+        ownerId: "other-user",
+        photos: [
+          { id: "primary", rating: 1200, wins: 1, losses: 1, totalVotes: 2 },
+          { id: "duplicate", rating: 1100, wins: 1, losses: 2, totalVotes: 3 },
+        ],
+        photoAliases: {},
+        secretKey: "secret",
+        createdAt: new Date().toISOString(),
+      }),
+    });
+
+    mockRunTransaction.mockImplementationOnce(async (_db, updater: any) => {
+      const transaction = {
+        get: jest.fn().mockResolvedValue({
+          exists: () => true,
+          data: () => ({
+            ownerId: "other-user",
+            photos: [
+              { id: "primary", rating: 1200, wins: 1, losses: 1, totalVotes: 2 },
+              { id: "duplicate", rating: 1100, wins: 1, losses: 2, totalVotes: 3 },
+            ],
+          }),
+        }),
+        update: jest.fn(),
+        set: jest.fn(),
+      };
+      await updater(transaction);
+    });
+
+    const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(
+        usePhotoFeedback.getState().mergeSessionPhotos("session-merge", "primary", "duplicate")
+      ).rejects.toThrow("You do not have permission to update this session.");
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+
+    expect(mockDeleteObject).not.toHaveBeenCalled();
+    expect(mockDeleteDoc).not.toHaveBeenCalled();
+  });
+
   it("throws when attempting to delete a photo from another user's session", async () => {
     mockRunTransaction.mockImplementationOnce(async (_db, updater: any) => {
       const transaction = {
@@ -428,6 +602,7 @@ describe("usePhotoFeedback gallery + session flow", () => {
           }),
         }),
         update: jest.fn(),
+        set: jest.fn(),
       };
       await updater(transaction);
     });
@@ -443,42 +618,6 @@ describe("usePhotoFeedback gallery + session flow", () => {
 
     expect(mockDeleteObject).not.toHaveBeenCalled();
     expect(mockDeleteDoc).not.toHaveBeenCalled();
-  });
-
-  it("updates ratings via submitVote transactions", async () => {
-    let updatedPayload: any = null;
-    mockRunTransaction.mockImplementation(async (_db, updater: any) => {
-      const transaction = {
-        get: jest.fn().mockResolvedValue({
-          exists: () => true,
-          data: () => ({
-            id: "session-1",
-            ownerId: "user-123",
-            photos: [
-              { id: "winner", rating: 1200, wins: 2, losses: 1, totalVotes: 3 },
-              { id: "loser", rating: 1200, wins: 1, losses: 2, totalVotes: 3 },
-            ],
-          }),
-        }),
-        update: jest.fn((_, payload) => {
-          updatedPayload = payload;
-        }),
-      };
-      await updater(transaction);
-    });
-
-    await act(async () => {
-      await usePhotoFeedback.getState().submitVote("session-1", "winner", "loser");
-    });
-
-    expect(mockRunTransaction).toHaveBeenCalled();
-    expect(updatedPayload).not.toBeNull();
-    const winner = updatedPayload.photos.find((photo: any) => photo.id === "winner");
-    const loser = updatedPayload.photos.find((photo: any) => photo.id === "loser");
-    expect(winner.rating).toBeGreaterThan(1200);
-    expect(loser.rating).toBeLessThan(1200);
-    expect(winner.wins).toBe(3);
-    expect(loser.losses).toBe(3);
   });
 
   it("returns sorted results for a valid secret key", async () => {
@@ -500,5 +639,11 @@ describe("usePhotoFeedback gallery + session flow", () => {
 
     expect(results[0].rating).toBeGreaterThan(results[1].rating);
     expect(usePhotoFeedback.getState().results[0].id).toBe("photo-a");
+  });
+
+  it("prevents combining the same photo twice", async () => {
+    await expect(
+      usePhotoFeedback.getState().mergeSessionPhotos("session-1", "photo-a", "photo-a")
+    ).rejects.toThrow("Choose two different photos to merge.");
   });
 });

@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { usePhotoFeedback } from "@/store/usePhotoFeedback";
-import { Trophy, TrendingUp, Users, Loader2, Share2, Trash2 } from "lucide-react";
+import { Trophy, TrendingUp, Users, Loader2, Share2, Trash2, GitMerge } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import Image from "next/image";
@@ -15,14 +15,23 @@ function ResultsPageContent() {
   const sessionId = params.id as string;
   const secretKey = searchParams.get('key');
 
-  const { loadResults, results, isLoading, error, deleteSessionPhoto } = usePhotoFeedback();
+  const { loadResults, results, isLoading, error, deleteSessionPhoto, mergeSessionPhotos } = usePhotoFeedback();
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
+  const [mergeSourceId, setMergeSourceId] = useState<string | null>(null);
+  const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
 
   useEffect(() => {
     if (sessionId && secretKey) {
       loadResults(sessionId, secretKey);
     }
   }, [sessionId, secretKey, loadResults]);
+
+  useEffect(() => {
+    if (results.length < 2) {
+      setMergeSourceId(null);
+      setMergeTargetId(null);
+    }
+  }, [results.length]);
 
   const handleDeletePhoto = async (photoId: string) => {
     if (!sessionId) return;
@@ -50,6 +59,49 @@ function ResultsPageContent() {
       });
     } finally {
       setDeletingPhotoId(null);
+      if (mergeSourceId === photoId || mergeTargetId === photoId) {
+        setMergeSourceId(null);
+        setMergeTargetId(null);
+      }
+    }
+  };
+
+  const mergeSourceIndex = mergeSourceId ? results.findIndex(photo => photo.id === mergeSourceId) : -1;
+
+  const handleToggleMergeSource = (photoId: string) => {
+    setMergeTargetId(null);
+    setMergeSourceId(prev => (prev === photoId ? null : photoId));
+  };
+
+  const handleMergePhotos = async (targetId: string) => {
+    if (!sessionId || !mergeSourceId || mergeSourceId === targetId) return;
+    const targetIndex = results.findIndex(photo => photo.id === targetId);
+    const baseIndex = mergeSourceIndex;
+    const baseLabel = baseIndex >= 0 ? `Photo #${baseIndex + 1}` : "the selected photo";
+    const targetLabel = targetIndex >= 0 ? `Photo #${targetIndex + 1}` : "this photo";
+    const confirmed =
+      typeof window === "undefined"
+        ? false
+        : window.confirm(
+            `Merge ${targetLabel} into ${baseLabel}? Their stats will be combined and ${targetLabel} will be removed.`
+          );
+    if (!confirmed) return;
+    setMergeTargetId(targetId);
+    try {
+      await mergeSessionPhotos(sessionId, mergeSourceId, targetId);
+      toastSuccess({
+        title: "Photos merged",
+        description: "The stats have been combined into the selected photo.",
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to merge photos. Please try again.";
+      toastError({
+        title: "Could not merge photos",
+        description: message,
+      });
+    } finally {
+      setMergeTargetId(null);
+      setMergeSourceId(null);
     }
   };
 
@@ -95,6 +147,7 @@ function ResultsPageContent() {
 
   const totalVotes = results.reduce((sum, r) => sum + r.totalVotes, 0);
   const avgVotesPerPhoto = results.length > 0 ? Math.round(totalVotes / results.length) : 0;
+  const canCombinePhotos = results.length > 1;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20">
@@ -155,6 +208,13 @@ function ResultsPageContent() {
           </Card>
         </div>
 
+        {mergeSourceId && mergeSourceIndex >= 0 && (
+          <div className="mb-4 rounded-lg border border-dashed border-purple-300 bg-purple-50/70 px-4 py-3 text-sm text-purple-900 dark:border-purple-500/50 dark:bg-purple-950/40 dark:text-purple-100">
+            Combining stats into <span className="font-semibold">Photo #{mergeSourceIndex + 1}</span>. Select another photo
+            to merge or cancel the combine mode.
+          </div>
+        )}
+
         {/* Results Grid */}
         {results.length === 0 ? (
           <Card className="p-12 text-center bg-white dark:bg-gray-800">
@@ -170,6 +230,9 @@ function ResultsPageContent() {
           <div className="space-y-4">
             {results.map((result, index) => {
               const winRate = result.totalVotes > 0 ? Math.round((result.wins / result.totalVotes) * 100) : 0;
+              const isMergeBase = mergeSourceId === result.id;
+              const canMergeWithBase = !!mergeSourceId && mergeSourceId !== result.id;
+              const isMergeTargetPending = mergeTargetId === result.id;
               return (
                 <Card
                   key={result.id}
@@ -202,30 +265,65 @@ function ResultsPageContent() {
                     </div>
 
                     <div className="flex-1 space-y-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">Photo #{index + 1}</h3>
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-col gap-2 items-start lg:items-end">
                           <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
                             {result.rating} pts
                           </div>
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-2 text-sm font-semibold text-red-500 hover:text-red-400 transition disabled:opacity-50"
-                            onClick={() => handleDeletePhoto(result.id)}
-                            disabled={deletingPhotoId === result.id}
-                          >
-                            {deletingPhotoId === result.id ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Removing…
-                              </>
-                            ) : (
-                              <>
-                                <Trash2 className="w-4 h-4" />
-                                Delete photo
-                              </>
-                            )}
-                          </button>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-2 text-sm font-semibold text-red-500 hover:text-red-400 transition disabled:opacity-50"
+                              onClick={() => handleDeletePhoto(result.id)}
+                              disabled={deletingPhotoId === result.id || isMergeTargetPending}
+                            >
+                              {deletingPhotoId === result.id ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  Removing…
+                                </>
+                              ) : (
+                                <>
+                                  <Trash2 className="w-4 h-4" />
+                                  Delete photo
+                                </>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              className={`inline-flex items-center gap-2 text-sm font-semibold transition ${
+                                isMergeBase
+                                  ? "text-orange-400 hover:text-orange-300"
+                                  : "text-blue-500 hover:text-blue-400"
+                              }`}
+                              onClick={() => handleToggleMergeSource(result.id)}
+                              disabled={isMergeTargetPending || !canCombinePhotos}
+                            >
+                              <GitMerge className="w-4 h-4" />
+                              {isMergeBase ? "Cancel combine" : "Combine stats"}
+                            </button>
+                          </div>
+                          {canMergeWithBase && (
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-purple-500 to-pink-500 px-3 py-1 text-xs font-semibold text-white disabled:opacity-60"
+                              onClick={() => handleMergePhotos(result.id)}
+                              disabled={isMergeTargetPending}
+                            >
+                              {isMergeTargetPending ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  Merging…
+                                </>
+                              ) : (
+                                <>
+                                  <GitMerge className="w-4 h-4" />
+                                  Merge into {mergeSourceIndex >= 0 ? `Photo #${mergeSourceIndex + 1}` : "selection"}
+                                </>
+                              )}
+                            </button>
+                          )}
                         </div>
                       </div>
 
