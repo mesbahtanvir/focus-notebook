@@ -8,6 +8,7 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { usePhotoFeedback, type BattlePhoto } from "@/store/usePhotoFeedback";
 import { toastError } from "@/lib/toast-presets";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Pair {
   left: BattlePhoto;
@@ -18,6 +19,7 @@ export default function PhotoBattleVotingPage() {
   const params = useParams();
   const sessionId = params.id as string;
   const { currentSession, loadSession, submitVote, isLoading, error } = usePhotoFeedback();
+  const { user: authUser, loading: authLoading, signInAnonymously } = useAuth();
   const [pairBuffer, setPairBuffer] = useState<Pair[]>([]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
@@ -28,6 +30,14 @@ export default function PhotoBattleVotingPage() {
       void loadSession(sessionId);
     }
   }, [sessionId, loadSession]);
+
+  useEffect(() => {
+    if (!authLoading && !authUser) {
+      void signInAnonymously().catch(err => {
+        console.error("Failed to start anonymous session for voting:", err);
+      });
+    }
+  }, [authLoading, authUser, signInAnonymously]);
 
   const canVote = currentSession && currentSession.photos.length >= 2;
   const pair = pairBuffer[0] ?? null;
@@ -91,6 +101,25 @@ export default function PhotoBattleVotingPage() {
   const handleVote = useCallback(
     async (winner: BattlePhoto, loser: BattlePhoto) => {
       if (!currentSession || isAnimating || !pair) return;
+      if (authLoading) {
+        toastError({
+          title: "Setting up voter",
+          description: "Please wait a moment and try again.",
+        });
+        return;
+      }
+      if (!authUser) {
+        try {
+          await signInAnonymously();
+        } catch (err) {
+          console.error(err);
+          toastError({
+            title: "Unable to start session",
+            description: "Refresh the page and try again.",
+          });
+          return;
+        }
+      }
       setSelectedPhotoId(winner.id);
       setIsAnimating(true);
       const animationDelay = new Promise<void>(resolve => {
@@ -115,7 +144,7 @@ export default function PhotoBattleVotingPage() {
         setIsAnimating(false);
       }
     },
-    [currentSession, submitVote, advancePairs, isAnimating, pair]
+    [currentSession, submitVote, advancePairs, isAnimating, pair, authLoading, authUser, signInAnonymously]
   );
 
   useEffect(() => {
