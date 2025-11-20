@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
-import { ArrowLeft, Upload, Trash2, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload, Trash2, X, Loader2, CheckCircle2, Circle, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toastError, toastSuccess } from "@/lib/toast-presets";
@@ -11,7 +11,7 @@ import { usePhotoFeedback, type PhotoLibraryItem, type UploadProgressEvent } fro
 import { useAuth } from "@/contexts/AuthContext";
 import { useInfiniteGallery } from "@/hooks/useInfiniteGallery";
 
-const PHOTOS_PER_PAGE = 9;
+const PHOTOS_PER_PAGE = 18;
 const MAX_IMAGE_DIMENSION = 1024;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -54,13 +54,18 @@ async function resizeImageIfNeeded(file: File): Promise<File> {
       }
       ctx.drawImage(img, 0, 0, width, height);
       canvas.toBlob(
-        (blob) => {
+        blob => {
           cleanup();
           if (!blob) {
             reject(new Error("Failed to process image"));
             return;
           }
-          resolve(new File([blob], file.name.replace(/\.(png|jpg|jpeg)$/i, ".jpg"), { type: "image/jpeg", lastModified: Date.now() }));
+          resolve(
+            new File([blob], file.name.replace(/\.(png|jpg|jpeg)$/i, ".jpg"), {
+              type: "image/jpeg",
+              lastModified: Date.now(),
+            })
+          );
         },
         "image/jpeg",
         0.9
@@ -81,6 +86,7 @@ export default function GalleryManagerPage() {
     library,
     libraryLoading,
     deleteLibraryPhoto,
+    deleteAllLibraryPhotos,
   } = usePhotoFeedback();
   const { user, isAnonymous } = useAuth();
   const canManage = !!user && !isAnonymous;
@@ -90,7 +96,13 @@ export default function GalleryManagerPage() {
   const [photoPendingDelete, setPhotoPendingDelete] = useState<PhotoLibraryItem | null>(null);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   const [uploadJobs, setUploadJobs] = useState<Record<string, UploadProgressEvent>>({});
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<"selected" | "all" | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+
   const galleryContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (canManage) {
@@ -105,6 +117,19 @@ export default function GalleryManagerPage() {
     }
   }, [library.length, galleryPage]);
 
+  useEffect(() => {
+    setSelectedPhotoIds(prev => {
+      if (prev.size === 0) return prev;
+      const next = new Set<string>();
+      library.forEach(photo => {
+        if (prev.has(photo.id)) {
+          next.add(photo.id);
+        }
+      });
+      return next;
+    });
+  }, [library]);
+
   useInfiniteGallery({
     items: library,
     pageSize: PHOTOS_PER_PAGE,
@@ -115,6 +140,34 @@ export default function GalleryManagerPage() {
 
   const visiblePhotos = library.slice(0, Math.min(library.length, (galleryPage + 1) * PHOTOS_PER_PAGE));
   const activeUploadJobs = Object.values(uploadJobs);
+  const selectedCount = selectedPhotoIds.size;
+  const allSelected = library.length > 0 && selectedCount === library.length;
+
+  const togglePhotoSelection = (photoId: string) => {
+    if (!canManage) return;
+    setSelectedPhotoIds(prev => {
+      const next = new Set(prev);
+      if (next.has(photoId)) {
+        next.delete(photoId);
+      } else {
+        next.add(photoId);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (!canManage || library.length === 0) return;
+    if (allSelected) {
+      setSelectedPhotoIds(new Set());
+      return;
+    }
+    setSelectedPhotoIds(new Set(library.map(photo => photo.id)));
+  };
+
+  const handleClearSelection = () => {
+    setSelectedPhotoIds(new Set());
+  };
 
   const handleDeletePhoto = async (photoId: string) => {
     if (!canManage) return;
@@ -130,6 +183,54 @@ export default function GalleryManagerPage() {
     } finally {
       setDeletingPhotoId(null);
       setPhotoPendingDelete(null);
+      setSelectedPhotoIds(prev => {
+        if (!prev.has(photoId)) return prev;
+        const next = new Set(prev);
+        next.delete(photoId);
+        return next;
+      });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!canManage || selectedCount === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const ids = Array.from(selectedPhotoIds);
+      for (const id of ids) {
+        await deleteLibraryPhoto(id);
+      }
+      toastSuccess({
+        title: "Photos removed",
+        description: `${ids.length} photo${ids.length === 1 ? "" : "s"} deleted from your gallery.`,
+      });
+      setSelectedPhotoIds(new Set());
+    } catch (error) {
+      toastError({
+        title: "Bulk delete failed",
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsBulkDeleting(false);
+      setBulkAction(null);
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!canManage || library.length === 0) return;
+    setIsDeletingAll(true);
+    try {
+      await deleteAllLibraryPhotos();
+      toastSuccess({ title: "Gallery cleared", description: "All photos have been removed." });
+      setSelectedPhotoIds(new Set());
+    } catch (error) {
+      toastError({
+        title: "Delete all failed",
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsDeletingAll(false);
+      setBulkAction(null);
     }
   };
 
@@ -191,280 +292,348 @@ export default function GalleryManagerPage() {
       });
     } finally {
       setUploadStatus(null);
-      if (e.target) {
-        e.target.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
     }
   };
 
-  const renderGallery = () => {
-    if (!canManage) {
-      return (
-        <Card className="p-6 bg-white dark:bg-gray-900 border border-purple-100 dark:border-purple-900/40">
-          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Sign in required</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Uploading photos and editing your gallery require a full account. Head back to the battle dashboard and sign in to keep curating your images.
-          </p>
-          <Link
-            href="/tools/photo-feedback"
-            className="mt-4 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-purple-600 text-white text-sm font-semibold"
-          >
-            Return to dashboard
-          </Link>
-        </Card>
-      );
+  const galleryHeaderDescription = library.length === 0
+    ? "Grab the floating button to add your first shots."
+    : "Tap images to select them, then clean up or clear everything in a couple clicks.";
+
+  const summaryLabel = selectedCount > 0
+    ? `${selectedCount} selected`
+    : `${library.length} photo${library.length === 1 ? "" : "s"}`;
+
+  const showUploadQueue = canManage && activeUploadJobs.length > 0;
+
+  const confirmBulkAction = () => {
+    if (bulkAction === "selected") {
+      void handleBulkDelete();
+    } else if (bulkAction === "all") {
+      void handleDeleteAll();
     }
-
-    return (
-      <Card className="p-6 bg-white dark:bg-gray-900 border-2 border-purple-200 dark:border-purple-800">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Manage gallery</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Every upload joins the battle automatically. Remove a photo here if you don&apos;t want it ranked.
-            </p>
-          </div>
-          {uploadStatus && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Uploading {uploadStatus.current}/{uploadStatus.total}
-            </p>
-          )}
-        </div>
-
-        {library.length === 0 ? (
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Your gallery is empty. Upload photos below to get started.
-            </p>
-            <label
-              htmlFor="gallery-upload"
-              className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-lg cursor-pointer bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all"
-            >
-              <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
-                <Upload className="w-8 h-8 text-purple-500 mb-2" />
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  <span className="font-semibold">Click to upload</span> or drag and drop
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG, GIF up to 10MB each</p>
-              </div>
-              <input
-                id="gallery-upload"
-                type="file"
-                className="hidden"
-                accept="image/*"
-                multiple
-                onChange={handleGalleryUpload}
-                disabled={libraryLoading}
-              />
-            </label>
-          </div>
-        ) : (
-          <>
-            <div ref={galleryContainerRef} className="max-h-[620px] overflow-y-auto pr-1">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {visiblePhotos.map(item => {
-                  const totalVotes = item.stats?.totalVotes ?? 0;
-                  const winRate = totalVotes > 0 ? Math.round(((item.stats?.yesVotes ?? 0) / totalVotes) * 100) : null;
-                  return (
-                    <div
-                      key={item.id}
-                      className="rounded-lg border overflow-hidden text-left transition-shadow relative group border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
-                    >
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPhotoPendingDelete(item);
-                        }}
-                        className="absolute top-2 left-2 z-10 inline-flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 w-7 h-7 transition"
-                        aria-label="Remove photo from gallery"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      <div className="relative aspect-square bg-gray-100 dark:bg-gray-900">
-                        <NextImage src={item.url} alt="Gallery photo" fill sizes="(max-width: 768px) 25vw, 150px" className="object-cover" />
-                        {totalVotes > 0 && (
-                          <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/60 text-white text-xs font-semibold px-2 py-1">
-                            {winRate !== null ? `${winRate}% win` : `${totalVotes} votes`}
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-3 text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                        <p>Uploaded {new Date(item.createdAt).toLocaleDateString()}</p>
-                        {totalVotes > 0 ? (
-                          <p className="text-gray-700 dark:text-gray-300">
-                            {item.stats?.yesVotes ?? 0} wins • {totalVotes} total votes
-                          </p>
-                        ) : (
-                          <p className="text-gray-500 dark:text-gray-400">Waiting for first votes</p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                <label
-                  htmlFor="gallery-upload"
-                  className="flex flex-col items-center justify-center border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-lg cursor-pointer bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all"
-                >
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
-                    <Upload className="w-8 h-8 text-purple-500 mb-2" />
-                    <p className="text-sm text-gray-700 dark:text-gray-300 font-semibold">Add more photos</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG, GIF up to 10MB each</p>
-                  </div>
-                  <input
-                    id="gallery-upload"
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    multiple
-                    onChange={handleGalleryUpload}
-                    disabled={libraryLoading}
-                  />
-                </label>
-              </div>
-            </div>
-            {library.length > PHOTOS_PER_PAGE && (
-              <div className="flex items-center justify-end mt-4 text-xs text-gray-500 dark:text-gray-400">
-                Showing {visiblePhotos.length} of {library.length} photos
-              </div>
-            )}
-          </>
-        )}
-      </Card>
-    );
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20">
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm uppercase tracking-widest text-purple-500 dark:text-purple-200 mb-1">Gallery manager</p>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Curate your battle photos</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Upload new shots, remove stale ones, and see vote stats for each image without leaving the dashboard.
-            </p>
-          </div>
-          <Link
-            href="/tools/photo-feedback"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-purple-600 dark:text-purple-300 hover:underline"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to battle overview
-          </Link>
-        </div>
+    <div className="relative min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/60 to-slate-900 text-white">
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        accept="image/*"
+        multiple
+        onChange={handleGalleryUpload}
+        disabled={libraryLoading}
+      />
 
-        {renderGallery()}
-
-        {canManage && activeUploadJobs.length > 0 && (
-          <Card className="p-6 bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-800">
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Upload queue</p>
+      <div className="flex min-h-screen flex-col">
+        <header className="px-6 pt-10 pb-6">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
-              {activeUploadJobs.map(job => {
-                const progressPercent = Math.round(job.progress * 100);
-                const statusLabel =
-                  job.status === "completed"
-                    ? "Completed"
-                    : job.status === "failed"
-                      ? "Failed"
-                      : `Uploading • ${progressPercent}%`;
-                const statusClass =
-                  job.status === "failed"
-                    ? "text-red-600 dark:text-red-400"
-                    : job.status === "completed"
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-purple-600 dark:text-purple-300";
-
-                return (
-                  <div key={job.id} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/40 p-3 shadow-sm">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-gray-700 dark:text-gray-200 truncate pr-4">{job.name}</span>
-                      <span className={`font-medium ${statusClass}`}>{statusLabel}</span>
-                    </div>
-                    <div className="mt-2 h-1.5 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${
-                          job.status === "failed"
-                            ? "bg-red-500"
-                            : job.status === "completed"
-                              ? "bg-green-500"
-                              : "bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500"
-                        }`}
-                        style={{ width: `${Math.min(100, progressPercent)}%` }}
-                      />
-                    </div>
-                    {job.status === "failed" && job.error && (
-                      <p className="mt-2 text-xs text-red-600 dark:text-red-400">{job.error}</p>
-                    )}
-                  </div>
-                );
-              })}
+              <p className="text-sm uppercase tracking-[0.3em] text-purple-300/80">Gallery Manager</p>
+              <h1 className="text-4xl font-bold text-white">Curate your battle photos</h1>
+              <p className="text-sm text-purple-100/80 max-w-2xl">{galleryHeaderDescription}</p>
             </div>
-          </Card>
-        )}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" className="text-white border-white/20" asChild>
+                <Link href="/tools/photo-feedback" className="gap-2">
+                  <ArrowLeft className="h-4 w-4" /> Back to overview
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                className="text-white border-white/30"
+                onClick={handleSelectAll}
+                disabled={!canManage || library.length === 0}
+              >
+                {allSelected ? "Deselect all" : "Select all"}
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-white/70 hover:text-white"
+                onClick={handleClearSelection}
+                disabled={selectedCount === 0}
+              >
+                Clear selection
+              </Button>
+              <Button
+                variant="destructive"
+                className="bg-red-600 hover:bg-red-700"
+                onClick={() => setBulkAction("selected")}
+                disabled={selectedCount === 0 || isBulkDeleting}
+              >
+                Delete selected
+              </Button>
+              <Button
+                variant="outline"
+                className="text-red-300 border-red-400/40 hover:bg-red-400/10"
+                onClick={() => setBulkAction("all")}
+                disabled={library.length === 0 || isDeletingAll}
+              >
+                Delete all
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 px-6 pb-24">
+          {!canManage ? (
+            <Card className="mx-auto max-w-3xl border border-white/10 bg-white/10 backdrop-blur p-8 text-white">
+              <p className="text-lg font-semibold mb-2">Sign in required</p>
+              <p className="text-sm text-white/80">
+                Uploading photos and editing your gallery require a full account. Head back to the battle dashboard and
+                sign in to keep curating your images.
+              </p>
+              <Button asChild className="mt-6 bg-white/10 hover:bg-white/20 text-white">
+                <Link href="/tools/photo-feedback">Return to dashboard</Link>
+              </Button>
+            </Card>
+          ) : (
+            <div className="flex h-full flex-col rounded-3xl border border-white/10 bg-white/5 backdrop-blur">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-6 py-4">
+                <div className="text-sm text-white/70">
+                  {summaryLabel}
+                  {uploadStatus && (
+                    <span className="ml-3 inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs text-white">
+                      Uploading {uploadStatus.current}/{uploadStatus.total}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-white/60">
+                  Scroll to load more • Showing {visiblePhotos.length} of {library.length}
+                </div>
+              </div>
+              <div ref={galleryContainerRef} className="flex-1 overflow-y-auto px-6 pb-8">
+                {library.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-white/80">
+                    <p className="text-lg font-semibold">Your gallery is empty</p>
+                    <p className="max-w-md text-sm">
+                      Use the floating action button in the corner to start uploading photos. They will automatically be
+                      added to your battle.
+                    </p>
+                    <Button
+                      className="bg-white/10 hover:bg-white/20"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="h-4 w-4 mr-2" /> Upload photos
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 pt-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                    {visiblePhotos.map(item => {
+                      const totalVotes = item.stats?.totalVotes ?? 0;
+                      const winRate = totalVotes > 0 ? Math.round(((item.stats?.yesVotes ?? 0) / totalVotes) * 100) : null;
+                      const sessionCount = item.stats?.sessionCount ?? 0;
+                      const isSelected = selectedPhotoIds.has(item.id);
+
+                      return (
+                        <div
+                          key={item.id}
+                          className={`group relative overflow-hidden rounded-3xl border bg-white/80 text-left text-gray-900 transition-all dark:bg-slate-900/70 ${
+                            isSelected ? "border-purple-400 ring-2 ring-purple-300/60" : "border-white/0"
+                          }`}
+                          onClick={() => togglePhotoSelection(item.id)}
+                          role="presentation"
+                        >
+                          <button
+                            type="button"
+                            onClick={e => {
+                              e.stopPropagation();
+                              togglePhotoSelection(item.id);
+                            }}
+                            className={`absolute left-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border text-white transition ${
+                              isSelected ? "bg-purple-600 border-purple-500" : "bg-black/40 border-white/30"
+                            }`}
+                            aria-label={isSelected ? "Deselect photo" : "Select photo"}
+                          >
+                            {isSelected ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={e => {
+                              e.stopPropagation();
+                              setPhotoPendingDelete(item);
+                            }}
+                            className="absolute right-3 top-3 z-10 rounded-full bg-black/40 p-2 text-white hover:bg-black/70"
+                            aria-label="Delete photo"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                          <div className="relative aspect-[3/4] w-full bg-slate-900">
+                            <NextImage
+                              src={item.url}
+                              alt="Gallery photo"
+                              fill
+                              sizes="(max-width: 768px) 50vw, 240px"
+                              className="object-cover"
+                            />
+                            {winRate !== null && (
+                              <span className="absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white">
+                                {winRate}% win • {totalVotes} votes
+                              </span>
+                            )}
+                          </div>
+                          <div className="space-y-1 border-t border-white/10 p-4 text-xs text-gray-600 dark:text-gray-300">
+                            <p className="font-semibold text-gray-900 dark:text-gray-50">
+                              Uploaded {new Date(item.createdAt).toLocaleDateString()}
+                            </p>
+                            {totalVotes > 0 ? (
+                              <p>
+                                In {sessionCount} session{sessionCount === 1 ? "" : "s"} • {totalVotes} battle
+                                {totalVotes === 1 ? "" : "s"}
+                              </p>
+                            ) : (
+                              <p className="text-gray-500">No votes yet</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {showUploadQueue && (
+                  <Card className="mt-8 bg-white/90 text-gray-900 dark:bg-slate-900/80 dark:text-white">
+                    <p className="text-sm font-semibold mb-3">Upload queue</p>
+                    <div className="space-y-2">
+                      {activeUploadJobs.map(job => {
+                        const progressPercent = Math.round(job.progress * 100);
+                        const statusLabel =
+                          job.status === "completed"
+                            ? "Completed"
+                            : job.status === "failed"
+                              ? "Failed"
+                              : `Uploading • ${progressPercent}%`;
+                        const statusClass =
+                          job.status === "failed"
+                            ? "text-red-600"
+                            : job.status === "completed"
+                              ? "text-green-600"
+                              : "text-purple-600";
+
+                        return (
+                          <div key={job.id} className="rounded-2xl border border-white/10 bg-white/60 dark:bg-white/10 p-3">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-semibold truncate pr-4">{job.name}</span>
+                              <span className={`font-medium ${statusClass}`}>{statusLabel}</span>
+                            </div>
+                            <div className="mt-2 h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${
+                                  job.status === "failed"
+                                    ? "bg-red-500"
+                                    : job.status === "completed"
+                                      ? "bg-green-500"
+                                      : "bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500"
+                                }`}
+                                style={{ width: `${Math.min(100, progressPercent)}%` }}
+                              />
+                            </div>
+                            {job.status === "failed" && job.error && (
+                              <p className="mt-2 text-xs text-red-600">{job.error}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+                )}
+              </div>
+            </div>
+          )}
+        </main>
       </div>
 
+      {canManage && (
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="fixed bottom-6 right-6 z-30 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 px-5 py-3 text-base font-semibold shadow-2xl transition hover:scale-105"
+        >
+          <Upload className="h-5 w-5" /> Upload photos
+        </button>
+      )}
+
       {photoPendingDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setPhotoPendingDelete(null)} />
-          <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-6 shadow-2xl">
-            <div className="flex items-start justify-between mb-4">
+        <div className="fixed inset-0 z-40 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setPhotoPendingDelete(null)} />
+          <div className="relative z-10 w-full max-w-md rounded-3xl bg-white p-6 text-gray-900 shadow-2xl dark:bg-slate-900 dark:text-white">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Remove photo?</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  This deletes the image and its stats everywhere. You can&apos;t undo this action.
-                </p>
+                <h3 className="text-lg font-semibold">Remove this photo?</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">This action permanently deletes the image and its stats.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setPhotoPendingDelete(null)}
                 className="text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
-                aria-label="Close delete dialog"
+                aria-label="Close dialog"
               >
-                <X className="w-4 h-4" />
+                <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="rounded-lg overflow-hidden mb-4 border border-gray-200 dark:border-gray-700">
+            <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 mb-5">
               <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-800">
-                <NextImage
-                  src={photoPendingDelete.url}
-                  alt="Photo selected for deletion"
-                  fill
-                  sizes="300px"
-                  className="object-cover"
-                />
+                <NextImage src={photoPendingDelete.url} alt="Photo selected for deletion" fill sizes="400px" className="object-cover" />
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  if (deletingPhotoId) return;
-                  setPhotoPendingDelete(null);
-                }}
-                disabled={!!deletingPhotoId}
-              >
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button variant="outline" className="flex-1" onClick={() => setPhotoPendingDelete(null)} disabled={!!deletingPhotoId}>
                 Keep photo
               </Button>
               <Button
                 type="button"
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2"
-                onClick={() => {
-                  if (!photoPendingDelete || deletingPhotoId) return;
-                  void handleDeletePhoto(photoPendingDelete.id);
-                }}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => photoPendingDelete && !deletingPhotoId && handleDeletePhoto(photoPendingDelete.id)}
                 disabled={!!deletingPhotoId}
               >
                 {deletingPhotoId === photoPendingDelete.id ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Deleting…
+                    <Loader2 className="h-4 w-4 animate-spin" /> Deleting…
                   </>
                 ) : (
                   "Delete photo"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {canManage && bulkAction && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setBulkAction(null)} />
+          <div className="relative z-10 w-full max-w-md rounded-3xl bg-white p-6 text-gray-900 shadow-2xl dark:bg-slate-900 dark:text-white">
+            <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+              <AlertTriangle className="h-5 w-5" />
+              <h3 className="text-lg font-semibold">
+                {bulkAction === "selected" ? "Delete selected photos?" : "Delete entire gallery?"}
+              </h3>
+            </div>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              {bulkAction === "selected"
+                ? `This will permanently delete ${selectedCount} photo${selectedCount === 1 ? "" : "s"}.`
+                : "This removes every image and its stats. You can't undo this."}
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <Button variant="outline" className="flex-1" onClick={() => setBulkAction(null)} disabled={isBulkDeleting || isDeletingAll}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                onClick={confirmBulkAction}
+                disabled={(bulkAction === "selected" && isBulkDeleting) || (bulkAction === "all" && isDeletingAll)}
+              >
+                {(bulkAction === "selected" && isBulkDeleting) || (bulkAction === "all" && isDeletingAll) ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Working…
+                  </>
+                ) : (
+                  bulkAction === "selected" ? "Delete selected" : "Delete all"
                 )}
               </Button>
             </div>
