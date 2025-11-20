@@ -94,7 +94,7 @@ type ChatClient = {
         response_format: { type: 'json_object' };
         temperature?: number;
         max_tokens?: number;
-      }) => Promise<{ choices: Array<{ message?: { content?: string } }> }>;
+      }) => Promise<{ choices: Array<{ message?: { content?: string | null } }> }>;
     };
   };
 };
