@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
-import { ArrowLeft, Upload, Trash2, X, Loader2, CheckCircle2, Circle, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Upload, Trash2, X, Loader2, CheckCircle2, Circle, AlertTriangle, GitMerge } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toastError, toastSuccess } from "@/lib/toast-presets";
@@ -87,9 +87,12 @@ export default function GalleryManagerPage() {
     libraryLoading,
     deleteLibraryPhoto,
     deleteAllLibraryPhotos,
+    mergeSessionPhotos,
+    loadSession,
   } = usePhotoFeedback();
   const { user, isAnonymous } = useAuth();
   const canManage = !!user && !isAnonymous;
+  const sessionId = user?.uid;
 
   const [uploadStatus, setUploadStatus] = useState<{ current: number; total: number } | null>(null);
   const [galleryPage, setGalleryPage] = useState(0);
@@ -100,6 +103,7 @@ export default function GalleryManagerPage() {
   const [bulkAction, setBulkAction] = useState<"selected" | "all" | "poor" | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [isMerging, setIsMerging] = useState(false);
   const [isDeletingPoor, setIsDeletingPoor] = useState(false);
 
   const galleryContainerRef = useRef<HTMLDivElement>(null);
@@ -108,8 +112,13 @@ export default function GalleryManagerPage() {
   useEffect(() => {
     if (canManage) {
       void loadLibrary();
+      if (sessionId) {
+        void loadSession(sessionId).catch(err => {
+          console.error("Failed to load session for merging:", err);
+        });
+      }
     }
-  }, [canManage, loadLibrary]);
+  }, [canManage, loadLibrary, loadSession, sessionId]);
 
   useEffect(() => {
     const maxPage = Math.max(0, Math.ceil(Math.max(library.length, 1) / PHOTOS_PER_PAGE) - 1);
@@ -238,6 +247,27 @@ export default function GalleryManagerPage() {
     } finally {
       setIsDeletingAll(false);
       setBulkAction(null);
+    }
+  };
+
+  const handleMergeSelected = async () => {
+    if (!canManage || selectedCount < 2 || !sessionId) return;
+    const [targetId, mergedId] = Array.from(selectedPhotoIds);
+    setIsMerging(true);
+    try {
+      await mergeSessionPhotos(sessionId, targetId, mergedId);
+      toastSuccess({
+        title: "Photos merged",
+        description: "The stats have been combined and the duplicate removed.",
+      });
+      setSelectedPhotoIds(new Set([targetId]));
+    } catch (error) {
+      toastError({
+        title: "Merge failed",
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsMerging(false);
     }
   };
 
@@ -414,6 +444,15 @@ export default function GalleryManagerPage() {
                 disabled={library.length === 0 || isDeletingAll}
               >
                 Delete all
+              </Button>
+              <Button
+                variant="outline"
+                className="text-purple-600 border-purple-200 hover:bg-purple-50 dark:text-purple-200 dark:border-purple-400/40 dark:hover:bg-purple-400/10"
+                onClick={handleMergeSelected}
+                disabled={!canManage || selectedCount < 2 || isMerging || !sessionId}
+              >
+                <GitMerge className="h-4 w-4 mr-2" />
+                Merge selected
               </Button>
               <Button
                 variant="outline"
