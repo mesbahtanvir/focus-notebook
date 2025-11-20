@@ -354,7 +354,7 @@ export default function GalleryManagerPage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/60 to-slate-900 text-white">
+    <div className="relative min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 text-slate-900 dark:from-slate-950 dark:via-purple-950/60 dark:to-slate-900 dark:text-white">
       <input
         ref={fileInputRef}
         type="file"
@@ -366,22 +366,26 @@ export default function GalleryManagerPage() {
       />
 
       <div className="flex min-h-screen flex-col">
-        <header className="px-6 pt-10 pb-6">
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-gradient-to-b from-pink-50 via-purple-50 to-transparent px-6 pt-10 pb-6 dark:border-white/10 dark:from-slate-950 dark:via-purple-950/60">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
-              <p className="text-sm uppercase tracking-[0.3em] text-purple-300/80">Gallery Manager</p>
-              <h1 className="text-4xl font-bold text-white">Curate your battle photos</h1>
-              <p className="text-sm text-purple-100/80 max-w-2xl">{galleryHeaderDescription}</p>
+              <p className="text-sm uppercase tracking-[0.3em] text-purple-600 dark:text-purple-300/80">Gallery Manager</p>
+              <h1 className="text-4xl font-bold text-slate-900 dark:text-white">Curate your battle photos</h1>
+              <p className="text-sm text-slate-600 dark:text-purple-100/80 max-w-2xl">{galleryHeaderDescription}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" className="text-white border-white/20" asChild>
+              <Button
+                variant="outline"
+                className="text-slate-700 border-slate-200 dark:text-white dark:border-white/20"
+                asChild
+              >
                 <Link href="/tools/photo-feedback" className="gap-2">
                   <ArrowLeft className="h-4 w-4" /> Back to overview
                 </Link>
               </Button>
               <Button
                 variant="outline"
-                className="text-white border-white/30"
+                className="text-slate-700 border-slate-200 dark:text-white dark:border-white/30"
                 onClick={handleSelectAll}
                 disabled={!canManage || library.length === 0}
               >
@@ -389,7 +393,7 @@ export default function GalleryManagerPage() {
               </Button>
               <Button
                 variant="ghost"
-                className="text-white/70 hover:text-white"
+                className="text-slate-500 hover:text-slate-700 dark:text-white/70 dark:hover:text-white"
                 onClick={handleClearSelection}
                 disabled={selectedCount === 0}
               >
@@ -405,7 +409,7 @@ export default function GalleryManagerPage() {
               </Button>
               <Button
                 variant="outline"
-                className="text-red-300 border-red-400/40 hover:bg-red-400/10"
+                className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-300 dark:border-red-400/40 dark:hover:bg-red-400/10"
                 onClick={() => setBulkAction("all")}
                 disabled={library.length === 0 || isDeletingAll}
               >
@@ -413,7 +417,7 @@ export default function GalleryManagerPage() {
               </Button>
               <Button
                 variant="outline"
-                className="text-amber-300 border-amber-400/40 hover:bg-amber-400/10"
+                className="text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-300 dark:border-amber-400/40 dark:hover:bg-amber-400/10"
                 onClick={() => setBulkAction("poor")}
                 disabled={poorCount === 0 || isDeletingPoor}
               >
@@ -423,43 +427,46 @@ export default function GalleryManagerPage() {
           </div>
         </header>
 
-        <main className="flex-1 px-6 pb-24">
+        <main className="flex-1 pb-24">
           {!canManage ? (
-            <Card className="mx-auto max-w-3xl border border-white/10 bg-white/10 backdrop-blur p-8 text-white">
+            <Card className="mx-auto max-w-3xl border border-slate-200 bg-white p-8 text-slate-900 dark:border-white/10 dark:bg-white/10 dark:text-white">
               <p className="text-lg font-semibold mb-2">Sign in required</p>
-              <p className="text-sm text-white/80">
+              <p className="text-sm text-slate-600 dark:text-white/80">
                 Uploading photos and editing your gallery require a full account. Head back to the battle dashboard and
                 sign in to keep curating your images.
               </p>
-              <Button asChild className="mt-6 bg-white/10 hover:bg-white/20 text-white">
+              <Button
+                asChild
+                className="mt-6 bg-purple-600 text-white hover:bg-purple-700 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white"
+              >
                 <Link href="/tools/photo-feedback">Return to dashboard</Link>
               </Button>
             </Card>
           ) : (
-            <div className="flex h-full flex-col rounded-3xl border border-white/10 bg-white/5 backdrop-blur">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-6 py-4">
-                <div className="text-sm text-white/70">
+            <div className="flex h-full flex-col rounded-3xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-white/5 dark:backdrop-blur">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-white/10">
+                <div className="text-sm text-slate-600 dark:text-white/70">
                   {summaryLabel}
                   {uploadStatus && (
-                    <span className="ml-3 inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs text-white">
+                    <span className="ml-3 inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-xs text-purple-700 dark:bg-white/10 dark:text-white">
                       Uploading {uploadStatus.current}/{uploadStatus.total}
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-white/60">
+                <div className="text-xs text-slate-500 dark:text-white/60">
                   Scroll to load more • Showing {visiblePhotos.length} of {library.length}
                 </div>
               </div>
               <div ref={galleryContainerRef} className="flex-1 overflow-y-auto px-6 pb-8">
                 {library.length === 0 ? (
-                  <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-white/80">
-                    <p className="text-lg font-semibold">Your gallery is empty</p>
+                  <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-slate-600 dark:text-white/80">
+                    <p className="text-lg font-semibold text-slate-900 dark:text-white">Your gallery is empty</p>
                     <p className="max-w-md text-sm">
                       Use the floating action button in the corner to start uploading photos. They will automatically be
                       added to your battle.
                     </p>
                     <Button
-                      className="bg-white/10 hover:bg-white/20"
+                      className="bg-purple-600 text-white hover:bg-purple-700 dark:bg-white/10 dark:hover:bg-white/20"
                       onClick={() => fileInputRef.current?.click()}
                     >
                       <Upload className="h-4 w-4 mr-2" /> Upload photos
