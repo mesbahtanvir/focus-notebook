@@ -15,6 +15,12 @@ export interface BattlePhoto {
   totalVotes: number;
 }
 
+export interface LinkHistoryEntry {
+  secretKey: string;
+  createdAt: string;
+  expiresAt?: string;
+}
+
 export interface PhotoBattle {
   id: string;
   ownerId: string;
@@ -23,6 +29,9 @@ export interface PhotoBattle {
   secretKey: string;
   createdAt: string;
   isPublic?: boolean;
+  linkExpiresAt?: string;
+  linkHistory?: LinkHistoryEntry[];
+  updatedAt?: string;
 }
 
 export interface PhotoStats {
@@ -91,14 +100,68 @@ type State = {
   setSessionPublic: (sessionId: string, isPublic: boolean) => Promise<void>;
 };
 
+const BATTLE_LINK_DURATION_DAYS = 30;
+
 // Generate a random secret key
 function generateSecretKey(): string {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
+function nextLinkExpiry(): string {
+  const expires = new Date();
+  expires.setDate(expires.getDate() + BATTLE_LINK_DURATION_DAYS);
+  return expires.toISOString();
+}
+
 // Generate a short anonymous voter ID
 function generateVoterId(): string {
   return 'voter_' + Math.random().toString(36).substring(2, 10);
+}
+
+function toIsoString(value?: string | Timestamp): string | undefined {
+  if (!value) return undefined;
+  if (value instanceof Timestamp) {
+    return value.toDate().toISOString();
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  return undefined;
+}
+
+function normalizeLinkHistoryEntries(entries?: Array<Partial<LinkHistoryEntry> & { createdAt?: string | Timestamp; expiresAt?: string | Timestamp }>): LinkHistoryEntry[] {
+  if (!entries) return [];
+  return entries
+    .map(entry => {
+      if (!entry || !entry.secretKey) return null;
+      const createdAt = toIsoString(entry.createdAt) ?? new Date().toISOString();
+      const expiresAt = toIsoString(entry.expiresAt);
+      return expiresAt ? { secretKey: entry.secretKey, createdAt, expiresAt } : { secretKey: entry.secretKey, createdAt };
+    })
+    .filter((entry): entry is LinkHistoryEntry => entry !== null);
+}
+
+function normalizeBattlePhotos(photos?: BattlePhoto[]): BattlePhoto[] {
+  if (!photos) return [];
+  return photos.map(photo => ({
+    ...photo,
+    rating: typeof photo.rating === 'number' ? photo.rating : 1200,
+    wins: typeof photo.wins === 'number' ? photo.wins : 0,
+    losses: typeof photo.losses === 'number' ? photo.losses : 0,
+    totalVotes: typeof photo.totalVotes === 'number' ? photo.totalVotes : 0,
+  }));
+}
+
+function normalizeBattle(data: PhotoBattle & Record<string, any>, id?: string): PhotoBattle {
+  return {
+    ...data,
+    ...(id ? { id } : {}),
+    photos: normalizeBattlePhotos(data.photos),
+    createdAt: toIsoString(data.createdAt) ?? new Date().toISOString(),
+    updatedAt: toIsoString(data.updatedAt),
+    linkExpiresAt: toIsoString(data.linkExpiresAt),
+    linkHistory: normalizeLinkHistoryEntries(data.linkHistory as any),
+  };
 }
 
 export const usePhotoFeedback = create<State>((set, get) => ({
@@ -142,27 +205,44 @@ export const usePhotoFeedback = create<State>((set, get) => ({
 
       let session: PhotoBattle;
       if (existing.exists()) {
-        const data = existing.data() as PhotoBattle;
+        const data = existing.data() as PhotoBattle & Record<string, any>;
         const existingPhotos = data.photos || [];
         const missing = selectedItems.filter(item => !existingPhotos.some(photo => photo.libraryId === item.id));
-        if (missing.length > 0 || (creatorName && creatorName !== data.creatorName)) {
-          const payload: Partial<PhotoBattle> = {};
-          if (missing.length > 0) {
-            payload.photos = [...existingPhotos, ...missing.map(convertLibraryItemToBattlePhoto)];
-          }
-          if (creatorName && creatorName !== data.creatorName) {
-            payload.creatorName = creatorName;
-          }
-          await setDoc(sessionRef, payload, { merge: true });
-          session = {
-            ...data,
-            id: sessionId,
-            photos: payload.photos ?? existingPhotos,
-            creatorName: payload.creatorName ?? data.creatorName,
-          };
-        } else {
-          session = { ...data, id: sessionId };
+        const updates: Partial<PhotoBattle> = {};
+
+        if (missing.length > 0) {
+          updates.photos = [...existingPhotos, ...missing.map(convertLibraryItemToBattlePhoto)];
         }
+        if (creatorName && creatorName !== data.creatorName) {
+          updates.creatorName = creatorName;
+        }
+        if (libraryPhotoIds.length === 0) {
+          const historyEntry: LinkHistoryEntry = {
+            secretKey: data.secretKey,
+            createdAt: new Date().toISOString(),
+            expiresAt: data.linkExpiresAt,
+          };
+          updates.linkHistory = [historyEntry, ...(data.linkHistory ?? [])].slice(0, 5);
+          updates.secretKey = generateSecretKey();
+          updates.linkExpiresAt = nextLinkExpiry();
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await setDoc(sessionRef, updates, { merge: true });
+        }
+
+        const merged: PhotoBattle & Record<string, any> = {
+          ...data,
+          ...updates,
+          id: sessionId,
+          photos: (updates.photos as BattlePhoto[]) ?? existingPhotos,
+          secretKey: updates.secretKey ?? data.secretKey,
+          creatorName: updates.creatorName ?? data.creatorName,
+          linkExpiresAt: updates.linkExpiresAt ?? data.linkExpiresAt,
+          linkHistory: updates.linkHistory ?? data.linkHistory,
+        };
+        session = normalizeBattle(merged, sessionId);
+
         set(state => ({
           currentSession: session,
           isLoading: false,
@@ -176,7 +256,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
 
       const secretKey = generateSecretKey();
       const sessionPhotos: BattlePhoto[] = selectedItems.map(convertLibraryItemToBattlePhoto);
-      session = {
+      session = normalizeBattle({
         id: sessionId,
         ownerId: user.uid,
         creatorName,
@@ -184,7 +264,9 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         secretKey,
         createdAt: new Date().toISOString(),
         isPublic: false,
-      };
+        linkExpiresAt: nextLinkExpiry(),
+        linkHistory: [],
+      });
       await setDoc(sessionRef, session);
 
       set(state => ({
@@ -424,7 +506,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         return null;
       }
 
-      const session = { ...(sessionDoc.data() as PhotoBattle), id: sessionDoc.id };
+      const session = normalizeBattle({ ...(sessionDoc.data() as PhotoBattle & Record<string, any>) }, sessionDoc.id);
 
       set({ currentSession: session, isLoading: false });
       return session;
@@ -492,7 +574,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         return [];
       }
 
-      const session = { ...(sessionDoc.data() as PhotoBattle), id: sessionDoc.id };
+      const session = normalizeBattle({ ...(sessionDoc.data() as PhotoBattle & Record<string, any>) }, sessionDoc.id);
 
       if (session.secretKey !== secretKey) {
         set({ error: 'Invalid secret key', isLoading: false });
@@ -525,7 +607,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         orderBy('createdAt', 'desc')
       );
       const snapshot = await getDocs(q);
-      const sessions = snapshot.docs.map(doc => ({ ...(doc.data() as PhotoBattle), id: doc.id }));
+      const sessions = snapshot.docs.map(doc => normalizeBattle({ ...(doc.data() as PhotoBattle & Record<string, any>) }, doc.id));
       set({ userSessions: sessions, sessionsLoading: false });
       return sessions;
     } catch (error) {

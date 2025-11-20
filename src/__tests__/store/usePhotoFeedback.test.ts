@@ -13,23 +13,41 @@ const mockGetDoc = jest.fn();
 const mockUpdateDoc = jest.fn();
 const mockRunTransaction = jest.fn();
 
-jest.mock("firebase/firestore", () => ({
-  collection: jest.fn(() => "collection-ref"),
-  doc: jest.fn((...segments: string[]) => ({ path: segments.join("/") })),
-  query: jest.fn(() => "query-ref"),
-  where: jest.fn(() => "where-ref"),
-  orderBy: jest.fn(() => "order-ref"),
-  getDocs: (...args: unknown[]) => mockGetDocs(...args),
-  setDoc: (...args: unknown[]) => mockSetDoc(...args),
-  getDoc: (...args: unknown[]) => mockGetDoc(...args),
-  Timestamp: {
-    fromDate: () => ({ seconds: 0, nanoseconds: 0 }),
-  },
-  updateDoc: (...args: unknown[]) => mockUpdateDoc(...args),
-  increment: (val: number) => ({ __op: "increment", val }),
-  arrayUnion: (...values: unknown[]) => values,
-  runTransaction: (...args: unknown[]) => mockRunTransaction(...args),
-}));
+jest.mock("firebase/firestore", () => {
+  class MockTimestamp {
+    seconds: number;
+    nanoseconds: number;
+
+    constructor(seconds = 0, nanoseconds = 0) {
+      this.seconds = seconds;
+      this.nanoseconds = nanoseconds;
+    }
+
+    toDate() {
+      return new Date(this.seconds * 1000);
+    }
+
+    static fromDate(date: Date) {
+      return new MockTimestamp(Math.floor(date.getTime() / 1000), 0);
+    }
+  }
+
+  return {
+    collection: jest.fn(() => "collection-ref"),
+    doc: jest.fn((...segments: string[]) => ({ path: segments.join("/") })),
+    query: jest.fn(() => "query-ref"),
+    where: jest.fn(() => "where-ref"),
+    orderBy: jest.fn(() => "order-ref"),
+    getDocs: (...args: unknown[]) => mockGetDocs(...args),
+    setDoc: (...args: unknown[]) => mockSetDoc(...args),
+    getDoc: (...args: unknown[]) => mockGetDoc(...args),
+    Timestamp: MockTimestamp,
+    updateDoc: (...args: unknown[]) => mockUpdateDoc(...args),
+    increment: (val: number) => ({ __op: "increment", val }),
+    arrayUnion: (...values: unknown[]) => values,
+    runTransaction: (...args: unknown[]) => mockRunTransaction(...args),
+  };
+});
 
 const mockUploadBytes = jest.fn();
 const mockUploadBytesResumable = jest.fn();
@@ -68,6 +86,7 @@ describe("usePhotoFeedback gallery + session flow", () => {
     jest.clearAllMocks();
     resetStore();
     (auth as { currentUser: any }).currentUser = { uid: "user-123", isAnonymous: false };
+    mockGetDocs.mockResolvedValue({ docs: [] });
 
     mockUploadBytesResumable.mockImplementation((_ref, file: File) => {
       return {
@@ -151,6 +170,8 @@ describe("usePhotoFeedback gallery + session flow", () => {
       expect.objectContaining({
         creatorName: "Alex",
         isPublic: false,
+        linkExpiresAt: expect.any(String),
+        linkHistory: [],
         photos: [
           expect.objectContaining({
             libraryId: "lib-photo-1",
@@ -161,6 +182,49 @@ describe("usePhotoFeedback gallery + session flow", () => {
       })
     );
     expect(usePhotoFeedback.getState().userSessions[0].photos[0].libraryId).toBe("lib-photo-1");
+  });
+
+  it("renews link when no selection is provided", async () => {
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({
+        id: "user-123",
+        ownerId: "user-123",
+        creatorName: "Alex",
+        photos: [],
+        secretKey: "old-secret",
+        linkExpiresAt: new Date("2024-01-01").toISOString(),
+        linkHistory: [],
+      }),
+    });
+
+    usePhotoFeedback.setState(state => ({
+      ...state,
+      library: [
+        {
+          id: "lib-photo-1",
+          ownerId: "user-123",
+          url: "https://example.com/photo-1.jpg",
+          storagePath: "users/user-123/photo-library/lib-photo-1",
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    }));
+
+    await act(async () => {
+      await usePhotoFeedback.getState().createSessionFromLibrary([], "Alex");
+    });
+
+    const [refArg, payloadArg, optionsArg] = mockSetDoc.mock.calls.find(call => call[2]?.merge) || [];
+    expect(refArg).toMatchObject({ path: expect.stringContaining("photoBattles") });
+    expect(payloadArg).toMatchObject({
+      secretKey: expect.any(String),
+      linkExpiresAt: expect.any(String),
+      linkHistory: expect.arrayContaining([
+        expect.objectContaining({ secretKey: "old-secret" }),
+      ]),
+    });
+    expect(optionsArg).toMatchObject({ merge: true });
   });
 
   it("loads gallery items from Firestore for the current user", async () => {

@@ -1,19 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { usePhotoFeedback, type UploadProgressEvent } from "@/store/usePhotoFeedback";
-import type { PhotoLibraryItem } from "@/store/usePhotoFeedback";
-import { Upload, ArrowRight, Heart, Loader2, Copy, ExternalLink, CheckCircle, Shuffle, Trash2, X } from "lucide-react";
+import type { PhotoLibraryItem, LinkHistoryEntry } from "@/store/usePhotoFeedback";
+import { Upload, ArrowRight, Loader2, Copy, ExternalLink, CheckCircle, Trash2, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import NextImage from "next/image";
 import { toastError, toastSuccess, toastWarning } from "@/lib/toast-presets";
 import { Button } from "@/components/ui/button";
-import { pickRandomPhotoIds } from "@/lib/photoGallery";
 import { useInfiniteGallery } from "@/hooks/useInfiniteGallery";
-import { PhotoLeaderboard } from "@/components/photo-feedback/PhotoLeaderboard";
 
 const PHOTOS_PER_PAGE = 8;
 const MAX_IMAGE_DIMENSION = 1024;
@@ -78,7 +75,6 @@ async function resizeImageIfNeeded(file: File): Promise<File> {
 }
 
 export default function PhotoFeedbackPage() {
-  const router = useRouter();
   const {
     createSessionFromLibrary,
     uploadToLibrary,
@@ -95,13 +91,15 @@ export default function PhotoFeedbackPage() {
   const { user, isAnonymous, loading: authLoading } = useAuth();
 
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per storage.rules
-  const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
   const [uploadStatus, setUploadStatus] = useState<{ current: number; total: number } | null>(null);
   const [galleryPage, setGalleryPage] = useState(0);
   const [photoPendingDelete, setPhotoPendingDelete] = useState<PhotoLibraryItem | null>(null);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   const [uploadJobs, setUploadJobs] = useState<Record<string, UploadProgressEvent>>({});
   const galleryContainerRef = useRef<HTMLDivElement>(null);
+  const [origin, setOrigin] = useState("");
+  const [votingLinkCopied, setVotingLinkCopied] = useState(false);
+  const [resultsLinkCopied, setResultsLinkCopied] = useState(false);
 
   const canCreateSession = !!user && !isAnonymous;
 
@@ -113,8 +111,10 @@ export default function PhotoFeedbackPage() {
   }, [canCreateSession, loadLibrary, loadUserSessions]);
 
   useEffect(() => {
-    setSelectedPhotoIds(prev => prev.filter(id => library.some(item => item.id === id)));
-  }, [library]);
+    if (typeof window !== "undefined") {
+      setOrigin(window.location.origin);
+    }
+  }, []);
 
   useEffect(() => {
     const maxPage = Math.max(0, Math.ceil(Math.max(library.length, 1) / PHOTOS_PER_PAGE) - 1);
@@ -123,27 +123,22 @@ export default function PhotoFeedbackPage() {
     }
   }, [library.length, galleryPage]);
 
-  const togglePhotoSelection = (photoId: string) => {
-    setSelectedPhotoIds(prev =>
-      prev.includes(photoId) ? prev.filter(id => id !== photoId) : [...prev, photoId]
-    );
-  };
-
-  const handleSelectRandom = () => {
-    if (library.length === 0) return;
-    const randomSelection = pickRandomPhotoIds(library, 10);
-    setSelectedPhotoIds(randomSelection);
-    toastSuccess({
-      title: "Random selection ready",
-      description: `Picked ${randomSelection.length} photo${randomSelection.length === 1 ? '' : 's'} from your gallery.`,
-    });
-  };
-
-  const totalPages = Math.max(1, Math.ceil(Math.max(library.length, 1) / PHOTOS_PER_PAGE));
   const visiblePhotos = library.slice(0, Math.min(library.length, (galleryPage + 1) * PHOTOS_PER_PAGE));
-  const hasMorePhotos = visiblePhotos.length < library.length;
   const hasLeaderboardData = library.some(item => (item.stats?.totalVotes ?? 0) > 0);
   const activeUploadJobs = Object.values(uploadJobs);
+  const battle = userSessions[0] ?? null;
+  const totalBattleVotes = battle ? battle.photos.reduce((sum, photo) => sum + (photo.totalVotes ?? 0), 0) : 0;
+  const totalBattlePhotos = battle ? battle.photos.length : library.length;
+  const averageBattlesPerPhoto = totalBattlePhotos > 0 ? Math.round(totalBattleVotes / totalBattlePhotos) : 0;
+  const topBattlePhotos = battle ? [...battle.photos].sort((a, b) => b.rating - a.rating).slice(0, 3) : [];
+  const galleryPreview = library.slice(0, 6);
+  const photosNeedingVotes = battle ? battle.photos.filter(photo => (photo.totalVotes ?? 0) < 5).length : 0;
+  const votingLink = battle && origin ? `${origin}/tools/photo-feedback/session/${battle.id}` : "";
+  const resultsLink = battle && origin ? `${origin}/tools/photo-feedback/results/${battle.id}?key=${battle.secretKey}` : "";
+  const linkHistory = (battle?.linkHistory ?? []) as LinkHistoryEntry[];
+  const linkExpiresLabel = battle?.linkExpiresAt ? new Date(battle.linkExpiresAt).toLocaleString() : "Not set";
+  const qrSrc = votingLink ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(votingLink)}` : "";
+  const lastVoteLabel = battle ? (battle.updatedAt ? new Date(battle.updatedAt).toLocaleString() : "No votes yet") : "";
 
   useInfiniteGallery({
     items: library,
@@ -211,7 +206,6 @@ export default function PhotoFeedbackPage() {
           }
         }
       );
-      setSelectedPhotoIds(prev => [...uploaded.map(item => item.id), ...prev]);
       toastSuccess({
         title: "Gallery updated",
         description: `${processed.length} photo${processed.length > 1 ? 's' : ''} added.`,
@@ -233,28 +227,41 @@ export default function PhotoFeedbackPage() {
     }
   };
 
-  const handleCreateSession = async () => {
+  const copyLink = async (value: string, setState?: (state: boolean) => void) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      if (setState) {
+        setState(true);
+        setTimeout(() => setState(false), 2000);
+      }
+      toastSuccess({ title: "Copied", description: "Link copied to clipboard." });
+    } catch {
+      toastError({ title: "Copy failed", description: "Please try again." });
+    }
+  };
+
+  const handleCreateSession = async (options?: { silent?: boolean }) => {
     if (!canCreateSession) {
       toastWarning({
         title: "Sign in required",
-        description: "Sign in to create a feedback session. Friends can still vote without accounts.",
+        description: "Sign in to create a battle link. Friends can still vote without accounts.",
       });
       return;
     }
 
     try {
-      const { sessionId, secretKey } = await createSessionFromLibrary(
-        selectedPhotoIds,
-        user?.displayName || undefined
-      );
-      setSelectedPhotoIds([]);
-
-      router.push(`/tools/photo-feedback/share?sessionId=${sessionId}&secretKey=${secretKey}`);
+      await createSessionFromLibrary([], user?.displayName || undefined);
+      await loadUserSessions();
+      toastSuccess({
+        title: options?.silent ? "Battle link refreshed" : "Battle link ready",
+        description: "Share it using the link below.",
+      });
     } catch (error) {
       const description =
         error instanceof Error && error.message ? error.message : "Please try again in a moment.";
       toastError({
-        title: "Could not create session",
+        title: "Could not create battle",
         description,
       });
     }
@@ -262,37 +269,258 @@ export default function PhotoFeedbackPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="p-4 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full">
-              <Heart className="w-12 h-12 text-white" />
+      <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+        <Card className="p-6 bg-white dark:bg-gray-900 border-2 border-purple-100 dark:border-purple-900/40 shadow-sm">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-widest text-purple-500 dark:text-purple-200 mb-1">
+                Photo battle
+              </p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                {battle ? "Your link is live" : "Launch your battle"}
+              </h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {battle
+                  ? "Friends can vote right now. Keep sharing to refine your rankings."
+                  : "One click gives you a long-lived link that ranks your entire gallery."}
+              </p>
+              {battle && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Last vote: {lastVoteLabel}
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div className="rounded-xl bg-purple-50 dark:bg-purple-900/30 p-4">
+                <p className="text-xs uppercase tracking-widest text-purple-500">Total votes</p>
+                <p className="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{totalBattleVotes}</p>
+              </div>
+              <div className="rounded-xl bg-blue-50 dark:bg-blue-900/30 p-4">
+                <p className="text-xs uppercase tracking-widest text-blue-500">Photos ranked</p>
+                <p className="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{totalBattlePhotos}</p>
+              </div>
             </div>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
-            Dating Photo Feedback
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 text-lg">
-            Friends will see two of your photos at a time and choose the stronger one—automated ELO rankings keep score.
-          </p>
-        </div>
-        {canCreateSession && (
-          <Card className="p-6 mb-8 bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-800">
-            <div className="flex items-center justify-between mb-4">
+          <div className="mt-6 flex flex-wrap gap-3">
+            {battle ? (
+              <>
+                <Button onClick={() => copyLink(votingLink, setVotingLinkCopied)} disabled={!votingLink}>
+                  {votingLinkCopied ? (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Copied battle link
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      Copy battle link
+                    </>
+                  )}
+                </Button>
+                <Button variant="outline" onClick={() => handleCreateSession({ silent: true })} disabled={isLoading}>
+                  Renew link
+                </Button>
+                {resultsLink && (
+                  <Link
+                    href={resultsLink}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-200 text-sm font-semibold"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    View results
+                  </Link>
+                )}
+              </>
+            ) : (
+              <Button onClick={() => handleCreateSession()} disabled={!canCreateSession || isLoading}>
+                Launch photo battle
+              </Button>
+            )}
+          </div>
+        </Card>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card className="p-5 bg-white dark:bg-gray-900 border border-purple-100 dark:border-purple-900/40">
+            <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Your gallery</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Your battle automatically uses every photo in your gallery. Selecting is optional if you want to spotlight a subset first.
+                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Gallery preview</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {library.length} photo{library.length === 1 ? "" : "s"} in rotation
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                {uploadStatus && (
+              <label
+                htmlFor="gallery-upload"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-purple-600 text-white text-sm font-semibold cursor-pointer"
+              >
+                <Upload className="w-4 h-4" />
+                Upload
+              </label>
+            </div>
+            <div className="mt-4 grid grid-cols-4 gap-2">
+              {galleryPreview.length === 0 ? (
+                <div className="col-span-4 text-sm text-gray-500 dark:text-gray-400 text-center py-6">
+                  Upload photos to start ranking
+                </div>
+              ) : (
+                galleryPreview.map(item => (
+                  <div key={item.id} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                    <NextImage src={item.url} alt="Gallery preview" fill className="object-cover" sizes="80px" />
+                  </div>
+                ))
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => document.getElementById("gallery-manager")?.scrollIntoView({ behavior: "smooth" })}
+              className="mt-4 text-sm font-semibold text-purple-600 dark:text-purple-300 hover:underline"
+            >
+              Manage gallery
+            </button>
+          </Card>
+
+          <Card className="p-5 bg-white dark:bg-gray-900 border border-purple-100 dark:border-purple-900/40">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Leaderboard snapshot</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Top performers from your battle</p>
+              </div>
+              {resultsLink && (
+                <Link href={resultsLink} className="text-xs font-semibold text-purple-600 dark:text-purple-300 hover:underline">
+                  Full leaderboard
+                </Link>
+              )}
+            </div>
+            {topBattlePhotos.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">Keep sharing to see live rankings.</p>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  {topBattlePhotos.map((photo, index) => (
+                    <div key={photo.id} className="flex items-center gap-3">
+                      <div className="relative h-12 w-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                        <NextImage src={photo.url} alt={`Rank ${index + 1}`} fill className="object-cover" sizes="48px" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                          #{index + 1} • {photo.rating} pts
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {photo.wins} wins • {photo.losses} losses
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {totalBattlePhotos > 0 && (
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between text-[11px] uppercase tracking-widest text-gray-500 dark:text-gray-400">
+                      <span>{totalBattlePhotos - photosNeedingVotes} dialed in</span>
+                      <span>{photosNeedingVotes} warming up</span>
+                    </div>
+                    <div className="mt-2 h-1.5 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500"
+                        style={{
+                          width: `${Math.min(100, Math.round(((totalBattlePhotos - photosNeedingVotes) / totalBattlePhotos) * 100))}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      {photosNeedingVotes > 0
+                        ? `${photosNeedingVotes} photo${photosNeedingVotes === 1 ? "" : "s"} still need at least 5 votes. Keep sharing the battle link.`
+                        : "Every photo has at least 5 votes. Rankings are stabilizing."}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </Card>
+        </div>
+
+        {battle && (
+          <>
+            <Card className="p-6 bg-white dark:bg-gray-900 border border-purple-100 dark:border-purple-900/40">
+              <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                <div className="flex-1 space-y-3">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Share with friends</p>
+                  <LinkRow
+                    label="Voting link"
+                    value={votingLink}
+                    copied={votingLinkCopied}
+                    onCopy={() => copyLink(votingLink, setVotingLinkCopied)}
+                  />
+                  <LinkRow
+                    label="Results link"
+                    value={resultsLink}
+                    sensitive
+                    copied={resultsLinkCopied}
+                    onCopy={() => copyLink(resultsLink, setResultsLinkCopied)}
+                  />
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Uploading {uploadStatus.current}/{uploadStatus.total}
+                    Link expires {linkExpiresLabel}. Renewing refreshes the URL without removing past votes.
                   </p>
+                </div>
+                {qrSrc && (
+                  <div className="mt-6 md:mt-0 flex justify-center">
+                    <div className="p-3 border border-gray-200 dark:border-gray-800 rounded-2xl bg-white dark:bg-gray-950">
+                      <NextImage src={qrSrc} alt="QR code for battle link" width={160} height={160} className="h-36 w-36" unoptimized />
+                    </div>
+                  </div>
                 )}
               </div>
+            </Card>
+
+            <Card className="p-6 bg-white dark:bg-gray-900 border border-purple-100 dark:border-purple-900/40">
+              <div className={`grid gap-4 ${photosNeedingVotes > 0 ? "md:grid-cols-2 lg:grid-cols-4" : "md:grid-cols-3"}`}>
+                <StatChip label="Total votes" value={totalBattleVotes} />
+                <StatChip label="Avg battles / photo" value={averageBattlesPerPhoto} />
+                <StatChip label="Photos in battle" value={totalBattlePhotos} />
+                {photosNeedingVotes > 0 && <StatChip label="Need more votes" value={photosNeedingVotes} />}
+              </div>
+            </Card>
+
+            {linkHistory.length > 0 && (
+              <Card className="p-6 bg-white dark:bg-gray-900 border border-purple-100 dark:border-purple-900/40">
+                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">Past links</p>
+                <div className="space-y-3">
+                  {linkHistory.map((entry, index) => (
+                    <div key={`${entry.secretKey}-${index}`} className="flex items-center justify-between text-sm">
+                      <div>
+                        <p className="font-semibold text-gray-800 dark:text-gray-100">
+                          {new Date(entry.createdAt).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Secret key ending in …{entry.secretKey.slice(-4)} • Expired{" "}
+                          {entry.expiresAt ? new Date(entry.expiresAt).toLocaleDateString() : "N/A"}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="text-xs text-purple-600 dark:text-purple-300 hover:underline"
+                        onClick={() => copyLink(`${origin}/tools/photo-feedback/results/${battle.id}?key=${entry.secretKey}`)}
+                      >
+                        Copy results link
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+          </>
+        )}
+        {canCreateSession && (
+          <Card id="gallery-manager" className="p-6 bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-800">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Manage gallery</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Every uploaded photo enters the battle automatically. Remove an image here if you don&apos;t want it ranked.
+                </p>
+              </div>
+              {uploadStatus && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Uploading {uploadStatus.current}/{uploadStatus.total}
+                </p>
+              )}
             </div>
 
             {library.length === 0 ? (
@@ -324,29 +552,15 @@ export default function PhotoFeedbackPage() {
               </div>
             ) : (
               <>
-                <div
-                  ref={galleryContainerRef}
-                  className="max-h-[520px] overflow-y-auto pr-1 md:max-h-[640px] lg:max-h-[720px]"
-                >
+                <div ref={galleryContainerRef} className="max-h-[520px] overflow-y-auto pr-1 md:max-h-[640px] lg:max-h-[720px]">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {visiblePhotos.map(item => {
-                      const selected = selectedPhotoIds.includes(item.id);
+                      const totalVotes = item.stats?.totalVotes ?? 0;
+                      const winRate = totalVotes > 0 ? Math.round(((item.stats?.yesVotes ?? 0) / totalVotes) * 100) : null;
                       return (
                         <div
                           key={item.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => togglePhotoSelection(item.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              togglePhotoSelection(item.id);
-                            }
-                          }}
-                          className={`rounded-lg border overflow-hidden text-left transition-all relative group cursor-pointer ${selected
-                            ? "border-pink-500 ring-2 ring-pink-300 dark:ring-pink-500/50"
-                            : "border-gray-200 dark:border-gray-700 hover:border-pink-300 dark:hover:border-pink-500/40"
-                            }`}
+                          className="rounded-lg border overflow-hidden text-left transition-shadow relative group border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
                         >
                           <button
                             type="button"
@@ -360,34 +574,22 @@ export default function PhotoFeedbackPage() {
                             <Trash2 className="w-4 h-4" />
                           </button>
                           <div className="relative aspect-square bg-gray-100 dark:bg-gray-900">
-                            <NextImage
-                              src={item.url}
-                              alt="Gallery photo"
-                              fill
-                              sizes="(max-width: 768px) 25vw, 150px"
-                              className="object-cover"
-                            />
-                            <div className="absolute inset-0 pointer-events-none flex items-end justify-center pb-2">
-                              {!selected && (
-                                <span className="text-[11px] font-semibold text-white/0 group-hover:text-white bg-black/0 group-hover:bg-black/40 px-2 py-1 rounded-full transition-all">
-                                  Tap to select
-                                </span>
-                              )}
-                            </div>
-                            {selected && (
-                              <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-pink-500 text-white text-xs font-semibold px-2 py-1">
-                                <CheckCircle className="w-3 h-3" />
-                                Selected
+                            <NextImage src={item.url} alt="Gallery photo" fill sizes="(max-width: 768px) 25vw, 150px" className="object-cover" />
+                            {totalVotes > 0 && (
+                              <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/60 text-white text-xs font-semibold px-2 py-1">
+                                {winRate !== null ? `${winRate}% win` : `${totalVotes} votes`}
                               </span>
                             )}
                           </div>
                           <div className="p-3 text-xs text-gray-600 dark:text-gray-400 space-y-1">
                             <p>Uploaded {new Date(item.createdAt).toLocaleDateString()}</p>
-                          {item.stats && item.stats.totalVotes > 0 && (
-                            <p className="text-gray-700 dark:text-gray-300">
-                              Wins {item.stats.yesVotes} / {item.stats.totalVotes} battles
-                            </p>
-                          )}
+                            {totalVotes > 0 ? (
+                              <p className="text-gray-700 dark:text-gray-300">
+                                {item.stats?.yesVotes ?? 0} wins • {totalVotes} total votes
+                              </p>
+                            ) : (
+                              <p className="text-gray-500 dark:text-gray-400">Waiting for first votes</p>
+                            )}
                           </div>
                         </div>
                       );
@@ -399,9 +601,7 @@ export default function PhotoFeedbackPage() {
                     >
                       <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
                         <Upload className="w-8 h-8 text-purple-500 mb-2" />
-                        <p className="text-sm text-gray-700 dark:text-gray-300 font-semibold">
-                          Add more photos
-                        </p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 font-semibold">Add more photos</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG, GIF up to 10MB each</p>
                       </div>
                       <input
@@ -416,189 +616,60 @@ export default function PhotoFeedbackPage() {
                     </label>
                   </div>
                 </div>
-
                 {library.length > PHOTOS_PER_PAGE && (
-                  <div className="flex items-center justify-between mt-4 text-sm text-gray-700 dark:text-gray-300">
-                    <span>
-                      Showing {visiblePhotos.length} of {library.length} photos
-                    </span>
-                    {hasMorePhotos && (
-                      <button
-                        type="button"
-                        onClick={() => setGalleryPage(Math.min(totalPages - 1, galleryPage + 1))}
-                        className="px-3 py-1 rounded-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
-                      >
-                        Load more
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {activeUploadJobs.length > 0 && (
-                  <div className="mt-6">
-                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Upload queue</p>
-                    <div className="space-y-2">
-                      {activeUploadJobs.map(job => {
-                        const progressPercent = Math.round(job.progress * 100);
-                        const statusLabel =
-                          job.status === "completed"
-                            ? "Completed"
-                            : job.status === "failed"
-                              ? "Failed"
-                              : `Uploading • ${progressPercent}%`;
-                        const statusClass =
-                          job.status === "failed"
-                            ? "text-red-600 dark:text-red-400"
-                            : job.status === "completed"
-                              ? "text-green-600 dark:text-green-400"
-                              : "text-purple-600 dark:text-purple-300";
-
-                        return (
-                          <div
-                            key={job.id}
-                            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/40 p-3 shadow-sm"
-                          >
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="font-semibold text-gray-700 dark:text-gray-200 truncate pr-4">
-                                {job.name}
-                              </span>
-                              <span className={`font-medium ${statusClass}`}>{statusLabel}</span>
-                            </div>
-                            <div className="mt-2 h-1.5 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${
-                                  job.status === "failed"
-                                    ? "bg-red-500"
-                                    : job.status === "completed"
-                                      ? "bg-green-500"
-                                      : "bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500"
-                                }`}
-                                style={{ width: `${Math.min(100, progressPercent)}%` }}
-                              />
-                            </div>
-                            {job.status === "failed" && job.error && (
-                              <p className="mt-2 text-xs text-red-600 dark:text-red-400">{job.error}</p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                  <div className="flex items-center justify-end mt-4 text-xs text-gray-500 dark:text-gray-400">
+                    Showing {visiblePhotos.length} of {library.length} photos
                   </div>
                 )}
               </>
             )}
           </Card>
         )}
-        {canCreateSession && hasLeaderboardData && (
-          <div className="mt-8">
-            <PhotoLeaderboard photos={library} />
-          </div>
-        )}
-        <Card className="p-6 bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-800">
-          <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">Ready to share</h2>
 
-          {!authLoading && !canCreateSession && (
-            <Card className="p-4 mb-6 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700">
-              <p className="text-sm text-purple-800 dark:text-purple-100 mb-2">
-                You need to be signed in to create a feedback link. Voting stays open to anyone with the link.
-              </p>
-              <Link
-                href="/login"
-                className="inline-block text-sm font-semibold text-purple-700 dark:text-purple-200 hover:underline"
-              >
-                Go to login
-              </Link>
-            </Card>
-          )}
+        {activeUploadJobs.length > 0 && (
+          <Card className="p-6 bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-800">
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Upload queue</p>
+            <div className="space-y-2">
+              {activeUploadJobs.map(job => {
+                const progressPercent = Math.round(job.progress * 100);
+                const statusLabel =
+                  job.status === "completed"
+                    ? "Completed"
+                    : job.status === "failed"
+                      ? "Failed"
+                      : `Uploading • ${progressPercent}%`;
+                const statusClass =
+                  job.status === "failed"
+                    ? "text-red-600 dark:text-red-400"
+                    : job.status === "completed"
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-purple-600 dark:text-purple-300";
 
-          {canCreateSession && (
-            <div className="mb-4 flex flex-wrap gap-2 text-xs font-semibold text-purple-700 dark:text-purple-200">
-              {user?.displayName && (
-                <span className="px-3 py-1 bg-purple-50 dark:bg-purple-900/30 rounded-full border border-purple-200 dark:border-purple-700">
-                  Owner: {user.displayName}
-                </span>
-              )}
-              <span className="px-3 py-1 bg-purple-50 dark:bg-purple-900/30 rounded-full border border-purple-200 dark:border-purple-700">
-                Photos selected: {selectedPhotoIds.length}
-              </span>
-            </div>
-          )}
-          {canCreateSession && (
-            <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
-              Launching a battle will include every uploaded photo. If you toggle selections above, they’ll be prioritized but not required.
-            </p>
-          )}
-
-          <button
-            onClick={handleCreateSession}
-            disabled={!canCreateSession || isLoading}
-            className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white py-4 px-6 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Creating Session...
-              </>
-            ) : (
-              <>
-                Launch Photo Battle
-                <ArrowRight className="w-5 h-5" />
-              </>
-            )}
-          </button>
-        </Card>
-
-        {canCreateSession && (
-          <Card className="p-6 bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-800 mt-8">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Your Photo Battle Link</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">One link per account. Share it anytime for fresh matchups.</p>
-              </div>
-            {sessionsLoading && (
-              <div className="text-sm text-gray-500 dark:text-gray-400">Loading…</div>
-            )}
-          </div>
-            {error && (
-              <div className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</div>
-            )}
-            {userSessions.length === 0 && !sessionsLoading ? (
-              <p className="text-sm text-gray-600 dark:text-gray-400">No battles yet. Launch one above to see it here.</p>
-            ) : (
-              <div className="space-y-4">
-                {userSessions.map((session) => {
-                  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-                  const votingLink = `${origin}/tools/photo-feedback/session/${session.id}`;
-                  const resultsLink = `${origin}/tools/photo-feedback/results/${session.id}?key=${session.secretKey}`;
-
-                  return (
-                    <div key={session.id} className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Battle link</p>
-                  <p className="font-semibold text-gray-800 dark:text-gray-100">{session.creatorName || 'Your photos'}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Created {new Date(session.createdAt).toLocaleString()} • Battle stays active
-                  </p>
-                </div>
-                        <div className="flex gap-2">
-                          <Link
-                            href={`/tools/photo-feedback/share?sessionId=${session.id}&secretKey=${session.secretKey}`}
-                            className="text-sm text-purple-700 dark:text-purple-200 hover:underline flex items-center gap-1"
-                          >
-                            <ExternalLink className="w-4 h-4" /> Manage
-                          </Link>
-                        </div>
-                      </div>
-                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        <LinkRow label="Voting link" value={votingLink} />
-                        <LinkRow label="Results link" value={resultsLink} sensitive />
-                      </div>
+                return (
+                  <div key={job.id} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/40 p-3 shadow-sm">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-gray-700 dark:text-gray-200 truncate pr-4">{job.name}</span>
+                      <span className={`font-medium ${statusClass}`}>{statusLabel}</span>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                    <div className="mt-2 h-1.5 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          job.status === "failed"
+                            ? "bg-red-500"
+                            : job.status === "completed"
+                              ? "bg-green-500"
+                              : "bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500"
+                        }`}
+                        style={{ width: `${Math.min(100, progressPercent)}%` }}
+                      />
+                    </div>
+                    {job.status === "failed" && job.error && (
+                      <p className="mt-2 text-xs text-red-600 dark:text-red-400">{job.error}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </Card>
         )}
 
@@ -687,16 +758,19 @@ export default function PhotoFeedbackPage() {
   );
 }
 
-function LinkRow({ label, value, sensitive = false }: { label: string; value: string; sensitive?: boolean }) {
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      toastSuccess({ title: "Copied", description: `${label} copied to clipboard.` });
-    } catch {
-      toastError({ title: "Copy failed", description: "Please try again." });
-    }
-  };
-
+function LinkRow({
+  label,
+  value,
+  sensitive = false,
+  onCopy,
+  copied,
+}: {
+  label: string;
+  value: string;
+  sensitive?: boolean;
+  onCopy?: () => void;
+  copied?: boolean;
+}) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between">
@@ -710,10 +784,29 @@ function LinkRow({ label, value, sensitive = false }: { label: string; value: st
           value={value}
           className="flex-1 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-gray-700 dark:text-gray-200"
         />
-        <Button variant="outline" size="sm" onClick={copy} type="button">
-          <Copy className="w-4 h-4" />
+        <Button variant="outline" size="sm" onClick={onCopy} type="button" disabled={!value}>
+          {copied ? (
+            <>
+              <CheckCircle className="w-4 h-4" />
+              Copied
+            </>
+          ) : (
+            <>
+              <Copy className="w-4 h-4" />
+              Copy
+            </>
+          )}
         </Button>
       </div>
+    </div>
+  );
+}
+
+function StatChip({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-800 p-4 text-center">
+      <p className="text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{value}</p>
     </div>
   );
 }

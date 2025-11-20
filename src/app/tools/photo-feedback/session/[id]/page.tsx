@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Award, Loader2, Shuffle } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { usePhotoFeedback, type BattlePhoto } from "@/store/usePhotoFeedback";
 import { toastError } from "@/lib/toast-presets";
@@ -18,9 +18,9 @@ export default function PhotoBattleVotingPage() {
   const params = useParams();
   const sessionId = params.id as string;
   const { currentSession, loadSession, submitVote, isLoading, error } = usePhotoFeedback();
-  const [pair, setPair] = useState<Pair | null>(null);
+  const [pairBuffer, setPairBuffer] = useState<Pair[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [recentWinner, setRecentWinner] = useState<BattlePhoto | null>(null);
+  const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
 
   useEffect(() => {
     if (sessionId) {
@@ -29,49 +29,110 @@ export default function PhotoBattleVotingPage() {
   }, [sessionId, loadSession]);
 
   const canVote = currentSession && currentSession.photos.length >= 2;
+  const pair = pairBuffer[0] ?? null;
 
-  const pickNextPair = useCallback(() => {
-    if (!currentSession || currentSession.photos.length < 2) {
-      setPair(null);
-      return;
-    }
+  const buildRandomPair = useCallback((): Pair | null => {
+    if (!currentSession || currentSession.photos.length < 2) return null;
     const pool = [...currentSession.photos];
-    pool.sort(() => Math.random() - 0.5);
-    const [left, rightCandidate] = pool;
-    const right = rightCandidate?.id === left.id ? pool[1] : rightCandidate;
-    if (!left || !right) {
-      setPair(null);
-      return;
+    for (let i = pool.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
     }
-    setPair({ left, right });
+    const [left, right] = pool;
+    if (!left || !right || left.id === right.id) {
+      return null;
+    }
+    return { left, right };
   }, [currentSession]);
+
+  const advancePairs = useCallback((): Pair | null => {
+    let consumed: Pair | null = null;
+    setPairBuffer(prev => {
+      if (prev.length === 0) return prev;
+      const [first, ...rest] = prev;
+      consumed = first ?? null;
+      const next = [...rest];
+      while (next.length < 3) {
+        const candidate = buildRandomPair();
+        if (!candidate) break;
+        next.push(candidate);
+      }
+      return next;
+    });
+    return consumed;
+  }, [buildRandomPair]);
 
   useEffect(() => {
-    pickNextPair();
-  }, [pickNextPair]);
-
-  const handleVote = async (winner: BattlePhoto, loser: BattlePhoto) => {
-    if (!currentSession) return;
-    setIsSubmitting(true);
-    try {
-      await submitVote(currentSession.id, winner.id, loser.id);
-      setRecentWinner(winner);
-      pickNextPair();
-    } catch (err) {
-      console.error(err);
-      toastError({
-        title: "Vote failed",
-        description: "Unable to record your choice. Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
+    if (!currentSession || currentSession.photos.length < 2) {
+      setPairBuffer([]);
+      return;
     }
-  };
+    setPairBuffer(() => {
+      const initial: Pair[] = [];
+      while (initial.length < 3) {
+        const candidate = buildRandomPair();
+        if (!candidate) break;
+        initial.push(candidate);
+      }
+      return initial;
+    });
+  }, [currentSession, buildRandomPair]);
 
-  const leaderboard = useMemo(() => {
-    if (!currentSession) return [];
-    return [...currentSession.photos].sort((a, b) => b.rating - a.rating).slice(0, 3);
-  }, [currentSession]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    pairBuffer.slice(0, 3).forEach(selection => {
+      if (!selection) return;
+      [selection.left, selection.right].forEach(photo => {
+        if (!photo) return;
+        const img = new window.Image();
+        img.src = photo.url;
+      });
+    });
+  }, [pairBuffer]);
+
+  const handleVote = useCallback(
+    async (winner: BattlePhoto, loser: BattlePhoto) => {
+      if (!currentSession || isSubmitting || !pair) return;
+      setSelectedPhotoId(winner.id);
+      setIsSubmitting(true);
+      const consumedPair = advancePairs();
+      try {
+        await submitVote(currentSession.id, winner.id, loser.id);
+      } catch (err) {
+        console.error(err);
+        if (consumedPair) {
+          setPairBuffer(prev => [consumedPair, ...prev]);
+        }
+        toastError({
+          title: "Vote failed",
+          description: "Unable to record your choice. Please try again.",
+        });
+      } finally {
+        setSelectedPhotoId(null);
+        setIsSubmitting(false);
+      }
+    },
+    [currentSession, submitVote, advancePairs, isSubmitting, pair]
+  );
+
+  useEffect(() => {
+    if (!pair || isSubmitting) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        void handleVote(pair.left, pair.right);
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        void handleVote(pair.right, pair.left);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [pair, isSubmitting, handleVote]);
+
+  useEffect(() => {
+    setSelectedPhotoId(null);
+  }, [pair]);
 
   if (isLoading || !currentSession) {
     return (
@@ -105,85 +166,38 @@ export default function PhotoBattleVotingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-4 md:p-10">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <header className="text-center space-y-2">
-          <p className="text-sm uppercase tracking-widest text-purple-200">Photo Battle</p>
-          <h1 className="text-3xl md:text-4xl font-bold">Pick the stronger photo</h1>
-          <p className="text-sm text-purple-100">Tap the card that best represents {currentSession.creatorName || "this person"}.</p>
-        </header>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-4 md:p-8">
+      <div className="max-w-4xl mx-auto flex flex-col gap-4">
+        <p className="text-center text-sm text-purple-100/80">
+          Click a photo or press ← / → to choose which shot looks better.
+        </p>
 
-        {recentWinner && (
-          <div className="text-center bg-white/10 border border-white/20 rounded-2xl py-3 px-4 text-sm text-purple-100">
-            <span className="font-semibold text-white">Nice! </span> You boosted one of the photos. Keep going to refine the ranking.
-          </div>
-        )}
-
-        <div className="grid gap-4 md:grid-cols-2">
-          {[{ side: "left" as const, card: pair.left }, { side: "right" as const, card: pair.right }].map(({ side, card }) => (
-            <Card
-              key={card.id}
-              className={`cursor-pointer overflow-hidden border-2 transition-all bg-white/5 border-white/10 hover:border-white/40 ${
-                isSubmitting ? "pointer-events-none opacity-70" : ""
-              }`}
-              onClick={() => handleVote(card, side === "left" ? pair.right : pair.left)}
-            >
-              <div className="relative aspect-[3/4]">
-                <Image src={card.url} alt="Photo option" fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
-              </div>
-              <div className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-widest text-purple-200">Pick this</p>
-                  <p className="text-lg font-semibold text-white">Looks better</p>
+        <div className="grid gap-3 md:grid-cols-2">
+          {[{ side: "left" as const, card: pair.left }, { side: "right" as const, card: pair.right }].map(({ side, card }) => {
+            const isSelected = selectedPhotoId === card.id;
+            return (
+              <Card
+                key={card.id}
+                className={`cursor-pointer overflow-hidden border-2 transition-all bg-white/5 ${
+                  isSelected ? "border-white ring-2 ring-white/70" : "border-white/10 hover:border-white/40"
+                } ${isSubmitting ? "pointer-events-none opacity-70" : ""}`}
+                onClick={() => handleVote(card, side === "left" ? pair.right : pair.left)}
+              >
+                <div className="relative aspect-[3/4]">
+                  <Image src={card.url} alt="Photo option" fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
+                  {isSelected && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <div className="flex items-center gap-2 text-white font-semibold text-lg">
+                        <CheckCircle2 className="w-6 h-6" />
+                        Selected
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-white text-purple-600 text-sm font-semibold"
-                >
-                  Choose
-                </button>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-purple-100">
-          <button
-            type="button"
-            onClick={pickNextPair}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-white/10 border border-white/20 hover:bg-white/20"
-          >
-            <Shuffle className="w-4 h-4" />
-            New pair
-          </button>
-          <Link href="/tools/photo-feedback" className="underline text-purple-200">
-            Start your own battle
-          </Link>
-        </div>
-
-        {leaderboard.length > 0 && (
-          <Card className="bg-white/5 border-white/10 p-5">
-            <div className="flex items-center gap-2 text-purple-100 mb-4">
-              <Award className="w-5 h-5" />
-              <p className="text-sm uppercase tracking-widest">Live leaderboard</p>
-            </div>
-            <div className="grid gap-3 md:grid-cols-3">
-              {leaderboard.map((photo, index) => (
-                <div key={photo.id} className="rounded-2xl bg-white/10 border border-white/10 overflow-hidden">
-                  <div className="relative h-32">
-                    <Image src={photo.url} alt={`Rank ${index + 1}`} fill className="object-cover" sizes="200px" />
-                  </div>
-                  <div className="p-3 space-y-1 text-sm">
-                    <p className="text-purple-200 font-semibold">#{index + 1} • {photo.rating} pts</p>
-                    <p className="text-xs text-purple-100">
-                      {photo.wins} wins • {photo.losses} losses
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
       </div>
     </div>
   );
