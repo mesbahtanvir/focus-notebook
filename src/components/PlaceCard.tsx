@@ -40,23 +40,28 @@ export function PlaceCard({ place, onEdit, onDelete }: {
         className={`card p-5 border-2 ${typeColors[config.color]} hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer`}
       >
       {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100">{place.name}</h3>
-            {place.aiEnriched && (
-              <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-            )}
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <span className={`px-2 py-1 rounded-full ${badgeColors[config.color]}`}>
-              {config.emoji} {config.label}
-            </span>
-          </div>
-          {place.city && place.country && (
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-              {place.city}, {place.country}
-            </p>
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100">{place.name}</h3>
+              {place.aiEnriched && (
+                <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className={`px-2 py-1 rounded-full ${badgeColors[config.color]}`}>
+                {config.emoji} {config.label}
+              </span>
+              {place.insightScores?.overall && (
+                <span className="px-2 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-200 font-semibold">
+                  Overall {place.insightScores.overall}/10
+                </span>
+              )}
+            </div>
+            {place.city && place.country && (
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                {place.city}, {place.country}
+              </p>
           )}
         </div>
         <div className="flex items-center gap-1">
@@ -86,6 +91,23 @@ export function PlaceCard({ place, onEdit, onDelete }: {
         <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 line-clamp-2">
           {place.description}
         </p>
+      )}
+
+      {place.insights?.dating && (
+        <div className="mb-3 text-xs text-gray-700 dark:text-gray-300 space-y-1">
+          {place.insights.dating.sexPositivity && (
+            <div className="flex items-center gap-1">
+              <Heart className="h-3 w-3 text-pink-500" />
+              <span className="font-semibold">Vibe:</span> {place.insights.dating.sexPositivity}
+            </div>
+          )}
+          {place.insights.dating.datingCulture && (
+            <div className="flex items-start gap-1">
+              <MapPin className="h-3 w-3 text-blue-500 mt-0.5" />
+              <span className="line-clamp-2">{place.insights.dating.datingCulture}</span>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Quick Info */}
