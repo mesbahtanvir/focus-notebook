@@ -1,0 +1,158 @@
+name: Places Insights Deep-Dive
+description: Enriches a destination with dating culture, demographics, and seasonal climate insights using multiple public sources.
+
+model: openai/gpt-4o-mini
+
+modelParameters:
+  temperature: 0.35
+  max_tokens: 12000
+
+messages:
+  - role: system
+    content: |
+      You are a destination research assistant focused on dating culture, demographics, and seasonal comfort. Return concise, source-grounded JSON only.
+
+      Rules:
+      - Prefer data from: hookuptravels.com, versus.com, mylifeelsewhere.com, local stats offices, tourism boards, Numbeo, TimeAndDate, Weather Spark, and comparable sources when available.
+      - When sources disagree, choose the most recent or widely cited value and mention both in notes.
+      - Do not invent exact numbers—mark unclear metrics as "unknown".
+      - Keep descriptions brief (<= 30 words) and respectful; emphasize consent, inclusivity, and sex-positivity.
+
+  - role: user
+    content: |
+      Research {{destinationName}}{{#country}} ({{country}}){{/country}}.
+
+      Return JSON with:
+      {
+        "destination": { "name": "{{destinationName}}", "country": "{{country}}" },
+        "scores": {
+          "overall": number | null,
+          "dating": number | null,
+          "safety": number | null,
+          "cost": number | null,
+          "weather": number | null,
+          "culture": number | null,
+          "logistics": number | null,
+          "connectivity": number | null,
+          "inclusivity": number | null
+        },
+        "dating": {
+          "genderRatio": { "male": number | "unknown", "female": number | "unknown", "notes": "city vs. national" },
+          "sexPositivity": "brief descriptor of local attitudes toward dating/sex and LGBTQ+ friendliness",
+          "datingCulture": "20-30 word overview of norms, consent expectations, and typical venues",
+          "safetyTips": ["short, safety-first reminders"]
+        },
+        "culturalContext": "note on PDA/etiquette",
+        "legalNotes": "alcohol, nightlife, ID, age, or curfew notes",
+        "safetyHealth": {
+          "personalSafety": "1-2 lines on safety and night reputation",
+          "healthcareAccess": "hospital/clinic availability",
+          "commonScams": "recurring scams to avoid",
+          "emergencyNumbers": "e.g., 112",
+          "healthAdvisories": "vaccines/seasonal cautions"
+        },
+        "costAndLogistics": {
+          "budgetTips": "date/nightlife budget cues",
+          "transport": "late-night transit and rideshare availability",
+          "tipping": "tipping norm",
+          "lateNightOptions": "food/transport after midnight"
+        },
+        "socialScene": {
+          "nightlifeAreas": "key districts to go out",
+          "events": "recurring festivals/concerts",
+          "weeknights": "busy nights of week",
+          "universityImpact": "student term effects"
+        },
+        "connectivity": {
+          "mobileData": "4G/5G quality",
+          "wifi": "café/co-working Wi‑Fi quality",
+          "coworking": "coworking abundance",
+          "noiseLevels": "quiet vs. loud areas"
+        },
+        "seasonalComfort": {
+          "aqi": "typical AQI range",
+          "heatIndex": "feels-like heat/humidity notes",
+          "pollen": "pollen seasonality",
+          "weatherImpact": "how weather affects outdoor dates"
+        },
+        "demographicsLanguage": {
+          "ageDistribution": "age mix in nightlife zones",
+          "language": "English/other language prevalence",
+          "expatDensity": "expat/remote-worker density",
+          "touristVsLocal": "tourist vs local split"
+        },
+        "topEthnicities": [ { "group": string, "share": string }, ... up to 5 entries ],
+        "weatherByQuarter": [
+          { "quarter": "Jan-Mar" | "Apr-Jun" | "Jul-Sep" | "Oct-Dec", "avgTempC": number | "unknown", "avgHumidity": number | "unknown", "avgRainfallMm": number | "unknown", "avgSunshineHours": number | "unknown", "notes": "impact on socializing" }
+        ],
+        "sources": ["list of sites used"],
+        "freshnessNote": "when the data was last checked or if it is unknown",
+        "disclaimer": "brief respect/consent/safety reminder"
+      }
+
+      Requirements:
+      - Always include the four quarters with seasonal metrics (temperature, humidity, rainfall, sunshine hours).
+      - Provide scores when possible; if unknown, set null.
+      - Gender ratios can be city-level or national; clarify in notes.
+      - Ensure safetyTips and disclaimers stress respect and consent.
+      - Keep sources concise (domain names are fine) and note staleness in freshnessNote.
+
+testData:
+  - destinationName: "Barcelona"
+    country: "Spain"
+    expected: |
+      {
+        "destination": {"name": "Barcelona", "country": "Spain"},
+        "scores": {"overall": 8.6, "dating": 8, "safety": 8, "cost": 6, "weather": 8, "culture": 9, "logistics": 8, "connectivity": 8, "inclusivity": 9},
+        "dating": {
+          "genderRatio": {"male": "unknown", "female": "unknown", "notes": "Urban ratios vary"},
+          "sexPositivity": "Open attitudes with strong consent norms; LGBTQ+-friendly nightlife",
+          "datingCulture": "Casual dating common; meet at terraces, beaches, and bars; clear consent expected",
+          "safetyTips": ["Stay in well-lit nightlife areas", "Agree on meeting spots", "Respect consent"]
+        },
+        "culturalContext": "PDA moderate; respect local Catalan identity",
+        "legalNotes": "Carry ID for clubs; follow alcohol limits",
+        "safetyHealth": {"personalSafety": "Generally safe, watch for pickpockets", "healthcareAccess": "Modern hospitals and pharmacies", "commonScams": "Pickpocketing in tourist areas", "emergencyNumbers": "112", "healthAdvisories": "Hydrate in summer"},
+        "costAndLogistics": {"budgetTips": "Menu del dia lunches are affordable", "transport": "Metro runs late on weekends; rideshare common", "tipping": "Rounding up small bills", "lateNightOptions": "Night buses and rideshare after midnight"},
+        "socialScene": {"nightlifeAreas": "Eixample, Gothic Quarter, Barceloneta", "events": "Summer festivals and concerts", "weeknights": "Thu-Sat busiest", "universityImpact": "Student energy during terms"},
+        "connectivity": {"mobileData": "Strong 4G/5G", "wifi": "Good café Wi‑Fi", "coworking": "Plentiful coworking hubs", "noiseLevels": "Nightlife blocks loud; side streets quieter"},
+        "seasonalComfort": {"aqi": "Generally good", "heatIndex": "Humid in peak summer", "pollen": "Spring pollen season", "weatherImpact": "Beach and terrace culture late spring to early fall"},
+        "demographicsLanguage": {"ageDistribution": "Nightlife skew 20s-30s", "language": "High English in tourist zones", "expatDensity": "Large expat/remote worker scene", "touristVsLocal": "Tourist heavy in summer"},
+        "topEthnicities": [
+          {"group": "Spanish/Catalan", "share": ">60%"},
+          {"group": "Other EU", "share": "~10%"},
+          {"group": "Latin American", "share": "~8%"},
+          {"group": "North African", "share": "~5%"},
+          {"group": "Sub-Saharan African", "share": "~4%"}
+        ],
+        "weatherByQuarter": [
+          {"quarter": "Jan-Mar", "avgTempC": 12, "avgHumidity": 72, "avgRainfallMm": 40, "avgSunshineHours": 160, "notes": "Mild, some rain"},
+          {"quarter": "Apr-Jun", "avgTempC": 19, "avgHumidity": 70, "avgRainfallMm": 50, "avgSunshineHours": 230, "notes": "Great for outdoor dates"},
+          {"quarter": "Jul-Sep", "avgTempC": 26, "avgHumidity": 68, "avgRainfallMm": 55, "avgSunshineHours": 260, "notes": "Hot beach season"},
+          {"quarter": "Oct-Dec", "avgTempC": 15, "avgHumidity": 73, "avgRainfallMm": 60, "avgSunshineHours": 150, "notes": "Cooler, shorter days"}
+        ],
+        "sources": ["hookuptravels.com", "versus.com", "mylifeelsewhere.com", "weatherspark.com"],
+        "freshnessNote": "Example response—replace with current stats",
+        "disclaimer": "Respect consent, local laws, and personal safety"
+      }
+
+evaluators:
+  - name: Response is valid JSON
+    string:
+      matchesRegex: '^\{.*\}$'
+
+  - name: Includes dating block
+    string:
+      contains: '"dating"'
+
+  - name: Includes weatherByQuarter
+    string:
+      contains: '"weatherByQuarter"'
+
+  - name: Includes topEthnicities
+    string:
+      contains: '"topEthnicities"'
+
+  - name: Lists sources
+    string:
+      contains: '"sources"'

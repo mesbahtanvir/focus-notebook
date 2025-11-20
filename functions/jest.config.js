@@ -1,8 +1,15 @@
 module.exports = {
-  preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.test.ts'],
+  transform: {
+    '^.+\\.ts$': '<rootDir>/jest.transform.js',
+  },
+  moduleNameMapper: {
+    '^firebase-functions/v1$': '<rootDir>/src/__mocks__/firebase-functions-v1.ts',
+    '^stripe$': '<rootDir>/src/__mocks__/stripe.ts',
+    '^openai$': '<rootDir>/src/__mocks__/openai.ts',
+  },
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',

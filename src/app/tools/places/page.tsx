@@ -58,6 +58,34 @@ export default function PlacesPage() {
     };
   }, [places]);
 
+  const rankedPlaces = useMemo(() => {
+    return places
+      .map((place) => {
+        const dimensionScores = {
+          dating: place.insightScores?.dating,
+          safety: place.insightScores?.safety ?? place.comparisonScores?.safety,
+          cost: place.insightScores?.cost ?? place.comparisonScores?.cost,
+          weather: place.insightScores?.weather ?? place.comparisonScores?.weather,
+          culture: place.insightScores?.culture ?? place.comparisonScores?.culture,
+          logistics: place.insightScores?.logistics ?? place.comparisonScores?.infrastructure,
+          connectivity: place.insightScores?.connectivity,
+          inclusivity: place.insightScores?.inclusivity,
+        };
+
+        const values = Object.values(dimensionScores).filter((v): v is number => typeof v === 'number');
+        const average = values.length ? Number((values.reduce((acc, val) => acc + val, 0) / values.length).toFixed(1)) : undefined;
+        const overall = place.insightScores?.overall ?? average ?? place.comparisonScores?.cost;
+
+        return {
+          place,
+          overall,
+          dimensionScores,
+        };
+      })
+      .filter((entry) => entry.overall !== undefined || Object.values(entry.dimensionScores).some((v) => v !== undefined))
+      .sort((a, b) => (b.overall ?? 0) - (a.overall ?? 0));
+  }, [places]);
+
   const handleEdit = (place: Place) => {
     setEditingPlace(place);
     setShowModal(true);
@@ -121,6 +149,50 @@ export default function PlacesPage() {
           </div>
         }
       />
+
+      {rankedPlaces.length > 0 && (
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Ranked overview</h3>
+            <span className="text-xs text-gray-500">Higher overall scores appear first</span>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800 text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-900/60">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">Rank</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">Place</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">Overall</th>
+                  {['Dating','Safety','Cost','Weather','Culture','Logistics','Connectivity','Inclusivity'].map((label) => (
+                    <th key={label} className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">{label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {rankedPlaces.map((entry, idx) => (
+                  <tr key={entry.place.id} className="bg-white dark:bg-gray-900/80 hover:bg-gray-50 dark:hover:bg-gray-800/70">
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300">#{idx + 1}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">{entry.place.name}</span>
+                        {entry.place.city && entry.place.country && (
+                          <span className="text-xs text-gray-500">{entry.place.city}, {entry.place.country}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 font-bold text-purple-700 dark:text-purple-300">{entry.overall ?? '—'}</td>
+                    {(['dating','safety','cost','weather','culture','logistics','connectivity','inclusivity'] as const).map((key) => (
+                      <td key={key} className="px-4 py-3 text-gray-700 dark:text-gray-200">
+                        {entry.dimensionScores[key] ?? '—'}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Places List */}
       {filteredPlaces.length === 0 ? (

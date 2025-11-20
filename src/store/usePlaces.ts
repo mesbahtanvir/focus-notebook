@@ -6,6 +6,84 @@ import { subscribeCol } from '@/lib/data/subscribe';
 
 export type PlaceType = 'live' | 'visit' | 'short-term';
 
+export type QuarterLabel = 'Jan-Mar' | 'Apr-Jun' | 'Jul-Sep' | 'Oct-Dec';
+
+export interface PlaceInsights {
+  dating?: {
+    genderRatio?: {
+      male?: number | 'unknown';
+      female?: number | 'unknown';
+      notes?: string;
+    };
+    sexPositivity?: string;
+    datingCulture?: string;
+    safetyTips?: string[];
+  };
+  culturalContext?: string;
+  legalNotes?: string;
+  safetyHealth?: {
+    personalSafety?: string;
+    healthcareAccess?: string;
+    commonScams?: string;
+    emergencyNumbers?: string;
+    healthAdvisories?: string;
+  };
+  costAndLogistics?: {
+    budgetTips?: string;
+    transport?: string;
+    tipping?: string;
+    lateNightOptions?: string;
+  };
+  socialScene?: {
+    nightlifeAreas?: string;
+    events?: string;
+    weeknights?: string;
+    universityImpact?: string;
+  };
+  connectivity?: {
+    mobileData?: string;
+    wifi?: string;
+    coworking?: string;
+    noiseLevels?: string;
+  };
+  seasonalComfort?: {
+    aqi?: string;
+    heatIndex?: string;
+    pollen?: string;
+    weatherImpact?: string;
+  };
+  demographicsLanguage?: {
+    ageDistribution?: string;
+    language?: string;
+    expatDensity?: string;
+    touristVsLocal?: string;
+  };
+  topEthnicities?: { group: string; share: string }[];
+  weatherByQuarter?: {
+    quarter: QuarterLabel;
+    avgTempC?: number | 'unknown';
+    avgHumidity?: number | 'unknown';
+    avgRainfallMm?: number | 'unknown';
+    avgSunshineHours?: number | 'unknown';
+    notes?: string;
+  }[];
+  sources?: string[];
+  freshnessNote?: string;
+  disclaimer?: string;
+}
+
+export interface PlaceScores {
+  overall?: number;
+  dating?: number;
+  cost?: number;
+  safety?: number;
+  weather?: number;
+  culture?: number;
+  logistics?: number;
+  connectivity?: number;
+  inclusivity?: number;
+}
+
 export interface Place {
   id: string;
   name: string;
@@ -35,6 +113,8 @@ export interface Place {
     nature?: number;
     foodScene?: number;
   };
+  insights?: PlaceInsights;
+  insightScores?: PlaceScores;
 
   aiEnriched?: boolean;
   createdAt: string;
