@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Place, PlaceType } from "@/store/usePlaces";
+import { Place, PlaceType, PlaceScores } from "@/store/usePlaces";
 import { MapPin, X, Save, Link as LinkIcon, Plus as PlusIcon } from "lucide-react";
 import RichTextEditor from "@/components/RichTextEditor";
 
@@ -27,6 +27,8 @@ export function PlaceModal({ place, onClose, onSave }: {
     notes: place?.notes || '',
     tags: place?.tags || [],
     comparisonScores: place?.comparisonScores || {},
+    insights: place?.insights,
+    insightScores: place?.insightScores || {},
     aiEnriched: place?.aiEnriched || false,
   });
 
@@ -289,6 +291,36 @@ export function PlaceModal({ place, onClose, onSave }: {
                     placeholder="1-10"
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Overall + Dimension Scores */}
+            <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-semibold">Overall & Dimension Scores (Optional, 1-10)</label>
+                <span className="text-xs text-gray-500">Used in ranking table</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {(["overall", "dating", "cost", "safety", "weather", "culture", "logistics", "connectivity", "inclusivity"] as (keyof PlaceScores)[]).map((key) => (
+                  <div key={key}>
+                    <label className="text-xs text-gray-600 capitalize">{key}</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={formData.insightScores?.[key] ?? ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        insightScores: {
+                          ...formData.insightScores,
+                          [key]: e.target.value ? Number(e.target.value) : undefined,
+                        }
+                      })}
+                      className="input w-full text-sm"
+                      placeholder="1-10"
+                    />
+                  </div>
+                ))}
               </div>
             </div>
 

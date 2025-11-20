@@ -52,6 +52,7 @@ import {
   getVisaRequirements,
 } from './visaDataUpdater';
 import { generatePhotoThumbnail, getSignedImageUrl } from './photoThumbnails';
+import { runPlaceInsights } from './placeInsights';
 
 // Export cloud functions
 export {
@@ -98,4 +99,6 @@ export {
   // Photos
   generatePhotoThumbnail,
   getSignedImageUrl,
+  // Places
+  runPlaceInsights,
 };

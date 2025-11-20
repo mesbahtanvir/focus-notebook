@@ -4,10 +4,32 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { usePlaces } from "@/store/usePlaces";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Sparkles, MapPin, Cloud, DollarSign, Shield, Calendar, Clock, Heart, ExternalLink, Edit3, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Sparkles,
+  MapPin,
+  Cloud,
+  DollarSign,
+  Shield,
+  Calendar,
+  Clock,
+  Heart,
+  ExternalLink,
+  Edit3,
+  Trash2,
+  BarChart3,
+  Users,
+  Sun,
+  CloudRain,
+  Wifi,
+  Globe2,
+  ListChecks,
+} from "lucide-react";
 import { PlaceModal } from "@/components/PlaceModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { useToast } from "@/hooks/use-toast";
+import { httpsCallable } from "firebase/functions";
+import { functionsClient } from "@/lib/firebaseClient";
 
 export default function PlaceDetailPage() {
   const params = useParams();
@@ -56,25 +78,40 @@ export default function PlaceDetailPage() {
   const handleEnrich = async () => {
     setIsEnriching(true);
     try {
-      // TODO: Call enrichment API
       toast({
         title: "Enrichment started",
         description: "AI is gathering information about this place..."
       });
 
-      // Simulate enrichment for now
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const callable = httpsCallable<
+        { destinationName: string; country?: string },
+        { result: any }
+      >(functionsClient, "runPlaceInsights");
+
+      const response = await callable({
+        destinationName: place.name,
+        country: place.country,
+      });
+
+      const payload = (response.data as any)?.result ?? (response.data as any);
+
+      if (!payload) {
+        throw new Error("No enrichment data returned");
+      }
+
+      const { destination, scores, ...insights } = payload;
+      const description =
+        payload.dating?.datingCulture ||
+        payload.culturalContext ||
+        place.description ||
+        "AI has added dating, safety, and weather insights.";
 
       await updatePlace(place.id, {
         aiEnriched: true,
-        description: `${place.name} is a fascinating destination known for its unique blend of culture and natural beauty.`,
-        climate: "Temperate",
-        costOfLiving: "Medium",
-        safety: "High",
-        culture: "Rich cultural heritage",
-        bestTimeToVisit: "Spring and Fall",
-        pros: ["Beautiful scenery", "Rich history", "Great food"],
-        cons: ["Can be crowded", "Expensive in peak season"]
+        country: destination?.country || place.country,
+        description,
+        insightScores: scores,
+        insights,
       });
 
       toast({
@@ -211,6 +248,35 @@ export default function PlaceDetailPage() {
             </div>
           )}
 
+          {place.insightScores && (
+            <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-xl p-6 shadow-lg space-y-4">
+              <div className="flex items-center gap-2 text-gray-700 dark:text-gray-200">
+                <BarChart3 className="h-5 w-5" />
+                <h2 className="text-xl font-bold">Scores & ranking inputs</h2>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {(
+                  [
+                    ['Overall', place.insightScores.overall],
+                    ['Dating', place.insightScores.dating],
+                    ['Safety', place.insightScores.safety],
+                    ['Cost', place.insightScores.cost],
+                    ['Weather', place.insightScores.weather],
+                    ['Culture', place.insightScores.culture],
+                    ['Logistics', place.insightScores.logistics],
+                    ['Connectivity', place.insightScores.connectivity],
+                    ['Inclusivity', place.insightScores.inclusivity],
+                  ] as [string, number | undefined][]
+                ).map(([label, value]) => (
+                  <div key={label} className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/60">
+                    <div className="text-xs text-gray-500">{label}</div>
+                    <div className="text-lg font-bold text-purple-700 dark:text-purple-300">{value ?? '—'}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Additional Details */}
           {(place.culture || place.bestTimeToVisit || place.averageStayDuration) && (
             <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-xl p-6 shadow-lg space-y-4">
@@ -234,6 +300,232 @@ export default function PlaceDetailPage() {
                   <span className="text-sm text-gray-600 dark:text-gray-400">Average stay:</span>
                   <span className="text-gray-800 dark:text-gray-200 font-medium">{place.averageStayDuration}</span>
                 </div>
+              )}
+            </div>
+          )}
+
+          {place.insights?.dating && (
+            <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-xl p-6 shadow-lg space-y-3">
+              <div className="flex items-center gap-2 text-gray-800 dark:text-gray-100 mb-1">
+                <Heart className="h-5 w-5 text-pink-500" />
+                <h2 className="text-xl font-bold">Dating & culture</h2>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                {place.insights.dating.sexPositivity && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Sex positivity</h3>
+                    <p className="text-gray-700 dark:text-gray-300">{place.insights.dating.sexPositivity}</p>
+                  </div>
+                )}
+                {place.insights.dating.datingCulture && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Dating culture</h3>
+                    <p className="text-gray-700 dark:text-gray-300">{place.insights.dating.datingCulture}</p>
+                  </div>
+                )}
+                {place.insights.dating.genderRatio && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Gender ratio</h3>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      {place.insights.dating.genderRatio.male ?? '—'}% male • {place.insights.dating.genderRatio.female ?? '—'}% female
+                    </p>
+                    {place.insights.dating.genderRatio.notes && (
+                      <p className="text-xs text-gray-500">{place.insights.dating.genderRatio.notes}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              {place.insights.dating.safetyTips && place.insights.dating.safetyTips.length > 0 && (
+                <div className="bg-pink-50 dark:bg-pink-900/20 border border-pink-200 dark:border-pink-800 rounded-lg p-3">
+                  <h4 className="text-sm font-semibold text-pink-700 dark:text-pink-200 mb-2">Safety & consent reminders</h4>
+                  <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-200 space-y-1">
+                    {place.insights.dating.safetyTips.map((tip, idx) => (
+                      <li key={idx}>{tip}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {(place.insights?.topEthnicities || place.insights?.demographicsLanguage) && (
+            <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-xl p-6 shadow-lg space-y-4">
+              <div className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                <Users className="h-5 w-5" />
+                <h2 className="text-xl font-bold">Demographics & language</h2>
+              </div>
+              {place.insights?.demographicsLanguage && (
+                <div className="grid md:grid-cols-2 gap-3 text-sm text-gray-700 dark:text-gray-300">
+                  {place.insights.demographicsLanguage.ageDistribution && (
+                    <div><span className="font-semibold">Age mix: </span>{place.insights.demographicsLanguage.ageDistribution}</div>
+                  )}
+                  {place.insights.demographicsLanguage.language && (
+                    <div><span className="font-semibold">Language: </span>{place.insights.demographicsLanguage.language}</div>
+                  )}
+                  {place.insights.demographicsLanguage.expatDensity && (
+                    <div><span className="font-semibold">Expat presence: </span>{place.insights.demographicsLanguage.expatDensity}</div>
+                  )}
+                  {place.insights.demographicsLanguage.touristVsLocal && (
+                    <div><span className="font-semibold">Tourist vs local: </span>{place.insights.demographicsLanguage.touristVsLocal}</div>
+                  )}
+                </div>
+              )}
+              {place.insights?.topEthnicities && place.insights.topEthnicities.length > 0 && (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-800">
+                    <thead className="bg-gray-50 dark:bg-gray-800/50">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-200">Group</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-200">Share</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                      {place.insights.topEthnicities.map((eth, idx) => (
+                        <tr key={`${eth.group}-${idx}`} className="bg-white dark:bg-gray-900/60">
+                          <td className="px-3 py-2 text-gray-800 dark:text-gray-200">{eth.group}</td>
+                          <td className="px-3 py-2 text-gray-800 dark:text-gray-200">{eth.share}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {place.insights?.weatherByQuarter && place.insights.weatherByQuarter.length > 0 && (
+            <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-xl p-6 shadow-lg space-y-4">
+              <div className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                <Sun className="h-5 w-5" />
+                <h2 className="text-xl font-bold">Weather by quarter</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-800">
+                  <thead className="bg-gray-50 dark:bg-gray-800/50">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-200">Quarter</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-200">Temp (°C)</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-200">Humidity (%)</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-200">Rain (mm)</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-200">Sun hrs</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-200">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                    {place.insights.weatherByQuarter.map((season) => (
+                      <tr key={season.quarter} className="bg-white dark:bg-gray-900/60">
+                        <td className="px-3 py-2 text-gray-800 dark:text-gray-200">{season.quarter}</td>
+                        <td className="px-3 py-2 text-gray-800 dark:text-gray-200">{season.avgTempC ?? 'unknown'}</td>
+                        <td className="px-3 py-2 text-gray-800 dark:text-gray-200">{season.avgHumidity ?? 'unknown'}</td>
+                        <td className="px-3 py-2 text-gray-800 dark:text-gray-200">{season.avgRainfallMm ?? 'unknown'}</td>
+                        <td className="px-3 py-2 text-gray-800 dark:text-gray-200">{season.avgSunshineHours ?? 'unknown'}</td>
+                        <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{season.notes}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {(place.insights?.safetyHealth || place.insights?.costAndLogistics) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {place.insights?.safetyHealth && (
+                <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-xl p-6 shadow-lg space-y-2">
+                  <div className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                    <Shield className="h-5 w-5" />
+                    <h3 className="text-lg font-bold">Safety & health</h3>
+                  </div>
+                  <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+                    {place.insights.safetyHealth.personalSafety && <p><span className="font-semibold">Personal safety: </span>{place.insights.safetyHealth.personalSafety}</p>}
+                    {place.insights.safetyHealth.commonScams && <p><span className="font-semibold">Watch for: </span>{place.insights.safetyHealth.commonScams}</p>}
+                    {place.insights.safetyHealth.healthcareAccess && <p><span className="font-semibold">Healthcare: </span>{place.insights.safetyHealth.healthcareAccess}</p>}
+                    {place.insights.safetyHealth.emergencyNumbers && <p><span className="font-semibold">Emergency #: </span>{place.insights.safetyHealth.emergencyNumbers}</p>}
+                    {place.insights.safetyHealth.healthAdvisories && <p><span className="font-semibold">Health tips: </span>{place.insights.safetyHealth.healthAdvisories}</p>}
+                  </div>
+                </div>
+              )}
+              {place.insights?.costAndLogistics && (
+                <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-xl p-6 shadow-lg space-y-2">
+                  <div className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                    <DollarSign className="h-5 w-5" />
+                    <h3 className="text-lg font-bold">Cost & logistics</h3>
+                  </div>
+                  <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+                    {place.insights.costAndLogistics.budgetTips && <p><span className="font-semibold">Budget: </span>{place.insights.costAndLogistics.budgetTips}</p>}
+                    {place.insights.costAndLogistics.transport && <p><span className="font-semibold">Transit: </span>{place.insights.costAndLogistics.transport}</p>}
+                    {place.insights.costAndLogistics.tipping && <p><span className="font-semibold">Tipping: </span>{place.insights.costAndLogistics.tipping}</p>}
+                    {place.insights.costAndLogistics.lateNightOptions && <p><span className="font-semibold">Late night: </span>{place.insights.costAndLogistics.lateNightOptions}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {(place.insights?.socialScene || place.insights?.connectivity) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {place.insights?.socialScene && (
+                <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-xl p-6 shadow-lg space-y-2">
+                  <div className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                    <Globe2 className="h-5 w-5" />
+                    <h3 className="text-lg font-bold">Social scene</h3>
+                  </div>
+                  <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+                    {place.insights.socialScene.nightlifeAreas && <p><span className="font-semibold">Nightlife zones: </span>{place.insights.socialScene.nightlifeAreas}</p>}
+                    {place.insights.socialScene.events && <p><span className="font-semibold">Events: </span>{place.insights.socialScene.events}</p>}
+                    {place.insights.socialScene.weeknights && <p><span className="font-semibold">Peak nights: </span>{place.insights.socialScene.weeknights}</p>}
+                    {place.insights.socialScene.universityImpact && <p><span className="font-semibold">University impact: </span>{place.insights.socialScene.universityImpact}</p>}
+                  </div>
+                </div>
+              )}
+              {place.insights?.connectivity && (
+                <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-xl p-6 shadow-lg space-y-2">
+                  <div className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                    <Wifi className="h-5 w-5" />
+                    <h3 className="text-lg font-bold">Connectivity & remote work</h3>
+                  </div>
+                  <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+                    {place.insights.connectivity.mobileData && <p><span className="font-semibold">Mobile data: </span>{place.insights.connectivity.mobileData}</p>}
+                    {place.insights.connectivity.wifi && <p><span className="font-semibold">Wi‑Fi: </span>{place.insights.connectivity.wifi}</p>}
+                    {place.insights.connectivity.coworking && <p><span className="font-semibold">Coworking: </span>{place.insights.connectivity.coworking}</p>}
+                    {place.insights.connectivity.noiseLevels && <p><span className="font-semibold">Noise: </span>{place.insights.connectivity.noiseLevels}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {place.insights?.seasonalComfort && (
+            <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-xl p-6 shadow-lg space-y-2">
+              <div className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                <CloudRain className="h-5 w-5" />
+                <h3 className="text-lg font-bold">Seasonal comfort & air quality</h3>
+              </div>
+              <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+                {place.insights.seasonalComfort.aqi && <p><span className="font-semibold">AQI: </span>{place.insights.seasonalComfort.aqi}</p>}
+                {place.insights.seasonalComfort.heatIndex && <p><span className="font-semibold">Heat index: </span>{place.insights.seasonalComfort.heatIndex}</p>}
+                {place.insights.seasonalComfort.pollen && <p><span className="font-semibold">Pollen: </span>{place.insights.seasonalComfort.pollen}</p>}
+                {place.insights.seasonalComfort.weatherImpact && <p><span className="font-semibold">Weather impact: </span>{place.insights.seasonalComfort.weatherImpact}</p>}
+              </div>
+            </div>
+          )}
+
+          {(place.insights?.legalNotes || place.insights?.culturalContext || place.insights?.sources?.length || place.insights?.freshnessNote) && (
+            <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-xl p-6 shadow-lg space-y-3">
+              <div className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                <ListChecks className="h-5 w-5" />
+                <h3 className="text-lg font-bold">Context & sources</h3>
+              </div>
+              {place.insights?.culturalContext && <p className="text-gray-700 dark:text-gray-300 text-sm">{place.insights.culturalContext}</p>}
+              {place.insights?.legalNotes && <p className="text-gray-700 dark:text-gray-300 text-sm">Legal/courtesy: {place.insights.legalNotes}</p>}
+              {place.insights?.sources && place.insights.sources.length > 0 && (
+                <div className="text-sm text-gray-700 dark:text-gray-300">
+                  <span className="font-semibold">Sources: </span>
+                  {place.insights.sources.join(', ')}
+                </div>
+              )}
+              {place.insights?.freshnessNote && (
+                <p className="text-xs text-gray-500">{place.insights.freshnessNote}</p>
               )}
             </div>
           )}
