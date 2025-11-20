@@ -267,7 +267,8 @@ export default function PhotoBattleVotingPage() {
         <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2">
           {[{ side: "left" as const, card: pair.left }, { side: "right" as const, card: pair.right }].map(({ side, card }) => {
             const isSelected = selectedPhotoId === card.id;
-            const previewUrl = card.thumbnailUrl ?? card.url;
+            const displayUrl = card.fullUrl ?? card.url;
+            const previewUrl = card.thumbnailUrl ?? card.mediumUrl ?? displayUrl;
             const isLoaded = loadedPhotos[card.id];
             return (
               <Card
@@ -286,7 +287,7 @@ export default function PhotoBattleVotingPage() {
                     aria-hidden
                   />
                   <Image
-                    src={card.url}
+                    src={displayUrl}
                     alt="Photo option"
                     fill
                     className={`relative object-contain transition-opacity duration-200 ${

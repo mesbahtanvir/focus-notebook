@@ -228,6 +228,7 @@ function ResultsPageContent() {
               const isMergeBase = mergeSourceId === result.id;
               const canMergeWithBase = !!mergeSourceId && mergeSourceId !== result.id;
               const isMergeTargetPending = mergeTargetId === result.id;
+              const resultImage = result.mediumUrl ?? result.url;
               return (
                 <Card
                   key={result.id}
@@ -241,7 +242,7 @@ function ResultsPageContent() {
                     <div className="flex-shrink-0">
                       <div className="relative w-full md:w-48 h-64">
                         <Image
-                          src={result.url}
+                          src={resultImage}
                           alt={`Photo ${index + 1}`}
                           fill
                           sizes="(max-width: 768px) 100vw, 192px"

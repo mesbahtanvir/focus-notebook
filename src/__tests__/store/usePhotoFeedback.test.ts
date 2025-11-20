@@ -139,12 +139,14 @@ describe("usePhotoFeedback gallery + session flow", () => {
       await usePhotoFeedback.getState().uploadToLibrary([file]);
     });
 
-    expect(mockUploadBytesResumable).toHaveBeenCalledTimes(1);
+    // Two uploads: medium + original
+    expect(mockUploadBytesResumable).toHaveBeenCalledTimes(2);
     expect(mockSetDoc).toHaveBeenCalledTimes(1);
     const [latest] = usePhotoFeedback.getState().library;
     expect(latest).toMatchObject({
       ownerId: "user-123",
-      url: expect.stringContaining("https://signed.example.com/images/original"),
+      url: expect.stringContaining("https://signed.example.com/images/medium"),
+      fullUrl: expect.stringContaining("https://signed.example.com/images/original"),
     });
   });
 
@@ -152,7 +154,10 @@ describe("usePhotoFeedback gallery + session flow", () => {
     const galleryItem = {
       id: "lib-photo-1",
       ownerId: "user-123",
-      url: "https://example.com/photo-1.jpg",
+      url: "https://example.com/photo-1-medium.jpg",
+      mediumUrl: "https://example.com/photo-1-medium.jpg",
+      thumbnailUrl: "https://example.com/photo-1-thumb.jpg",
+      fullUrl: "https://example.com/photo-1-full.jpg",
       storagePath: "users/user-123/photo-library/lib-photo-1",
       createdAt: new Date("2024-01-01").toISOString(),
     };
@@ -181,7 +186,9 @@ describe("usePhotoFeedback gallery + session flow", () => {
         photos: [
           expect.objectContaining({
             libraryId: "lib-photo-1",
-            url: "https://example.com/photo-1.jpg",
+            url: "https://example.com/photo-1-medium.jpg",
+            mediumUrl: "https://example.com/photo-1-medium.jpg",
+            fullUrl: "https://example.com/photo-1-full.jpg",
             rating: 1200,
           }),
         ],

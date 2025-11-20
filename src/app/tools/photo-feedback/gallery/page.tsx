@@ -105,6 +105,9 @@ export default function GalleryManagerPage() {
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
   const [isDeletingPoor, setIsDeletingPoor] = useState(false);
+  const [previewPhoto, setPreviewPhoto] = useState<PhotoLibraryItem | null>(null);
+  const [previewZoom, setPreviewZoom] = useState(1);
+  const [previewDimensions, setPreviewDimensions] = useState<{ width: number; height: number } | null>(null);
 
   const galleryContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -139,6 +142,31 @@ export default function GalleryManagerPage() {
       return next;
     });
   }, [library]);
+
+  useEffect(() => {
+    // Reset zoom whenever a new photo is opened
+    setPreviewZoom(1);
+    if (!previewPhoto) {
+      setPreviewDimensions(null);
+      return;
+    }
+    let active = true;
+    const img = new Image();
+    img.src = previewPhoto.url;
+    img.onload = () => {
+      if (!active) return;
+      const width = img.naturalWidth || 1;
+      const height = img.naturalHeight || 1;
+      setPreviewDimensions({ width, height });
+    };
+    img.onerror = () => {
+      if (!active) return;
+      setPreviewDimensions(null);
+    };
+    return () => {
+      active = false;
+    };
+  }, [previewPhoto]);
 
   useInfiniteGallery({
     items: library,
@@ -316,10 +344,15 @@ export default function GalleryManagerPage() {
     }
 
     try {
-      const processed = await Promise.all(imageFiles.map(resizeImageIfNeeded));
-      setUploadStatus({ current: 0, total: processed.length });
+      const processedPairs = await Promise.all(
+        imageFiles.map(async file => {
+          const resized = await resizeImageIfNeeded(file);
+          return { original: file, processed: resized };
+        })
+      );
+      setUploadStatus({ current: 0, total: processedPairs.length });
       await uploadToLibrary(
-        processed,
+        processedPairs,
         (current, total) => {
           setUploadStatus({ current, total });
         },
@@ -344,7 +377,7 @@ export default function GalleryManagerPage() {
       );
       toastSuccess({
         title: "Gallery updated",
-        description: `${processed.length} photo${processed.length > 1 ? "s" : ""} added.`,
+        description: `${processedPairs.length} photo${processedPairs.length > 1 ? "s" : ""} added.`,
       });
     } catch (err) {
       const description =
@@ -496,7 +529,10 @@ export default function GalleryManagerPage() {
                   Scroll to load more • Showing {visiblePhotos.length} of {library.length}
                 </div>
               </div>
-              <div ref={galleryContainerRef} className="flex-1 overflow-y-auto px-6 pb-8">
+              <div
+                ref={galleryContainerRef}
+                className="flex-1 overflow-y-auto px-6 pb-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              >
                 {library.length === 0 ? (
                   <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-slate-600 dark:text-white/80">
                     <p className="text-lg font-semibold text-slate-900 dark:text-white">Your gallery is empty</p>
@@ -518,6 +554,9 @@ export default function GalleryManagerPage() {
                       const winRate = totalVotes > 0 ? Math.round(((item.stats?.yesVotes ?? 0) / totalVotes) * 100) : null;
                       const sessionCount = item.stats?.sessionCount ?? 0;
                       const isSelected = selectedPhotoIds.has(item.id);
+                      const gridUrl = item.thumbnailUrl ?? item.mediumUrl ?? item.url;
+                      // Consider variants "ready" if we have at least a medium or thumbnail (or legacy single URL).
+                      const variantsReady = !!(item.thumbnailUrl || item.mediumUrl || item.url);
 
                       return (
                         <div
@@ -525,7 +564,7 @@ export default function GalleryManagerPage() {
                           className={`group relative overflow-hidden rounded-3xl border bg-white/80 text-left text-gray-900 transition-all dark:bg-slate-900/70 ${
                             isSelected ? "border-purple-400 ring-2 ring-purple-300/60" : "border-white/0"
                           }`}
-                          onClick={() => togglePhotoSelection(item.id)}
+                          onClick={() => setPreviewPhoto(item)}
                           role="presentation"
                         >
                           <button
@@ -554,12 +593,17 @@ export default function GalleryManagerPage() {
                           </button>
                           <div className="relative aspect-[3/4] w-full bg-slate-900">
                             <NextImage
-                              src={item.url}
+                              src={gridUrl}
                               alt="Gallery photo"
                               fill
                               sizes="(max-width: 768px) 50vw, 240px"
                               className="object-cover"
                             />
+                            {!variantsReady && (
+                              <span className="absolute left-3 top-3 rounded-full bg-amber-500/90 px-3 py-1 text-[11px] font-semibold text-white shadow-sm">
+                                Processing variants…
+                              </span>
+                            )}
                             {winRate !== null && (
                               <span className="absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white">
                                 {winRate}% win • {totalVotes} votes
@@ -645,6 +689,69 @@ export default function GalleryManagerPage() {
         >
           <Upload className="h-5 w-5" /> Upload photos
         </button>
+      )}
+
+      {previewPhoto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="absolute inset-0" onClick={() => setPreviewPhoto(null)} aria-hidden />
+          <div className="relative z-10 w-full max-w-6xl">
+            <div className="relative overflow-hidden rounded-3xl bg-black/80 shadow-2xl">
+              <button
+                type="button"
+                className="absolute right-4 top-4 z-20 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
+                onClick={() => setPreviewPhoto(null)}
+                aria-label="Close preview"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <div
+                className="relative w-full overflow-auto bg-black/60 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                onWheel={event => {
+                  if (!previewPhoto) return;
+                  if (!event.ctrlKey && !event.metaKey) return;
+                  event.preventDefault();
+                  const delta = -event.deltaY * 0.0015;
+                  setPreviewZoom(prev => Math.min(4, Math.max(1, prev + delta)));
+                }}
+                onDoubleClick={() =>
+                  setPreviewZoom(prev => {
+                    if (prev < 1.6) return 2;
+                    if (prev < 2.6) return 3;
+                    return 1;
+                  })
+                }
+                style={{
+                  touchAction: "pinch-zoom pan-x pan-y",
+                  maxHeight: "80vh",
+                  aspectRatio: previewDimensions
+                    ? `${previewDimensions.width} / ${previewDimensions.height}`
+                    : "4 / 3",
+                }}
+              >
+                <div className="flex h-full w-full items-center justify-center p-4" role="presentation">
+                  <NextImage
+                    src={previewPhoto.fullUrl ?? previewPhoto.url}
+                    alt="Large preview"
+                    width={1920}
+                    height={1200}
+                    draggable={false}
+                    className="select-none rounded-2xl bg-black/40"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                      transform: `scale(${previewZoom})`,
+                      transformOrigin: "center center",
+                      transition: "transform 150ms ease",
+                    }}
+                    sizes="90vw"
+                    priority
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {photoPendingDelete && (

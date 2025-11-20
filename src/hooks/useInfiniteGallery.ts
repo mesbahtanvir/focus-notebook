@@ -20,17 +20,31 @@ export function useInfiniteGallery({
     const container = containerRef.current;
     if (!container) return;
 
-    const handleScroll = () => {
+    const totalPages = Math.max(1, Math.ceil(Math.max(items.length, 1) / pageSize));
+    const maybeLoadMore = () => {
+      if (totalPages <= 1) return;
       const { scrollTop, scrollHeight, clientHeight } = container;
-      if (scrollHeight - scrollTop - clientHeight < 200) {
-        const totalPages = Math.max(1, Math.ceil(Math.max(items.length, 1) / pageSize));
-        if (currentPage < totalPages - 1) {
-          setCurrentPage(currentPage + 1);
-        }
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      const cannotScroll = scrollHeight <= clientHeight + 8;
+      if (distanceFromBottom < 200 || cannotScroll) {
+        setCurrentPage(prev => Math.min(prev + 1, totalPages - 1));
       }
     };
 
+    const handleScroll = () => {
+      maybeLoadMore();
+    };
+
     container.addEventListener("scroll", handleScroll);
-    return () => container.removeEventListener("scroll", handleScroll);
-  }, [items.length, pageSize, currentPage, setCurrentPage, containerRef]);
+    const resizeObserver = new ResizeObserver(() => maybeLoadMore());
+    resizeObserver.observe(container);
+
+    // Kickstart load when the list fits without scrolling
+    maybeLoadMore();
+
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+      resizeObserver.disconnect();
+    };
+  }, [items.length, pageSize, setCurrentPage, containerRef]);
 }
