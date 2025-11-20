@@ -180,12 +180,12 @@ export default function PhotoBattleVotingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-4 md:p-8">
-      <div className="max-w-4xl mx-auto flex flex-col gap-4">
+      <div className="max-w-6xl mx-auto flex h-full min-h-[70vh] flex-col gap-4">
         <p className="text-center text-sm text-purple-100/80">
           Click a photo or press ← / → to choose which shot looks better.
         </p>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2">
           {[{ side: "left" as const, card: pair.left }, { side: "right" as const, card: pair.right }].map(({ side, card }) => {
             const isSelected = selectedPhotoId === card.id;
             const previewUrl = card.thumbnailUrl ?? card.url;
@@ -193,12 +193,12 @@ export default function PhotoBattleVotingPage() {
             return (
               <Card
                 key={card.id}
-                className={`cursor-pointer overflow-hidden border-2 transition-all bg-white/5 ${
+                className={`group relative flex h-full cursor-pointer overflow-hidden border-2 bg-white/5 transition-all ${
                   isSelected ? "border-white ring-2 ring-white/70" : "border-white/10 hover:border-white/40"
                 } ${isSubmitting ? "pointer-events-none opacity-70" : ""}`}
                 onClick={() => handleVote(card, side === "left" ? pair.right : pair.left)}
               >
-                <div className="relative aspect-[3/4] overflow-hidden">
+                <div className="relative h-[46vh] min-h-[280px] w-full overflow-hidden rounded-lg md:h-[70vh]">
                   <div
                     className={`absolute inset-0 bg-cover bg-center blur-xl scale-110 transition-opacity duration-200 ${
                       isLoaded ? "opacity-0" : "opacity-100"
@@ -210,7 +210,9 @@ export default function PhotoBattleVotingPage() {
                     src={card.url}
                     alt="Photo option"
                     fill
-                    className={`relative object-cover transition-opacity duration-200 ${isLoaded ? "opacity-100" : "opacity-0"}`}
+                    className={`relative object-contain transition-opacity duration-200 ${
+                      isLoaded ? "opacity-100" : "opacity-0"
+                    }`}
                     sizes="(max-width: 768px) 100vw, 50vw"
                     onLoadingComplete={() =>
                       setLoadedPhotos(prev => ({
