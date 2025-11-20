@@ -97,9 +97,10 @@ export default function GalleryManagerPage() {
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   const [uploadJobs, setUploadJobs] = useState<Record<string, UploadProgressEvent>>({});
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
-  const [bulkAction, setBulkAction] = useState<"selected" | "all" | null>(null);
+  const [bulkAction, setBulkAction] = useState<"selected" | "all" | "poor" | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [isDeletingPoor, setIsDeletingPoor] = useState(false);
 
   const galleryContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -142,6 +143,12 @@ export default function GalleryManagerPage() {
   const activeUploadJobs = Object.values(uploadJobs);
   const selectedCount = selectedPhotoIds.size;
   const allSelected = library.length > 0 && selectedCount === library.length;
+  const poorPerformers = library.filter(photo => {
+    const totalVotes = photo.stats?.totalVotes ?? 0;
+    const yesVotes = photo.stats?.yesVotes ?? 0;
+    return totalVotes >= 5 && yesVotes === 0;
+  });
+  const poorCount = poorPerformers.length;
 
   const togglePhotoSelection = (photoId: string) => {
     if (!canManage) return;
@@ -234,6 +241,34 @@ export default function GalleryManagerPage() {
     }
   };
 
+  const handleDeletePoorPerformers = async () => {
+    if (!canManage || poorCount === 0) return;
+    setIsDeletingPoor(true);
+    try {
+      for (const photo of poorPerformers) {
+        await deleteLibraryPhoto(photo.id);
+      }
+      toastSuccess({
+        title: "Poor performers removed",
+        description: `${poorCount} photo${poorCount === 1 ? "" : "s"} with zero wins deleted.`,
+      });
+      setSelectedPhotoIds(prev => {
+        if (prev.size === 0) return prev;
+        const next = new Set(prev);
+        poorPerformers.forEach(photo => next.delete(photo.id));
+        return next;
+      });
+    } catch (error) {
+      toastError({
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsDeletingPoor(false);
+      setBulkAction(null);
+    }
+  };
+
   const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canManage) return;
     const files = Array.from(e.target.files || []);
@@ -313,6 +348,8 @@ export default function GalleryManagerPage() {
       void handleBulkDelete();
     } else if (bulkAction === "all") {
       void handleDeleteAll();
+    } else if (bulkAction === "poor") {
+      void handleDeletePoorPerformers();
     }
   };
 
@@ -373,6 +410,14 @@ export default function GalleryManagerPage() {
                 disabled={library.length === 0 || isDeletingAll}
               >
                 Delete all
+              </Button>
+              <Button
+                variant="outline"
+                className="text-amber-300 border-amber-400/40 hover:bg-amber-400/10"
+                onClick={() => setBulkAction("poor")}
+                disabled={poorCount === 0 || isDeletingPoor}
+              >
+                Delete poor performers
               </Button>
             </div>
           </div>
@@ -609,31 +654,52 @@ export default function GalleryManagerPage() {
             <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
               <AlertTriangle className="h-5 w-5" />
               <h3 className="text-lg font-semibold">
-                {bulkAction === "selected" ? "Delete selected photos?" : "Delete entire gallery?"}
+                {bulkAction === "selected"
+                  ? "Delete selected photos?"
+                  : bulkAction === "poor"
+                    ? "Delete poor performers?"
+                    : "Delete entire gallery?"}
               </h3>
             </div>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
               {bulkAction === "selected"
                 ? `This will permanently delete ${selectedCount} photo${selectedCount === 1 ? "" : "s"}.`
-                : "This removes every image and its stats. You can't undo this."}
+                : bulkAction === "poor"
+                  ? `This removes ${poorCount} photo${poorCount === 1 ? "" : "s"} that never won despite at least five battles.`
+                  : "This removes every image and its stats. You can't undo this."}
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Button variant="outline" className="flex-1" onClick={() => setBulkAction(null)} disabled={isBulkDeleting || isDeletingAll}>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setBulkAction(null)}
+                disabled={isBulkDeleting || isDeletingAll || isDeletingPoor}
+              >
                 Cancel
               </Button>
               <Button
                 type="button"
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                 onClick={confirmBulkAction}
-                disabled={(bulkAction === "selected" && isBulkDeleting) || (bulkAction === "all" && isDeletingAll)}
+                disabled={
+                  (bulkAction === "selected" && isBulkDeleting) ||
+                  (bulkAction === "all" && isDeletingAll) ||
+                  (bulkAction === "poor" && isDeletingPoor)
+                }
               >
-                {(bulkAction === "selected" && isBulkDeleting) || (bulkAction === "all" && isDeletingAll) ? (
+                {(bulkAction === "selected" && isBulkDeleting) ||
+                (bulkAction === "all" && isDeletingAll) ||
+                (bulkAction === "poor" && isDeletingPoor) ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Working…
                   </>
                 ) : (
-                  bulkAction === "selected" ? "Delete selected" : "Delete all"
+                  bulkAction === "selected"
+                    ? "Delete selected"
+                    : bulkAction === "poor"
+                      ? "Delete poor performers"
+                      : "Delete all"
                 )}
               </Button>
             </div>
