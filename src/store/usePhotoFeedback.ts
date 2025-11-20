@@ -97,6 +97,7 @@ type State = {
   deleteAllLibraryPhotos: () => Promise<void>;
   loadSession: (sessionId: string) => Promise<PhotoBattle | null>;
   submitVote: (sessionId: string, winnerId: string, loserId: string) => Promise<void>;
+  deleteSessionPhoto: (sessionId: string, photoId: string) => Promise<void>;
   loadResults: (sessionId: string, secretKey: string) => Promise<BattlePhoto[]>;
   loadUserSessions: () => Promise<PhotoBattle[]>;
   setSessionPublic: (sessionId: string, isPublic: boolean) => Promise<void>;
@@ -560,6 +561,72 @@ export const usePhotoFeedback = create<State>((set, get) => ({
       });
     } catch (error) {
       console.error('Error submitting vote:', error);
+      throw error;
+    }
+  },
+
+  deleteSessionPhoto: async (sessionId: string, photoId: string) => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) {
+      throw new Error('You must be signed in to delete battle photos.');
+    }
+
+    let removedPhoto: BattlePhoto | null = null;
+    try {
+      await runTransaction(db, async transaction => {
+        const sessionRef = doc(db, 'photoBattles', sessionId);
+        const snap = await transaction.get(sessionRef);
+        if (!snap.exists()) {
+          throw new Error('Session not found');
+        }
+
+        const session = snap.data() as PhotoBattle;
+        if (session.ownerId !== user.uid) {
+          throw new Error('You do not have permission to update this session.');
+        }
+
+        const index = session.photos.findIndex(photo => photo.id === photoId);
+        if (index === -1) {
+          throw new Error('Photo not found in this battle.');
+        }
+
+        removedPhoto = session.photos[index];
+        const updatedPhotos = session.photos.filter(photo => photo.id !== photoId);
+        transaction.update(sessionRef, {
+          photos: updatedPhotos,
+          updatedAt: new Date().toISOString(),
+        });
+      });
+
+      if (removedPhoto?.storagePath) {
+        const storageRef = ref(storage, removedPhoto.storagePath);
+        await deleteObject(storageRef).catch(error => {
+          console.warn('Unable to delete battle photo file (continuing):', error);
+        });
+      }
+
+      if (removedPhoto?.libraryId) {
+        await deleteDoc(doc(db, `users/${user.uid}/photoLibrary`, removedPhoto.libraryId)).catch(error => {
+          console.warn('Unable to remove library photo entry (continuing):', error);
+        });
+      }
+
+      const prune = (photos: BattlePhoto[]) => photos.filter(photo => photo.id !== photoId);
+      set(state => ({
+        results: prune(state.results),
+        currentSession:
+          state.currentSession && state.currentSession.id === sessionId
+            ? { ...state.currentSession, photos: prune(state.currentSession.photos) }
+            : state.currentSession,
+        userSessions: state.userSessions.map(session =>
+          session.id === sessionId ? { ...session, photos: prune(session.photos) } : session
+        ),
+        library: removedPhoto?.libraryId
+          ? state.library.filter(entry => entry.id !== removedPhoto?.libraryId)
+          : state.library,
+      }));
+    } catch (error) {
+      console.error('Failed to delete battle photo:', error);
       throw error;
     }
   },

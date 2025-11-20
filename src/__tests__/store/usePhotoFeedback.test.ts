@@ -11,6 +11,7 @@ const mockSetDoc = jest.fn();
 const mockGetDocs = jest.fn();
 const mockGetDoc = jest.fn();
 const mockUpdateDoc = jest.fn();
+const mockDeleteDoc = jest.fn();
 const mockRunTransaction = jest.fn();
 
 jest.mock("firebase/firestore", () => {
@@ -43,6 +44,7 @@ jest.mock("firebase/firestore", () => {
     getDoc: (...args: unknown[]) => mockGetDoc(...args),
     Timestamp: MockTimestamp,
     updateDoc: (...args: unknown[]) => mockUpdateDoc(...args),
+    deleteDoc: (...args: unknown[]) => mockDeleteDoc(...args),
     increment: (val: number) => ({ __op: "increment", val }),
     arrayUnion: (...values: unknown[]) => values,
     runTransaction: (...args: unknown[]) => mockRunTransaction(...args),
@@ -52,6 +54,7 @@ jest.mock("firebase/firestore", () => {
 const mockUploadBytes = jest.fn();
 const mockUploadBytesResumable = jest.fn();
 const mockGetDownloadURL = jest.fn();
+const mockDeleteObject = jest.fn();
 const mockHttpsCallable = jest.fn();
 
 jest.mock("firebase/storage", () => ({
@@ -59,6 +62,7 @@ jest.mock("firebase/storage", () => ({
   uploadBytes: (...args: unknown[]) => mockUploadBytes(...args),
   uploadBytesResumable: (...args: unknown[]) => mockUploadBytesResumable(...args),
   getDownloadURL: (...args: unknown[]) => mockGetDownloadURL(...args),
+  deleteObject: (...args: unknown[]) => mockDeleteObject(...args),
 }));
 
 jest.mock("firebase/functions", () => ({
@@ -332,6 +336,113 @@ describe("usePhotoFeedback gallery + session flow", () => {
 
     expect(results[0].id).toBe("a");
     expect(usePhotoFeedback.getState().results[0].id).toBe("a");
+  });
+
+  it("deletes battle photos and cleans up linked resources", async () => {
+    const buildPhoto = (id: string, libraryId: string) => ({
+      id,
+      url: `${id}.jpg`,
+      storagePath: `images/original/${libraryId}.jpg`,
+      libraryId,
+      rating: 1200,
+      wins: 0,
+      losses: 0,
+      totalVotes: 0,
+    });
+    const sessionPhotos = [buildPhoto("photo-1", "lib-1"), buildPhoto("photo-2", "lib-2")];
+
+    usePhotoFeedback.setState(state => ({
+      ...state,
+      currentSession: {
+        id: "session-1",
+        ownerId: "user-123",
+        creatorName: "Alex",
+        photos: sessionPhotos.map(photo => ({ ...photo })),
+        secretKey: "secret",
+        createdAt: new Date().toISOString(),
+      },
+      results: sessionPhotos.map(photo => ({ ...photo })),
+      userSessions: [
+        {
+          id: "session-1",
+          ownerId: "user-123",
+          creatorName: "Alex",
+          photos: sessionPhotos.map(photo => ({ ...photo })),
+          secretKey: "secret",
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      library: sessionPhotos.map(photo => ({
+        id: photo.libraryId!,
+        ownerId: "user-123",
+        url: photo.url,
+        storagePath: photo.storagePath,
+        createdAt: new Date().toISOString(),
+      })),
+    }));
+
+    mockDeleteObject.mockResolvedValue(undefined);
+    mockDeleteDoc.mockResolvedValue(undefined);
+    mockRunTransaction.mockImplementationOnce(async (_db, updater: any) => {
+      const transaction = {
+        get: jest.fn().mockResolvedValue({
+          exists: () => true,
+          data: () => ({
+            ownerId: "user-123",
+            photos: sessionPhotos.map(photo => ({ ...photo })),
+          }),
+        }),
+        update: jest.fn(),
+      };
+      await updater(transaction);
+      expect(transaction.update).toHaveBeenCalled();
+      const [, payload] = transaction.update.mock.calls[0];
+      expect(payload.photos).toHaveLength(1);
+      expect(payload.photos[0].id).toBe("photo-2");
+    });
+
+    await act(async () => {
+      await usePhotoFeedback.getState().deleteSessionPhoto("session-1", "photo-1");
+    });
+
+    expect(mockDeleteObject).toHaveBeenCalledWith(expect.objectContaining({ path: "images/original/lib-1.jpg" }));
+    expect(mockDeleteDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ path: expect.stringContaining("users/user-123/photoLibrary/lib-1") })
+    );
+
+    const state = usePhotoFeedback.getState();
+    expect(state.currentSession?.photos).toHaveLength(1);
+    expect(state.results).toHaveLength(1);
+    expect(state.userSessions[0].photos).toHaveLength(1);
+    expect(state.library.find(photo => photo.id === "lib-1")).toBeUndefined();
+  });
+
+  it("throws when attempting to delete a photo from another user's session", async () => {
+    mockRunTransaction.mockImplementationOnce(async (_db, updater: any) => {
+      const transaction = {
+        get: jest.fn().mockResolvedValue({
+          exists: () => true,
+          data: () => ({
+            ownerId: "other-user",
+            photos: [{ id: "photo-1", rating: 1200, wins: 0, losses: 0, totalVotes: 0 }],
+          }),
+        }),
+        update: jest.fn(),
+      };
+      await updater(transaction);
+    });
+
+    const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(
+        usePhotoFeedback.getState().deleteSessionPhoto("session-1", "photo-1")
+      ).rejects.toThrow("You do not have permission to update this session.");
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+
+    expect(mockDeleteObject).not.toHaveBeenCalled();
+    expect(mockDeleteDoc).not.toHaveBeenCalled();
   });
 
   it("updates ratings via submitVote transactions", async () => {

@@ -3,10 +3,11 @@
 import { useEffect, useState, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { usePhotoFeedback } from "@/store/usePhotoFeedback";
-import { Trophy, TrendingUp, ThumbsUp, ThumbsDown, Users, Loader2, Share2 } from "lucide-react";
+import { Trophy, TrendingUp, Users, Loader2, Share2, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import Image from "next/image";
+import { toastError, toastSuccess } from "@/lib/toast-presets";
 
 function ResultsPageContent() {
   const params = useParams();
@@ -14,13 +15,43 @@ function ResultsPageContent() {
   const sessionId = params.id as string;
   const secretKey = searchParams.get('key');
 
-  const { loadResults, results, isLoading, error } = usePhotoFeedback();
+  const { loadResults, results, isLoading, error, deleteSessionPhoto } = usePhotoFeedback();
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
 
   useEffect(() => {
     if (sessionId && secretKey) {
       loadResults(sessionId, secretKey);
     }
   }, [sessionId, secretKey, loadResults]);
+
+  const handleDeletePhoto = async (photoId: string) => {
+    if (!sessionId) return;
+    const confirmed =
+      typeof window === "undefined"
+        ? false
+        : window.confirm(
+            "Remove this photo from your leaderboard? This permanently deletes it from your account."
+          );
+    if (!confirmed) {
+      return;
+    }
+    setDeletingPhotoId(photoId);
+    try {
+      await deleteSessionPhoto(sessionId, photoId);
+      toastSuccess({
+        title: "Photo removed",
+        description: "The shot has been deleted from your leaderboard.",
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete photo. Please try again.";
+      toastError({
+        title: "Could not delete photo",
+        description: message,
+      });
+    } finally {
+      setDeletingPhotoId(null);
+    }
+  };
 
   if (!secretKey) {
     return (
@@ -171,10 +202,30 @@ function ResultsPageContent() {
                     </div>
 
                     <div className="flex-1 space-y-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">Photo #{index + 1}</h3>
-                        <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                          {result.rating} pts
+                        <div className="flex items-center gap-4">
+                          <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                            {result.rating} pts
+                          </div>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-2 text-sm font-semibold text-red-500 hover:text-red-400 transition disabled:opacity-50"
+                            onClick={() => handleDeletePhoto(result.id)}
+                            disabled={deletingPhotoId === result.id}
+                          >
+                            {deletingPhotoId === result.id ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Removing…
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="w-4 h-4" />
+                                Delete photo
+                              </>
+                            )}
+                          </button>
                         </div>
                       </div>
 
