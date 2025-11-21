@@ -909,17 +909,33 @@ export const toolSpecs: Record<string, ToolSpec> = {
       'Integrate with existing thought processing workflow',
     ],
     description:
-      'Convert thoughts containing scheduling information into structured calendar events. Handles appointments, meetings, deadlines, and scheduled activities.',
+      'Convert thoughts containing scheduling information into structured calendar events. Handles appointments, meetings, deadlines, and scheduled activities with natural language date parsing.',
     primaryTags: ['calendar', 'scheduled'],
     expectedCapabilities: ['createsEntries'],
     guidance: [
       ...baseGuidance,
       'Only create calendar events when specific time information is mentioned.',
-      'Extract dates, times, locations, and appropriate categories.',
-      'Use high confidence (90+) only when scheduling details are clear.',
-      'Categorize events as Work, Personal, Health, Social, or Learning.',
+      'Parse natural language dates: "tomorrow", "next Monday", "in 2 weeks", etc.',
+      'Use VERY HIGH confidence (99-100) when user explicitly requests calendar event creation.',
+      'Use high confidence (90-98) when scheduling details are clear and specific.',
+      'Use medium confidence (70-89) when date/time is somewhat clear but needs interpretation.',
+      'Extract dates (YYYY-MM-DD), times (HH:MM 24-hour format), locations, and descriptions.',
+      'Categorize events as Work, Personal, Health, Social, or Learning based on context.',
+      'For recurring events, detect patterns like "every Monday", "weekly", "monthly".',
     ],
     positiveExamples: [
+      {
+        thought: 'Create a calendar event to call mom tomorrow at 5pm',
+        rationale:
+          'EXPLICIT request to create calendar event with clear date ("tomorrow") and time (5pm). This should be auto-applied with very high confidence.',
+        recommendedActions: [
+          {
+            type: 'createCalendarEvent',
+            confidence: 99,
+            dataSummary: 'Call Mom on [tomorrow date] at 17:00 (Personal)',
+          },
+        ],
+      },
       {
         thought: 'Doctor appointment tomorrow at 2pm, need to remember to bring insurance card',
         rationale:
@@ -928,19 +944,43 @@ export const toolSpecs: Record<string, ToolSpec> = {
           {
             type: 'createCalendarEvent',
             confidence: 95,
-            dataSummary: 'Doctor Appointment on 2024-01-16 at 14:00 (Health)',
+            dataSummary: 'Doctor Appointment on [tomorrow date] at 14:00 (Health)',
           },
         ],
       },
       {
         thought: 'Team meeting next Monday at 10am in the conference room',
         rationale:
-          'Clear meeting details with time, location, and work context.',
+          'Clear meeting details with relative date, time, location, and work context.',
         recommendedActions: [
           {
             type: 'createCalendarEvent',
-            confidence: 90,
-            dataSummary: 'Team Meeting on 2024-01-22 at 10:00 at conference room (Work)',
+            confidence: 92,
+            dataSummary: 'Team Meeting on [next Monday date] at 10:00 at conference room (Work)',
+          },
+        ],
+      },
+      {
+        thought: 'Coffee with Sarah on Friday afternoon around 3',
+        rationale:
+          'Social event with specific day and approximate time.',
+        recommendedActions: [
+          {
+            type: 'createCalendarEvent',
+            confidence: 88,
+            dataSummary: 'Coffee with Sarah on [next Friday date] at 15:00 (Social)',
+          },
+        ],
+      },
+      {
+        thought: 'Dentist checkup in 2 weeks on the 15th at 9:30am',
+        rationale:
+          'Future appointment with specific date and time.',
+        recommendedActions: [
+          {
+            type: 'createCalendarEvent',
+            confidence: 95,
+            dataSummary: 'Dentist Checkup on [calculated date] at 09:30 (Health)',
           },
         ],
       },
@@ -949,13 +989,22 @@ export const toolSpecs: Record<string, ToolSpec> = {
       {
         thought: 'Should schedule a meeting sometime next week',
         rationale: 'Too vague - no specific date or time provided.',
-        recommendedActions: [],
+        recommendedActions: [
+          { type: 'createTask', confidence: 75, dataSummary: 'Schedule meeting for next week' },
+        ],
       },
       {
         thought: 'Remember to call mom',
         rationale: 'No scheduling information - better suited for tasks tool.',
         recommendedActions: [
-          { type: 'addTag', dataSummary: 'tool-tasks' },
+          { type: 'createTask', confidence: 85, dataSummary: 'Call mom' },
+        ],
+      },
+      {
+        thought: 'Need to meet with the team soon',
+        rationale: 'No specific timing - create task instead of calendar event.',
+        recommendedActions: [
+          { type: 'createTask', confidence: 80, dataSummary: 'Schedule team meeting' },
         ],
       },
     ],

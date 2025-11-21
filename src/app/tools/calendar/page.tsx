@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, MapPin, Tag, Plus, ChevronDown, Download, Upload } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, MapPin, Tag, Plus, ChevronDown, Download, Upload, Brain, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ModalPortal } from "@/components/ui/modal-portal";
 import { useCalendar } from "@/store/useCalendar";
 import { useTrackToolUsage } from "@/hooks/useTrackToolUsage";
 import { useToast } from "@/hooks/use-toast";
@@ -44,6 +46,7 @@ const makeDraft = (dateKey = formatDateKey(new Date())): EventDraft => ({
 
 function CalendarTool() {
   useTrackToolUsage("calendar");
+  const router = useRouter();
 
   const events = useCalendar((state) => state.events);
   const addEvent = useCalendar((state) => state.addEvent);
@@ -313,9 +316,17 @@ function CalendarTool() {
                             {dayEvents.slice(0, 3).map((event) => (
                               <div
                                 key={event.id}
-                                className={`text-[11px] px-2 py-0.5 rounded-full text-white truncate bg-gradient-to-r ${event.color}`}
+                                className={`text-[11px] px-2 py-0.5 rounded-full text-white truncate bg-gradient-to-r ${event.color} ${event.thoughtId ? 'cursor-pointer hover:opacity-80' : ''} flex items-center gap-1`}
+                                onClick={(e) => {
+                                  if (event.thoughtId) {
+                                    e.stopPropagation();
+                                    router.push(`/tools/thoughts?thoughtId=${event.thoughtId}`);
+                                  }
+                                }}
+                                title={event.thoughtId ? 'Created from thought - click to view' : event.title}
                               >
-                                {event.title}
+                                {event.thoughtId && <Brain className="h-2.5 w-2.5 flex-shrink-0" />}
+                                <span className="truncate">{event.title}</span>
                               </div>
                             ))}
                             {dayEvents.length > 3 && (
@@ -437,10 +448,17 @@ function CalendarTool() {
                     selectedDayEvents.map((event) => {
                       const meta = CATEGORY_META[event.category as CategoryName] ?? CATEGORY_META[DEFAULT_CATEGORY];
                       return (
-                        <div key={event.id} className={`rounded-xl border px-4 py-3 ${meta.bg}`}>
+                        <div key={event.id} className={`rounded-xl border px-4 py-3 ${meta.bg} ${event.thoughtId ? 'cursor-pointer hover:ring-2 hover:ring-purple-400 transition-all' : ''}`} onClick={() => event.thoughtId && router.push(`/tools/thoughts?thoughtId=${event.thoughtId}`)}>
                           <div className="flex flex-col gap-2">
                             <div className="flex items-center justify-between">
-                              <p className="font-semibold text-slate-900 dark:text-slate-50">{event.title}</p>
+                              <div className="flex items-center gap-2">
+                                {event.thoughtId && (
+                                  <span title="Created from thought">
+                                    <Brain className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                  </span>
+                                )}
+                                <p className="font-semibold text-slate-900 dark:text-slate-50">{event.title}</p>
+                              </div>
                               <span className="text-xs text-slate-500">{event.category}</span>
                             </div>
                             <div className="flex flex-wrap gap-4 text-sm text-slate-600 dark:text-slate-300">
@@ -459,6 +477,12 @@ function CalendarTool() {
                             </div>
                             {event.description && (
                               <p className="text-sm text-slate-700 dark:text-slate-200">{event.description}</p>
+                            )}
+                            {event.thoughtId && (
+                              <div className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400 mt-1">
+                                <ExternalLink className="h-3 w-3" />
+                                <span>View source thought</span>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -484,10 +508,17 @@ function CalendarTool() {
               const meta = CATEGORY_META[event.category as CategoryName] ?? CATEGORY_META[DEFAULT_CATEGORY];
               const eventDate = new Date(event.date);
               return (
-                <div key={event.id} className={`rounded-xl border px-4 py-3 ${meta.bg}`}>
+                <div key={event.id} className={`rounded-xl border px-4 py-3 ${meta.bg} ${event.thoughtId ? 'cursor-pointer hover:ring-2 hover:ring-purple-400 transition-all' : ''}`} onClick={() => event.thoughtId && router.push(`/tools/thoughts?thoughtId=${event.thoughtId}`)}>
                   <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="font-semibold text-slate-900 dark:text-slate-50">{event.title}</p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        {event.thoughtId && (
+                          <span title="Created from thought">
+                            <Brain className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                          </span>
+                        )}
+                        <p className="font-semibold text-slate-900 dark:text-slate-50">{event.title}</p>
+                      </div>
                       <p className="text-sm text-slate-600 dark:text-slate-300">
                         {eventDate.toLocaleDateString("en-US", { month: "short", day: "numeric", weekday: "short" })}
                         {event.time ? ` · ${event.time}` : ""}
@@ -508,22 +539,10 @@ function CalendarTool() {
         </Card>
       </div>
 
-      <AnimatePresence>
-        {composerOpen && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={closeComposer}
-          >
-            <motion.div
-              className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900"
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.97, opacity: 0 }}
-              onClick={(event) => event.stopPropagation()}
-            >
+      <ModalPortal isOpen={composerOpen}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+          <ModalPortal.Backdrop onClick={closeComposer} />
+          <ModalPortal.Content className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900">
               <div className="mb-6">
                 <p className="text-xl font-semibold text-slate-900 dark:text-slate-50">Create calendar event</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -668,10 +687,9 @@ function CalendarTool() {
                   </Button>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </ModalPortal.Content>
+        </div>
+      </ModalPortal>
     </div>
   );
 }

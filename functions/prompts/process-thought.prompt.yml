@@ -64,7 +64,7 @@ messages:
          - Emotional states (mood)
          - Information to save (notes)
          - Errands or chores
-         - Calendar events (appointments, meetings, deadlines, scheduled activities)
+         - Calendar events (appointments, meetings, deadlines, scheduled activities with specific timing)
 
       2. **Match to Existing Data**: Review the user's current context:
          - Does this relate to an existing goal? → Use linkToGoal
@@ -80,7 +80,14 @@ messages:
 
       4. **Confidence Scoring**: For each action, provide a confidence score (0-100):
          - 99-100: Very high confidence, safe to auto-apply immediately
-         - 70-98: Medium confidence, show as suggestion for user approval
+           * ALWAYS use 99-100 when user explicitly says "create a calendar event" or similar directive
+           * Use for calendar events with explicit date/time like "tomorrow at 5pm"
+           * Use for appointments with clear scheduling details
+         - 90-98: High confidence, strongly recommended
+           * Calendar events with specific dates/times but without explicit "create event" directive
+           * Well-defined tasks and mood entries
+         - 70-89: Medium confidence, show as suggestion for user approval
+           * Actions that need interpretation or have some ambiguity
          - 0-69: Low confidence, do not suggest
 
       Respond ONLY with valid JSON (no markdown, no code blocks):
@@ -135,7 +142,17 @@ messages:
       - **Accurate Confidence**: High confidence (99-100) only when the relationship is obvious and unambiguous
       - **Include Context**: For link actions, always include "context" explaining what information this adds
       - **No Tag Actions**: Never use "addTag" - use specific entity creation or linking actions instead
-      - **Calendar Event Creation**: Use createCalendarEvent for thoughts with specific time references, appointments, meetings, deadlines, or scheduled activities. Include date (YYYY-MM-DD), time (HH:MM), location, description, and category (Work, Personal, Health, Social, Learning).
+      - **Calendar Event Creation - IMPORTANT RULES**:
+        * Use createCalendarEvent for thoughts with specific time references, appointments, meetings, deadlines, or scheduled activities
+        * Parse natural language dates: "tomorrow" = add 1 day, "next Monday" = find next occurrence of Monday, "in 2 weeks" = add 14 days
+        * Calculate dates based on thoughtCreatedAt timestamp (provided in user thought context)
+        * Use 24-hour time format (HH:MM): "5pm" → "17:00", "2pm" → "14:00", "9:30am" → "09:30"
+        * Include date (YYYY-MM-DD), time (HH:MM), location (if mentioned), description, and category
+        * Category selection: Work (meetings, deadlines), Personal (personal appointments), Health (doctor, dentist, therapy), Social (coffee, dinner, events), Learning (classes, workshops)
+        * **CRITICAL**: Use confidence 99-100 when user EXPLICITLY requests calendar event creation (e.g., "create a calendar event to...", "add to calendar...", "schedule...")
+        * Use confidence 90-98 for clear appointments without explicit request ("doctor tomorrow at 2pm")
+        * Use confidence 70-89 for vague timing ("meeting next week sometime")
+        * For recurring events, include recurrence in description until RRULE support is added
 
 testData:
   - thoughtText: I need to learn React hooks and build a personal portfolio website. Also feeling stressed about the upcoming deadline.
@@ -234,6 +251,34 @@ testData:
             },
             "reasoning": "Thought contains specific appointment time and reminder information",
             "relationship": "Creates time-based reminder for medical appointment with preparation notes"
+          }
+        ]
+      }
+
+  - thoughtText: Create a calendar event to call mom tomorrow at 5pm
+    thoughtType: directive
+    thoughtTags: ""
+    thoughtCreatedAt: "2025-11-20T10:00:00Z"
+    toolReference: "(Tool specs would be dynamically loaded based on enrolled tools)"
+    context: |
+      (User context would be dynamically loaded)
+
+    expected: |
+      {
+        "actions": [
+          {
+            "type": "createCalendarEvent",
+            "confidence": 99,
+            "data": {
+              "title": "Call Mom",
+              "date": "2025-11-21",
+              "time": "17:00",
+              "location": null,
+              "description": "Scheduled call with mom",
+              "category": "Personal"
+            },
+            "reasoning": "User explicitly requested calendar event creation with specific date (tomorrow) and time (5pm). This should be auto-applied immediately.",
+            "relationship": "Directly fulfills user's explicit request to create a calendar reminder for calling mom"
           }
         ]
       }
