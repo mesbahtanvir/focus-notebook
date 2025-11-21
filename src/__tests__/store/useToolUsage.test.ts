@@ -177,8 +177,10 @@ describe('useToolUsage store', () => {
       const { result } = renderHook(() => useToolUsage());
 
       // Set up existing record
-      useToolUsage.setState({
-        usageRecords: [createMockRecord('tasks', 5)],
+      act(() => {
+        useToolUsage.setState({
+          usageRecords: [createMockRecord('tasks', 5)],
+        });
       });
 
       await act(async () => {
@@ -237,12 +239,14 @@ describe('useToolUsage store', () => {
     it('should return tools sorted by click count', () => {
       const { result } = renderHook(() => useToolUsage());
 
-      useToolUsage.setState({
-        usageRecords: [
-          createMockRecord('tasks', 10),
-          createMockRecord('thoughts', 5),
-          createMockRecord('goals', 15),
-        ],
+      act(() => {
+        useToolUsage.setState({
+          usageRecords: [
+            createMockRecord('tasks', 10),
+            createMockRecord('thoughts', 5),
+            createMockRecord('goals', 15),
+          ],
+        });
       });
 
       const mostUsed = result.current.getMostUsedTools();
@@ -259,14 +263,16 @@ describe('useToolUsage store', () => {
     it('should limit results to specified number', () => {
       const { result } = renderHook(() => useToolUsage());
 
-      useToolUsage.setState({
-        usageRecords: [
-          createMockRecord('tasks', 10),
-          createMockRecord('thoughts', 8),
-          createMockRecord('goals', 6),
-          createMockRecord('focus', 4),
-          createMockRecord('spending', 2),
-        ],
+      act(() => {
+        useToolUsage.setState({
+          usageRecords: [
+            createMockRecord('tasks', 10),
+            createMockRecord('thoughts', 8),
+            createMockRecord('goals', 6),
+            createMockRecord('focus', 4),
+            createMockRecord('spending', 2),
+          ],
+        });
       });
 
       const mostUsed = result.current.getMostUsedTools(3);
@@ -280,10 +286,12 @@ describe('useToolUsage store', () => {
     it('should use default limit of 5', () => {
       const { result } = renderHook(() => useToolUsage());
 
-      useToolUsage.setState({
-        usageRecords: Array.from({ length: 10 }, (_, i) =>
-          createMockRecord(`tool-${i}` as any, 10 - i)
-        ),
+      act(() => {
+        useToolUsage.setState({
+          usageRecords: Array.from({ length: 10 }, (_, i) =>
+            createMockRecord(`tool-${i}` as any, 10 - i)
+          ),
+        });
       });
 
       const mostUsed = result.current.getMostUsedTools();
@@ -294,12 +302,14 @@ describe('useToolUsage store', () => {
     it('should deduplicate by toolName keeping highest click count', () => {
       const { result } = renderHook(() => useToolUsage());
 
-      useToolUsage.setState({
-        usageRecords: [
-          { ...createMockRecord('tasks', 5), id: 'tasks-1' },
-          { ...createMockRecord('tasks', 10), id: 'tasks-2' },
-          { ...createMockRecord('thoughts', 3), id: 'thoughts-1' },
-        ],
+      act(() => {
+        useToolUsage.setState({
+          usageRecords: [
+            { ...createMockRecord('tasks', 5), id: 'tasks-1' },
+            { ...createMockRecord('tasks', 10), id: 'tasks-2' },
+            { ...createMockRecord('thoughts', 3), id: 'thoughts-1' },
+          ],
+        });
       });
 
       const mostUsed = result.current.getMostUsedTools();
@@ -313,10 +323,12 @@ describe('useToolUsage store', () => {
       const { result } = renderHook(() => useToolUsage());
 
       const testDate = '2024-05-15T10:30:00.000Z';
-      useToolUsage.setState({
-        usageRecords: [
-          { ...createMockRecord('tasks', 5), lastAccessed: testDate },
-        ],
+      act(() => {
+        useToolUsage.setState({
+          usageRecords: [
+            { ...createMockRecord('tasks', 5), lastAccessed: testDate },
+          ],
+        });
       });
 
       const mostUsed = result.current.getMostUsedTools();
@@ -327,11 +339,13 @@ describe('useToolUsage store', () => {
     it('should handle limit larger than number of records', () => {
       const { result } = renderHook(() => useToolUsage());
 
-      useToolUsage.setState({
-        usageRecords: [
-          createMockRecord('tasks', 5),
-          createMockRecord('thoughts', 3),
-        ],
+      act(() => {
+        useToolUsage.setState({
+          usageRecords: [
+            createMockRecord('tasks', 5),
+            createMockRecord('thoughts', 3),
+          ],
+        });
       });
 
       const mostUsed = result.current.getMostUsedTools(10);
@@ -342,8 +356,10 @@ describe('useToolUsage store', () => {
     it('should handle zero limit', () => {
       const { result } = renderHook(() => useToolUsage());
 
-      useToolUsage.setState({
-        usageRecords: [createMockRecord('tasks', 5)],
+      act(() => {
+        useToolUsage.setState({
+          usageRecords: [createMockRecord('tasks', 5)],
+        });
       });
 
       const mostUsed = result.current.getMostUsedTools(0);
