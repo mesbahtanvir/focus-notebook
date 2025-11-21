@@ -222,6 +222,69 @@ go test -tags=integration ./...
 hey -n 10000 -c 100 http://localhost:8080/health
 ```
 
+## CI/CD
+
+### GitHub Actions Workflows
+
+The backend uses automated workflows for continuous integration:
+
+#### Backend Tests Workflow (`.github/workflows/backend-tests.yml`)
+
+Runs automatically on every push and pull request to `main` or `develop` branches:
+
+**Test Job**
+- Sets up Go 1.21 environment
+- Downloads and verifies dependencies
+- Runs all tests with race detector
+- Generates coverage reports
+- Creates coverage summary in PR comments
+
+**Lint Job**
+- Runs `golangci-lint` with custom configuration (`.golangci.yml`)
+- Checks code quality, style, and best practices
+- Validates security patterns
+
+**Build Job**
+- Compiles all packages
+- Builds server binary
+- Verifies successful compilation
+
+**Security Job**
+- Runs `gosec` security scanner
+- Runs `govulncheck` for vulnerability detection
+- Reports security issues
+
+### Running CI Checks Locally
+
+Before pushing, run the same checks locally:
+
+```bash
+# 1. Verify dependencies
+go mod tidy
+git diff --exit-code go.mod go.sum
+
+# 2. Run linter
+golangci-lint run
+
+# 3. Run tests with coverage
+go test -race -coverprofile=coverage.out ./...
+
+# 4. View coverage
+go tool cover -func=coverage.out
+
+# 5. Verify build
+go build ./...
+```
+
+### Test Coverage Reports
+
+Coverage reports are automatically generated in CI and can be viewed in:
+- GitHub Actions job summaries
+- Artifacts uploaded per build (retention: 7 days)
+- Local coverage reports: `go tool cover -html=coverage.out`
+
+Current coverage: **80%+** across all packages
+
 ## Deployment
 
 ### Cloud Run (Recommended)
