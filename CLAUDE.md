@@ -389,6 +389,47 @@ await entityService.createEntity('task', taskData, options);
 - Mock implementations for testing
 - Located in: `di/`
 
+### 8. Modal Portal Pattern
+
+**CRITICAL**: All full-screen modals MUST use `ModalPortal` to ensure proper viewport coverage.
+
+**The Problem**: The `<main>` element in `Layout.tsx` has `overflow-y-auto`, which creates a new containing block for `position: fixed` elements. This causes modals to only cover the scrollable content area, not the entire viewport including the sidebar.
+
+**The Solution**: Use `ModalPortal` component which uses React's `createPortal` to render modals directly into `document.body`, bypassing the overflow constraint.
+
+**Usage**:
+```tsx
+import { ModalPortal } from '@/components/ui/modal-portal';
+
+export function MyModal({ isOpen, onClose }) {
+  return (
+    <ModalPortal isOpen={isOpen}>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <ModalPortal.Backdrop onClick={onClose} />
+        <ModalPortal.Content className="bg-white rounded-2xl p-6">
+          {/* Your modal content */}
+        </ModalPortal.Content>
+      </div>
+    </ModalPortal>
+  );
+}
+```
+
+**Key Requirements**:
+- ✅ Use `ModalPortal` for ALL full-screen modals/overlays
+- ✅ Use z-index `z-[100]` or higher (not `z-50`)
+- ✅ Separate backdrop and content layers
+- ✅ Components: `ModalPortal.Backdrop` and `ModalPortal.Content`
+- ❌ Never use bare `<div className="fixed inset-0">` inside routes
+
+**When to Use**:
+- Confirmation dialogs
+- Form modals
+- Full-screen overlays
+- Any component that should cover the entire viewport
+
+**Documentation**: See `docs/patterns/modal-portal-pattern.md` for complete guide and migration examples.
+
 ---
 
 ## Development Workflows
@@ -816,6 +857,7 @@ import { TaskCard } from './TaskCard';
 5. ❌ **Don't use `any` type**: Use proper types or `unknown`
 6. ❌ **Don't commit secrets**: Use environment variables
 7. ❌ **Don't skip tests**: Write tests for new code
+8. ❌ **Don't create modals without ModalPortal**: Always use `ModalPortal` for full-screen overlays (prevents viewport coverage issues)
 
 ### Debugging Tips
 

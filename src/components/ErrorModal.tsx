@@ -1,8 +1,8 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
 import { AlertCircle, X, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { ModalPortal } from "@/components/ui/modal-portal";
 
 interface ErrorModalProps {
   isOpen: boolean;
@@ -27,15 +27,12 @@ export function ErrorModal({
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border-4 border-red-200 dark:border-red-800 max-w-md w-full overflow-hidden"
-          >
+    <ModalPortal isOpen={isOpen}>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <ModalPortal.Backdrop onClick={onClose} opacity={60} />
+
+        <ModalPortal.Content className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border-4 border-red-200 dark:border-red-800 max-w-md w-full overflow-hidden">
+
             {/* Header */}
             <div className="bg-gradient-to-r from-red-100 to-orange-100 dark:from-red-900/50 dark:to-orange-900/50 border-b-4 border-red-300 dark:border-red-700 p-6">
               <div className="flex items-center justify-between">
@@ -81,9 +78,8 @@ export function ErrorModal({
                 )}
               </div>
             </div>
-          </motion.div>
+          </ModalPortal.Content>
         </div>
-      )}
-    </AnimatePresence>
+      </ModalPortal>
   );
 }

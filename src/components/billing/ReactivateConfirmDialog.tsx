@@ -1,8 +1,8 @@
 'use client';
 
-import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ModalPortal } from '@/components/ui/modal-portal';
 
 interface ReactivateConfirmDialogProps {
   isOpen: boolean;
@@ -26,27 +26,12 @@ export function ReactivateConfirmDialog({
   });
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onCancel}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-          />
+    <ModalPortal isOpen={isOpen}>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <ModalPortal.Backdrop onClick={onCancel} opacity={60} />
 
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30, mass: 0.8 }}
-            className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full border-4 border-purple-200 dark:border-purple-800 overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <ModalPortal.Content className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full border-4 border-purple-200 dark:border-purple-800 overflow-hidden">
+
             {/* Decorative background */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-100/20 to-pink-100/20 dark:from-purple-900/20 dark:to-pink-900/20 rounded-full blur-3xl -z-10" />
 
@@ -88,9 +73,8 @@ export function ReactivateConfirmDialog({
                 </Button>
               </div>
             </div>
-          </motion.div>
+          </ModalPortal.Content>
         </div>
-      )}
-    </AnimatePresence>
+      </ModalPortal>
   );
 }
