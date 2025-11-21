@@ -81,10 +81,16 @@ const mockPackingList: PackingList = {
     },
   ],
   packedItemIds: ['passport'],
-  customItems: {},
+  customItems: {
+    essentials: [],
+    clothing: [],
+    personal: [],
+    tech: [],
+    extras: [],
+  },
   timelinePhases: [
     {
-      id: 'week-before',
+      id: 'before',
       title: '1 Week Before',
       emoji: '📅',
       summary: 'Start preparing',
@@ -483,6 +489,10 @@ describe('usePackingLists store', () => {
             custom: true,
           },
         ],
+        clothing: [],
+        personal: [],
+        tech: [],
+        extras: [],
       };
 
       await act(async () => {
