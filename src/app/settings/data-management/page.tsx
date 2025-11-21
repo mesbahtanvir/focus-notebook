@@ -14,6 +14,7 @@ import { useMoods } from '@/store/useMoods';
 import { useFocus } from '@/store/useFocus';
 import { EnhancedDataManagement } from '@/components/EnhancedDataManagement';
 import { DataDiagnostics } from '@/components/DataDiagnostics';
+import { PhotoCleanupMigration } from '@/components/migrations/PhotoCleanupMigration';
 import { ArrowLeft, Database, ShieldCheck, Zap, Trash2, Loader2 } from 'lucide-react';
 import { usePhotoFeedback } from '@/store/usePhotoFeedback';
 import { toastError, toastSuccess } from '@/lib/toast-presets';
@@ -180,6 +181,9 @@ export default function DataManagementPage() {
 
       {/* Data Diagnostics & Migration */}
       <DataDiagnostics />
+
+      {/* Photo Database Cleanup Migration */}
+      <PhotoCleanupMigration />
 
       {/* Enhanced Data Management Component */}
       <EnhancedDataManagement onDataChanged={refreshAllStores} />
