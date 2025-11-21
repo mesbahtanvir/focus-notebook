@@ -54,6 +54,13 @@ import {
 import { generatePhotoThumbnail, getSignedImageUrl } from './photoThumbnails';
 import { runPlaceInsights } from './placeInsights';
 import { submitPhotoVote, getNextPhotoPair } from './photoVotes';
+import {
+  createPackingList,
+  updatePackingList,
+  togglePackedItem,
+  addCustomPackingItem,
+  deleteCustomPackingItem,
+} from './packingList';
 
 // Export cloud functions
 export {
@@ -104,4 +111,10 @@ export {
   getNextPhotoPair,
   // Places
   runPlaceInsights,
+  // Packing Lists
+  createPackingList,
+  updatePackingList,
+  togglePackedItem,
+  addCustomPackingItem,
+  deleteCustomPackingItem,
 };
