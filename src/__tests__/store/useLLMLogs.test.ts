@@ -5,6 +5,13 @@ jest.mock('@/lib/firebaseClient', () => ({
   db: {},
 }));
 
+jest.mock('firebase/firestore', () => ({
+  collection: jest.fn(() => ({})),
+  orderBy: jest.fn(() => ({})),
+  limit: jest.fn(() => ({})),
+  query: jest.fn((...args) => args),
+}));
+
 jest.mock('@/lib/data/subscribe', () => ({
   subscribeCol: jest.fn((query, callback) => {
     callback([]);
@@ -56,7 +63,14 @@ describe('useLLMLogs store', () => {
         result.current.subscribe('test-user-id');
       });
 
-      // Before callback is invoked, loading should be true (set in subscribe)
+      // Before callback is invoked, loading should be true
+      expect(result.current.isLoading).toBe(true);
+
+      // Invoke callback to complete loading
+      act(() => {
+        callbackRef!([]);
+      });
+
       // After callback, it should be false
       expect(result.current.isLoading).toBe(false);
     });

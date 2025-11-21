@@ -6,6 +6,13 @@ jest.mock('@/lib/firebaseClient', () => ({
   auth: { currentUser: { uid: 'test-user-id' } },
 }));
 
+jest.mock('firebase/firestore', () => ({
+  collection: jest.fn((db, path) => ({ _path: path })),
+  query: jest.fn((...args) => args),
+  orderBy: jest.fn(() => ({})),
+  where: jest.fn(() => ({})),
+}));
+
 jest.mock('@/lib/data/gateway', () => ({
   createAt: jest.fn().mockResolvedValue(undefined),
   updateAt: jest.fn().mockResolvedValue(undefined),
@@ -106,10 +113,18 @@ describe('useSpending store', () => {
       ];
 
       let accountCallback: ((accounts: BankAccount[], meta: any) => void) | null = null;
+      let callCount = 0;
+
       mockSubscribeCol.mockImplementation((query, callback) => {
-        const queryStr = JSON.stringify(query);
-        if (queryStr.includes('bankAccounts')) {
+        callCount++;
+        // First call is for accounts, second for transactions, third for insights
+        if (callCount === 1) {
           accountCallback = callback;
+          // Immediately call with test data
+          callback(testAccounts, { fromCache: false, hasPendingWrites: false });
+        } else {
+          // For transactions and insights, call with empty arrays
+          callback([], { fromCache: false, hasPendingWrites: false });
         }
         return jest.fn();
       });
@@ -118,10 +133,6 @@ describe('useSpending store', () => {
 
       act(() => {
         result.current.subscribe('test-user-id');
-      });
-
-      act(() => {
-        accountCallback?.(testAccounts, { fromCache: false, hasPendingWrites: false });
       });
 
       expect(result.current.accounts).toEqual(testAccounts);
