@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { collection, doc, query, where, getDocs, setDoc, getDoc, deleteDoc, Timestamp, orderBy, updateDoc, increment, arrayUnion, runTransaction } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, setDoc, getDoc, deleteDoc, Timestamp, orderBy, updateDoc, increment, arrayUnion, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
 import { auth, db, storage, functionsClient } from '@/lib/firebaseClient';
@@ -594,7 +594,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         const updatedPhotos = session.photos.filter(photo => photo.id !== photoId);
         transaction.update(sessionRef, {
           photos: updatedPhotos,
-          updatedAt: new Date().toISOString(),
+          updatedAt: serverTimestamp(),
         });
       });
 
@@ -703,7 +703,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         transaction.update(sessionRef, {
           photos: updatedPhotos,
           photoAliases: aliasMap,
-          updatedAt: new Date().toISOString(),
+          updatedAt: serverTimestamp(),
         });
       });
 
