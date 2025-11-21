@@ -12,12 +12,12 @@ jest.mock('@/lib/data/subscribe', () => ({
   }),
 }));
 
-jest.mock('../../shared/subscription', () => ({
+jest.mock('../../../shared/subscription', () => ({
   evaluateAiEntitlement: jest.fn((subscription) => {
     if (!subscription) return { allowed: false, code: 'no-record' };
-    if (subscription.status === 'active') return { allowed: true, code: 'active' };
-    if (subscription.status === 'trialing') return { allowed: true, code: 'trial' };
-    return { allowed: false, code: 'expired' };
+    if (subscription.status === 'active') return { allowed: true, code: 'allowed' };
+    if (subscription.status === 'trialing') return { allowed: true, code: 'allowed' };
+    return { allowed: false, code: 'inactive' };
   }),
   hasActivePro: jest.fn((subscription) => {
     return subscription?.status === 'active' || subscription?.status === 'trialing';
@@ -33,7 +33,7 @@ const { subscribeDoc: mockSubscribeDoc } = require('@/lib/data/subscribe') as {
 const {
   evaluateAiEntitlement: mockEvaluateAiEntitlement,
   hasActivePro: mockHasActivePro,
-} = require('../../shared/subscription');
+} = require('../../../shared/subscription');
 
 const resetStore = () => {
   useSubscriptionStatus.setState({
@@ -77,8 +77,8 @@ describe('useSubscriptionStatus store', () => {
         result.current.subscribe('test-user-id');
       });
 
-      // Should be set to loading initially
-      expect(result.current.isLoading).toBe(false); // After callback fires
+      // Should be set to loading when callback hasn't fired yet
+      expect(result.current.isLoading).toBe(true);
     });
 
     it('should unsubscribe from previous subscription', () => {
@@ -354,7 +354,7 @@ describe('useSubscriptionStatus store', () => {
 
       useSubscriptionStatus.setState({
         subscription: subscriptionData as any,
-        entitlement: { allowed: true, code: 'active' },
+        entitlement: { allowed: true, code: 'allowed' },
         hasProAccess: true,
         isLoading: false,
         fromCache: false,
@@ -435,7 +435,15 @@ describe('useSubscriptionStatus store', () => {
         result.current.subscribe('test-user-id');
       });
 
-      // Initially set to loading by subscribe, but callback fires immediately in test
+      // Initially set to loading by subscribe
+      expect(result.current.isLoading).toBe(true);
+
+      // Fire the callback to simulate data loading
+      act(() => {
+        callbackRef(null, { fromCache: false, hasPendingWrites: false });
+      });
+
+      // Should be set to false after callback fires
       expect(result.current.isLoading).toBe(false);
     });
 
