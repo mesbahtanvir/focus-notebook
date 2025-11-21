@@ -19,6 +19,24 @@ jest.mock('@/lib/data/subscribe', () => ({
   }),
 }));
 
+jest.mock('@/lib/services/currency', () => ({
+  convertCurrencySync: jest.fn((amount, fromCurrency, toCurrency) => {
+    // Mock conversion rates (CAD as base)
+    const rates: Record<string, number> = {
+      'CAD': 1,
+      'USD': 0.71,
+      'BDT': 87,
+      'COP': 2758,
+    };
+
+    if (fromCurrency === toCurrency) return amount;
+
+    // Convert to CAD first, then to target currency
+    const amountInCAD = fromCurrency === 'CAD' ? amount : amount / rates[fromCurrency];
+    return toCurrency === 'CAD' ? amountInCAD : amountInCAD * rates[toCurrency];
+  }),
+}));
+
 const { createAt: mockCreateAt, updateAt: mockUpdateAt } = require('@/lib/data/gateway') as {
   createAt: jest.Mock;
   updateAt: jest.Mock;
@@ -256,5 +274,217 @@ describe('useTrips store', () => {
     expect(storedTrip.expenses).toEqual([]);
     expect(storedTrip.budgetBreakdown).toEqual({});
     expect(storedTrip.status).toBe('in-progress');
+  });
+
+  describe('currency conversion', () => {
+    it('converts expenses to CAD when calculating total spent', () => {
+      const tripId = 'trip-multi-currency';
+      act(() => {
+        useTrips.setState({
+          trips: [
+            {
+              id: tripId,
+              name: 'Multi-Currency Trip',
+              destination: 'World Tour',
+              startDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+              endDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+              budget: 5000,
+              currency: 'CAD',
+              status: 'in-progress',
+              expenses: [
+                {
+                  id: 'exp-1',
+                  category: 'food',
+                  amount: 100,
+                  currency: 'USD',
+                  date: new Date().toISOString(),
+                  description: 'Dinner in USA',
+                  createdAt: new Date().toISOString(),
+                },
+                {
+                  id: 'exp-2',
+                  category: 'accommodation',
+                  amount: 200,
+                  currency: 'CAD',
+                  date: new Date().toISOString(),
+                  description: 'Hotel in Canada',
+                  createdAt: new Date().toISOString(),
+                },
+                {
+                  id: 'exp-3',
+                  category: 'shopping',
+                  amount: 1000,
+                  currency: 'BDT',
+                  date: new Date().toISOString(),
+                  description: 'Shopping in Bangladesh',
+                  createdAt: new Date().toISOString(),
+                },
+              ],
+              budgetBreakdown: {},
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        });
+      });
+
+      const { result } = renderHook(() => useTrips());
+      const totalSpent = result.current.getTotalSpent(tripId);
+
+      // 100 USD -> 100/0.71 = ~140.85 CAD
+      // 200 CAD -> 200 CAD
+      // 1000 BDT -> 1000/87 = ~11.49 CAD
+      // Total: ~352.34 CAD
+      const expectedTotal = 100 / 0.71 + 200 + 1000 / 87;
+      expect(totalSpent).toBeCloseTo(expectedTotal, 2);
+    });
+
+    it('converts budget to CAD when calculating remaining budget', () => {
+      const tripId = 'trip-usd-budget';
+      act(() => {
+        useTrips.setState({
+          trips: [
+            {
+              id: tripId,
+              name: 'USD Budget Trip',
+              destination: 'USA',
+              startDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+              endDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+              budget: 1000,
+              currency: 'USD',
+              status: 'in-progress',
+              expenses: [
+                {
+                  id: 'exp-1',
+                  category: 'food',
+                  amount: 100,
+                  currency: 'CAD',
+                  date: new Date().toISOString(),
+                  description: 'Food',
+                  createdAt: new Date().toISOString(),
+                },
+              ],
+              budgetBreakdown: {},
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        });
+      });
+
+      const { result } = renderHook(() => useTrips());
+      const remaining = result.current.getBudgetRemaining(tripId);
+
+      // Budget: 1000 USD -> 1000/0.71 = ~1408.45 CAD
+      // Spent: 100 CAD
+      // Remaining: ~1308.45 CAD
+      const expectedRemaining = 1000 / 0.71 - 100;
+      expect(remaining).toBeCloseTo(expectedRemaining, 2);
+    });
+
+    it('converts expenses to CAD when calculating spent by category', () => {
+      const tripId = 'trip-category';
+      act(() => {
+        useTrips.setState({
+          trips: [
+            {
+              id: tripId,
+              name: 'Category Test',
+              destination: 'Everywhere',
+              startDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+              endDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+              budget: 5000,
+              currency: 'CAD',
+              status: 'in-progress',
+              expenses: [
+                {
+                  id: 'exp-1',
+                  category: 'food',
+                  amount: 50,
+                  currency: 'USD',
+                  date: new Date().toISOString(),
+                  description: 'Breakfast',
+                  createdAt: new Date().toISOString(),
+                },
+                {
+                  id: 'exp-2',
+                  category: 'food',
+                  amount: 100,
+                  currency: 'CAD',
+                  date: new Date().toISOString(),
+                  description: 'Lunch',
+                  createdAt: new Date().toISOString(),
+                },
+                {
+                  id: 'exp-3',
+                  category: 'accommodation',
+                  amount: 200,
+                  currency: 'USD',
+                  date: new Date().toISOString(),
+                  description: 'Hotel',
+                  createdAt: new Date().toISOString(),
+                },
+              ],
+              budgetBreakdown: {},
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        });
+      });
+
+      const { result } = renderHook(() => useTrips());
+      const foodSpent = result.current.getSpentByCategory(tripId, 'food');
+
+      // 50 USD -> 50/0.71 = ~70.42 CAD
+      // 100 CAD -> 100 CAD
+      // Total food: ~170.42 CAD
+      const expectedFood = 50 / 0.71 + 100;
+      expect(foodSpent).toBeCloseTo(expectedFood, 2);
+    });
+
+    it('converts total spent to CAD when calculating average daily spend', () => {
+      const tripId = 'trip-daily';
+      const startDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString();
+      const endDate = new Date(Date.now()).toISOString();
+
+      act(() => {
+        useTrips.setState({
+          trips: [
+            {
+              id: tripId,
+              name: 'Daily Spend Test',
+              destination: 'Test Land',
+              startDate,
+              endDate,
+              budget: 5000,
+              currency: 'CAD',
+              status: 'completed',
+              expenses: [
+                {
+                  id: 'exp-1',
+                  category: 'food',
+                  amount: 710,
+                  currency: 'USD',
+                  date: new Date().toISOString(),
+                  description: 'Total food',
+                  createdAt: new Date().toISOString(),
+                },
+              ],
+              budgetBreakdown: {},
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        });
+      });
+
+      const { result } = renderHook(() => useTrips());
+      const avgDaily = result.current.getAverageDailySpend(tripId);
+
+      // 710 USD -> 710/0.71 = 1000 CAD
+      // 10 days (from startDate to endDate)
+      // Average: 1000/10 = 100 CAD/day
+      const totalSpentInCAD = 710 / 0.71;
+      const days = 10;
+      const expectedAvg = totalSpentInCAD / days;
+      expect(avgDaily).toBeCloseTo(expectedAvg, 2);
+    });
   });
 });

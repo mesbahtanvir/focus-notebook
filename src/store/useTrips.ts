@@ -4,6 +4,7 @@ import { subscribeCol } from '@/lib/data/subscribe';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebaseClient';
 import type { Unsubscribe } from 'firebase/firestore';
+import { convertCurrencySync } from '@/lib/services/currency';
 
 export type TripStatus = 'planning' | 'in-progress' | 'completed';
 export type ExpenseCategory =
@@ -280,14 +281,18 @@ export const useTrips = create<TripsState>((set, get) => ({
   getTotalSpent: (tripId) => {
     const trip = get().getTrip(tripId);
     if (!trip) return 0;
-    return trip.expenses.reduce((sum, exp) => sum + exp.amount, 0);
+    return trip.expenses.reduce((sum, exp) => {
+      const convertedAmount = convertCurrencySync(exp.amount, exp.currency, 'CAD');
+      return sum + convertedAmount;
+    }, 0);
   },
 
   getBudgetRemaining: (tripId) => {
     const trip = get().getTrip(tripId);
     if (!trip) return 0;
-    const spent = get().getTotalSpent(tripId);
-    return trip.budget - spent;
+    const spent = get().getTotalSpent(tripId); // Already in CAD
+    const budgetInCAD = convertCurrencySync(trip.budget, trip.currency, 'CAD');
+    return budgetInCAD - spent;
   },
 
   getSpentByCategory: (tripId, category) => {
@@ -295,7 +300,10 @@ export const useTrips = create<TripsState>((set, get) => ({
     if (!trip) return 0;
     return trip.expenses
       .filter(exp => exp.category === category)
-      .reduce((sum, exp) => sum + exp.amount, 0);
+      .reduce((sum, exp) => {
+        const convertedAmount = convertCurrencySync(exp.amount, exp.currency, 'CAD');
+        return sum + convertedAmount;
+      }, 0);
   },
 
   getAverageDailySpend: (tripId) => {
