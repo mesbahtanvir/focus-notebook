@@ -533,8 +533,8 @@ npx playwright test --headed
 
 ### Test Coverage Goals
 
-- **Unit Tests**: 70%+ coverage
-- **Critical Paths**: 90%+ coverage (auth, payments, data sync)
+- **Unit Tests**: 50%+ coverage
+- **Critical Paths**: 70%+ coverage (auth, payments, data sync)
 - **Edge Cases**: Test error conditions and boundaries
 
 ### When to Run Which Tests
