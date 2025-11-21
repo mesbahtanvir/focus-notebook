@@ -17,7 +17,6 @@ interface Pair {
 }
 
 const PREFETCH_TARGET = 5;
-const RECENT_PAIRS_LIMIT = 10; // Track last 10 pairs to avoid duplicates
 
 export default function PhotoBattleVotingPage() {
   const params = useParams();
@@ -31,7 +30,6 @@ export default function PhotoBattleVotingPage() {
   const [isFetchingPair, setIsFetchingPair] = useState(false);
   const [displayedPair, setDisplayedPair] = useState<Pair | null>(null);
   const [pairSequence, setPairSequence] = useState(0);
-  const recentPairsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (sessionId) {
@@ -39,7 +37,6 @@ export default function PhotoBattleVotingPage() {
       setPairBuffer([]);
       setDisplayedPair(null);
       setPairSequence(0);
-      recentPairsRef.current.clear();
       setLoadedPhotos({});
 
       void loadSession(sessionId);
@@ -94,62 +91,22 @@ export default function PhotoBattleVotingPage() {
     return `${ids[0]}_${ids[1]}`;
   }, []);
 
-  // Helper to check if pair was recently shown
-  const isRecentPair = useCallback((left: BattlePhoto, right: BattlePhoto) => {
-    const key = getPairKey(left, right);
-    return recentPairsRef.current.has(key);
-  }, [getPairKey]);
-
-  // Helper to mark pair as shown
-  const markPairAsShown = useCallback((left: BattlePhoto, right: BattlePhoto) => {
-    const key = getPairKey(left, right);
-    recentPairsRef.current.add(key);
-
-    // Keep only the last RECENT_PAIRS_LIMIT pairs
-    if (recentPairsRef.current.size > RECENT_PAIRS_LIMIT) {
-      const entries = Array.from(recentPairsRef.current);
-      recentPairsRef.current = new Set(entries.slice(-RECENT_PAIRS_LIMIT));
-    }
-  }, [getPairKey]);
-
   const fetchNextPair = useCallback(async () => {
     if (!currentSession || currentSession.photos.length < 2 || isFetchingPair) return;
     setIsFetchingPair(true);
     try {
-      // Try up to 5 times to get a non-duplicate pair
-      let attempts = 0;
-      let next = null;
-      const maxAttempts = 5;
-
-      while (attempts < maxAttempts) {
-        next = await getNextPair(currentSession.id);
-
-        // If we got a pair and it's not a recent duplicate, use it
-        if (next?.left && next?.right && !isRecentPair(next.left, next.right)) {
-          break;
-        }
-
-        // If all photos have been shown recently, reset the cache and accept the pair
-        if (attempts === maxAttempts - 1 && recentPairsRef.current.size >= currentSession.photos.length - 1) {
-          console.log('Resetting recent pairs cache - all pairs shown');
-          recentPairsRef.current.clear();
-          break;
-        }
-
-        // Add a small delay between attempts to allow for any backend processing
-        await new Promise(resolve => setTimeout(resolve, 50));
-        attempts++;
-      }
+      const next = await getNextPair(currentSession.id);
 
       if (next?.left && next?.right) {
-        // Final check: don't add if it's identical to the last buffer item
+        // Only check: don't add if it's identical to the last buffer item
+        // The improved backend algorithm handles variety, we just prevent immediate duplicates
         setPairBuffer(prev => {
           const lastPair = prev[prev.length - 1];
           if (lastPair) {
             const lastKey = getPairKey(lastPair.left, lastPair.right);
             const nextKey = getPairKey(next.left, next.right);
             if (lastKey === nextKey) {
-              console.log('Skipping duplicate pair in buffer');
+              // Silently skip if backend returns exact same pair (rare with new algorithm)
               return prev;
             }
           }
@@ -161,12 +118,11 @@ export default function PhotoBattleVotingPage() {
     } finally {
       setIsFetchingPair(false);
     }
-  }, [currentSession, getNextPair, isFetchingPair, isRecentPair, getPairKey]);
+  }, [currentSession, getNextPair, isFetchingPair, getPairKey]);
 
   useEffect(() => {
     if (!currentSession || currentSession.photos.length < 2) {
       setPairBuffer([]);
-      recentPairsRef.current.clear();
       return;
     }
     let cancelled = false;
@@ -230,8 +186,8 @@ export default function PhotoBattleVotingPage() {
 
   useEffect(() => {
     if (!currentSession || currentSession.photos.length < 2) return;
-    // Always maintain at least 2 pairs in buffer when not fetching
-    if (pairBuffer.length < 2 && !isFetchingPair) {
+    // Always maintain at least 3 pairs in buffer when not fetching
+    if (pairBuffer.length < 3 && !isFetchingPair) {
       void fetchNextPair();
     }
     // Keep prefetching up to target
@@ -292,17 +248,12 @@ export default function PhotoBattleVotingPage() {
         await animationDelay;
       } finally {
         if (shouldAdvance) {
-          // Mark current pair as shown before advancing
-          const currentPair = pairBuffer[0];
-          if (currentPair) {
-            markPairAsShown(currentPair.left, currentPair.right);
-          }
-
           // Advance to next pair (remove current from buffer)
-          // Keep up to 2 more pairs in buffer for smooth transitions
+          // Keep up to 3 more pairs in buffer for smooth transitions
           setPairBuffer(prev => {
             if (prev.length === 0) return prev;
-            return prev.slice(1, 3);
+            // Keep 3 items after removing current (positions 1, 2, 3)
+            return prev.slice(1, 4);
           });
 
           // Reload session AFTER animation completes and pair advances
@@ -313,7 +264,7 @@ export default function PhotoBattleVotingPage() {
         setIsAnimating(false);
       }
     },
-    [currentSession, submitVote, reloadSession, isAnimating, pair, pairBuffer, authLoading, authUser, ensureAnonymousSession, markPairAsShown]
+    [currentSession, submitVote, reloadSession, isAnimating, pair, authLoading, authUser, ensureAnonymousSession]
   );
 
   useEffect(() => {
