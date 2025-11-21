@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePhotoFeedback } from "@/store/usePhotoFeedback";
+import { useDatingFeedback } from "@/store/useDatingFeedback";
+import { usePhotoLibrary } from "@/store/usePhotoLibrary";
 import { ArrowRight, Copy, ExternalLink, CheckCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,14 +13,13 @@ import { Button } from "@/components/ui/button";
 export default function PhotoFeedbackPage() {
   const {
     createSessionFromLibrary,
-    loadLibrary,
-    library,
     isLoading,
     userSessions,
     sessionsLoading,
     loadUserSessions,
     error,
-  } = usePhotoFeedback();
+  } = useDatingFeedback();
+  const { library, loadLibrary } = usePhotoLibrary();
   const { user, isAnonymous, loading: authLoading } = useAuth();
 
   const [origin, setOrigin] = useState("");
@@ -75,7 +75,7 @@ export default function PhotoFeedbackPage() {
     }
 
     try {
-      await createSessionFromLibrary([], user?.displayName || undefined);
+      await createSessionFromLibrary(library, [], user?.displayName || undefined);
       await loadUserSessions();
       toastSuccess({
         title: options?.silent ? "Battle link refreshed" : "Battle link ready",
