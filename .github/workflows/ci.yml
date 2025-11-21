@@ -1,4 +1,8 @@
-name: Validate & Deploy
+name: CI - Validation & Testing
+
+# This workflow handles validation and testing ONLY
+# Deployment is handled separately in deploy.yml
+# PRs run lightweight checks, main branch runs comprehensive validation
 
 on:
   push:
@@ -367,110 +371,6 @@ jobs:
 
       - name: Health check
         run: echo "✅ Emulator setup complete"
-
-  deploy_functions:
-    name: Deploy Cloud Functions
-    runs-on: ubuntu-latest
-    needs:
-      - validate_web
-      - validate_functions
-      - security_check_functions
-      - validate_config
-      - integration_tests
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22.x'
-          cache: npm
-          cache-dependency-path: functions/package-lock.json
-
-      - name: Install dependencies
-        run: |
-          cd functions
-          npm ci
-
-      - name: Generate environment file
-        env:
-          OPENAI_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-test-mock-key-12345678901234567890' }}
-          STRIPE_SECRET: ${{ secrets.STRIPE_SECRET || 'sk_test_placeholder' }}
-          STRIPE_PRICE_ID: ${{ secrets.STRIPE_PRICE_ID || 'price_test_placeholder' }}
-          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET || 'whsec_test_placeholder' }}
-          APP_BASE_URL: ${{ secrets.APP_BASE_URL || 'https://focus.yourthoughts.ca' }}
-          ALPHA_VANTAGE_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY || 'demo' }}
-        run: |
-          python - <<'PY'
-          import os, pathlib
-
-          env_path = pathlib.Path('functions/.env')
-          env_path.write_text('\n'.join([
-              f"OPENAI_API_KEY={os.environ['OPENAI_KEY']}",
-              f"STRIPE_SECRET={os.environ['STRIPE_SECRET']}",
-              f"STRIPE_PRICE_ID={os.environ['STRIPE_PRICE_ID']}",
-              f"STRIPE_WEBHOOK_SECRET={os.environ['STRIPE_WEBHOOK_SECRET']}",
-              f"APP_BASE_URL={os.environ['APP_BASE_URL']}",
-              f"ALPHA_VANTAGE_API_KEY={os.environ['ALPHA_VANTAGE_KEY']}",
-          ]) + '\n')
-          PY
-
-      - name: Build functions
-        run: |
-          cd functions
-          npm run build
-
-      - name: Deploy to Firebase
-        uses: w9jds/firebase-action@master
-        with:
-          args: deploy --only functions
-        env:
-          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
-
-      - name: Comment deployment success on related PRs
-        if: success()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const commitSha = context.sha;
-            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: commitSha,
-            });
-
-            for (const pr of prs) {
-              await github.rest.issues.createComment({
-                issue_number: pr.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `✅ Cloud Functions deployed successfully for commit ${commitSha.substring(0, 7)}`
-              });
-            }
-
-      - name: Notify deployment failure
-        if: failure()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const commitSha = context.sha;
-            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: commitSha,
-            });
-
-            for (const pr of prs) {
-              await github.rest.issues.createComment({
-                issue_number: pr.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `❌ Cloud Functions deployment failed for commit ${commitSha.substring(0, 7)}. Check the workflow run for details.`
-              });
-            }
 
   notify_failure:
     name: Notify on Failure
