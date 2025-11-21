@@ -26,8 +26,7 @@ export function InteractivePackingMode({
   onClose,
 }: InteractivePackingModeProps) {
   const [isMounted, setIsMounted] = useState(false);
-  const [showKeyboardHints, setShowKeyboardHints] = useState(false);
-  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | 'down' | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
 
   // Mount the portal only on client side
@@ -37,10 +36,12 @@ export function InteractivePackingMode({
 
   // Motion values for swipe gestures
   const x = useMotionValue(0);
+  const y = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-25, 25]);
   const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0.5, 1, 1, 1, 0.5]);
   const swipeRightOpacity = useTransform(x, [0, 100], [0, 0.9]);
   const swipeLeftOpacity = useTransform(x, [-100, 0], [0.9, 0]);
+  const swipeDownOpacity = useTransform(y, [0, 100], [0, 0.9]);
 
   // Get all items that need attention (unpacked or later)
   const allItems = packingList.sections.flatMap((section) =>
@@ -117,12 +118,14 @@ export function InteractivePackingMode({
         setIsAnimating(false);
         setSwipeDirection(null);
         x.set(0);
+        y.set(0);
       }, 300);
     } catch (error) {
       console.error('[Quick Pack] Error setting item status:', error);
       setIsAnimating(false);
       setSwipeDirection(null);
       x.set(0);
+      y.set(0);
     }
   };
 
@@ -131,29 +134,20 @@ export function InteractivePackingMode({
     const handleKeyPress = (e: KeyboardEvent) => {
       if (isAnimating || !currentItem) return;
 
-      // Show hints when ? is pressed
-      if (e.key === '?' || e.key === '/') {
-        e.preventDefault();
-        setShowKeyboardHints((prev) => !prev);
-        return;
-      }
-
-      switch (e.key.toLowerCase()) {
-        case 'p':
-        case 'enter':
+      switch (e.key) {
+        case 'ArrowRight':
           e.preventDefault();
           handleAction('packed');
           break;
-        case 'l':
+        case 'ArrowDown':
           e.preventDefault();
           handleAction('later');
           break;
-        case 'n':
-        case 'x':
+        case 'ArrowLeft':
           e.preventDefault();
           handleAction('no-need');
           break;
-        case 'escape':
+        case 'Escape':
           e.preventDefault();
           onClose();
           break;
@@ -201,8 +195,13 @@ export function InteractivePackingMode({
     const threshold = 100;
     const { offset, velocity } = info;
 
+    // Swipe down = Pack Later
+    if (offset.y > threshold || velocity.y > 500) {
+      setSwipeDirection('down');
+      handleAction('later');
+    }
     // Swipe right = Packed
-    if (offset.x > threshold || velocity.x > 500) {
+    else if (offset.x > threshold || velocity.x > 500) {
       setSwipeDirection('right');
       handleAction('packed');
     }
@@ -214,6 +213,7 @@ export function InteractivePackingMode({
     // Not enough swipe, return to center
     else {
       x.set(0);
+      y.set(0);
     }
   };
 
@@ -332,21 +332,12 @@ export function InteractivePackingMode({
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowKeyboardHints((prev) => !prev)}
-                className="p-2 hover:bg-white/20 rounded-full transition"
-                title="Keyboard shortcuts"
-              >
-                <Keyboard className="w-5 h-5" />
-              </button>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-white/20 rounded-full transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-full transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
           <div className="w-full bg-white/30 rounded-full h-3 overflow-hidden">
             <motion.div
@@ -356,37 +347,15 @@ export function InteractivePackingMode({
               transition={{ duration: 0.3 }}
             />
           </div>
-
-          {/* Keyboard Hints */}
-          <AnimatePresence>
-            {showKeyboardHints && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mt-3 bg-white/10 backdrop-blur-sm rounded-lg p-3 text-white text-xs"
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  <div><kbd className="px-2 py-1 bg-white/20 rounded">P</kbd> or <kbd className="px-2 py-1 bg-white/20 rounded">Enter</kbd> - Packed</div>
-                  <div><kbd className="px-2 py-1 bg-white/20 rounded">L</kbd> - Later</div>
-                  <div><kbd className="px-2 py-1 bg-white/20 rounded">N</kbd> or <kbd className="px-2 py-1 bg-white/20 rounded">X</kbd> - No Need</div>
-                  <div><kbd className="px-2 py-1 bg-white/20 rounded">Esc</kbd> - Exit</div>
-                </div>
-                <div className="mt-2 text-center opacity-75">
-                  Swipe right ➡ Packed • Swipe left ⬅ No Need
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </motion.div>
 
         {/* Item Card */}
         <AnimatePresence mode="wait">
           <motion.div
             key={currentItem.id}
-            style={{ x, rotate, opacity }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
+            style={{ x, y, rotate, opacity }}
+            drag
+            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
             dragElastic={0.7}
             onDragEnd={handleDragEnd}
             initial={{ scale: 0.8, opacity: 0, rotateY: -90 }}
@@ -394,7 +363,8 @@ export function InteractivePackingMode({
             exit={{
               scale: 0.8,
               opacity: 0,
-              x: swipeDirection === 'right' ? 300 : swipeDirection === 'left' ? -300 : 0
+              x: swipeDirection === 'right' ? 300 : swipeDirection === 'left' ? -300 : 0,
+              y: swipeDirection === 'down' ? 300 : 0
             }}
             transition={{ type: 'spring', duration: 0.5 }}
             className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden cursor-grab active:cursor-grabbing relative"
@@ -415,6 +385,14 @@ export function InteractivePackingMode({
               }}
             >
               <XCircle className="w-16 h-16 text-white" />
+            </motion.div>
+            <motion.div
+              className="absolute inset-0 bg-amber-500 flex items-end justify-center pb-8 pointer-events-none z-10"
+              style={{
+                opacity: swipeDownOpacity,
+              }}
+            >
+              <Clock className="w-16 h-16 text-white" />
             </motion.div>
 
             {/* Section Badge */}

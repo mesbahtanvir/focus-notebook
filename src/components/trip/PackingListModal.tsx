@@ -572,7 +572,8 @@ export function PackingListModal({
                               {/* Group Items */}
                               <div className="space-y-2 ml-6 sm:ml-7">
                                 {group.items.map((item) => {
-                                  const isPacked = isItemPacked(packingList, item.id);
+                                  const itemStatus = getItemStatus(packingList, item.id);
+                                  const isPacked = itemStatus === 'packed';
 
                                   return (
                                     <div
@@ -580,6 +581,10 @@ export function PackingListModal({
                                       className={`flex items-start justify-between gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg border transition ${
                                         isPacked
                                           ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950/30'
+                                          : itemStatus === 'later'
+                                          ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30'
+                                          : itemStatus === 'no-need'
+                                          ? 'border-gray-300 bg-gray-100 dark:border-gray-600 dark:bg-gray-800'
                                           : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
                                       }`}
                                     >

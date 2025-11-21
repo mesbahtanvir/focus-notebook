@@ -26,6 +26,7 @@ import {
   Package,
   AlertTriangle,
   Zap,
+  Clock,
 } from 'lucide-react';
 import type { PackingSectionId, PackingItemStatus, PackingList } from '@/types/packing-list';
 
@@ -638,7 +639,8 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
                               {/* Group Items */}
                               <div className="space-y-2 ml-7">
                                 {group.items.map((item) => {
-                                  const isPacked = isItemPacked(packingList, item.id);
+                                  const itemStatus = getItemStatus(packingList, item.id);
+                                  const isPacked = itemStatus === 'packed';
 
                                   return (
                                     <div
@@ -646,6 +648,10 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
                                       className={`flex items-start justify-between gap-3 p-3 rounded-lg border transition ${
                                         isPacked
                                           ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950/30'
+                                          : itemStatus === 'later'
+                                          ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30'
+                                          : itemStatus === 'no-need'
+                                          ? 'border-gray-300 bg-gray-100 dark:border-gray-600 dark:bg-gray-800'
                                           : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
                                       }`}
                                     >
@@ -655,6 +661,8 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
                                       >
                                         {isPacked ? (
                                           <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                                        ) : itemStatus === 'later' ? (
+                                          <Clock className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
                                         ) : (
                                           <Circle className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
                                         )}
