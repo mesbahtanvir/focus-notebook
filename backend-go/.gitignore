@@ -1,6 +1,6 @@
-# Binaries
-server
-worker
+# Binaries (in root directory only, not cmd/server/)
+/server
+/worker
 *.exe
 *.exe~
 *.dll
