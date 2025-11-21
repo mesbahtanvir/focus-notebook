@@ -48,8 +48,8 @@ export interface DashboardAnalytics {
     completionRate: number;
   };
   comparison: {
-    focusTime: number;
-    tasks: number;
+    focusTime: number | null;
+    tasks: number | null;
   } | null;
   goals: {
     total: number;
@@ -130,10 +130,28 @@ export function computeDashboardAnalytics({
   // Calculate streak (consecutive days with at least 1 focus session)
   const currentStreak = calculateStreak(sessions, referenceDate);
 
-  // Calculate completion rate
-  const allTasks = tasks.length;
-  const completed = tasks.filter(task => task.done).length;
-  const completionRate = allTasks > 0 ? (completed / allTasks) * 100 : 0;
+  // Calculate completion rate for the selected period
+  // Get all tasks that were due or completed in this period
+  const tasksInPeriod = tasks.filter(task => {
+    // Include tasks completed in this period
+    if (task.completedAt) {
+      const completedDate = new Date(task.completedAt);
+      if (completedDate >= range.startDate && completedDate <= range.endDate) {
+        return true;
+      }
+    }
+    // Include tasks that were due in this period (whether completed or not)
+    if (task.dueDate) {
+      const dueDate = new Date(task.dueDate);
+      if (dueDate >= range.startDate && dueDate <= range.endDate) {
+        return true;
+      }
+    }
+    return false;
+  });
+
+  const completedInPeriod = tasksInPeriod.filter(task => task.done).length;
+  const completionRate = tasksInPeriod.length > 0 ? (completedInPeriod / tasksInPeriod.length) * 100 : 0;
 
   // Calculate comparison with previous period
   const comparison = calculateComparison(tasks, sessions, period, referenceDate, range);
@@ -283,7 +301,17 @@ function calculateComparison(
   period: SummaryPeriod,
   referenceDate: Date,
   currentRange: DateRange
-): { focusTime: number; tasks: number } | null {
+): { focusTime: number | null; tasks: number | null } | null {
+  // Helper to calculate percentage change, handling division by zero
+  const calcPercentChange = (prev: number, curr: number): number | null => {
+    if (prev > 0) {
+      return ((curr - prev) / prev) * 100;
+    }
+    // If prev is 0 and curr > 0, return null to indicate "new activity"
+    // If both are 0, return 0 to indicate "no change"
+    return curr > 0 ? null : 0;
+  };
+
   if (period === "today") {
     // Compare with yesterday
     const previousRange = {
@@ -303,8 +331,8 @@ function calculateComparison(
     const currTaskCount = filterByDateRange(tasks, currentRange, (task) => task.completedAt).length;
 
     return {
-      focusTime: prevFocusTime > 0 ? ((currFocusTime - prevFocusTime) / prevFocusTime) * 100 : 0,
-      tasks: prevTaskCount > 0 ? ((currTaskCount - prevTaskCount) / prevTaskCount) * 100 : 0
+      focusTime: calcPercentChange(prevFocusTime, currFocusTime),
+      tasks: calcPercentChange(prevTaskCount, currTaskCount)
     };
   }
 
@@ -327,8 +355,8 @@ function calculateComparison(
     const currTaskCount = filterByDateRange(tasks, currentRange, (task) => task.completedAt).length;
 
     return {
-      focusTime: prevFocusTime > 0 ? ((currFocusTime - prevFocusTime) / prevFocusTime) * 100 : 0,
-      tasks: prevTaskCount > 0 ? ((currTaskCount - prevTaskCount) / prevTaskCount) * 100 : 0
+      focusTime: calcPercentChange(prevFocusTime, currFocusTime),
+      tasks: calcPercentChange(prevTaskCount, currTaskCount)
     };
   }
 
@@ -353,8 +381,8 @@ function calculateComparison(
     const currTaskCount = filterByDateRange(tasks, currentRange, (task) => task.completedAt).length;
 
     return {
-      focusTime: prevFocusTime > 0 ? ((currFocusTime - prevFocusTime) / prevFocusTime) * 100 : 0,
-      tasks: prevTaskCount > 0 ? ((currTaskCount - prevTaskCount) / prevTaskCount) * 100 : 0
+      focusTime: calcPercentChange(prevFocusTime, currFocusTime),
+      tasks: calcPercentChange(prevTaskCount, currTaskCount)
     };
   }
 
@@ -373,9 +401,37 @@ function calculateGoalStats(goals: Goal[]): {
   const completed = goals.filter((g) => g.status === "completed").length;
   const progress = total > 0 ? (completed / total) * 100 : 0;
 
-  // Find goal with highest completion % (based on projects/tasks if available)
-  // For now, just pick the first active goal
-  const topGoal = activeGoals.length > 0 ? activeGoals[0] : null;
+  // Select top goal based on priority and recency
+  // Priority order: urgent > high > medium > low
+  const priorityWeight: Record<string, number> = {
+    urgent: 4,
+    high: 3,
+    medium: 2,
+    low: 1
+  };
+
+  const sortedActiveGoals = [...activeGoals].sort((a, b) => {
+    // First, sort by priority
+    const aPriority = priorityWeight[a.priority] || 0;
+    const bPriority = priorityWeight[b.priority] || 0;
+    if (aPriority !== bPriority) {
+      return bPriority - aPriority; // Higher priority first
+    }
+
+    // If same priority, prefer higher progress
+    const aProgress = a.progress || 0;
+    const bProgress = b.progress || 0;
+    if (aProgress !== bProgress) {
+      return bProgress - aProgress; // Higher progress first
+    }
+
+    // If same progress, sort by most recent update
+    const aTime = a.updatedAt || new Date(a.createdAt).getTime();
+    const bTime = b.updatedAt || new Date(b.createdAt).getTime();
+    return bTime - aTime; // Most recent first
+  });
+
+  const topGoal = sortedActiveGoals.length > 0 ? sortedActiveGoals[0] : null;
 
   return {
     total,

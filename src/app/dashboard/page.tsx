@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import { Target, Zap, Flame, BookOpen, Heart, BarChart3, TrendingUp } from "lucide-react";
+import { Target, Zap, Flame, BookOpen, Heart, BarChart3, TrendingUp, AlertCircle, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 import DashboardCharts from "@/components/dashboard/DashboardCharts";
@@ -32,6 +32,7 @@ const STAT_CARD_DEFINITIONS: ReadonlyArray<{
   value: (analytics: DashboardAnalytics) => string;
   subtitle: (analytics: DashboardAnalytics) => string;
   comparison?: (analytics: DashboardAnalytics) => number | null;
+  comparisonContext?: (analytics: DashboardAnalytics) => string;
 }> = [
   {
     key: "focus-time",
@@ -45,6 +46,11 @@ const STAT_CARD_DEFINITIONS: ReadonlyArray<{
     },
     subtitle: (analytics) => `${analytics.stats.totalSessions} sessions`,
     comparison: (analytics) => analytics.comparison?.focusTime ?? null,
+    comparisonContext: (analytics) => {
+      if (analytics.period === "today") return "vs. yesterday";
+      if (analytics.period === "week") return "vs. last week";
+      return "vs. last month";
+    },
   },
   {
     key: "tasks-completed",
@@ -54,6 +60,11 @@ const STAT_CARD_DEFINITIONS: ReadonlyArray<{
     value: (analytics) => analytics.stats.completedTasks.toString(),
     subtitle: (analytics) => getPeriodLabel(analytics.period),
     comparison: (analytics) => analytics.comparison?.tasks ?? null,
+    comparisonContext: (analytics) => {
+      if (analytics.period === "today") return "vs. yesterday";
+      if (analytics.period === "week") return "vs. last week";
+      return "vs. last month";
+    },
   },
   {
     key: "streak",
@@ -93,10 +104,22 @@ export default function DashboardPage() {
   const goals = useGoals((state) => state.goals);
   const projects = useProjects((state) => state.projects);
 
+  // Get loading and error states
+  const isLoadingTasks = useTasks((state) => state.isLoading);
+  const isLoadingFocus = useFocus((state) => state.isLoading);
+  const isLoadingGoals = useGoals((state) => state.isLoading);
+  const isLoadingProjects = useProjects((state) => state.isLoading);
+
+  const tasksSyncError = useTasks((state) => state.syncError);
+  // Note: Only useTasks has syncError field currently. Other stores may add it in the future.
+
   const subscribeFocus = useFocus((state) => state.subscribe);
   const subscribeTasks = useTasks((state) => state.subscribe);
   const subscribeGoals = useGoals((state) => state.subscribe);
   const subscribeProjects = useProjects((state) => state.subscribe);
+
+  const isLoading = isLoadingTasks || isLoadingFocus || isLoadingGoals || isLoadingProjects;
+  const hasErrors = !!tasksSyncError;
 
   const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>("today");
 
@@ -107,6 +130,19 @@ export default function DashboardPage() {
       subscribeGoals(user.uid);
       subscribeProjects(user.uid);
     }
+
+    // Cleanup function - unsubscribe from all stores
+    return () => {
+      const unsubFocus = useFocus.getState().unsubscribe;
+      const unsubTasks = useTasks.getState().unsubscribe;
+      const unsubGoals = useGoals.getState().unsubscribe;
+      const unsubProjects = useProjects.getState().unsubscribe;
+
+      if (unsubFocus) unsubFocus();
+      if (unsubTasks) unsubTasks();
+      if (unsubGoals) unsubGoals();
+      if (unsubProjects) unsubProjects();
+    };
   }, [user?.uid, subscribeFocus, subscribeTasks, subscribeGoals, subscribeProjects]);
 
   const analytics = useMemo(
@@ -135,6 +171,35 @@ export default function DashboardPage() {
           </p>
         </motion.div>
 
+        {/* Error Banner */}
+        {hasErrors && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-50 dark:bg-red-950/20 border-2 border-red-200 dark:border-red-800 rounded-lg p-4"
+          >
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-red-900 dark:text-red-100">
+                  Sync Error
+                </h3>
+                <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                  Some data may be out of sync. Please check your connection and refresh the page.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600 dark:text-blue-400" />
+            <span className="ml-3 text-gray-600 dark:text-gray-400">Loading dashboard data...</span>
+          </div>
+        )}
+
         {/* Period Selector */}
         <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 pb-4">
           <div className="flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 shadow-md">
@@ -157,7 +222,7 @@ export default function DashboardPage() {
 
         {/* Key Metrics */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          {STAT_CARD_DEFINITIONS.map(({ key, icon, title, gradient, value, subtitle, comparison }) => (
+          {STAT_CARD_DEFINITIONS.map(({ key, icon, title, gradient, value, subtitle, comparison, comparisonContext }) => (
             <StatsCard
               key={key}
               icon={icon}
@@ -166,6 +231,7 @@ export default function DashboardPage() {
               subtitle={subtitle(analytics)}
               gradient={gradient}
               comparison={comparison ? comparison(analytics) : undefined}
+              comparisonContext={comparisonContext ? comparisonContext(analytics) : undefined}
             />
           ))}
         </div>
