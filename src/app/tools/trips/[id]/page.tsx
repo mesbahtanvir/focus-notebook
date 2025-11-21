@@ -14,8 +14,7 @@ import { toolThemes } from '@/components/tools/themes';
 import { MapPin, Calendar, DollarSign, Trash2, TrendingDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { BudgetBreakdownCard } from '@/components/trip/BudgetBreakdownCard';
-import { PackingListCard } from '@/components/trip/PackingListCard';
-import { PackingListModal } from '@/components/trip/PackingListModal';
+import { PackingListInline } from '@/components/trip/PackingListInline';
 
 export default function TripDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -33,7 +32,6 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
 
   const [isExpenseFormOpen, setIsExpenseFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | undefined>();
-  const [isPackingListOpen, setIsPackingListOpen] = useState(false);
 
   useEffect(() => {
     if (user?.uid) {
@@ -211,11 +209,7 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
 
         {(isPlanning || hasBudgetBreakdown) && <BudgetBreakdownCard trip={trip} />}
 
-        <PackingListCard
-          tripId={trip.id}
-          tripStatus={trip.status}
-          onOpenModal={() => setIsPackingListOpen(true)}
-        />
+        <PackingListInline tripId={trip.id} tripName={trip.name} tripStatus={trip.status} />
 
         {!isPlanning && budgetVsActual.length > 0 && (
           <Card className="p-6">
@@ -358,13 +352,6 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
           }}
           tripId={trip.id}
           expense={editingExpense}
-        />
-
-        <PackingListModal
-          isOpen={isPackingListOpen}
-          onClose={() => setIsPackingListOpen(false)}
-          tripId={trip.id}
-          tripName={trip.name}
         />
       </div>
     </div>
