@@ -50,5 +50,3 @@ export const toastWarning = (input: ToastInput) => {
     ...rest,
   });
 };
-
-export const TOAST_DURATIONS = DURATIONS;

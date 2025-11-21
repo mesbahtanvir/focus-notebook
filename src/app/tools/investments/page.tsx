@@ -13,7 +13,7 @@ import { toolThemes } from '@/components/tools/themes';
 import { useCurrency } from '@/store/useCurrency';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { convertCurrency, normalizeCurrencyCode, SupportedCurrency } from '@/lib/utils/currency';
+import { convertCurrencySync, normalizeCurrencyCode, SupportedCurrency } from '@/lib/utils/currency';
 import { Download, Upload } from 'lucide-react';
 import { toastError, toastSuccess, toastWarning } from '@/lib/toast-presets';
 import { AssetHorizonPanel } from '@/components/investment/AssetHorizonPanel';
@@ -230,7 +230,7 @@ function InvestmentsPageContent() {
           return;
         }
         const investmentCurrency = normalizeCurrencyCode(investment.currency);
-        const convertedValue = convertCurrency(investment.currentValue, investmentCurrency, currency);
+        const convertedValue = convertCurrencySync(investment.currentValue, investmentCurrency, currency);
         currencyTotals.set(
           investmentCurrency,
           (currencyTotals.get(investmentCurrency) || 0) + convertedValue

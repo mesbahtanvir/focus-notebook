@@ -2,6 +2,7 @@
 
 import { Edit, Trash2 } from 'lucide-react';
 import { Subscription } from '@/store/useSubscriptions';
+import { formatCurrency } from '@/lib/services/currency';
 
 interface SubscriptionCardProps {
   subscription: Subscription;
@@ -42,14 +43,6 @@ export function SubscriptionCard({
       default:
         return 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300';
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(amount);
   };
 
   const formatDate = (dateString: string) => {

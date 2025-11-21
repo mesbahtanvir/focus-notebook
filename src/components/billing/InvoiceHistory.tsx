@@ -4,6 +4,7 @@ import { FileText, Download, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { formatCurrency } from '@/lib/services/currency';
 import type { CachedInvoice } from '../../../shared/subscription';
 
 interface InvoiceHistoryProps {
@@ -11,13 +12,6 @@ interface InvoiceHistoryProps {
   isLoading: boolean;
   hasMore: boolean;
   onLoadMore: () => Promise<void>;
-}
-
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-  }).format(amount / 100);
 }
 
 function formatDate(timestamp: number): string {
@@ -127,7 +121,7 @@ export function InvoiceHistory({ invoices, isLoading, hasMore, onLoadMore }: Inv
                 >
                   <td className="py-3 px-4 text-sm">{formatDate(invoice.created)}</td>
                   <td className="py-3 px-4 text-sm font-medium">
-                    {formatCurrency(invoice.amount, invoice.currency)}
+                    {formatCurrency(invoice.amount / 100, invoice.currency.toUpperCase())}
                   </td>
                   <td className="py-3 px-4">{getStatusBadge(invoice.status)}</td>
                   <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
@@ -173,7 +167,7 @@ export function InvoiceHistory({ invoices, isLoading, hasMore, onLoadMore }: Inv
               <div className="flex items-start justify-between">
                 <div>
                   <div className="font-medium">
-                    {formatCurrency(invoice.amount, invoice.currency)}
+                    {formatCurrency(invoice.amount / 100, invoice.currency.toUpperCase())}
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">
                     {formatDate(invoice.created)}

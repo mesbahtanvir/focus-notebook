@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { useSpending, type Transaction as CsvTransaction } from '@/store/useSpending';
+import { formatCurrency } from '@/lib/services/currency';
 import {
   LineChart as RechartsLineChart,
   Line,
@@ -549,12 +550,6 @@ function CSVTransactionDetailModal({ transaction, isOpen, onClose }: CSVTransact
   const isIncome = transaction.amount < 0;
   const amount = Math.abs(transaction.amount);
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
@@ -573,7 +568,7 @@ function CSVTransactionDetailModal({ transaction, isOpen, onClose }: CSVTransact
             <div className="mt-2 text-lg font-semibold">
               <span className={isIncome ? 'text-emerald-600' : 'text-rose-600'}>
                 {isIncome ? '+' : '-'}
-                {formatCurrency(amount)}
+                {formatCurrency(amount, 'USD')}
               </span>
             </div>
           </div>

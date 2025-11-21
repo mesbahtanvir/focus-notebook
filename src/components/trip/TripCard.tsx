@@ -6,6 +6,7 @@ import { MapPin, Calendar, DollarSign, TrendingUp } from 'lucide-react';
 import { Trip, useTrips } from '@/store/useTrips';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { formatCurrency } from '@/lib/services/currency';
 
 interface TripCardProps {
   trip: Trip;
@@ -47,14 +48,6 @@ export function TripCard({ trip, index }: TripCardProps) {
       default:
         return 'bg-gray-500/10 text-gray-700 dark:text-gray-400';
     }
-  };
-
-  const formatCurrency = (amount: number, currency: string = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-    }).format(amount);
   };
 
   const formatDate = (dateString: string) => {

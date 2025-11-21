@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/card';
 import { toolThemes } from '@/components/tools/themes';
 import { Calendar } from 'lucide-react';
 import { toastError, toastSuccess, toastWarning } from '@/lib/toast-presets';
+import { formatCurrency } from '@/lib/services/currency';
 
 export default function SubscriptionsPage() {
   const { user } = useAuth();
@@ -52,14 +53,6 @@ export default function SubscriptionsPage() {
   const activeCount = getActiveSubscriptions().length;
   const upcomingWeek = getUpcomingBillings(7);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
-
   const handleEdit = (subscription: Subscription) => {
     setEditingSubscription(subscription);
     setIsFormOpen(true);
@@ -98,12 +91,12 @@ export default function SubscriptionsPage() {
           stats={[
             {
               label: 'Monthly',
-              value: formatCurrency(totalMonthlyCost),
+              value: formatCurrency(totalMonthlyCost, 'USD'),
               variant: 'default',
             },
             {
               label: 'Yearly',
-              value: formatCurrency(totalYearlyCost),
+              value: formatCurrency(totalYearlyCost, 'USD'),
               variant: 'info',
             },
             {
@@ -129,7 +122,7 @@ export default function SubscriptionsPage() {
                     <span className="font-medium">{sub.name}</span>
                     <span className="text-blue-600 dark:text-blue-400">
                       {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} -{' '}
-                      {formatCurrency(sub.cost)}
+                      {formatCurrency(sub.cost, 'USD')}
                     </span>
                   </div>
                 );

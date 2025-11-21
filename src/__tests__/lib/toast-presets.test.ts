@@ -7,7 +7,6 @@ import {
   toastError,
   toastInfo,
   toastWarning,
-  TOAST_DURATIONS,
 } from '@/lib/toast-presets';
 
 // Mock the toast hook
@@ -20,14 +19,6 @@ const { toast: mockToast } = require('@/hooks/use-toast');
 describe('toast-presets utilities', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  describe('TOAST_DURATIONS', () => {
-    it('should export duration constants', () => {
-      expect(TOAST_DURATIONS.short).toBe(3500);
-      expect(TOAST_DURATIONS.medium).toBe(6000);
-      expect(TOAST_DURATIONS.long).toBe(8000);
-    });
   });
 
   describe('toastSuccess', () => {

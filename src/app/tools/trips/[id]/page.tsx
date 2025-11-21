@@ -12,6 +12,7 @@ import { MapPin, Calendar, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { BudgetBreakdownCard } from '@/components/trip/BudgetBreakdownCard';
 import { PackingListInline } from '@/components/trip/PackingListInline';
+import { formatCurrency } from '@/lib/services/currency';
 
 export default function TripDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -56,14 +57,6 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
   const isPlanning = trip.status === 'planning';
   const canAddExpenses = true;
   const hasBudgetBreakdown = !!(trip.budgetBreakdown && Object.keys(trip.budgetBreakdown).length > 0);
-
-  const formatCurrency = (amount: number, currency: string = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

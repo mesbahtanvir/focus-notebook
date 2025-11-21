@@ -5,7 +5,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { Investment } from '@/store/useInvestments';
 import { getChangeColorClass } from '@/lib/services/stockApi';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { convertCurrency, normalizeCurrencyCode, formatCurrency, SupportedCurrency } from '@/lib/utils/currency';
+import { convertCurrencySync, normalizeCurrencyCode, formatCurrency, SupportedCurrency } from '@/lib/utils/currency';
 import { CurrencyBadge } from '@/components/investment/CurrencyBadge';
 
 interface StockPerformanceChartProps {
@@ -24,7 +24,7 @@ export function StockPerformanceChart({ investment, currency, variant = 'standal
 
   const convertToDisplay = (value: number, sourceCurrency?: string) => {
     const fromCurrency = normalizeCurrencyCode(sourceCurrency || investmentCurrency);
-    return convertCurrency(value, fromCurrency, currency);
+    return convertCurrencySync(value, fromCurrency, currency);
   };
 
   const formatPointDate = (date: string) =>
@@ -55,7 +55,7 @@ export function StockPerformanceChart({ investment, currency, variant = 'standal
         <div className="flex justify-between text-sky-900 dark:text-sky-100">
           <span>Current:</span>
           <span className="font-semibold font-mono tabular-nums">
-            {formatCurrency(nativeCurrentValue, normalizeCurrencyCode(nativeCurrency), investment.locale || 'en-US')}
+            {formatCurrency(nativeCurrentValue, normalizeCurrencyCode(nativeCurrency))}
           </span>
         </div>
         {typeof investment.nativeInitialAmount === 'number' && (
@@ -64,8 +64,7 @@ export function StockPerformanceChart({ investment, currency, variant = 'standal
             <span className="font-semibold font-mono tabular-nums">
               {formatCurrency(
                 investment.nativeInitialAmount,
-                normalizeCurrencyCode(nativeCurrency),
-                investment.locale || 'en-US'
+                normalizeCurrencyCode(nativeCurrency)
               )}
             </span>
           </div>

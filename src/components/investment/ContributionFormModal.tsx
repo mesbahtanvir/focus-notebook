@@ -129,16 +129,14 @@ export function ContributionFormModal({
                   <span>
                     {formatCurrency(
                       investment.nativeCurrentValue,
-                      normalizeCurrencyCode(investment.nativeCurrency),
-                      investment.locale || 'en-US'
+                      normalizeCurrencyCode(investment.nativeCurrency)
                     )}
                   </span>
                   <span>
                     {typeof investment.nativeInitialAmount === 'number'
                       ? formatCurrency(
                           investment.nativeInitialAmount,
-                          normalizeCurrencyCode(investment.nativeCurrency),
-                          investment.locale || 'en-US'
+                          normalizeCurrencyCode(investment.nativeCurrency)
                         )
                       : '—'}
                   </span>
