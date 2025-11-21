@@ -21,6 +21,7 @@ function ResultsPageContent() {
   const [deleteConfirmPhoto, setDeleteConfirmPhoto] = useState<BattlePhoto | null>(null);
   const [mergeSourceId, setMergeSourceId] = useState<string | null>(null);
   const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
+  const [showMergeConfirm, setShowMergeConfirm] = useState<{ targetId: string; targetLabel: string; baseLabel: string } | null>(null);
 
   useEffect(() => {
     if (sessionId && secretKey) {
@@ -67,25 +68,25 @@ function ResultsPageContent() {
     setMergeSourceId(prev => (prev === photoId ? null : photoId));
   };
 
-  const handleMergePhotos = async (targetId: string) => {
+  const handleMergeClick = (targetId: string) => {
     if (!sessionId || !mergeSourceId || mergeSourceId === targetId) return;
     const targetIndex = results.findIndex(photo => photo.id === targetId);
     const baseIndex = mergeSourceIndex;
     const baseLabel = baseIndex >= 0 ? `Photo #${baseIndex + 1}` : "the selected photo";
     const targetLabel = targetIndex >= 0 ? `Photo #${targetIndex + 1}` : "this photo";
-    const confirmed =
-      typeof window === "undefined"
-        ? false
-        : window.confirm(
-            `Merge ${targetLabel} into ${baseLabel}? Their stats will be combined and ${targetLabel} will be removed.`
-          );
-    if (!confirmed) return;
+    setShowMergeConfirm({ targetId, targetLabel, baseLabel });
+  };
+
+  const handleMergeConfirm = async () => {
+    if (!sessionId || !mergeSourceId || !showMergeConfirm) return;
+    const { targetId } = showMergeConfirm;
     setMergeTargetId(targetId);
+    setShowMergeConfirm(null);
     try {
       await mergeSessionPhotos(sessionId, mergeSourceId, targetId);
       toastSuccess({
-        title: "Photos merged",
-        description: "The stats have been combined into the selected photo.",
+        title: "Photos merged successfully!",
+        description: "The voting stats have been combined and the duplicate photo has been removed.",
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to merge photos. Please try again.";
@@ -304,7 +305,7 @@ function ResultsPageContent() {
                             <button
                               type="button"
                               className="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-purple-500 to-pink-500 px-3 py-1 text-xs font-semibold text-white disabled:opacity-60"
-                              onClick={() => handleMergePhotos(result.id)}
+                              onClick={() => handleMergeClick(result.id)}
                               disabled={isMergeTargetPending}
                             >
                               {isMergeTargetPending ? (
@@ -402,6 +403,58 @@ function ResultsPageContent() {
                   </>
                 ) : (
                   "Delete photo"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMergeConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setShowMergeConfirm(null)} />
+          <div className="relative z-10 w-full max-w-md rounded-3xl bg-white p-6 text-gray-900 shadow-2xl dark:bg-slate-900 dark:text-white">
+            <div className="flex items-center gap-3 text-purple-600 dark:text-purple-400 mb-3">
+              <GitMerge className="h-5 w-5" />
+              <h3 className="text-lg font-semibold">Combine these photos?</h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Merge <span className="font-semibold text-purple-600 dark:text-purple-400">{showMergeConfirm.targetLabel}</span> into{" "}
+              <span className="font-semibold text-purple-600 dark:text-purple-400">{showMergeConfirm.baseLabel}</span>?
+            </p>
+            <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 p-4 mb-5">
+              <p className="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-2">What happens:</p>
+              <ul className="text-xs text-gray-700 dark:text-gray-300 space-y-1">
+                <li>• All voting stats (wins, losses, rating) will be combined</li>
+                <li>• {showMergeConfirm.targetLabel} will be permanently removed</li>
+                <li>• {showMergeConfirm.baseLabel} will inherit the complete battle history</li>
+              </ul>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowMergeConfirm(null)}
+                disabled={!!mergeTargetId}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={handleMergeConfirm}
+                disabled={!!mergeTargetId}
+              >
+                {mergeTargetId ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Merging…
+                  </>
+                ) : (
+                  <>
+                    <GitMerge className="h-4 w-4 mr-2" />
+                    Merge photos
+                  </>
                 )}
               </Button>
             </div>

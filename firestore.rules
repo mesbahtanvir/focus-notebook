@@ -32,20 +32,6 @@ service cloud.firestore {
              resource.data.photos is list &&
              request.resource.data.photos.size() == resource.data.photos.size();
     }
-
-    function isMergeUpdate() {
-      // Allow merge operations by authenticated owner:
-      // - photos array shrinks (one photo removed)
-      // - photoAliases field may be added or modified
-      // - updatedAt changed
-      let changedKeys = request.resource.data.diff(resource.data).changedKeys();
-      return (changedKeys.hasOnly(['photos', 'photoAliases', 'updatedAt']) ||
-              changedKeys.hasOnly(['photos', 'updatedAt'])) &&
-             resource.data.keys().hasAll(['photos']) &&
-             request.resource.data.photos is list &&
-             resource.data.photos is list &&
-             request.resource.data.photos.size() < resource.data.photos.size();
-    }
     
     // User data collections
     match /users/{userId}/{collection}/{document} {
@@ -90,10 +76,8 @@ service cloud.firestore {
                     && request.resource.data.ownerId == request.auth.uid;
 
       allow update: if (
-        (isAuthenticated() && request.auth.uid == resource.data.ownerId)
-        || isVoteUpdate()
-        || (isAuthenticated() && request.auth.uid == resource.data.ownerId && isMergeUpdate())
-      );
+        isAuthenticated() && request.auth.uid == resource.data.ownerId
+      ) || isVoteUpdate();
 
       allow delete: if false;
     }

@@ -105,6 +105,7 @@ export default function GalleryManagerPage() {
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
   const [isDeletingPoor, setIsDeletingPoor] = useState(false);
+  const [showMergeConfirm, setShowMergeConfirm] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<PhotoLibraryItem | null>(null);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [previewDimensions, setPreviewDimensions] = useState<{ width: number; height: number } | null>(null);
@@ -278,15 +279,21 @@ export default function GalleryManagerPage() {
     }
   };
 
-  const handleMergeSelected = async () => {
-    if (!canManage || selectedCount < 2 || !sessionId) return;
+  const handleMergeClick = () => {
+    if (!canManage || selectedCount !== 2 || !sessionId) return;
+    setShowMergeConfirm(true);
+  };
+
+  const handleMergeConfirm = async () => {
+    if (!canManage || selectedCount !== 2 || !sessionId) return;
     const [targetId, mergedId] = Array.from(selectedPhotoIds);
     setIsMerging(true);
+    setShowMergeConfirm(false);
     try {
       await mergeSessionPhotos(sessionId, targetId, mergedId);
       toastSuccess({
-        title: "Photos merged",
-        description: "The stats have been combined and the duplicate removed.",
+        title: "Photos merged successfully!",
+        description: "The voting stats have been combined and the duplicate photo has been removed.",
       });
       setSelectedPhotoIds(new Set([targetId]));
     } catch (error) {
@@ -478,11 +485,11 @@ export default function GalleryManagerPage() {
               <Button
                 variant="outline"
                 className="text-purple-600 border-purple-200 hover:bg-purple-50 dark:text-purple-200 dark:border-purple-400/40 dark:hover:bg-purple-400/10"
-                onClick={handleMergeSelected}
-                disabled={!canManage || selectedCount < 2 || isMerging || !sessionId}
+                onClick={handleMergeClick}
+                disabled={!canManage || selectedCount !== 2 || isMerging || !sessionId}
               >
                 <GitMerge className="h-4 w-4 mr-2" />
-                Merge selected
+                {isMerging ? "Merging..." : selectedCount === 2 ? "Merge selected" : "Select 2 to merge"}
               </Button>
               <Button
                 variant="outline"
@@ -843,6 +850,57 @@ export default function GalleryManagerPage() {
                     : bulkAction === "poor"
                       ? "Delete poor performers"
                       : "Delete all"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMergeConfirm && selectedCount === 2 && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setShowMergeConfirm(false)} />
+          <div className="relative z-10 w-full max-w-md rounded-3xl bg-white p-6 text-gray-900 shadow-2xl dark:bg-slate-900 dark:text-white">
+            <div className="flex items-center gap-3 text-purple-600 dark:text-purple-400 mb-3">
+              <GitMerge className="h-5 w-5" />
+              <h3 className="text-lg font-semibold">Combine these photos?</h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              When you merge duplicates, all voting stats (wins, losses, rating) will be combined into one photo.
+              The second photo will be permanently removed.
+            </p>
+            <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 p-4 mb-5">
+              <p className="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-2">💡 Merge tip</p>
+              <p className="text-xs text-gray-700 dark:text-gray-300">
+                Use this to clean up duplicate uploads or combine photos that represent the same shot.
+                The first selected photo will keep its image, while inheriting all battle history.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowMergeConfirm(false)}
+                disabled={isMerging}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={handleMergeConfirm}
+                disabled={isMerging}
+              >
+                {isMerging ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Merging…
+                  </>
+                ) : (
+                  <>
+                    <GitMerge className="h-4 w-4 mr-2" />
+                    Merge photos
+                  </>
                 )}
               </Button>
             </div>
