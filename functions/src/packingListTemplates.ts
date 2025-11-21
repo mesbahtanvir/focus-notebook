@@ -49,6 +49,7 @@ export const PACKING_SECTIONS: PackingSection[] = [
         description: "Everything you need to get out the door.",
         items: [
           { id: "essentials-passport", name: "Passport / ID", tip: "Store with travel wallet for easy reach." },
+          { id: "essentials-driving-license", name: "Driving license", description: "Required for car rentals and additional ID." },
           { id: "essentials-visa", name: "Visa (if required)", description: "Check validity and required documents." },
           { id: "essentials-itinerary", name: "Itinerary + confirmations", description: "Addresses, reservation codes, and tickets." },
           { id: "essentials-insurance", name: "Travel insurance info", description: "Policy number, emergency contacts, coverage details." },
@@ -61,6 +62,7 @@ export const PACKING_SECTIONS: PackingSection[] = [
         icon: "💳",
         description: "Currency and payment preparation.",
         items: [
+          { id: "essentials-credit-cards", name: "Credit cards", tip: "Primary card plus backup card stored separately." },
           { id: "essentials-local-currency", name: "Get local currency from bank", description: "Visit TD Bank or exchange service for cash." },
           { id: "essentials-notify-cards", name: "Notify credit card companies", tip: "Inform banks of international travel dates to avoid blocks." },
           { id: "essentials-no-fee-cards", name: "Pack cards with no foreign transaction fees", description: "Select travel-friendly credit cards." },
@@ -73,6 +75,7 @@ export const PACKING_SECTIONS: PackingSection[] = [
         icon: "👜",
         description: "Comfort and essentials for the journey itself.",
         items: [
+          { id: "essentials-keys", name: "Keys", description: "House keys and any other essential keys." },
           { id: "essentials-snacks", name: "Snacks & hydration", description: "Reusable bottle, protein snack, gum." },
           { id: "essentials-comfort", name: "Comfort items", tip: "Neck pillow, sleep mask, or cozy scarf." },
           { id: "essentials-health", name: "Health essentials", description: "Meds, supplements, motion sickness aids." },
@@ -134,8 +137,9 @@ export const PACKING_SECTIONS: PackingSection[] = [
         icon: "👟",
         description: "Comfortable shoes for all activities.",
         items: [
-          { id: "clothing-walking-shoes", name: "Comfortable walking shoes", tip: "Break in before trip to avoid blisters." },
-          { id: "clothing-flip-flops", name: "Flip-flops or sandals", description: "For beach, pool, or relaxing." },
+          { id: "clothing-white-sneakers", name: "White sneakers (daily wear)", tip: "Versatile and comfortable for everyday activities." },
+          { id: "clothing-sandals", name: "Sandals / Beach shoes", description: "For beach, pool, or relaxing." },
+          { id: "clothing-hiking-shoes", name: "Lightweight hiking or walking shoes", tip: "Break in before trip to avoid blisters." },
         ],
       },
       {
@@ -164,10 +168,14 @@ export const PACKING_SECTIONS: PackingSection[] = [
         description: "Mini versions of your daily routine.",
         items: [
           { id: "personal-toothbrush", name: "Toothbrush + paste", description: "Include floss and mouthwash tablets." },
+          { id: "personal-razor", name: "Razor & trimmer", tip: "Pack with protective cover for safety." },
           { id: "personal-skincare", name: "Skincare basics", tip: "Cleanser, moisturizer, SPF." },
           { id: "personal-hair", name: "Hair care essentials", description: "Brush/comb, styling tools, dry shampoo." },
+          { id: "personal-hair-gel", name: "Hair cream / gel", description: "Travel-size styling product." },
           { id: "personal-shower", name: "Shower essentials", description: "Travel-size shampoo, conditioner, body wash." },
           { id: "personal-deodorant", name: "Deodorant", tip: "TSA-compliant size for carry-on." },
+          { id: "personal-perfume", name: "Perfume", description: "Small travel atomizer or solid perfume." },
+          { id: "personal-lip-balm", name: "Lip balm", tip: "With SPF protection for sun exposure." },
         ],
       },
       {
@@ -210,7 +218,10 @@ export const PACKING_SECTIONS: PackingSection[] = [
         description: "Core electronics for travel days and downtime.",
         items: [
           { id: "tech-phone", name: "Phone + charger", tip: "Add travel eSIM or offline maps." },
+          { id: "tech-laptop", name: "Laptop + charger", description: "For work or entertainment during downtime." },
           { id: "tech-headphones", name: "Headphones", description: "Noise-cancelling or wired backup." },
+          { id: "tech-usb-drive", name: "USB flash drive", tip: "For quick file transfers and backups." },
+          { id: "tech-watch", name: "Watch", description: "For timekeeping and fitness tracking." },
           { id: "tech-entertainment", name: "Entertainment", description: "E-reader, tablet, or favorite book." },
         ],
       },
@@ -243,6 +254,8 @@ export const PACKING_SECTIONS: PackingSection[] = [
           { id: "extras-eye", name: "Sleep kit", tip: "Eye mask and earplugs." },
           { id: "extras-snacks", name: "Favorite treats", description: "Keep morale high with familiar snacks." },
           { id: "extras-flight-clothes", name: "Comfortable, layered flight clothes", tip: "Dress in layers for temperature changes on plane." },
+          { id: "extras-sunglasses", name: "Sunglasses", description: "Protect eyes from sun during outdoor activities." },
+          { id: "extras-ziplock-bags", name: "Ziplock bags", tip: "For organizing electronics, wet clothes, and toiletries." },
         ],
       },
       {
@@ -265,6 +278,16 @@ export const PACKING_SECTIONS: PackingSection[] = [
           { id: "extras-tipping", name: "Check tipping etiquette", description: "Research local customs for tipping and gratuity." },
           { id: "extras-phrases", name: "Learn 3-5 local phrases", tip: "Hello, thank you, help, no, excuse me in local language." },
           { id: "extras-flight-alerts", name: "Set up flight alerts", description: "Use TripIt, FlightAware, or airline app for updates." },
+        ],
+      },
+      {
+        id: "fitness",
+        title: "Fitness & Wellness",
+        icon: "💪",
+        description: "Stay active and healthy during your trip.",
+        items: [
+          { id: "extras-gym-strap", name: "Gym strap / resistance band", description: "Portable workout equipment for quick exercises." },
+          { id: "extras-workout-clothes", name: "Workout clothes", tip: "Quick-dry athletic wear if planning to exercise." },
         ],
       },
     ],
