@@ -45,11 +45,11 @@ jobs:
         with:
           node-version: '22.x'
           cache: npm
-          cache-dependency-path: functions/package-lock.json
+          cache-dependency-path: apps/functions/package-lock.json
 
       - name: Install dependencies
         run: |
-          cd functions
+          cd apps/functions
           npm ci
 
       - name: Generate environment file
@@ -64,7 +64,7 @@ jobs:
           python - <<'PY'
           import os, pathlib
 
-          env_path = pathlib.Path('functions/.env')
+          env_path = pathlib.Path('apps/functions/.env')
           env_path.write_text('\n'.join([
               f"OPENAI_API_KEY={os.environ['OPENAI_KEY']}",
               f"STRIPE_SECRET={os.environ['STRIPE_SECRET']}",
@@ -77,7 +77,7 @@ jobs:
 
       - name: Build functions
         run: |
-          cd functions
+          cd apps/functions
           npm run build
 
       - name: Deploy to Firebase
