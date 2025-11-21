@@ -20,7 +20,11 @@
     "test:screenshots:ui": "playwright test --ui",
     "test:screenshots:debug": "playwright test --debug",
     "test:screenshots:update": "playwright test --update-snapshots",
-    "validate": "npm run lint && npm run test && npm run build"
+    "validate": "npm run lint && npm run test && npm run build",
+    "deploy": "firebase deploy",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:rules": "firebase deploy --only firestore:rules,storage:rules"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
