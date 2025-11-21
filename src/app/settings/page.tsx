@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { toastWarning } from '@/lib/toast-presets';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTasks } from '@/store/useTasks';
@@ -16,27 +16,9 @@ import { useThoughts } from '@/store/useThoughts';
 import { useMoods } from '@/store/useMoods';
 import { useFocus } from '@/store/useFocus';
 import { useSubscriptionStatus } from '@/store/useSubscriptionStatus';
-import { EnhancedDataManagement } from '@/components/EnhancedDataManagement';
 import { TokenUsageDashboard } from '@/components/TokenUsageDashboard';
-import { Crown, Database, Rocket, ShieldCheck, Sparkles, RefreshCw } from 'lucide-react';
-
-const PRO_BENEFITS = [
-  {
-    icon: Sparkles,
-    title: 'Unlimited AI automations',
-    description: 'Process every thought with intelligent action plans, summaries, and smart tagging.',
-  },
-  {
-    icon: Rocket,
-    title: 'Background processing',
-    description: 'Let Focus Notebook run in the background and surface confident suggestions automatically.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Priority support & previews',
-    description: 'Get hands-on help from the team and early access to upcoming features.',
-  },
-] as const;
+import { SettingsLayout } from '@/components/settings/SettingsLayout';
+import { Crown, Sparkles, Info, ExternalLink } from 'lucide-react';
 
 const ENTITLEMENT_MESSAGES: Record<string, string> = {
   allowed: 'Focus Notebook Pro is active on your account.',
@@ -157,109 +139,96 @@ export default function SettingsPage() {
   };
 
   if (isSettingsLoading || (subscriptionLoading && !subscription)) {
-    return <div className="flex items-center justify-center h-64">Loading settings...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-gray-600 dark:text-gray-400">Loading settings...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto py-4 px-3 space-y-4 max-w-6xl">
-      {/* Compact Header */}
-      <div className="flex items-baseline gap-2">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">⚙️ Settings</h1>
-        <span className="text-sm text-gray-500 dark:text-gray-400">Manage preferences</span>
-      </div>
+    <SettingsLayout
+      title="General"
+      description="Manage your app preferences and subscription"
+    >
+      <div className="space-y-8">
+        {/* AI Features Section */}
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              AI Features
+            </h3>
+          </div>
 
-      {/* Ultra-Compact Grid - 3 columns on large screens */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-
-        {/* Background Processing */}
-        <Card className="border border-blue-200 dark:border-blue-800">
-          <CardHeader className="pb-2 pt-3 px-3">
-            <CardTitle className="text-base flex items-center gap-1.5">
-              <Sparkles className="h-4 w-4 text-blue-600" />
-              Background Processing
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 pb-3">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Auto-analyze thoughts
+          <div className="space-y-4">
+            {/* Background Processing */}
+            <div className="flex items-start justify-between gap-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Label
+                    htmlFor="allowBackgroundProcessing"
+                    className="text-sm font-medium text-gray-900 dark:text-white cursor-pointer"
+                  >
+                    Background Processing
+                  </Label>
+                  {!hasProAccess && (
+                    <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                      <Crown className="h-3 w-3 mr-1" />
+                      Pro
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Automatically analyze and process your thoughts in the background
                 </p>
-                <Switch
-                  id="allowBackgroundProcessing"
-                  checked={allowBackgroundProcessing && hasProAccess}
-                  disabled={!hasProAccess}
-                  onCheckedChange={handleBackgroundToggle}
-                />
               </div>
-              {!hasProAccess && (
-                <Link href="/profile" className="text-xs font-semibold text-purple-600 hover:underline">
-                  Pro feature →
-                </Link>
-              )}
+              <Switch
+                id="allowBackgroundProcessing"
+                checked={allowBackgroundProcessing && hasProAccess}
+                disabled={!hasProAccess}
+                onCheckedChange={handleBackgroundToggle}
+              />
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Data Management */}
-        <Card className="border border-green-200 dark:border-green-800">
-          <CardHeader className="pb-2 pt-3 px-3">
-            <CardTitle className="text-base flex items-center gap-1.5">
-              <Database className="h-4 w-4 text-green-600" />
-              Data Management
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 pb-3">
-            <div className="space-y-2">
-              <div className="flex flex-wrap gap-1">
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                  Import/Export
-                </Badge>
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                  Preview
-                </Badge>
+            {/* Pro Status */}
+            <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-900 dark:text-white font-medium mb-1">
+                    {hasProAccess ? 'Pro Active' : 'Pro Features'}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {entitlementMessage}
+                  </p>
+                  {!hasProAccess && (
+                    <Link href="/profile" className="inline-flex items-center gap-1 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 mt-2">
+                      Upgrade to Pro
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  )}
+                </div>
               </div>
-              <Link href="/settings/data-management" className="block">
-                <Button size="sm" className="w-full h-7 text-xs bg-green-600 hover:bg-green-700 text-white">
-                  <Database className="h-3 w-3 mr-1" />
-                  Manage
-                </Button>
-              </Link>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        {/* Database Migrations */}
-        <Card className="border border-orange-200 dark:border-orange-800">
-          <CardHeader className="pb-2 pt-3 px-3">
-            <CardTitle className="text-base flex items-center gap-1.5">
-              <RefreshCw className="h-4 w-4 text-orange-600" />
-              Migrations
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 pb-3">
-            <div className="space-y-2">
-              <div className="flex flex-wrap gap-1">
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
-                  Sequential
-                </Badge>
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
-                  Tracked
-                </Badge>
-              </div>
-              <Link href="/tools/migrate" className="block">
-                <Button size="sm" variant="outline" className="w-full h-7 text-xs border-orange-300 hover:bg-orange-50 dark:border-orange-700 dark:hover:bg-orange-900/20">
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Run
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+        <Separator />
+
+        {/* Token Usage Section */}
+        <section>
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+              Token Usage
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Monitor your AI token consumption and limits
+            </p>
+          </div>
+          <TokenUsageDashboard />
+        </section>
       </div>
-
-      {/* Token Usage Dashboard - Full Width */}
-      <TokenUsageDashboard />
-    </div>
+    </SettingsLayout>
   );
 }
