@@ -65,8 +65,6 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
   const { toast } = useToast();
   const {
     subscribe,
-    getPackingList,
-    getProgress,
     togglePacked,
     setItemStatus,
     addCustomItem,
@@ -74,7 +72,6 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
     toggleTimelineTask,
     createPackingList,
     deletePackingList,
-    isLoadingList,
   } = usePackingLists();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -102,9 +99,51 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
     };
   }, [user?.uid, tripId, subscribe]);
 
-  const packingList = getPackingList(tripId);
-  const isLoading = isLoadingList(tripId);
-  const progress = getProgress(tripId);
+  // Subscribe to packing list state for reactive updates
+  const packingList = usePackingLists((state) => state.packingLists.get(tripId));
+  const isLoading = usePackingLists((state) => state.isLoading.get(tripId) || false);
+
+  // Calculate progress reactively when packingList changes
+  const progress = useMemo(() => {
+    if (!packingList) {
+      return { total: 0, packed: 0, percentage: 0 };
+    }
+
+    // Count total items from sections
+    let totalItems = 0;
+    packingList.sections.forEach((section) => {
+      section.groups.forEach((group) => {
+        totalItems += group.items.length;
+      });
+    });
+
+    // Count custom items
+    if (packingList.customItems) {
+      Object.values(packingList.customItems).forEach((items) => {
+        totalItems += items.length;
+      });
+    }
+
+    // Count packed items - support both old and new format
+    let packedCount = 0;
+    if (packingList.itemStatuses) {
+      // New format: count items with status 'packed'
+      packedCount = Object.values(packingList.itemStatuses).filter(
+        (status) => status === 'packed'
+      ).length;
+    } else {
+      // Fallback to old format
+      packedCount = packingList.packedItemIds?.length || 0;
+    }
+
+    const percentage = totalItems === 0 ? 0 : Math.round((packedCount / totalItems) * 100);
+
+    return {
+      total: totalItems,
+      packed: packedCount,
+      percentage,
+    };
+  }, [packingList]);
 
   // Status gating - only show for planning or in-progress trips
   const canUsePacking = tripStatus === 'planning' || tripStatus === 'in-progress';

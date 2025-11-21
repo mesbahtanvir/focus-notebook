@@ -69,8 +69,6 @@ export function PackingListModal({
 }: PackingListModalProps) {
   const { toast } = useToast();
   const {
-    getPackingList,
-    getProgress,
     togglePacked,
     setItemStatus,
     addCustomItem,
@@ -88,8 +86,50 @@ export function PackingListModal({
   const [customItemName, setCustomItemName] = useState('');
   const [customItemQuantity, setCustomItemQuantity] = useState('');
 
-  const packingList = getPackingList(tripId);
-  const progress = getProgress(tripId);
+  // Subscribe to packing list state for reactive updates
+  const packingList = usePackingLists((state) => state.packingLists.get(tripId));
+
+  // Calculate progress reactively when packingList changes
+  const progress = useMemo(() => {
+    if (!packingList) {
+      return { total: 0, packed: 0, percentage: 0 };
+    }
+
+    // Count total items from sections
+    let totalItems = 0;
+    packingList.sections.forEach((section) => {
+      section.groups.forEach((group) => {
+        totalItems += group.items.length;
+      });
+    });
+
+    // Count custom items
+    if (packingList.customItems) {
+      Object.values(packingList.customItems).forEach((items) => {
+        totalItems += items.length;
+      });
+    }
+
+    // Count packed items - support both old and new format
+    let packedCount = 0;
+    if (packingList.itemStatuses) {
+      // New format: count items with status 'packed'
+      packedCount = Object.values(packingList.itemStatuses).filter(
+        (status) => status === 'packed'
+      ).length;
+    } else {
+      // Fallback to old format
+      packedCount = packingList.packedItemIds?.length || 0;
+    }
+
+    const percentage = totalItems === 0 ? 0 : Math.round((packedCount / totalItems) * 100);
+
+    return {
+      total: totalItems,
+      packed: packedCount,
+      percentage,
+    };
+  }, [packingList]);
 
   // Track if we've shown confetti to avoid repeating
   const hasShownConfetti = useRef(false);
