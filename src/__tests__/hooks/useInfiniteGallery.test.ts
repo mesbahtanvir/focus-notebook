@@ -2,6 +2,15 @@ import { renderHook } from "@testing-library/react";
 import { useInfiniteGallery } from "@/hooks/useInfiniteGallery";
 import { PhotoLibraryItem } from "@/store/usePhotoFeedback";
 
+// Mock ResizeObserver
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+global.ResizeObserver = ResizeObserverMock as any;
+
 const buildPhoto = (id: string): PhotoLibraryItem => ({
   id,
   ownerId: "test-user",

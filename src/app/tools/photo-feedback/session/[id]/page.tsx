@@ -4,8 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, SkipForward } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { usePhotoFeedback, type BattlePhoto } from "@/store/usePhotoFeedback";
 import { toastError } from "@/lib/toast-presets";
 import { useAuth } from "@/contexts/AuthContext";
@@ -267,6 +268,23 @@ export default function PhotoBattleVotingPage() {
     [currentSession, submitVote, reloadSession, isAnimating, pair, authLoading, authUser, ensureAnonymousSession]
   );
 
+  const handleSkip = useCallback(() => {
+    if (!currentSession || isAnimating || !pair) return;
+
+    setIsAnimating(true);
+
+    // Short animation for skip
+    setTimeout(() => {
+      // Simply advance to next pair without voting
+      setPairBuffer(prev => {
+        if (prev.length === 0) return prev;
+        return prev.slice(1, 4);
+      });
+
+      setIsAnimating(false);
+    }, 300);
+  }, [currentSession, isAnimating, pair]);
+
   useEffect(() => {
     if (!displayedPair || isAnimating) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -276,11 +294,14 @@ export default function PhotoBattleVotingPage() {
       } else if (event.key === "ArrowRight") {
         event.preventDefault();
         void handleVote(displayedPair.right, displayedPair.left);
+      } else if (event.key === "Escape" || event.key === "ArrowDown") {
+        event.preventDefault();
+        handleSkip();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [displayedPair, isAnimating, handleVote]);
+  }, [displayedPair, isAnimating, handleVote, handleSkip]);
 
   useEffect(() => {
     setSelectedPhotoId(null);
@@ -432,6 +453,19 @@ export default function PhotoBattleVotingPage() {
             })}
           </motion.div>
         </AnimatePresence>
+
+        <div className="flex justify-center mt-4">
+          <Button
+            onClick={handleSkip}
+            disabled={isAnimating}
+            variant="outline"
+            className="bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 transition-all"
+          >
+            <SkipForward className="h-4 w-4 mr-2" />
+            Skip this pair
+            <span className="ml-2 text-xs text-white/60">(Esc or ↓)</span>
+          </Button>
+        </div>
       </div>
     </div>
   );

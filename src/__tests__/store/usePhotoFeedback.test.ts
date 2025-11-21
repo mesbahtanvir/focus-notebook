@@ -48,6 +48,7 @@ jest.mock("firebase/firestore", () => {
     increment: (val: number) => ({ __op: "increment", val }),
     arrayUnion: (...values: unknown[]) => values,
     runTransaction: (...args: unknown[]) => mockRunTransaction(...args),
+    serverTimestamp: jest.fn(() => ({ __op: "serverTimestamp" })),
   };
 });
 
