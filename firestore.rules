@@ -48,6 +48,14 @@ service cloud.firestore {
 
       // Allow delete if user owns the data (no validation needed for delete)
       allow delete: if isOwner(userId);
+
+      // Nested subcollections (e.g., packing lists within trips)
+      match /{subcollection}/{subdocument} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
     }
 
     // Visa requirements - read-only for all users
