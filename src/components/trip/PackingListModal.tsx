@@ -5,7 +5,8 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -60,6 +61,53 @@ export function PackingListModal({
 
   const packingList = getPackingList(tripId);
   const progress = getProgress(tripId);
+
+  // Track if we've shown confetti to avoid repeating
+  const hasShownConfetti = useRef(false);
+
+  // Confetti celebration on 100% completion
+  useEffect(() => {
+    if (progress.percentage === 100 && !hasShownConfetti.current && isOpen) {
+      hasShownConfetti.current = true;
+
+      // Trigger confetti animation
+      const duration = 3000;
+      const end = Date.now() + duration;
+
+      const colors = ['#10b981', '#14b8a6', '#22c55e', '#84cc16'];
+
+      (function frame() {
+        confetti({
+          particleCount: 3,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0, y: 0.6 },
+          colors: colors,
+        });
+        confetti({
+          particleCount: 3,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1, y: 0.6 },
+          colors: colors,
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      })();
+
+      toast({
+        title: '🎉 All packed!',
+        description: "You're ready for your trip!",
+      });
+    }
+
+    // Reset confetti tracker when percentage drops below 100
+    if (progress.percentage < 100) {
+      hasShownConfetti.current = false;
+    }
+  }, [progress.percentage, isOpen, toast]);
 
   // Filter sections and items based on search
   const filteredSections = useMemo(() => {
@@ -192,23 +240,22 @@ export function PackingListModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-6xl h-[95vh] sm:h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-6 pb-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+        <div className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-gray-100 truncate">
                 📦 Packing for {tripName}
               </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {progress.packed}/{progress.total} items packed •{' '}
-                {progress.percentage}% complete
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {progress.packed}/{progress.total} packed • {progress.percentage}%
               </p>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition flex-shrink-0"
             >
               <X className="w-5 h-5" />
             </button>
@@ -228,53 +275,76 @@ export function PackingListModal({
         </div>
 
         {/* Toolbar */}
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0 space-y-3">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0 space-y-2 sm:space-y-3">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Search items (e.g. passport, adapter, sunscreen)"
+              placeholder="Search items..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 text-sm"
             />
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowTimeline(!showTimeline)}
             >
               <Calendar className="w-4 h-4 mr-2" />
-              {showTimeline ? 'Hide' : 'Show'} Timeline
+              <span className="hidden sm:inline">{showTimeline ? 'Hide' : 'Show'} Timeline</span>
+              <span className="sm:hidden">Timeline</span>
             </Button>
+            {!showTimeline && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setExpandedSections(
+                      new Set(['essentials', 'clothing', 'personal', 'tech', 'extras'])
+                    )
+                  }
+                >
+                  Expand All
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setExpandedSections(new Set())}
+                >
+                  Collapse All
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-3 sm:py-4">
           {showTimeline ? (
             /* Timeline View */
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
+            <div className="space-y-4 sm:space-y-6">
+              <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
                 Trip Timeline
               </h3>
 
               {packingList.timelinePhases.map((phase) => (
                 <div
                   key={phase.id}
-                  className="rounded-lg border border-gray-200 dark:border-gray-800 p-4"
+                  className="rounded-lg border border-gray-200 dark:border-gray-800 p-3 sm:p-4"
                 >
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-2xl">{phase.emoji}</span>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                    <span className="text-xl sm:text-2xl">{phase.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-gray-100">
                         {phase.title}
                       </h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                         {phase.summary}
                       </p>
                     </div>
@@ -289,21 +359,21 @@ export function PackingListModal({
                         <button
                           key={task.id}
                           onClick={() => handleToggleTimelineTask(task.id)}
-                          className={`w-full flex items-start gap-3 p-3 rounded-lg border text-left transition ${
+                          className={`w-full flex items-start gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border text-left transition ${
                             isCompleted
                               ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950/30'
                               : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
                           }`}
                         >
                           {isCompleted ? (
-                            <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 mt-0.5 flex-shrink-0" />
                           ) : (
-                            <Circle className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                            <Circle className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 mt-0.5 flex-shrink-0" />
                           )}
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{task.title}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-xs sm:text-sm">{task.title}</p>
                             {task.description && (
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">
                                 {task.description}
                               </p>
                             )}
@@ -317,11 +387,11 @@ export function PackingListModal({
             </div>
           ) : (
             /* Packing Sections View */
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {filteredSections.length === 0 ? (
-                <div className="py-16 text-center">
-                  <Sparkles className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-600 dark:text-gray-400">
+                <div className="py-12 sm:py-16 text-center">
+                  <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
                     No items match your search
                   </p>
                 </div>
@@ -341,20 +411,20 @@ export function PackingListModal({
                       {/* Section Header */}
                       <button
                         onClick={() => toggleSection(section.id)}
-                        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+                        className="w-full flex items-center justify-between p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{section.emoji}</span>
-                          <div className="text-left">
-                            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                          <span className="text-xl sm:text-2xl flex-shrink-0">{section.emoji}</span>
+                          <div className="text-left flex-1 min-w-0">
+                            <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-gray-100 truncate">
                               {section.title}
                             </h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 line-clamp-1">
                               {section.summary}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                           <Badge
                             variant={
                               packedCount === sectionItems.length
@@ -377,16 +447,16 @@ export function PackingListModal({
 
                       {/* Section Content */}
                       {isExpanded && (
-                        <div className="p-4 pt-0 space-y-4">
+                        <div className="p-3 sm:p-4 pt-0 space-y-3 sm:space-y-4">
                           {section.groups.map((group) => (
                             <div key={group.id}>
                               {/* Group Header */}
                               <div className="flex items-start gap-2 mb-2">
                                 {group.icon && (
-                                  <span className="text-lg">{group.icon}</span>
+                                  <span className="text-base sm:text-lg">{group.icon}</span>
                                 )}
-                                <div>
-                                  <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-medium text-sm sm:text-base text-gray-900 dark:text-gray-100">
                                     {group.title}
                                   </h4>
                                   {group.description && (
@@ -398,7 +468,7 @@ export function PackingListModal({
                               </div>
 
                               {/* Group Items */}
-                              <div className="space-y-2 ml-7">
+                              <div className="space-y-2 ml-6 sm:ml-7">
                                 {group.items.map((item) => {
                                   const isPacked =
                                     packingList.packedItemIds.includes(item.id);
@@ -406,7 +476,7 @@ export function PackingListModal({
                                   return (
                                     <div
                                       key={item.id}
-                                      className={`flex items-start justify-between gap-3 p-3 rounded-lg border transition ${
+                                      className={`flex items-start justify-between gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg border transition ${
                                         isPacked
                                           ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950/30'
                                           : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
@@ -416,15 +486,15 @@ export function PackingListModal({
                                         onClick={() =>
                                           handleTogglePacked(item.id, isPacked)
                                         }
-                                        className="flex items-start gap-3 flex-1 text-left"
+                                        className="flex items-start gap-2 sm:gap-3 flex-1 text-left min-w-0"
                                       >
                                         {isPacked ? (
-                                          <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                                          <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 mt-0.5 flex-shrink-0" />
                                         ) : (
-                                          <Circle className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                                          <Circle className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 mt-0.5 flex-shrink-0" />
                                         )}
-                                        <div className="flex-1">
-                                          <div className="font-medium text-sm">
+                                        <div className="flex-1 min-w-0">
+                                          <div className="font-medium text-xs sm:text-sm">
                                             {item.name}
                                             {item.quantity && (
                                               <span className="ml-2 text-xs text-gray-500">
@@ -433,12 +503,12 @@ export function PackingListModal({
                                             )}
                                           </div>
                                           {item.description && (
-                                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">
                                               {item.description}
                                             </p>
                                           )}
                                           {item.tip && (
-                                            <p className="text-xs text-teal-600 dark:text-teal-400 mt-1">
+                                            <p className="text-xs text-teal-600 dark:text-teal-400 mt-0.5 sm:mt-1">
                                               💡 {item.tip}
                                             </p>
                                           )}
@@ -453,7 +523,7 @@ export function PackingListModal({
                                               item.id
                                             )
                                           }
-                                          className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition"
+                                          className="p-1.5 sm:p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition flex-shrink-0"
                                         >
                                           <Trash2 className="w-4 h-4 text-red-500" />
                                         </button>
@@ -467,7 +537,7 @@ export function PackingListModal({
 
                           {/* Add Custom Item */}
                           {addingToSection === section.id ? (
-                            <div className="ml-7 p-3 rounded-lg border border-dashed border-teal-300 dark:border-teal-700 bg-teal-50 dark:bg-teal-950/20">
+                            <div className="ml-6 sm:ml-7 p-2.5 sm:p-3 rounded-lg border border-dashed border-teal-300 dark:border-teal-700 bg-teal-50 dark:bg-teal-950/20">
                               <div className="space-y-2">
                                 <Input
                                   placeholder="Item name"
@@ -480,6 +550,7 @@ export function PackingListModal({
                                       handleAddCustomItem(section.id);
                                     }
                                   }}
+                                  className="text-sm"
                                   autoFocus
                                 />
                                 <Input
@@ -493,6 +564,7 @@ export function PackingListModal({
                                       handleAddCustomItem(section.id);
                                     }
                                   }}
+                                  className="text-sm"
                                 />
                                 <div className="flex gap-2">
                                   <Button
@@ -500,7 +572,7 @@ export function PackingListModal({
                                     onClick={() =>
                                       handleAddCustomItem(section.id)
                                     }
-                                    className="bg-teal-600 hover:bg-teal-700"
+                                    className="bg-teal-600 hover:bg-teal-700 flex-1 sm:flex-initial"
                                   >
                                     Add Item
                                   </Button>
@@ -512,6 +584,7 @@ export function PackingListModal({
                                       setCustomItemName('');
                                       setCustomItemQuantity('');
                                     }}
+                                    className="flex-1 sm:flex-initial"
                                   >
                                     Cancel
                                   </Button>
@@ -521,7 +594,7 @@ export function PackingListModal({
                           ) : (
                             <button
                               onClick={() => setAddingToSection(section.id)}
-                              className="ml-7 flex items-center gap-2 text-sm text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition"
+                              className="ml-6 sm:ml-7 flex items-center gap-2 text-xs sm:text-sm text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition p-2 sm:p-0"
                             >
                               <Plus className="w-4 h-4" />
                               Add custom item
@@ -538,11 +611,11 @@ export function PackingListModal({
         </div>
 
         {/* Footer */}
-        <div className="p-6 pt-4 border-t border-gray-200 dark:border-gray-800 flex-shrink-0 flex justify-between items-center">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="p-4 sm:p-6 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-800 flex-shrink-0 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left">
             {progress.percentage === 100 ? (
               <span className="text-green-600 dark:text-green-400 font-medium">
-                🎉 All packed! You're ready to go!
+                🎉 All packed! You&apos;re ready to go!
               </span>
             ) : (
               <span>
@@ -550,7 +623,7 @@ export function PackingListModal({
               </span>
             )}
           </div>
-          <Button onClick={onClose} className="bg-teal-600 hover:bg-teal-700">
+          <Button onClick={onClose} className="bg-teal-600 hover:bg-teal-700 w-full sm:w-auto">
             Save & Close
           </Button>
         </div>
