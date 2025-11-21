@@ -112,6 +112,7 @@ type State = {
   deleteAllLibraryPhotos: () => Promise<void>;
   loadSession: (sessionId: string) => Promise<PhotoBattle | null>;
   getNextPair: (sessionId: string) => Promise<BattlePair>;
+  getNextPairs: (sessionId: string, count?: number) => Promise<BattlePair[]>;
   submitVote: (sessionId: string, winnerId: string, loserId: string, skipReload?: boolean) => Promise<void>;
   reloadSession: (sessionId: string) => Promise<void>;
   deleteSessionPhoto: (sessionId: string, photoId: string) => Promise<void>;
@@ -624,6 +625,28 @@ export const usePhotoFeedback = create<State>((set, get) => ({
       return { left: normalizedLeft, right: normalizedRight };
     } catch (error) {
       console.error('Error fetching next battle pair:', error);
+      throw error;
+    }
+  },
+
+  getNextPairs: async (sessionId: string, count = 10) => {
+    try {
+      const pairsCallable = httpsCallable<
+        { sessionId: string; count: number },
+        { pairs: Array<{ left: BattlePhoto; right: BattlePhoto }> }
+      >(functionsClient, 'getNextPhotoPairs');
+      const response = await pairsCallable({ sessionId, count });
+      const { pairs } = response.data ?? {};
+      if (!pairs || pairs.length === 0) {
+        throw new Error('No pairs available for this battle.');
+      }
+      // Normalize all pairs
+      return pairs.map(pair => {
+        const [normalizedLeft, normalizedRight] = normalizeBattlePhotos([pair.left, pair.right]);
+        return { left: normalizedLeft, right: normalizedRight };
+      });
+    } catch (error) {
+      console.error('Error fetching next battle pairs:', error);
       throw error;
     }
   },

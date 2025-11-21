@@ -289,6 +289,67 @@ export const getNextPhotoPair = functions.https.onCall(async request => {
   return { left: enrichedLeft, right: enrichedRight };
 });
 
+/**
+ * Get next batch of photo pairs for efficient pagination
+ * Returns up to 'count' pairs to minimize cloud function calls
+ */
+export const getNextPhotoPairs = functions.https.onCall(async request => {
+  const sessionId = typeof request.data?.sessionId === 'string' ? request.data.sessionId : '';
+  const count = typeof request.data?.count === 'number' ? request.data.count : 10;
+
+  if (!sessionId) {
+    throw new functions.https.HttpsError('invalid-argument', 'sessionId is required.');
+  }
+
+  if (count < 1 || count > 50) {
+    throw new functions.https.HttpsError('invalid-argument', 'count must be between 1 and 50.');
+  }
+
+  const sessionRef = db.collection('photoBattles').doc(sessionId);
+  const snap = await sessionRef.get();
+  if (!snap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Session not found');
+  }
+
+  const session = snap.data() as PhotoBattle;
+  const photos = session.photos ?? [];
+  if (photos.length < 2) {
+    throw new functions.https.HttpsError('failed-precondition', 'Need at least two photos for a battle.');
+  }
+
+  // Track which pairs we've already generated to avoid duplicates within this batch
+  const seenPairs = new Set<string>();
+  const pairs: Array<{ left: BattlePhoto; right: BattlePhoto }> = [];
+
+  // Generate unique pairs up to the requested count
+  let attempts = 0;
+  const maxAttempts = count * 3; // Allow some retries for uniqueness
+
+  while (pairs.length < count && attempts < maxAttempts) {
+    attempts++;
+
+    const [left, right] = choosePairForRanking(photos);
+
+    // Create a canonical pair key (sorted IDs to catch A-B and B-A as same pair)
+    const pairKey = [left.id, right.id].sort().join('_');
+
+    // Skip if we've already added this pair in this batch
+    if (seenPairs.has(pairKey)) {
+      continue;
+    }
+
+    seenPairs.add(pairKey);
+
+    // Enrich the photos with library data if needed
+    const enrichedLeft = await enrichPhotoData(left, session.ownerId);
+    const enrichedRight = await enrichPhotoData(right, session.ownerId);
+
+    pairs.push({ left: enrichedLeft, right: enrichedRight });
+  }
+
+  return { pairs };
+});
+
 async function enrichPhotoData(photo: BattlePhoto, ownerId: string): Promise<BattlePhoto> {
   // If photo already has url and storagePath, return as is
   if (photo.url && photo.storagePath) {
