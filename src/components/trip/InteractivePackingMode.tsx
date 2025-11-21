@@ -24,11 +24,9 @@ export function InteractivePackingMode({
   onSetItemStatus,
   onClose,
 }: InteractivePackingModeProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [completedCount, setCompletedCount] = useState(0);
   const [showKeyboardHints, setShowKeyboardHints] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   // Motion values for swipe gestures
   const x = useMotionValue(0);
@@ -49,21 +47,25 @@ export function InteractivePackingMode({
     )
   );
 
-  // Filter items that need attention
-  const itemsToReview = allItems.filter((item) => {
+  // Build initial queue of items to review
+  const initialQueue = allItems.filter((item) => {
     const status = packingList.itemStatuses?.[item.id] || 'unpacked';
     return status === 'unpacked' || status === 'later';
   });
 
-  // Count "later" items vs new items
-  const laterItemsCount = itemsToReview.filter(
+  // Queue of items to process (items marked "later" get added back to the end)
+  const [itemQueue, setItemQueue] = useState<typeof initialQueue>(initialQueue);
+  const [completedCount, setCompletedCount] = useState(0);
+  const totalItemsToProcess = initialQueue.length;
+
+  const currentItem = itemQueue[0]; // Always process first item in queue
+  const progress = totalItemsToProcess > 0 ? (completedCount / totalItemsToProcess) * 100 : 100;
+  const isComplete = itemQueue.length === 0;
+
+  // Count "later" items currently in queue
+  const laterItemsCount = itemQueue.filter(
     (item) => packingList.itemStatuses?.[item.id] === 'later'
   ).length;
-  const newItemsCount = itemsToReview.length - laterItemsCount;
-
-  const currentItem = itemsToReview[currentIndex];
-  const progress = itemsToReview.length > 0 ? (completedCount / itemsToReview.length) * 100 : 100;
-  const isComplete = currentIndex >= itemsToReview.length;
   const isLaterItem = currentItem && packingList.itemStatuses?.[currentItem.id] === 'later';
 
   const handleAction = async (status: PackingItemStatus) => {
@@ -84,11 +86,20 @@ export function InteractivePackingMode({
         });
       }
 
-      setCompletedCount((prev) => prev + 1);
-
       // Move to next item after a short delay
       setTimeout(() => {
-        setCurrentIndex((prev) => prev + 1);
+        if (status === 'later') {
+          // Re-queue: move item to end of queue for later review
+          setItemQueue((prevQueue) => {
+            const [current, ...rest] = prevQueue;
+            return [...rest, current];
+          });
+        } else {
+          // Completed (packed or no-need): remove from queue
+          setItemQueue((prevQueue) => prevQueue.slice(1));
+          setCompletedCount((prev) => prev + 1);
+        }
+
         setIsAnimating(false);
         setSwipeDirection(null);
         x.set(0);
@@ -192,8 +203,8 @@ export function InteractivePackingMode({
     }
   };
 
-  // If no items to review
-  if (itemsToReview.length === 0) {
+  // If no items to review at start
+  if (initialQueue.length === 0) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4">
         <motion.div
@@ -263,12 +274,12 @@ export function InteractivePackingMode({
           <div className="flex items-center justify-between mb-2 text-white">
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium">
-                {currentIndex + 1} of {itemsToReview.length}
+                {completedCount} done • {itemQueue.length} left
               </span>
               {laterItemsCount > 0 && (
                 <Badge className="bg-amber-500/90 text-white border-0 flex items-center gap-1">
                   <RotateCcw className="w-3 h-3" />
-                  {laterItemsCount} Later
+                  {laterItemsCount} deferred
                 </Badge>
               )}
             </div>
@@ -468,8 +479,8 @@ export function InteractivePackingMode({
           </motion.div>
         </AnimatePresence>
 
-        {/* Swipe Hint - Show on first item */}
-        {currentIndex === 0 && (
+        {/* Swipe Hint - Show at start of session */}
+        {completedCount === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
