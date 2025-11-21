@@ -254,13 +254,20 @@ export const usePackingLists = create<PackingListsState>((set, get) => ({
       return { total: 0, packed: 0, percentage: 0 };
     }
 
-    // Count total items
+    // Count total items from sections
     let totalItems = 0;
     packingList.sections.forEach((section) => {
       section.groups.forEach((group) => {
         totalItems += group.items.length;
       });
     });
+
+    // Count custom items
+    if (packingList.customItems) {
+      Object.values(packingList.customItems).forEach((items) => {
+        totalItems += items.length;
+      });
+    }
 
     // Count packed items - support both old and new format
     let packedCount = 0;

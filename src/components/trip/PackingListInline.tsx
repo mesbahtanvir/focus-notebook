@@ -27,7 +27,32 @@ import {
   AlertTriangle,
   Zap,
 } from 'lucide-react';
-import type { PackingSectionId, PackingItemStatus } from '@/types/packing-list';
+import type { PackingSectionId, PackingItemStatus, PackingList } from '@/types/packing-list';
+
+/**
+ * Helper function to get item status from packing list
+ * Supports both new itemStatuses and legacy packedItemIds
+ */
+function getItemStatus(packingList: PackingList, itemId: string): PackingItemStatus {
+  // Prefer new itemStatuses system
+  if (packingList.itemStatuses?.[itemId]) {
+    return packingList.itemStatuses[itemId];
+  }
+
+  // Fallback to legacy packedItemIds for backward compatibility
+  if (packingList.packedItemIds.includes(itemId)) {
+    return 'packed';
+  }
+
+  return 'unpacked';
+}
+
+/**
+ * Helper function to check if item is packed
+ */
+function isItemPacked(packingList: PackingList, itemId: string): boolean {
+  return getItemStatus(packingList, itemId) === 'packed';
+}
 
 interface PackingListInlineProps {
   tripId: string;
@@ -512,7 +537,7 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
                   const isExpanded = expandedSections.has(section.id);
                   const sectionItems = section.groups.flatMap((g) => g.items);
                   const packedCount = sectionItems.filter((item) =>
-                    packingList.packedItemIds.includes(item.id)
+                    isItemPacked(packingList, item.id)
                   ).length;
 
                   return (
@@ -574,7 +599,7 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
                               {/* Group Items */}
                               <div className="space-y-2 ml-7">
                                 {group.items.map((item) => {
-                                  const isPacked = packingList.packedItemIds.includes(item.id);
+                                  const isPacked = isItemPacked(packingList, item.id);
 
                                   return (
                                     <div
