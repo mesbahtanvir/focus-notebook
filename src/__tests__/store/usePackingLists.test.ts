@@ -82,7 +82,7 @@ const mockPackingList: PackingList = {
   ],
   packedItemIds: ['passport'],
   itemStatuses: {
-    'passport': 'packed'
+    'passport': 'packed' as const
   },
   customItems: {
     essentials: [],
@@ -391,9 +391,9 @@ describe('usePackingLists store', () => {
         ...mockPackingList,
         packedItemIds: ['passport', 'tickets', 'tshirt'],
         itemStatuses: {
-          'passport': 'packed',
-          'tickets': 'packed',
-          'tshirt': 'packed'
+          'passport': 'packed' as const,
+          'tickets': 'packed' as const,
+          'tshirt': 'packed' as const
         },
       };
 

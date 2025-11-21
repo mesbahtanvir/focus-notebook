@@ -27,6 +27,8 @@ import type {
   AddCustomItemResponse,
   DeleteCustomItemRequest,
   DeleteCustomItemResponse,
+  DeletePackingListRequest,
+  DeletePackingListResponse,
 } from '@/types/packing-list';
 
 interface PackingListsState {
@@ -39,6 +41,7 @@ interface PackingListsState {
   subscribe: (userId: string, tripId: string) => () => void;
   unsubscribe: (tripId: string) => void;
   createPackingList: (tripId: string) => Promise<PackingList>;
+  deletePackingList: (tripId: string) => Promise<void>;
   togglePacked: (tripId: string, itemId: string, packed: boolean) => Promise<void>;
   setItemStatus: (tripId: string, itemId: string, status: PackingItemStatus) => Promise<void>;
   addCustomItem: (tripId: string, sectionId: PackingSectionId, item: Omit<PackingItem, 'id'>) => Promise<string>;
@@ -149,6 +152,22 @@ export const usePackingLists = create<PackingListsState>((set, get) => ({
 
     const result = await createFn({ tripId });
     return result.data.packingList;
+  },
+
+  deletePackingList: async (tripId: string) => {
+    const deleteFn = httpsCallable<DeletePackingListRequest, DeletePackingListResponse>(
+      functionsClient,
+      'deletePackingList'
+    );
+
+    await deleteFn({ tripId });
+
+    // Remove from local state
+    set((state) => {
+      const newLists = new Map(state.packingLists);
+      newLists.delete(tripId);
+      return { packingLists: newLists };
+    });
   },
 
   togglePacked: async (tripId: string, itemId: string, packed: boolean) => {

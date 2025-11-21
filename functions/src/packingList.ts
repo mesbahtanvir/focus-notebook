@@ -31,6 +31,8 @@ import type {
   AddCustomItemResponse,
   DeleteCustomItemRequest,
   DeleteCustomItemResponse,
+  DeletePackingListRequest,
+  DeletePackingListResponse,
   TogglePackedRequest,
   TogglePackedResponse,
   SetItemStatusRequest,
@@ -533,6 +535,40 @@ export const deleteCustomPackingItem = functions.https.onCall<
     packedItemIds,
     updatedAt: Date.now(),
   });
+
+  return { success: true };
+});
+
+/**
+ * Cloud Function: Delete packing list
+ */
+export const deletePackingList = functions.https.onCall<
+  DeletePackingListRequest,
+  Promise<DeletePackingListResponse>
+>(async (request) => {
+  const userId = request.auth?.uid;
+  if (!userId) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const { tripId } = request.data;
+
+  if (!tripId) {
+    throw new HttpsError('invalid-argument', 'tripId is required');
+  }
+
+  // Verify trip ownership
+  await verifyTripOwnership(userId, tripId);
+
+  // Delete packing list
+  const packingListRef = db.doc(`users/${userId}/trips/${tripId}/packingList/data`);
+  const doc = await packingListRef.get();
+
+  if (!doc.exists) {
+    throw new HttpsError('not-found', 'Packing list not found');
+  }
+
+  await packingListRef.delete();
 
   return { success: true };
 });

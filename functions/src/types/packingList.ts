@@ -175,3 +175,11 @@ export interface DismissSuggestionRequest {
 export interface DismissSuggestionResponse {
   success: boolean;
 }
+
+export interface DeletePackingListRequest {
+  tripId: string;
+}
+
+export interface DeletePackingListResponse {
+  success: boolean;
+}

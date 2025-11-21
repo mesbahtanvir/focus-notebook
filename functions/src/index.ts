@@ -61,6 +61,7 @@ import {
   setPackingItemStatus,
   addCustomPackingItem,
   deleteCustomPackingItem,
+  deletePackingList,
 } from './packingList';
 
 // Export cloud functions
@@ -120,4 +121,5 @@ export {
   setPackingItemStatus,
   addCustomPackingItem,
   deleteCustomPackingItem,
+  deletePackingList,
 };
