@@ -24,6 +24,7 @@ import { useTrips } from '@/store/useTrips';
 import { useAuth } from '@/contexts/AuthContext';
 import { toastError, toastSuccess } from '@/lib/toast-presets';
 import { Button } from '@/components/ui/button';
+import { formatCurrency } from '@/lib/services/currency';
 import type { PlaidTransaction, Account } from '@/types/spending-tool';
 import type { Trip } from '@/store/useTrips';
 
@@ -455,12 +456,6 @@ function TransactionDetailModal({
   const amount = Math.abs(transaction.amount);
   const categories = transaction.category_premium ?? transaction.category_base ?? [];
 
-  const formatCurrency = (value: number, currency: string) =>
-    new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: currency || 'USD',
-    }).format(value);
-
   const linkWithTrip = async (tripId?: string) => {
     if (!transaction.id) {
       toastError({
@@ -511,7 +506,7 @@ function TransactionDetailModal({
             <div className="mt-2 text-lg font-semibold">
               <span className={isIncome ? 'text-emerald-600' : 'text-rose-600'}>
                 {isIncome ? '+' : '-'}
-                {formatCurrency(amount, transaction.isoCurrency)}
+                {formatCurrency(amount, transaction.isoCurrency || 'USD')}
               </span>
             </div>
           </div>

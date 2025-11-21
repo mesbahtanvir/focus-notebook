@@ -25,6 +25,7 @@ import {
   Bar,
   Legend,
 } from "recharts";
+import { formatCurrency } from '@/lib/services/currency';
 
 const COLORS = [
   "#10b981",
@@ -93,14 +94,6 @@ function getPresetRange(days: number | null): DateRange {
     start: start.toISOString().split("T")[0],
     end: end.toISOString().split("T")[0],
   };
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 export function EnhancedSpendingDashboard({
@@ -279,28 +272,28 @@ export function EnhancedSpendingDashboard({
         <SummaryCard
           icon={TrendingUp}
           title="Total Spending"
-          value={formatCurrency(Math.round(stats.totalSpend))}
+          value={formatCurrency(Math.round(stats.totalSpend), 'USD', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           subtitle={`${stats.transactionCount} transactions`}
           gradient="from-rose-500 to-orange-500"
         />
         <SummaryCard
           icon={Wallet}
           title="Total Income"
-          value={formatCurrency(Math.round(stats.totalIncome))}
+          value={formatCurrency(Math.round(stats.totalIncome), 'USD', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           subtitle="Captured inflows"
           gradient="from-emerald-500 to-teal-500"
         />
         <SummaryCard
           icon={CalendarRange}
           title="Avg Daily Spend"
-          value={formatCurrency(Math.round(stats.avgDailySpend))}
+          value={formatCurrency(Math.round(stats.avgDailySpend), 'USD', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           subtitle="Per day"
           gradient="from-blue-500 to-indigo-500"
         />
         <SummaryCard
           icon={Repeat}
           title="Subscriptions"
-          value={formatCurrency(Math.round(stats.subscriptionSpend))}
+          value={formatCurrency(Math.round(stats.subscriptionSpend), 'USD', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           subtitle={`${stats.subscriptionCount} recurring charges`}
           gradient="from-purple-500 to-pink-500"
         />
@@ -387,7 +380,7 @@ export function EnhancedSpendingDashboard({
                     <span className="text-sm font-semibold text-gray-500">#{index + 1}</span>
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-gray-100">{merchant.name}</p>
-                      <p className="text-xs text-gray-500">{formatCurrency(Math.round(merchant.value))}</p>
+                      <p className="text-xs text-gray-500">{formatCurrency(Math.round(merchant.value), 'USD', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
                     </div>
                   </div>
                 </li>

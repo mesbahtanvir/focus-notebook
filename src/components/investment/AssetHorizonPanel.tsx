@@ -18,7 +18,7 @@ import { useCurrency } from '@/store/useCurrency';
 import { RecurringFrequency, useInvestments } from '@/store/useInvestments';
 import {
   formatCurrency,
-  convertCurrency,
+  convertCurrencySync,
   normalizeCurrencyCode,
   type SupportedCurrency,
 } from '@/lib/utils/currency';
@@ -122,7 +122,7 @@ export function AssetHorizonPanel({ focusPortfolioId, showHeader = true }: Asset
     const planCurrency = normalizeCurrencyCode(
       plan.currency ?? targetPortfolio.baseCurrency ?? currency
     );
-    const amountInDisplay = convertCurrency(plan.amount, planCurrency, currency);
+    const amountInDisplay = convertCurrencySync(plan.amount, planCurrency, currency);
 
     return {
       portfolioId: targetPortfolio.id,

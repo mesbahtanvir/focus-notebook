@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts';
 import { Portfolio, PortfolioSnapshot } from '@/store/useInvestments';
-import { BASE_CURRENCY, convertCurrency, formatCurrency, normalizeCurrencyCode, SupportedCurrency } from '@/lib/utils/currency';
+import { BASE_CURRENCY, convertCurrencySync, formatCurrency, normalizeCurrencyCode, SupportedCurrency } from '@/lib/utils/currency';
 
 interface PortfolioValueChartProps {
   portfolio: Portfolio;
@@ -21,7 +21,7 @@ export function PortfolioValueChart({
   showPredictions = false,
   currency
 }: PortfolioValueChartProps) {
-  const toDisplay = (value: number) => convertCurrency(value, BASE_CURRENCY, currency);
+  const toDisplay = (value: number) => convertCurrencySync(value, BASE_CURRENCY, currency);
 
   // Define chart data type
   type ChartDataPoint = {
@@ -36,7 +36,7 @@ export function PortfolioValueChart({
     const snapshotCurrency = normalizeCurrencyCode(snapshot.currency || BASE_CURRENCY);
     return {
       date: new Date(snapshot.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      value: convertCurrency(snapshot.totalValue, snapshotCurrency, currency),
+      value: convertCurrencySync(snapshot.totalValue, snapshotCurrency, currency),
       type: 'historical' as const,
     };
   });
@@ -47,7 +47,7 @@ export function PortfolioValueChart({
       return sum;
     }
     const investmentCurrency = normalizeCurrencyCode(inv.currency);
-    return sum + convertCurrency(inv.currentValue, investmentCurrency, BASE_CURRENCY);
+    return sum + convertCurrencySync(inv.currentValue, investmentCurrency, BASE_CURRENCY);
   }, 0);
   const currentValue = toDisplay(currentValueBase);
   const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });

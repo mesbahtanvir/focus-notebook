@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/store/useSettings';
 import { fetchStockHistory } from '@/lib/services/stockApi';
 import { useCurrency } from '@/store/useCurrency';
-import { BASE_CURRENCY, convertCurrency, normalizeCurrencyCode } from '@/lib/utils/currency';
+import { BASE_CURRENCY, convertCurrencySync, normalizeCurrencyCode } from '@/lib/utils/currency';
 
 export default function PortfolioDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -120,7 +120,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
     if (!Number.isFinite(amount ?? NaN)) {
       return 0;
     }
-    return convertCurrency(amount ?? 0, BASE_CURRENCY, currency);
+    return convertCurrencySync(amount ?? 0, BASE_CURRENCY, currency);
   };
 
   const convertFromCurrency = (amount: number | undefined | null, sourceCurrency?: string) => {
@@ -128,7 +128,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
       return 0;
     }
     const normalizedSource = normalizeCurrencyCode(sourceCurrency || currency);
-    return convertCurrency(amount ?? 0, normalizedSource, currency);
+    return convertCurrencySync(amount ?? 0, normalizedSource, currency);
   };
 
   const formatAmount = (amount: number, code?: string) => {

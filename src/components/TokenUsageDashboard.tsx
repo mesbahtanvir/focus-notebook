@@ -16,6 +16,7 @@ import {
   Activity
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { formatCurrency } from '@/lib/services/currency';
 
 interface TokenUsageDashboardProps {
   className?: string;
@@ -167,15 +168,6 @@ export function TokenUsageDashboard({ className }: TokenUsageDashboardProps) {
     };
   }, [tokenUsages]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 4,
-      maximumFractionDigits: 4,
-    }).format(amount);
-  };
-
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat('en-US').format(num);
   };
@@ -297,7 +289,7 @@ export function TokenUsageDashboard({ className }: TokenUsageDashboardProps) {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{formatCurrency(stats.totalCost)}</div>
+                  <div className="text-2xl font-bold">{formatCurrency(stats.totalCost, 'USD', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</div>
                   <p className="text-xs text-muted-foreground">
                     {stats.totalRequests} requests
                   </p>
@@ -335,7 +327,7 @@ export function TokenUsageDashboard({ className }: TokenUsageDashboardProps) {
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{formatCurrency(stats.averageCostPerRequest)}</div>
+                  <div className="text-2xl font-bold">{formatCurrency(stats.averageCostPerRequest, 'USD', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</div>
                   <p className="text-xs text-muted-foreground">
                     Per API call
                   </p>
@@ -388,7 +380,7 @@ export function TokenUsageDashboard({ className }: TokenUsageDashboardProps) {
                           <div>
                             <div className="font-medium">{formatNumber(tokens)} tokens</div>
                             <div className="text-sm text-muted-foreground">
-                              {formatCurrency(stats.costByModel[model] || 0)} cost
+                              {formatCurrency(stats.costByModel[model] || 0, 'USD', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} cost
                             </div>
                           </div>
                         </div>
@@ -434,7 +426,7 @@ export function TokenUsageDashboard({ className }: TokenUsageDashboardProps) {
                         <div className="text-right">
                           <div className="font-medium">{formatNumber(day.tokens)} tokens</div>
                           <div className="text-sm text-muted-foreground">
-                            {formatCurrency(day.cost)}
+                            {formatCurrency(day.cost, 'USD', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                           </div>
                         </div>
                       </div>
@@ -475,7 +467,7 @@ export function TokenUsageDashboard({ className }: TokenUsageDashboardProps) {
                             {formatNumber(usage.totalTokens)} tokens
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {formatCurrency(usage.cost)}
+                            {formatCurrency(usage.cost, 'USD', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                           </div>
                         </div>
                       </div>

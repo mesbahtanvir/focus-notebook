@@ -7,7 +7,7 @@ import { TrendingUp, TrendingDown, DollarSign, Target, Trash2 } from 'lucide-rea
 import { Portfolio, useInvestments } from '@/store/useInvestments';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { BASE_CURRENCY, convertCurrency, SupportedCurrency } from '@/lib/utils/currency';
+import { BASE_CURRENCY, convertCurrencySync, SupportedCurrency } from '@/lib/utils/currency';
 import { useConfirm } from '@/hooks/useConfirm';
 
 interface PortfolioCardProps {
@@ -34,7 +34,7 @@ export function PortfolioCard({ portfolio, index, currency }: PortfolioCardProps
 
 
   const targetAmount = portfolio.targetAmount
-    ? convertCurrency(portfolio.targetAmount, BASE_CURRENCY, currency)
+    ? convertCurrencySync(portfolio.targetAmount, BASE_CURRENCY, currency)
     : undefined;
 
   const formatValue = (amount: number) =>

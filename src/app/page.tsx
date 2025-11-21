@@ -13,6 +13,7 @@ import { ThoughtDetailModal } from "@/components/ThoughtDetailModal";
 import { MostUsedTools } from "@/components/MostUsedTools";
 import { useTrips } from "@/store/useTrips";
 import { LandingPage } from "@/components/LandingPage";
+import { formatCurrency } from "@/lib/services/currency";
 
 // Disable static generation for now
 export const dynamic = 'force-dynamic';
@@ -94,14 +95,6 @@ export default function Page() {
   );
 
   const liveTripPreview = liveTrips.slice(0, 2);
-
-  const formatCurrency = (amount: number, currency: string = 'USD') =>
-    new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
 
   const formatTripDate = (value: string) =>
     new Date(value).toLocaleDateString('en-US', {
@@ -228,7 +221,7 @@ export default function Page() {
                     <div className="text-right">
                       <p className="text-xs text-gray-500 dark:text-gray-400">Spent</p>
                       <p className="text-base font-bold text-teal-700 dark:text-teal-300">
-                        {formatCurrency(spent, trip.currency)}
+                        {formatCurrency(spent, trip.currency, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </p>
                       <p
                         className={`text-xs mt-1 ${
@@ -237,7 +230,7 @@ export default function Page() {
                             : 'text-gray-500 dark:text-gray-400'
                         }`}
                       >
-                        Remaining {formatCurrency(remainingBudget, trip.currency)}
+                        Remaining {formatCurrency(remainingBudget, trip.currency, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </p>
                     </div>
                   </div>

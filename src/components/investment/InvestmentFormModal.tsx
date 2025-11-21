@@ -253,8 +253,7 @@ export function InvestmentFormModal({
                       <p className="font-semibold">
                         {formatCurrency(
                           investment.nativeInitialAmount,
-                          normalizeCurrencyCode(investment.nativeCurrency),
-                          investment.locale || 'en-US'
+                          normalizeCurrencyCode(investment.nativeCurrency)
                         )}
                       </p>
                     </div>
@@ -265,8 +264,7 @@ export function InvestmentFormModal({
                       <p className="font-semibold">
                         {formatCurrency(
                           investment.nativeCurrentValue,
-                          normalizeCurrencyCode(investment.nativeCurrency),
-                          investment.locale || 'en-US'
+                          normalizeCurrencyCode(investment.nativeCurrency)
                         )}
                       </p>
                     </div>
@@ -274,7 +272,7 @@ export function InvestmentFormModal({
                 </div>
                 {investment.conversionRate && (
                   <p className="mt-2 text-[0.65rem] text-sky-800/80 dark:text-sky-200">
-                    1 {investment.nativeCurrency} ≈ {formatCurrency(investment.conversionRate, normalizeCurrencyCode(effectiveBaseCurrency), locale, {
+                    1 {investment.nativeCurrency} ≈ {formatCurrency(investment.conversionRate, normalizeCurrencyCode(effectiveBaseCurrency), {
                       minimumFractionDigits: 4,
                       maximumFractionDigits: 4,
                     })}
