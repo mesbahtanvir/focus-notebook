@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { usePackingLists } from '@/store/usePackingLists';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { InteractivePackingMode } from './InteractivePackingMode';
 import {
   Search,
   CheckCircle2,
@@ -24,8 +25,9 @@ import {
   ChevronUp,
   Package,
   AlertTriangle,
+  Zap,
 } from 'lucide-react';
-import type { PackingSectionId } from '@/types/packing-list';
+import type { PackingSectionId, PackingItemStatus } from '@/types/packing-list';
 
 interface PackingListInlineProps {
   tripId: string;
@@ -41,6 +43,7 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
     getPackingList,
     getProgress,
     togglePacked,
+    setItemStatus,
     addCustomItem,
     deleteCustomItem,
     toggleTimelineTask,
@@ -54,6 +57,7 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
     new Set(['essentials'])
   );
   const [showTimeline, setShowTimeline] = useState(false);
+  const [showInteractiveMode, setShowInteractiveMode] = useState(false);
   const [addingToSection, setAddingToSection] = useState<PackingSectionId | null>(null);
   const [customItemName, setCustomItemName] = useState('');
   const [customItemQuantity, setCustomItemQuantity] = useState('');
@@ -135,6 +139,19 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
       await togglePacked(tripId, itemId, !currentlyPacked);
     } catch (error) {
       console.error('Error toggling packed:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update item. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSetItemStatus = async (itemId: string, status: PackingItemStatus) => {
+    try {
+      await setItemStatus(tripId, itemId, status);
+    } catch (error) {
+      console.error('Error setting item status:', error);
       toast({
         title: 'Error',
         description: 'Failed to update item. Please try again.',
@@ -331,6 +348,14 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
             </button>
 
             <div className="flex items-center gap-3">
+              <Button
+                size="sm"
+                onClick={() => setShowInteractiveMode(true)}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+              >
+                <Zap className="w-4 h-4 mr-1.5" />
+                <span className="hidden sm:inline">Quick Pack</span>
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -719,6 +744,15 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
             </div>
           </Card>
         </div>
+      )}
+
+      {/* Interactive Packing Mode */}
+      {showInteractiveMode && packingList && (
+        <InteractivePackingMode
+          packingList={packingList}
+          onSetItemStatus={handleSetItemStatus}
+          onClose={() => setShowInteractiveMode(false)}
+        />
       )}
     </>
   );

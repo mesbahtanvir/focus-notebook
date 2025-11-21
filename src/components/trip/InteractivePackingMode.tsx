@@ -1,16 +1,16 @@
 /**
  * InteractivePackingMode - Fun, gamified one-at-a-time packing experience
- * Shows items one at a time with animations and three-state actions
+ * Shows items one at a time with animations, swipe gestures, and three-state actions
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { X, CheckCircle, Clock, XCircle, Sparkles } from 'lucide-react';
+import { X, CheckCircle, Clock, XCircle, Sparkles, Keyboard, RotateCcw } from 'lucide-react';
 import type { PackingItem, PackingSectionId, PackingList, PackingItemStatus } from '@/types/packing-list';
 
 interface InteractivePackingModeProps {
@@ -24,9 +24,16 @@ export function InteractivePackingMode({
   onSetItemStatus,
   onClose,
 }: InteractivePackingModeProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [showKeyboardHints, setShowKeyboardHints] = useState(false);
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [completedCount, setCompletedCount] = useState(0);
+
+  // Motion values for swipe gestures
+  const x = useMotionValue(0);
+  const rotate = useTransform(x, [-200, 200], [-25, 25]);
+  const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0.5, 1, 1, 1, 0.5]);
+  const swipeRightOpacity = useTransform(x, [0, 100], [0, 0.9]);
+  const swipeLeftOpacity = useTransform(x, [-100, 0], [0.9, 0]);
 
   // Get all items that need attention (unpacked or later)
   const allItems = packingList.sections.flatMap((section) =>
@@ -40,15 +47,124 @@ export function InteractivePackingMode({
     )
   );
 
-  // Filter items that need attention
-  const itemsToReview = allItems.filter((item) => {
-    const status = packingList.itemStatuses?.[item.id] || 'unpacked';
-    return status === 'unpacked' || status === 'later';
-  });
+  // Build initial queue of items to review
+  const initialQueueRef = useRef<typeof allItems | null>(null);
 
-  const currentItem = itemsToReview[currentIndex];
-  const progress = itemsToReview.length > 0 ? (completedCount / itemsToReview.length) * 100 : 100;
-  const isComplete = currentIndex >= itemsToReview.length;
+  if (initialQueueRef.current === null) {
+    initialQueueRef.current = allItems.filter((item) => {
+      const status = packingList.itemStatuses?.[item.id] || 'unpacked';
+      return status === 'unpacked' || status === 'later';
+    });
+  }
+
+  // Queue of items to process (items marked "later" get added back to the end)
+  const [itemQueue, setItemQueue] = useState<typeof allItems>(initialQueueRef.current);
+  const [completedCount, setCompletedCount] = useState(0);
+  const totalItemsToProcess = initialQueueRef.current.length; // Fixed: only calculated once
+
+  const currentItem = itemQueue[0]; // Always process first item in queue
+  const progress = totalItemsToProcess > 0 ? (completedCount / totalItemsToProcess) * 100 : 100;
+  const isComplete = itemQueue.length === 0;
+
+  // Count "later" items currently in queue
+  const laterItemsCount = itemQueue.filter(
+    (item) => packingList.itemStatuses?.[item.id] === 'later'
+  ).length;
+  const isLaterItem = currentItem && packingList.itemStatuses?.[currentItem.id] === 'later';
+
+  const handleAction = async (status: PackingItemStatus) => {
+    if (!currentItem || isAnimating) return;
+
+    setIsAnimating(true);
+    console.log(`[Quick Pack] Setting ${currentItem.name} to ${status}`);
+
+    try {
+      await onSetItemStatus(currentItem.id, status);
+      console.log(`[Quick Pack] Successfully updated ${currentItem.name} to ${status}`);
+
+      // Small celebration for packed items
+      if (status === 'packed') {
+        confetti({
+          particleCount: 20,
+          spread: 60,
+          origin: { y: 0.6 },
+          colors: ['#10b981', '#14b8a6', '#22c55e'],
+        });
+      }
+
+      // Move to next item after a short delay
+      setTimeout(() => {
+        if (status === 'later') {
+          // Re-queue: move item to end of queue for later review
+          setItemQueue((prevQueue) => {
+            const [current, ...rest] = prevQueue;
+            console.log(`[Quick Pack] Re-queued ${current.name}, ${rest.length} items remaining in front`);
+            return [...rest, current];
+          });
+        } else {
+          // Completed (packed or no-need): remove from queue
+          setItemQueue((prevQueue) => {
+            const newQueue = prevQueue.slice(1);
+            console.log(`[Quick Pack] Removed ${prevQueue[0].name}, ${newQueue.length} items left in queue`);
+            return newQueue;
+          });
+          setCompletedCount((prev) => {
+            const newCount = prev + 1;
+            console.log(`[Quick Pack] Completed count: ${newCount}/${totalItemsToProcess} (${Math.round((newCount / totalItemsToProcess) * 100)}%)`);
+            return newCount;
+          });
+        }
+
+        setIsAnimating(false);
+        setSwipeDirection(null);
+        x.set(0);
+      }, 300);
+    } catch (error) {
+      console.error('[Quick Pack] Error setting item status:', error);
+      setIsAnimating(false);
+      setSwipeDirection(null);
+      x.set(0);
+    }
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (isAnimating || !currentItem) return;
+
+      // Show hints when ? is pressed
+      if (e.key === '?' || e.key === '/') {
+        e.preventDefault();
+        setShowKeyboardHints((prev) => !prev);
+        return;
+      }
+
+      switch (e.key.toLowerCase()) {
+        case 'p':
+        case 'enter':
+          e.preventDefault();
+          handleAction('packed');
+          break;
+        case 'l':
+          e.preventDefault();
+          handleAction('later');
+          break;
+        case 'n':
+        case 'x':
+          e.preventDefault();
+          handleAction('no-need');
+          break;
+        case 'escape':
+          e.preventDefault();
+          onClose();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAnimating, currentItem?.id]);
 
   // Celebration effect when complete
   useEffect(() => {
@@ -81,39 +197,29 @@ export function InteractivePackingMode({
     }
   }, [isComplete, completedCount]);
 
-  const handleAction = async (status: PackingItemStatus) => {
-    if (!currentItem || isAnimating) return;
+  // Handle swipe gesture
+  const handleDragEnd = (event: any, info: PanInfo) => {
+    const threshold = 100;
+    const { offset, velocity } = info;
 
-    setIsAnimating(true);
-
-    try {
-      await onSetItemStatus(currentItem.id, status);
-
-      // Small celebration for packed items
-      if (status === 'packed') {
-        confetti({
-          particleCount: 20,
-          spread: 60,
-          origin: { y: 0.6 },
-          colors: ['#10b981', '#14b8a6', '#22c55e'],
-        });
-      }
-
-      setCompletedCount((prev) => prev + 1);
-
-      // Move to next item after a short delay
-      setTimeout(() => {
-        setCurrentIndex((prev) => prev + 1);
-        setIsAnimating(false);
-      }, 300);
-    } catch (error) {
-      console.error('Error setting item status:', error);
-      setIsAnimating(false);
+    // Swipe right = Packed
+    if (offset.x > threshold || velocity.x > 500) {
+      setSwipeDirection('right');
+      handleAction('packed');
+    }
+    // Swipe left = No Need
+    else if (offset.x < -threshold || velocity.x < -500) {
+      setSwipeDirection('left');
+      handleAction('no-need');
+    }
+    // Not enough swipe, return to center
+    else {
+      x.set(0);
     }
   };
 
-  // If no items to review
-  if (itemsToReview.length === 0) {
+  // If no items to review at start
+  if (initialQueueRef.current.length === 0) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4">
         <motion.div
@@ -181,15 +287,32 @@ export function InteractivePackingMode({
           className="mb-6"
         >
           <div className="flex items-center justify-between mb-2 text-white">
-            <span className="text-sm font-medium">
-              {currentIndex + 1} of {itemsToReview.length}
-            </span>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-white/20 rounded-full transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium">
+                {completedCount} done • {itemQueue.length} left
+              </span>
+              {laterItemsCount > 0 && (
+                <Badge className="bg-amber-500/90 text-white border-0 flex items-center gap-1">
+                  <RotateCcw className="w-3 h-3" />
+                  {laterItemsCount} deferred
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowKeyboardHints((prev) => !prev)}
+                className="p-2 hover:bg-white/20 rounded-full transition"
+                title="Keyboard shortcuts"
+              >
+                <Keyboard className="w-5 h-5" />
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-white/20 rounded-full transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
           <div className="w-full bg-white/30 rounded-full h-3 overflow-hidden">
             <motion.div
@@ -199,18 +322,67 @@ export function InteractivePackingMode({
               transition={{ duration: 0.3 }}
             />
           </div>
+
+          {/* Keyboard Hints */}
+          <AnimatePresence>
+            {showKeyboardHints && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-3 bg-white/10 backdrop-blur-sm rounded-lg p-3 text-white text-xs"
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  <div><kbd className="px-2 py-1 bg-white/20 rounded">P</kbd> or <kbd className="px-2 py-1 bg-white/20 rounded">Enter</kbd> - Packed</div>
+                  <div><kbd className="px-2 py-1 bg-white/20 rounded">L</kbd> - Later</div>
+                  <div><kbd className="px-2 py-1 bg-white/20 rounded">N</kbd> or <kbd className="px-2 py-1 bg-white/20 rounded">X</kbd> - No Need</div>
+                  <div><kbd className="px-2 py-1 bg-white/20 rounded">Esc</kbd> - Exit</div>
+                </div>
+                <div className="mt-2 text-center opacity-75">
+                  Swipe right ➡ Packed • Swipe left ⬅ No Need
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {/* Item Card */}
         <AnimatePresence mode="wait">
           <motion.div
             key={currentItem.id}
+            style={{ x, rotate, opacity }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.7}
+            onDragEnd={handleDragEnd}
             initial={{ scale: 0.8, opacity: 0, rotateY: -90 }}
             animate={{ scale: 1, opacity: 1, rotateY: 0 }}
-            exit={{ scale: 0.8, opacity: 0, rotateY: 90 }}
+            exit={{
+              scale: 0.8,
+              opacity: 0,
+              x: swipeDirection === 'right' ? 300 : swipeDirection === 'left' ? -300 : 0
+            }}
             transition={{ type: 'spring', duration: 0.5 }}
-            className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden"
+            className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden cursor-grab active:cursor-grabbing relative"
           >
+            {/* Swipe Indicators */}
+            <motion.div
+              className="absolute inset-0 bg-green-500 flex items-center justify-start px-8 pointer-events-none z-10"
+              style={{
+                opacity: swipeRightOpacity,
+              }}
+            >
+              <CheckCircle className="w-16 h-16 text-white" />
+            </motion.div>
+            <motion.div
+              className="absolute inset-0 bg-gray-500 flex items-center justify-end px-8 pointer-events-none z-10"
+              style={{
+                opacity: swipeLeftOpacity,
+              }}
+            >
+              <XCircle className="w-16 h-16 text-white" />
+            </motion.div>
+
             {/* Section Badge */}
             <div className="bg-gradient-to-r from-teal-500 to-cyan-500 p-4 text-white">
               <div className="flex items-center justify-center gap-2">
@@ -253,13 +425,17 @@ export function InteractivePackingMode({
                 )}
 
                 {/* Check if item was marked as "later" before */}
-                {packingList.itemStatuses?.[currentItem.id] === 'later' && (
-                  <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-3 mb-6">
-                    <p className="text-sm text-amber-800 dark:text-amber-300 flex items-center justify-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      You marked this as &quot;later&quot; before
+                {isLaterItem && (
+                  <motion.div
+                    initial={{ scale: 0.9 }}
+                    animate={{ scale: 1 }}
+                    className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl p-4 mb-6 border-2 border-amber-300 dark:border-amber-700"
+                  >
+                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 flex items-center justify-center gap-2">
+                      <RotateCcw className="w-5 h-5 animate-pulse" />
+                      Revisiting this item - Ready to decide now?
                     </p>
-                  </div>
+                  </motion.div>
                 )}
               </motion.div>
             </div>
@@ -317,6 +493,26 @@ export function InteractivePackingMode({
             </div>
           </motion.div>
         </AnimatePresence>
+
+        {/* Swipe Hint - Show at start of session */}
+        {completedCount === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1, duration: 0.5 }}
+            className="mt-4 text-center"
+          >
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 text-white text-sm">
+              <motion.span
+                animate={{ x: [0, 10, 0] }}
+                transition={{ repeat: Infinity, duration: 1.5, repeatDelay: 1 }}
+              >
+                👆
+              </motion.span>
+              <span>Drag the card or use buttons</span>
+            </div>
+          </motion.div>
+        )}
 
         {/* Skip Button */}
         <motion.div
