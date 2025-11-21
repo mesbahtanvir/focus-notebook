@@ -13,6 +13,8 @@ export type TripLength = "weekend" | "one-week" | "two-week";
 
 export type ActivityId = "beach" | "hiking" | "city" | "formal";
 
+export type PackingItemStatus = 'unpacked' | 'packed' | 'later' | 'no-need';
+
 export interface PackingItem {
   id: string;
   name: string;
@@ -20,6 +22,7 @@ export interface PackingItem {
   description?: string;
   tip?: string;
   custom?: boolean;
+  status?: PackingItemStatus;
 }
 
 export interface PackingGroup {
@@ -74,7 +77,8 @@ export interface PackingList {
   tripId: string;
   userId: string;
   sections: PackingSection[];
-  packedItemIds: string[];
+  packedItemIds: string[]; // Deprecated, use itemStatuses
+  itemStatuses: Record<string, PackingItemStatus>; // New item status tracking
   customItems: CustomItemsState;
   timelinePhases: TimelinePhase[];
   timelineCompleted: string[];
@@ -144,6 +148,16 @@ export interface TogglePackedResponse {
   success: boolean;
 }
 
+export interface SetItemStatusRequest {
+  tripId: string;
+  itemId: string;
+  status: PackingItemStatus;
+}
+
+export interface SetItemStatusResponse {
+  success: boolean;
+}
+
 export interface AddAISuggestionRequest {
   tripId: string;
   suggestionId: string;
@@ -159,5 +173,13 @@ export interface DismissSuggestionRequest {
 }
 
 export interface DismissSuggestionResponse {
+  success: boolean;
+}
+
+export interface DeletePackingListRequest {
+  tripId: string;
+}
+
+export interface DeletePackingListResponse {
   success: boolean;
 }

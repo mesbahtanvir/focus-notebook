@@ -58,8 +58,10 @@ import {
   createPackingList,
   updatePackingList,
   togglePackedItem,
+  setPackingItemStatus,
   addCustomPackingItem,
   deleteCustomPackingItem,
+  deletePackingList,
 } from './packingList';
 
 // Export cloud functions
@@ -116,6 +118,8 @@ export {
   createPackingList,
   updatePackingList,
   togglePackedItem,
+  setPackingItemStatus,
   addCustomPackingItem,
   deleteCustomPackingItem,
+  deletePackingList,
 };

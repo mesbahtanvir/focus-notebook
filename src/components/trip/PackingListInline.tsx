@@ -23,6 +23,7 @@ import {
   ChevronDown,
   ChevronUp,
   Package,
+  AlertTriangle,
 } from 'lucide-react';
 import type { PackingSectionId } from '@/types/packing-list';
 
@@ -44,6 +45,7 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
     deleteCustomItem,
     toggleTimelineTask,
     createPackingList,
+    deletePackingList,
     isLoadingList,
   } = usePackingLists();
 
@@ -57,6 +59,8 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
   const [customItemQuantity, setCustomItemQuantity] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Subscribe to packing list
   useEffect(() => {
@@ -218,6 +222,27 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
     }
   };
 
+  const handleDeletePackingList = async () => {
+    try {
+      setIsDeleting(true);
+      await deletePackingList(tripId);
+      setShowDeleteConfirm(false);
+      toast({
+        title: 'Packing list deleted',
+        description: 'Your packing list has been removed.',
+      });
+    } catch (error) {
+      console.error('Error deleting packing list:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete packing list. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Status gating message
   if (!canUsePacking) {
     return (
@@ -283,48 +308,56 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
 
   // Packing list exists - show inline view
   return (
-    <Card className="border-teal-200 dark:border-teal-800">
-      {/* Header */}
-      <div className="p-6 pb-4 border-b border-gray-200 dark:border-gray-800">
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full flex items-center justify-between"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
-              <Package className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-            </div>
-            <div className="text-left">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                Packing Checklist
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {progress.packed}/{progress.total} items packed
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Badge
-              variant={progress.percentage === 100 ? 'default' : 'outline'}
-              className={
-                progress.percentage === 100
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : ''
-              }
+    <>
+      <Card className="border-teal-200 dark:border-teal-800">
+        {/* Header */}
+        <div className="p-6 pb-4 border-b border-gray-200 dark:border-gray-800">
+          <div className="flex items-center justify-between mb-3">
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="flex items-center gap-3 flex-1"
             >
-              {progress.percentage}% Complete
-            </Badge>
-            {isExpanded ? (
-              <ChevronUp className="w-5 h-5 text-gray-400" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400" />
-            )}
-          </div>
-        </button>
+              <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
+                <Package className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+              </div>
+              <div className="text-left">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                  Packing Checklist
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {progress.packed}/{progress.total} items packed
+                </p>
+              </div>
+            </button>
 
-        {/* Progress Bar */}
-        <div className="mt-4">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+              <Badge
+                variant={progress.percentage === 100 ? 'default' : 'outline'}
+                className={
+                  progress.percentage === 100
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : ''
+                }
+              >
+                {progress.percentage}% Complete
+              </Badge>
+              {isExpanded ? (
+                <ChevronUp className="w-5 h-5 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-gray-400" />
+              )}
+            </div>
+          </div>
+
+          {/* Progress Bar */}
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
             <div
               className={`h-2 rounded-full transition-all ${
@@ -334,7 +367,6 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
             />
           </div>
         </div>
-      </div>
 
       {/* Expandable Content */}
       {isExpanded && (
@@ -642,6 +674,52 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
           )}
         </div>
       )}
-    </Card>
+      </Card>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <Card className="max-w-md w-full p-6">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg mb-2">Delete Packing List?</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  This will permanently delete your packing list and all custom items. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeletePackingList}
+                disabled={isDeleting}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </>
+                )}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </>
   );
 }

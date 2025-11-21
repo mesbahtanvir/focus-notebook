@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { usePackingLists } from '@/store/usePackingLists';
 import { useToast } from '@/hooks/use-toast';
+import { InteractivePackingMode } from './InteractivePackingMode';
 import {
   Search,
   CheckCircle2,
@@ -24,8 +25,9 @@ import {
   Sparkles,
   RotateCcw,
   X,
+  Zap,
 } from 'lucide-react';
-import type { PackingSectionId } from '@/types/packing-list';
+import type { PackingSectionId, PackingItemStatus } from '@/types/packing-list';
 
 interface PackingListModalProps {
   isOpen: boolean;
@@ -45,6 +47,7 @@ export function PackingListModal({
     getPackingList,
     getProgress,
     togglePacked,
+    setItemStatus,
     addCustomItem,
     deleteCustomItem,
     toggleTimelineTask,
@@ -55,6 +58,7 @@ export function PackingListModal({
     new Set(['essentials', 'clothing', 'personal', 'tech', 'extras'])
   );
   const [showTimeline, setShowTimeline] = useState(false);
+  const [showInteractiveMode, setShowInteractiveMode] = useState(false);
   const [addingToSection, setAddingToSection] = useState<PackingSectionId | null>(null);
   const [customItemName, setCustomItemName] = useState('');
   const [customItemQuantity, setCustomItemQuantity] = useState('');
@@ -235,12 +239,36 @@ export function PackingListModal({
     }
   };
 
+  const handleSetItemStatus = async (itemId: string, status: PackingItemStatus) => {
+    try {
+      await setItemStatus(tripId, itemId, status);
+    } catch (error) {
+      console.error('Error setting item status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update item status. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (!isOpen || !packingList) {
     return null;
   }
 
+  // Show interactive mode
+  if (showInteractiveMode) {
+    return (
+      <InteractivePackingMode
+        packingList={packingList}
+        onSetItemStatus={handleSetItemStatus}
+        onClose={() => setShowInteractiveMode(false)}
+      />
+    );
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-2 sm:p-4">
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-6xl h-[95vh] sm:h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
@@ -289,6 +317,15 @@ export function PackingListModal({
 
           {/* Action Buttons */}
           <div className="flex gap-2 flex-wrap items-center">
+            <Button
+              size="sm"
+              onClick={() => setShowInteractiveMode(true)}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Quick Pack Mode</span>
+              <span className="sm:hidden">Quick Pack</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"

@@ -12,6 +12,7 @@ import type {
   PackingList,
   PackingItem,
   PackingSectionId,
+  PackingItemStatus,
   CustomItemsState,
   AISuggestion,
   CreatePackingListRequest,
@@ -20,10 +21,14 @@ import type {
   UpdatePackingListResponse,
   TogglePackedRequest,
   TogglePackedResponse,
+  SetItemStatusRequest,
+  SetItemStatusResponse,
   AddCustomItemRequest,
   AddCustomItemResponse,
   DeleteCustomItemRequest,
   DeleteCustomItemResponse,
+  DeletePackingListRequest,
+  DeletePackingListResponse,
 } from '@/types/packing-list';
 
 interface PackingListsState {
@@ -36,7 +41,9 @@ interface PackingListsState {
   subscribe: (userId: string, tripId: string) => () => void;
   unsubscribe: (tripId: string) => void;
   createPackingList: (tripId: string) => Promise<PackingList>;
+  deletePackingList: (tripId: string) => Promise<void>;
   togglePacked: (tripId: string, itemId: string, packed: boolean) => Promise<void>;
+  setItemStatus: (tripId: string, itemId: string, status: PackingItemStatus) => Promise<void>;
   addCustomItem: (tripId: string, sectionId: PackingSectionId, item: Omit<PackingItem, 'id'>) => Promise<string>;
   deleteCustomItem: (tripId: string, sectionId: PackingSectionId, itemId: string) => Promise<void>;
   toggleTimelineTask: (tripId: string, taskId: string) => Promise<void>;
@@ -147,6 +154,22 @@ export const usePackingLists = create<PackingListsState>((set, get) => ({
     return result.data.packingList;
   },
 
+  deletePackingList: async (tripId: string) => {
+    const deleteFn = httpsCallable<DeletePackingListRequest, DeletePackingListResponse>(
+      functionsClient,
+      'deletePackingList'
+    );
+
+    await deleteFn({ tripId });
+
+    // Remove from local state
+    set((state) => {
+      const newLists = new Map(state.packingLists);
+      newLists.delete(tripId);
+      return { packingLists: newLists };
+    });
+  },
+
   togglePacked: async (tripId: string, itemId: string, packed: boolean) => {
     const toggleFn = httpsCallable<TogglePackedRequest, TogglePackedResponse>(
       functionsClient,
@@ -154,6 +177,15 @@ export const usePackingLists = create<PackingListsState>((set, get) => ({
     );
 
     await toggleFn({ tripId, itemId, packed });
+  },
+
+  setItemStatus: async (tripId: string, itemId: string, status: PackingItemStatus) => {
+    const setStatusFn = httpsCallable<SetItemStatusRequest, SetItemStatusResponse>(
+      functionsClient,
+      'setPackingItemStatus'
+    );
+
+    await setStatusFn({ tripId, itemId, status });
   },
 
   addCustomItem: async (
@@ -230,8 +262,17 @@ export const usePackingLists = create<PackingListsState>((set, get) => ({
       });
     });
 
-    // Count packed items
-    const packedCount = packingList.packedItemIds.length;
+    // Count packed items - support both old and new format
+    let packedCount = 0;
+    if (packingList.itemStatuses) {
+      // New format: count items with status 'packed'
+      packedCount = Object.values(packingList.itemStatuses).filter(
+        (status) => status === 'packed'
+      ).length;
+    } else {
+      // Fallback to old format
+      packedCount = packingList.packedItemIds?.length || 0;
+    }
 
     const percentage = totalItems === 0 ? 0 : Math.round((packedCount / totalItems) * 100);
 
