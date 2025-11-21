@@ -12,8 +12,8 @@ require (
 	github.com/prometheus/client_golang v1.18.0
 	github.com/sashabaranov/go-openai v1.18.3
 	github.com/stripe/stripe-go/v76 v76.16.0
-	go.uber.org/zap v1.26.0
 	go.uber.org/multierr v1.11.0
-	google.golang.org/api v0.155.0
+	go.uber.org/zap v1.26.0
+	google.golang.org/api v0.189.0
 	gopkg.in/yaml.v3 v3.0.1
 )
