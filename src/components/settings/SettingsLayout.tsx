@@ -7,11 +7,6 @@ import { cn } from '@/lib/utils';
 import {
   Settings,
   Database,
-  Sparkles,
-  Shield,
-  Bell,
-  Palette,
-  Crown,
   ChevronRight,
 } from 'lucide-react';
 
@@ -49,21 +44,47 @@ export function SettingsLayout({ children, title, description }: SettingsLayoutP
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl">
+        {/* Header - More compact on mobile */}
+        <div className="mb-4 sm:mb-6 lg:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">
             Settings
           </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
             Manage your account settings and preferences
           </p>
         </div>
 
+        {/* Mobile: Horizontal tabs */}
+        <div className="lg:hidden mb-4">
+          <nav className="flex gap-2 overflow-x-auto pb-2 -mx-3 px-3 scrollbar-hide">
+            {settingsSections.map((section) => {
+              const Icon = section.icon;
+              const isActive = pathname === section.href;
+
+              return (
+                <Link
+                  key={section.id}
+                  href={section.href}
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex-shrink-0',
+                    isActive
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-800'
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{section.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
         {/* Layout */}
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Sidebar Navigation */}
-          <aside className="w-full lg:w-64 flex-shrink-0">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+          {/* Desktop: Sidebar Navigation */}
+          <aside className="hidden lg:block w-64 flex-shrink-0">
             <nav className="sticky top-6 space-y-1 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-2">
               {settingsSections.map((section) => {
                 const Icon = section.icon;
@@ -102,20 +123,20 @@ export function SettingsLayout({ children, title, description }: SettingsLayoutP
           {/* Main Content */}
           <main className="flex-1 min-w-0">
             <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
-              {/* Content Header */}
-              <div className="border-b border-gray-200 dark:border-gray-800 px-6 py-4">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              {/* Content Header - Hidden on mobile to avoid duplication */}
+              <div className="hidden sm:block border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 py-3 sm:py-4">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
                   {title}
                 </h2>
                 {description && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
                     {description}
                   </p>
                 )}
               </div>
 
-              {/* Content Body */}
-              <div className="p-6">
+              {/* Content Body - Reduced padding on mobile */}
+              <div className="p-4 sm:p-6">
                 {children}
               </div>
             </div>
