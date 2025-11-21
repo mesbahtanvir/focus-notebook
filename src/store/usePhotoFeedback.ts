@@ -112,7 +112,8 @@ type State = {
   deleteAllLibraryPhotos: () => Promise<void>;
   loadSession: (sessionId: string) => Promise<PhotoBattle | null>;
   getNextPair: (sessionId: string) => Promise<BattlePair>;
-  submitVote: (sessionId: string, winnerId: string, loserId: string) => Promise<void>;
+  submitVote: (sessionId: string, winnerId: string, loserId: string, skipReload?: boolean) => Promise<void>;
+  reloadSession: (sessionId: string) => Promise<void>;
   deleteSessionPhoto: (sessionId: string, photoId: string) => Promise<void>;
   mergeSessionPhotos: (sessionId: string, targetPhotoId: string, mergedPhotoId: string) => Promise<void>;
   loadResults: (sessionId: string, secretKey: string) => Promise<BattlePhoto[]>;
@@ -544,7 +545,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
     }
   },
 
-  submitVote: async (sessionId: string, winnerId: string, loserId: string) => {
+  submitVote: async (sessionId: string, winnerId: string, loserId: string, skipReload = false) => {
     try {
       const voteCallable = httpsCallable<
         { sessionId: string; winnerId: string; loserId: string },
@@ -552,7 +553,23 @@ export const usePhotoFeedback = create<State>((set, get) => ({
       >(functionsClient, 'submitPhotoVote');
       await voteCallable({ sessionId, winnerId, loserId });
 
-      // Reload session to get updated ratings and vote counts
+      // Only reload session if not skipped (allows caller to control timing)
+      if (!skipReload) {
+        const sessionRef = doc(db, 'photoBattles', sessionId);
+        const sessionDoc = await getDoc(sessionRef);
+        if (sessionDoc.exists()) {
+          const session = normalizeBattle({ ...(sessionDoc.data() as PhotoBattle & Record<string, any>) }, sessionDoc.id);
+          set({ currentSession: session });
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting vote:', error);
+      throw error;
+    }
+  },
+
+  reloadSession: async (sessionId: string) => {
+    try {
       const sessionRef = doc(db, 'photoBattles', sessionId);
       const sessionDoc = await getDoc(sessionRef);
       if (sessionDoc.exists()) {
@@ -560,8 +577,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         set({ currentSession: session });
       }
     } catch (error) {
-      console.error('Error submitting vote:', error);
-      throw error;
+      console.error('Error reloading session:', error);
     }
   },
 
