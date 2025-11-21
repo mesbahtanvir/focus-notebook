@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
@@ -24,9 +25,15 @@ export function InteractivePackingMode({
   onSetItemStatus,
   onClose,
 }: InteractivePackingModeProps) {
+  const [isMounted, setIsMounted] = useState(false);
   const [showKeyboardHints, setShowKeyboardHints] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
+
+  // Mount the portal only on client side
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Motion values for swipe gestures
   const x = useMotionValue(0);
@@ -212,13 +219,24 @@ export function InteractivePackingMode({
 
   // If no items to review at start
   if (initialQueueRef.current.length === 0) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4">
+    const content = (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="absolute inset-0 bg-black/50 backdrop-blur-md"
+        />
+
+        {/* Modal Content */}
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full p-8 text-center"
+          onClick={(e) => e.stopPropagation()}
+          className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full p-8 text-center"
         >
           <div className="mb-6">
             <Sparkles className="w-16 h-16 mx-auto text-green-500 mb-4" />
@@ -233,17 +251,30 @@ export function InteractivePackingMode({
         </motion.div>
       </div>
     );
+
+    return isMounted ? createPortal(content, document.body) : null;
   }
 
   // Complete state
   if (isComplete) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4">
+    const content = (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="absolute inset-0 bg-black/50 backdrop-blur-md"
+        />
+
+        {/* Modal Content */}
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full p-8 text-center"
+          onClick={(e) => e.stopPropagation()}
+          className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full p-8 text-center"
         >
           <div className="mb-6">
             <motion.div
@@ -267,11 +298,22 @@ export function InteractivePackingMode({
         </motion.div>
       </div>
     );
+
+    return isMounted ? createPortal(content, document.body) : null;
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-teal-500/20 via-purple-500/20 to-blue-500/20 backdrop-blur-md p-4">
-      <div className="w-full max-w-2xl">
+  const content = (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-gradient-to-br from-teal-500/20 via-purple-500/20 to-blue-500/20 backdrop-blur-md"
+      />
+
+      {/* Content */}
+      <div className="relative w-full max-w-2xl">
         {/* Progress Bar */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -523,4 +565,6 @@ export function InteractivePackingMode({
       </div>
     </div>
   );
+
+  return isMounted ? createPortal(content, document.body) : null;
 }
