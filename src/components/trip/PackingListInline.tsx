@@ -27,7 +27,32 @@ import {
   AlertTriangle,
   Zap,
 } from 'lucide-react';
-import type { PackingSectionId, PackingItemStatus } from '@/types/packing-list';
+import type { PackingSectionId, PackingItemStatus, PackingList } from '@/types/packing-list';
+
+/**
+ * Helper function to get item status from packing list
+ * Supports both new itemStatuses and legacy packedItemIds
+ */
+function getItemStatus(packingList: PackingList, itemId: string): PackingItemStatus {
+  // Prefer new itemStatuses system
+  if (packingList.itemStatuses?.[itemId]) {
+    return packingList.itemStatuses[itemId];
+  }
+
+  // Fallback to legacy packedItemIds for backward compatibility
+  if (packingList.packedItemIds.includes(itemId)) {
+    return 'packed';
+  }
+
+  return 'unpacked';
+}
+
+/**
+ * Helper function to check if item is packed
+ */
+function isItemPacked(packingList: PackingList, itemId: string): boolean {
+  return getItemStatus(packingList, itemId) === 'packed';
+}
 
 interface PackingListInlineProps {
   tripId: string;
@@ -40,8 +65,6 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
   const { toast } = useToast();
   const {
     subscribe,
-    getPackingList,
-    getProgress,
     togglePacked,
     setItemStatus,
     addCustomItem,
@@ -49,7 +72,6 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
     toggleTimelineTask,
     createPackingList,
     deletePackingList,
-    isLoadingList,
   } = usePackingLists();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,9 +99,51 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
     };
   }, [user?.uid, tripId, subscribe]);
 
-  const packingList = getPackingList(tripId);
-  const isLoading = isLoadingList(tripId);
-  const progress = getProgress(tripId);
+  // Subscribe to packing list state for reactive updates
+  const packingList = usePackingLists((state) => state.packingLists.get(tripId));
+  const isLoading = usePackingLists((state) => state.isLoading.get(tripId) || false);
+
+  // Calculate progress reactively when packingList changes
+  const progress = useMemo(() => {
+    if (!packingList) {
+      return { total: 0, packed: 0, percentage: 0 };
+    }
+
+    // Count total items from sections
+    let totalItems = 0;
+    packingList.sections.forEach((section) => {
+      section.groups.forEach((group) => {
+        totalItems += group.items.length;
+      });
+    });
+
+    // Count custom items
+    if (packingList.customItems) {
+      Object.values(packingList.customItems).forEach((items) => {
+        totalItems += items.length;
+      });
+    }
+
+    // Count packed items - support both old and new format
+    let packedCount = 0;
+    if (packingList.itemStatuses) {
+      // New format: count items with status 'packed'
+      packedCount = Object.values(packingList.itemStatuses).filter(
+        (status) => status === 'packed'
+      ).length;
+    } else {
+      // Fallback to old format
+      packedCount = packingList.packedItemIds?.length || 0;
+    }
+
+    const percentage = totalItems === 0 ? 0 : Math.round((packedCount / totalItems) * 100);
+
+    return {
+      total: totalItems,
+      packed: packedCount,
+      percentage,
+    };
+  }, [packingList]);
 
   // Status gating - only show for planning or in-progress trips
   const canUsePacking = tripStatus === 'planning' || tripStatus === 'in-progress';
@@ -512,7 +576,7 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
                   const isExpanded = expandedSections.has(section.id);
                   const sectionItems = section.groups.flatMap((g) => g.items);
                   const packedCount = sectionItems.filter((item) =>
-                    packingList.packedItemIds.includes(item.id)
+                    isItemPacked(packingList, item.id)
                   ).length;
 
                   return (
@@ -574,7 +638,7 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
                               {/* Group Items */}
                               <div className="space-y-2 ml-7">
                                 {group.items.map((item) => {
-                                  const isPacked = packingList.packedItemIds.includes(item.id);
+                                  const isPacked = isItemPacked(packingList, item.id);
 
                                   return (
                                     <div

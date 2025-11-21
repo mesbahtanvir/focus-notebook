@@ -76,11 +76,9 @@ export function InteractivePackingMode({
     if (!currentItem || isAnimating) return;
 
     setIsAnimating(true);
-    console.log(`[Quick Pack] Setting ${currentItem.name} to ${status}`);
 
     try {
       await onSetItemStatus(currentItem.id, status);
-      console.log(`[Quick Pack] Successfully updated ${currentItem.name} to ${status}`);
 
       // Small celebration for packed items
       if (status === 'packed') {
@@ -98,21 +96,15 @@ export function InteractivePackingMode({
           // Re-queue: move item to end of queue for later review
           setItemQueue((prevQueue) => {
             const [current, ...rest] = prevQueue;
-            console.log(`[Quick Pack] Re-queued ${current.name}, ${rest.length} items remaining in front`);
             return [...rest, current];
           });
         } else {
           // Completed (packed or no-need): remove from queue
           setItemQueue((prevQueue) => {
             const newQueue = prevQueue.slice(1);
-            console.log(`[Quick Pack] Removed ${prevQueue[0].name}, ${newQueue.length} items left in queue`);
             return newQueue;
           });
-          setCompletedCount((prev) => {
-            const newCount = prev + 1;
-            console.log(`[Quick Pack] Completed count: ${newCount}/${totalItemsToProcess} (${Math.round((newCount / totalItemsToProcess) * 100)}%)`);
-            return newCount;
-          });
+          setCompletedCount((prev) => prev + 1);
         }
 
         setIsAnimating(false);
