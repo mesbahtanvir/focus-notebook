@@ -551,6 +551,14 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         void
       >(functionsClient, 'submitPhotoVote');
       await voteCallable({ sessionId, winnerId, loserId });
+
+      // Reload session to get updated ratings and vote counts
+      const sessionRef = doc(db, 'photoBattles', sessionId);
+      const sessionDoc = await getDoc(sessionRef);
+      if (sessionDoc.exists()) {
+        const session = normalizeBattle({ ...(sessionDoc.data() as PhotoBattle & Record<string, any>) }, sessionDoc.id);
+        set({ currentSession: session });
+      }
     } catch (error) {
       console.error('Error submitting vote:', error);
       throw error;

@@ -129,20 +129,6 @@ export default function PhotoBattleVotingPage() {
     }
   }, [currentSession, getNextPair, isFetchingPair, isRecentPair]);
 
-  const advancePairs = useCallback(() => {
-    setPairBuffer(prev => {
-      if (prev.length === 0) return prev;
-
-      // Mark the current pair as shown before removing it
-      const currentPair = prev[0];
-      if (currentPair) {
-        markPairAsShown(currentPair.left, currentPair.right);
-      }
-
-      return prev.slice(1);
-    });
-  }, [markPairAsShown]);
-
   useEffect(() => {
     if (!currentSession || currentSession.photos.length < 2) {
       setPairBuffer([]);
@@ -254,12 +240,25 @@ export default function PhotoBattleVotingPage() {
       } finally {
         setSelectedPhotoId(null);
         if (shouldAdvance) {
-          advancePairs();
+          // Advance to next pair
+          setPairBuffer(prev => {
+            if (prev.length === 0) return prev;
+
+            // Mark the current pair as shown before removing it
+            const currentPair = prev[0];
+            if (currentPair) {
+              markPairAsShown(currentPair.left, currentPair.right);
+            }
+
+            // Remove current pair and clear all prefetched pairs to force fresh data with updated ratings
+            // Keep only the next pair (which becomes current), discard the rest
+            return prev.slice(1, 2);
+          });
         }
         setIsAnimating(false);
       }
     },
-    [currentSession, submitVote, advancePairs, isAnimating, pair, authLoading, authUser, ensureAnonymousSession]
+    [currentSession, submitVote, isAnimating, pair, authLoading, authUser, ensureAnonymousSession, markPairAsShown]
   );
 
   useEffect(() => {
