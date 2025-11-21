@@ -29,9 +29,10 @@ This document provides essential information about the codebase structure, devel
 
 ### Key Features
 - **Mental Health Tools**: Thought tracking, CBT exercises, mood tracking, AI-powered thought analysis
-- **Task Management**: Smart task organization, focus sessions, recurring tasks
+- **Task Management**: Smart task organization, focus sessions, recurring tasks, packing lists
 - **Focus & Deep Work**: Pomodoro timer, balanced task selection, session analytics
 - **Financial Tools**: Spending tracking, investment tracking, trip planning
+- **Personal Growth**: Photo feedback/gallery, body progress tracking, admired people tracking
 - **Privacy First**: Real-time sync with Firebase, offline support, user data ownership
 
 ### Project Philosophy
@@ -105,7 +106,7 @@ npm run lint && npm test && npm run build
 /src/
 ├── app/                    # Next.js App Router (pages & routes)
 │   ├── api/               # API routes (/api/*)
-│   ├── tools/             # Tool pages (28 different tools)
+│   ├── tools/             # Tool pages (30 different tools)
 │   ├── dashboard/         # Dashboard routes
 │   ├── settings/          # Settings pages
 │   ├── admin/             # Admin pages
@@ -120,28 +121,41 @@ npm run lint && npm test && npm run build
 │   ├── tools/            # Tool-specific components
 │   └── [feature dirs]    # Task, Goal, Trip, Visa, Investment, etc.
 │
-├── store/                # Zustand state management (31 stores)
+├── store/                # Zustand state management (35 stores)
 │   ├── useTasks.ts       # Task management
 │   ├── useFocus.ts       # Focus sessions
 │   ├── useThoughts.ts    # Thought tracking
 │   ├── useInvestments.ts # Investment tracking
+│   ├── usePhotoLibrary.ts    # Photo gallery management
+│   ├── usePhotoFeedback.ts   # Photo feedback sessions
+│   ├── useDatingFeedback.ts  # Dating photo feedback (legacy)
+│   ├── usePackingLists.ts    # Travel packing lists
+│   ├── useBodyProgress.ts    # Body progress tracking
+│   ├── useAdmiredPeople.ts   # Admired people tracking
 │   └── [others]          # Domain-specific stores
 │
-├── hooks/                # Custom React hooks (31 hooks)
-│   ├── useFocus.ts       # Focus session logic
-│   ├── useEntityGraph.ts # Entity relationships
-│   ├── useLLMQueue.ts    # LLM request queueing
-│   └── [others]          # Domain-specific hooks
+├── hooks/                # Custom React hooks (8 hooks)
+│   ├── useTrackToolUsage.ts   # Tool usage analytics tracking
+│   ├── useInfiniteScroll.ts   # Infinite scroll implementation
+│   ├── useInfiniteGallery.ts  # Infinite gallery with keyboard nav
+│   ├── useImportExport.ts     # Data import/export operations
+│   ├── useHaptics.ts          # Haptic feedback for mobile
+│   ├── useConnectionHealth.ts # Network health monitoring
+│   ├── use-toast.ts           # Toast notification management
+│   └── useAuthUserId.ts       # Auth user ID helper
 │
 ├── lib/                  # Utilities and services
 │   ├── firebase/         # Firebase resilience layer
-│   │   ├── circuit-breaker.ts      # Circuit breaker pattern
-│   │   ├── offline-queue.ts        # Offline operation queueing
-│   │   ├── retry.ts                # Retry logic with backoff
-│   │   ├── gateway.ts              # CRUD operations wrapper
-│   │   ├── subscription-health.ts  # Real-time subscription health
-│   │   ├── connection-monitor.ts   # Connection tracking
-│   │   └── metrics.ts              # Operation metrics
+│   │   ├── circuit-breaker.ts        # Circuit breaker pattern
+│   │   ├── offline-queue.ts          # Offline operation queueing
+│   │   ├── retry.ts                  # Retry logic with backoff
+│   │   ├── gateway.ts                # CRUD operations wrapper
+│   │   ├── subscription-health.ts    # Real-time subscription health
+│   │   ├── connection-monitor.ts     # Connection tracking
+│   │   ├── metrics.ts                # Operation metrics
+│   │   ├── initialize-resilience.ts  # Resilience system initialization
+│   │   ├── resilient-operations.ts   # High-level resilient ops
+│   │   └── visibility-manager.ts     # Page visibility handling
 │   ├── data/            # Data access layer
 │   ├── entityGraph/     # Entity graph utilities
 │   ├── analytics/       # Analytics utilities
@@ -153,8 +167,12 @@ npm run lint && npm test && npm run build
 │   ├── entityService.ts              # Centralized entity management
 │   ├── thoughtProcessingService.ts   # Thought processing logic
 │   ├── TimeTrackingService.ts        # Time tracking
-│   ├── RecurringTaskService.ts       # Recurring task logic
-│   └── import-export/               # Data import/export service
+│   └── import-export/               # Data import/export services
+│       ├── ImportService.ts          # Data import logic
+│       ├── ExportService.ts          # Data export logic
+│       ├── ValidationService.ts      # Import/export validation
+│       ├── ConflictDetectionService.ts  # Conflict detection
+│       └── ReferenceMappingService.ts   # Reference mapping
 │
 ├── repositories/        # Data repository pattern
 │   ├── firebase/        # Firebase repositories
@@ -194,10 +212,20 @@ npm run lint && npm test && npm run build
 │   ├── plaidFunctions.ts             # Plaid API integration
 │   ├── plaidWebhooks.ts              # Plaid webhook handlers
 │   ├── csvStorageTrigger.ts          # CSV file processing
+│   ├── processCSVTransactions.ts     # CSV transaction processing
+│   ├── deleteCSVStatement.ts         # CSV statement deletion
 │   ├── marketData.ts                 # Stock market data updates
 │   ├── visaDataUpdater.ts            # Visa requirement updates
 │   ├── portfolioSnapshots.ts         # Daily portfolio snapshots
 │   ├── cleanupAnonymous.ts           # Anonymous user cleanup
+│   ├── photoThumbnails.ts            # Photo thumbnail generation
+│   ├── photoVotes.ts                 # Photo voting/feedback system
+│   ├── packingList.ts                # Packing list AI generation
+│   ├── packingListTemplates.ts       # Packing list templates
+│   ├── placeInsights.ts              # Place insights generation
+│   ├── tripLinking.ts                # Trip entity linking
+│   ├── dexaScanStorageTrigger.ts     # DEXA scan processing
+│   ├── spendingMaintenance.ts        # Spending data maintenance
 │   │
 │   ├── services/                     # Specialized services
 │   │   ├── categorizationService.ts  # Transaction categorization
@@ -242,7 +270,7 @@ npm run lint && npm test && npm run build
 
 ### Backend & Data
 - **Firebase**: 12.4.0 (Auth, Firestore, Storage)
-- **Firebase Admin**: 12.7.0
+- **Firebase Admin**: 13.6.0 (functions), 12.7.0 (web app)
 - **Firebase Functions**: 7.0.0
 - **Database**: Firestore (real-time, document-based)
 
@@ -254,7 +282,8 @@ npm run lint && npm test && npm run build
 - **Payment**: Stripe 14.24.0
 - **Banking**: Plaid 39.1.0
 - **AI**: OpenAI 6.9.0, Anthropic SDK 0.68.0
-- **PDF**: pdf-parse 2.4.5
+- **Image Processing**: Sharp 0.33.5 (functions)
+- **UI Effects**: canvas-confetti 1.9.4
 - **Data**: YAML 2.8.1
 
 ### Testing
@@ -276,7 +305,7 @@ npm run lint && npm test && npm run build
 
 ### 1. State Management with Zustand
 
-- **31 domain-specific stores** (tasks, thoughts, investments, spending, etc.)
+- **35 domain-specific stores** (tasks, thoughts, investments, spending, photos, packing lists, etc.)
 - Each store manages: data, loading states, cache, subscriptions
 - Real-time Firebase subscriptions integrated into stores
 - Store pattern:
@@ -921,4 +950,4 @@ import { TaskCard } from './TaskCard';
 
 **Remember**: This is a mental health and productivity tool. Code quality, reliability, and user privacy are paramount. When in doubt, prioritize user safety and data security.
 
-*Last updated: 2025-11-18*
+*Last updated: 2025-11-21*
