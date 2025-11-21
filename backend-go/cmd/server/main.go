@@ -158,6 +158,10 @@ func main() {
 	investmentCalcSvc := services.NewInvestmentCalculationService(repo, logger)
 	logger.Info("Investment calculation service initialized")
 
+	// Initialize entity graph service
+	entityGraphSvc := services.NewEntityGraphService(repo, logger)
+	logger.Info("Entity graph service initialized")
+
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(
 		fbAdmin.Auth,
@@ -191,6 +195,9 @@ func main() {
 
 	// Investment calculation handler (always available)
 	investmentHandler := handlers.NewInvestmentHandler(investmentCalcSvc, logger)
+
+	// Entity graph handler (always available)
+	entityGraphHandler := handlers.NewEntityGraphHandler(entityGraphSvc, logger)
 
 	// Create router
 	router := mux.NewRouter()
@@ -282,6 +289,14 @@ func main() {
 	portfolioRoutes.HandleFunc("/projection", investmentHandler.GenerateProjection).Methods("POST")
 	portfolioRoutes.HandleFunc("/summary", investmentHandler.GetDashboardSummary).Methods("GET")
 	logger.Info("Investment calculation endpoints registered")
+
+	// Entity graph routes (authenticated)
+	entityGraphRoutes := api.PathPrefix("/entity-graph").Subrouter()
+	entityGraphRoutes.HandleFunc("/relationships", entityGraphHandler.QueryRelationships).Methods("GET", "POST")
+	entityGraphRoutes.HandleFunc("/linked/{entityType}/{entityId}", entityGraphHandler.GetLinkedEntities).Methods("GET")
+	entityGraphRoutes.HandleFunc("/tools", entityGraphHandler.GetToolRelationships).Methods("GET")
+	entityGraphRoutes.HandleFunc("/stats", entityGraphHandler.GetRelationshipStats).Methods("GET")
+	logger.Info("Entity graph endpoints registered")
 
 	// TODO: Add more routes here as we implement handlers
 	// - /api/chat
