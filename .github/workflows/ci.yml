@@ -24,8 +24,8 @@ permissions:
   issues: write
 
 jobs:
-  pr_checks:
-    name: PR Smoke Checks
+  pr_checks_web:
+    name: PR Checks - Web App
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
@@ -47,10 +47,73 @@ jobs:
       - name: Run type check
         run: npx tsc --noEmit
 
-      - name: Run targeted unit tests
-        run: npm run test:ci:changed
+      - name: Run unit tests
+        run: npm test
         env:
           CI: true
+
+      - name: Build project
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Verify build output
+        run: |
+          if [ ! -d ".next" ]; then
+            echo "Build failed - .next directory not found"
+            exit 1
+          fi
+          echo "✅ Web app build successful"
+
+  pr_checks_functions:
+    name: PR Checks - Cloud Functions
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd functions
+          npm ci
+
+      - name: Run type check
+        run: |
+          cd functions
+          npx tsc --noEmit
+
+      - name: Run unit tests
+        run: |
+          cd functions
+          npm test
+        env:
+          CI: true
+
+      - name: Build functions
+        run: |
+          cd functions
+          npm run build
+
+      - name: Verify build output
+        run: |
+          cd functions
+          if [ ! -d "lib" ]; then
+            echo "Build failed - lib directory not found"
+            exit 1
+          fi
+          if [ ! -f "lib/index.js" ]; then
+            echo "Build failed - index.js not found"
+            exit 1
+          fi
+          echo "✅ Cloud Functions build successful"
 
   validate_web:
     name: Validate Web App
@@ -444,17 +507,53 @@ jobs:
   notify_failure_pr:
     name: Notify PR Failure
     runs-on: ubuntu-latest
-    needs: pr_checks
+    needs: [pr_checks_web, pr_checks_functions]
     if: ${{ always() && github.event_name == 'pull_request' }}
     steps:
       - name: Comment on PR
-        if: ${{ needs.pr_checks.result == 'failure' }}
+        if: ${{ needs.pr_checks_web.result == 'failure' || needs.pr_checks_functions.result == 'failure' }}
         uses: actions/github-script@v6
         with:
           script: |
+            const webStatus = '${{ needs.pr_checks_web.result }}';
+            const functionsStatus = '${{ needs.pr_checks_functions.result }}';
+
+            let message = '## ❌ PR Checks Failed\n\n';
+
+            if (webStatus === 'failure') {
+              message += '- **Web App**: Failed\n';
+            } else {
+              message += '- **Web App**: ✅ Passed\n';
+            }
+
+            if (functionsStatus === 'failure') {
+              message += '- **Cloud Functions**: Failed\n';
+            } else {
+              message += '- **Cloud Functions**: ✅ Passed\n';
+            }
+
+            message += '\nPlease review the workflow logs and fix the failing checks before merging.';
+
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '❌ Lightweight PR checks failed. Please review the logs.'
+              body: message
+            })
+
+      - name: Comment on PR success
+        if: ${{ needs.pr_checks_web.result == 'success' && needs.pr_checks_functions.result == 'success' }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const message = '## ✅ All PR Checks Passed\n\n' +
+              '- **Web App**: Lint, TypeScript, Tests, Build - All passed\n' +
+              '- **Cloud Functions**: TypeScript, Tests, Build - All passed\n\n' +
+              'Your PR is ready for review!';
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
             })
