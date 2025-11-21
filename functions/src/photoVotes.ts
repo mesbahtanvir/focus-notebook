@@ -17,6 +17,7 @@ interface BattlePhoto {
 interface PhotoBattle {
   ownerId: string;
   photos: BattlePhoto[];
+  photoAliases?: Record<string, string>;
 }
 
 const db = admin.firestore();
@@ -340,3 +341,118 @@ async function updateLibraryStatsAdmin(ownerId: string, libraryId: string, resul
 
   await statsRef.update(updates);
 }
+
+/**
+ * Merge two photos in a battle session
+ * Combines all voting stats from mergedPhotoId into targetPhotoId
+ * Deletes the merged photo completely (storage files + library entry)
+ */
+export const mergePhotos = functions.https.onCall(async request => {
+  const sessionId = typeof request.data?.sessionId === 'string' ? request.data.sessionId : '';
+  const targetPhotoId = typeof request.data?.targetPhotoId === 'string' ? request.data.targetPhotoId : '';
+  const mergedPhotoId = typeof request.data?.mergedPhotoId === 'string' ? request.data.mergedPhotoId : '';
+
+  if (!sessionId || !targetPhotoId || !mergedPhotoId) {
+    throw new functions.https.HttpsError('invalid-argument', 'sessionId, targetPhotoId, and mergedPhotoId are required.');
+  }
+
+  if (!request.auth?.uid) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated.');
+  }
+
+  const sessionRef = db.collection('photoBattles').doc(sessionId);
+
+  // Store merged photo data before transaction for cleanup
+  let mergedPhotoData: BattlePhoto | undefined;
+  let ownerId: string | undefined;
+
+  // Run transaction to merge photos atomically
+  await db.runTransaction(async transaction => {
+    const sessionSnap = await transaction.get(sessionRef);
+
+    if (!sessionSnap.exists) {
+      throw new functions.https.HttpsError('not-found', 'Session not found');
+    }
+
+    const sessionData = sessionSnap.data() as PhotoBattle;
+    ownerId = sessionData.ownerId;
+
+    // Verify ownership
+    if (sessionData.ownerId !== request.auth!.uid) {
+      throw new functions.https.HttpsError('permission-denied', 'Only the session owner can merge photos');
+    }
+
+    const photos = sessionData.photos || [];
+    const targetPhoto = photos.find(p => p.id === targetPhotoId);
+    const mergedPhoto = photos.find(p => p.id === mergedPhotoId);
+
+    if (!targetPhoto || !mergedPhoto) {
+      throw new functions.https.HttpsError('not-found', 'Photos not found in session');
+    }
+
+    // Store merged photo data for cleanup
+    mergedPhotoData = { ...mergedPhoto };
+
+    // Combine stats: wins, losses, totalVotes, rating (weighted average)
+    const totalVotes = targetPhoto.totalVotes + mergedPhoto.totalVotes;
+    const combinedRating = totalVotes > 0
+      ? Math.round(
+          (targetPhoto.rating * targetPhoto.totalVotes + mergedPhoto.rating * mergedPhoto.totalVotes) / totalVotes
+        )
+      : targetPhoto.rating;
+
+    targetPhoto.wins += mergedPhoto.wins;
+    targetPhoto.losses += mergedPhoto.losses;
+    targetPhoto.totalVotes = totalVotes;
+    targetPhoto.rating = combinedRating;
+
+    // Create alias mapping to track the merge
+    const photoAliases = (sessionData.photoAliases as Record<string, string>) || {};
+    photoAliases[mergedPhotoId] = targetPhotoId;
+
+    // Remove merged photo from session
+    const updatedPhotos = photos.filter(p => p.id !== mergedPhotoId);
+
+    // Update session
+    transaction.update(sessionRef, {
+      photos: updatedPhotos,
+      photoAliases,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  // After transaction, clean up merged photo resources (not in transaction to avoid blocking)
+  if (mergedPhotoData) {
+    // Delete storage files
+    if (mergedPhotoData.storagePath) {
+      try {
+        await admin.storage().bucket().file(mergedPhotoData.storagePath).delete();
+      } catch (error) {
+        console.warn(`Failed to delete merged photo file: ${mergedPhotoData.storagePath}`, error);
+      }
+    }
+
+    if (mergedPhotoData.thumbnailPath) {
+      try {
+        await admin.storage().bucket().file(mergedPhotoData.thumbnailPath).delete();
+      } catch (error) {
+        console.warn(`Failed to delete merged thumbnail: ${mergedPhotoData.thumbnailPath}`, error);
+      }
+    }
+
+    // Delete library entry if it exists
+    if (mergedPhotoData.libraryId && ownerId) {
+      try {
+        await db.collection('users')
+          .doc(ownerId)
+          .collection('photoLibrary')
+          .doc(mergedPhotoData.libraryId)
+          .delete();
+      } catch (error) {
+        console.warn(`Failed to delete library entry: ${mergedPhotoData.libraryId}`, error);
+      }
+    }
+  }
+
+  return { success: true };
+});

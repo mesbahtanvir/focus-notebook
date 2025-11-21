@@ -753,123 +753,36 @@ export const usePhotoFeedback = create<State>((set, get) => ({
     }
 
     try {
+      // Call Cloud Function to merge photos with admin permissions
+      const mergeCallable = httpsCallable<
+        { sessionId: string; targetPhotoId: string; mergedPhotoId: string },
+        { success: boolean }
+      >(functionsClient, 'mergePhotos');
+
+      await mergeCallable({ sessionId, targetPhotoId, mergedPhotoId });
+
+      // Reload session to get updated state
       const sessionRef = doc(db, 'photoBattles', sessionId);
-      const sessionSnap = await getDoc(sessionRef);
-      if (!sessionSnap.exists()) {
-        throw new Error('Session not found');
-      }
+      const sessionDoc = await getDoc(sessionRef);
 
-      const session = sessionSnap.data() as PhotoBattle;
-      if (session.ownerId !== user.uid) {
-        throw new Error('You do not have permission to update this session.');
-      }
+      if (sessionDoc.exists()) {
+        const session = normalizeBattle(
+          { ...(sessionDoc.data() as PhotoBattle & Record<string, any>) },
+          sessionDoc.id
+        );
 
-      const baseAliases = session.photoAliases ?? {};
-      const canonicalTarget = resolveAlias(targetPhotoId, baseAliases);
-      const canonicalMerged = resolveAlias(mergedPhotoId, baseAliases);
+        set(state => {
+          // Find the merged photo's library ID from the current state before updating
+          const oldSession = state.currentSession?.id === sessionId ? state.currentSession : state.userSessions.find(s => s.id === sessionId);
+          const mergedLibraryId = oldSession?.photos.find(p => p.id === mergedPhotoId)?.libraryId;
 
-      if (canonicalTarget === canonicalMerged) {
-        throw new Error('These photos are already combined.');
-      }
-
-      const targetPhoto = session.photos.find(photo => photo.id === canonicalTarget);
-      const mergedPhoto = session.photos.find(photo => photo.id === canonicalMerged);
-      if (!targetPhoto || !mergedPhoto) {
-        throw new Error('Unable to find both photos to merge.');
-      }
-
-      const history = await fetchBattleHistory(sessionId);
-      const aliasMap = { ...baseAliases, [canonicalMerged]: canonicalTarget };
-      const recomputedMap = replayBattleWithHistory(session, history, aliasMap);
-
-      const updatedPhotos = session.photos
-        .filter(photo => photo.id !== canonicalMerged)
-        .map(photo => {
-          const next = recomputedMap.get(photo.id);
-          if (!next) {
-            return { ...photo, rating: 1200, wins: 0, losses: 0, totalVotes: 0 };
-          }
           return {
-            ...photo,
-            rating: next.rating,
-            wins: next.wins,
-            losses: next.losses,
-            totalVotes: next.totalVotes,
+            currentSession: state.currentSession?.id === sessionId ? session : state.currentSession,
+            userSessions: state.userSessions.map(sess => (sess.id === sessionId ? session : sess)),
+            library: mergedLibraryId ? state.library.filter(photo => photo.id !== mergedLibraryId) : state.library,
           };
         });
-
-      const previousUpdatedAt = session.updatedAt;
-      await runTransaction(db, async transaction => {
-        const freshSnap = await transaction.get(sessionRef);
-        if (!freshSnap.exists()) {
-          throw new Error('Session not found');
-        }
-        const freshData = freshSnap.data() as PhotoBattle;
-        if (previousUpdatedAt && freshData.updatedAt && previousUpdatedAt !== freshData.updatedAt) {
-          throw new Error('Session changed while combining. Please try again.');
-        }
-        transaction.update(sessionRef, {
-          photos: updatedPhotos,
-          photoAliases: aliasMap,
-          updatedAt: serverTimestamp(),
-        });
-      });
-
-      // Delete merged photo's storage files (main + thumbnail)
-      const storageRef = ref(storage, mergedPhoto.storagePath);
-      await deleteObject(storageRef).catch(error => {
-        console.warn('Unable to delete merged photo file (continuing):', error);
-      });
-
-      // Delete thumbnail if it exists
-      if (mergedPhoto.thumbnailPath) {
-        const thumbnailRef = ref(storage, mergedPhoto.thumbnailPath);
-        await deleteObject(thumbnailRef).catch(error => {
-          console.warn('Unable to delete merged photo thumbnail (continuing):', error);
-        });
       }
-
-      // Delete from library if it has a library entry
-      if (mergedPhoto.libraryId) {
-        await deleteDoc(doc(db, `users/${user.uid}/photoLibrary`, mergedPhoto.libraryId)).catch(error => {
-          console.warn('Unable to remove merged library entry (continuing):', error);
-        });
-      }
-
-      set(state => {
-        const applyUpdate = (photos: BattlePhoto[]) =>
-          photos
-            .filter(photo => photo.id !== canonicalMerged)
-            .map(photo => {
-              const next = recomputedMap.get(photo.id);
-              if (!next) {
-                return { ...photo, rating: 1200, wins: 0, losses: 0, totalVotes: 0 };
-              }
-              return {
-                ...photo,
-                rating: next.rating,
-                wins: next.wins,
-                losses: next.losses,
-                totalVotes: next.totalVotes,
-              };
-            });
-
-        const updatedResults =
-          state.results.length > 0 ? applyUpdate(state.results).sort((a, b) => b.rating - a.rating) : state.results;
-
-        return {
-          ...state,
-          results: updatedResults,
-          currentSession:
-            state.currentSession && state.currentSession.id === sessionId
-              ? { ...state.currentSession, photos: applyUpdate(state.currentSession.photos), photoAliases: aliasMap }
-              : state.currentSession,
-          userSessions: state.userSessions.map(entry =>
-            entry.id === sessionId ? { ...entry, photos: applyUpdate(entry.photos), photoAliases: aliasMap } : entry
-          ),
-          library: mergedPhoto.libraryId ? state.library.filter(item => item.id !== mergedPhoto.libraryId) : state.library,
-        };
-      });
     } catch (error) {
       console.error('Failed to merge battle photos:', error);
       throw error;
@@ -1005,91 +918,3 @@ async function appendPhotoToBattle(ownerId: string, photo: BattlePhoto) {
   }
 }
 
-function resolveAlias(photoId: string, aliasMap: Record<string, string>): string {
-  let current = photoId;
-  const seen = new Set<string>();
-  while (aliasMap[current] && !seen.has(current)) {
-    seen.add(current);
-    current = aliasMap[current];
-  }
-  return current;
-}
-
-async function fetchBattleHistory(sessionId: string): Promise<BattleHistoryEntry[]> {
-  const sessionRef = doc(db, 'photoBattles', sessionId);
-  const historyRef = collection(sessionRef, 'history');
-  const snapshot = await getDocs(historyRef);
-  const entries = snapshot.docs.map(item => {
-    const data = item.data() as Partial<BattleHistoryEntry>;
-    return {
-      id: item.id,
-      winnerId: data.winnerId ?? '',
-      loserId: data.loserId ?? '',
-      createdAt: data.createdAt ?? new Date().toISOString(),
-    };
-  });
-  return entries.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-}
-
-function replayBattleWithHistory(session: PhotoBattle, history: BattleHistoryEntry[], aliasMap: Record<string, string>) {
-  const canonical = (id: string) => resolveAlias(id, aliasMap);
-  const metadata = new Map<string, BattlePhoto>();
-  session.photos.forEach(photo => {
-    metadata.set(photo.id, photo);
-  });
-
-  const state = new Map<string, BattlePhoto>();
-  const ensurePhoto = (id: string) => {
-    const existing = state.get(id);
-    if (existing) return existing;
-    const base = metadata.get(id);
-    const fresh: BattlePhoto = {
-      id,
-      url: base?.url ?? '',
-      storagePath: base?.storagePath ?? '',
-      libraryId: base?.libraryId,
-      rating: 1200,
-      wins: 0,
-      losses: 0,
-      totalVotes: 0,
-    };
-    state.set(id, fresh);
-    return fresh;
-  };
-
-  // Seed existing photos so even those without history retain default ratings
-  session.photos.forEach(photo => {
-    if (!state.has(photo.id)) {
-      state.set(photo.id, {
-        ...photo,
-        rating: 1200,
-        wins: 0,
-        losses: 0,
-        totalVotes: 0,
-      });
-    }
-  });
-
-  history.forEach(entry => {
-    const winnerId = canonical(entry.winnerId);
-    const loserId = canonical(entry.loserId);
-    if (!winnerId || !loserId || winnerId === loserId) {
-      return;
-    }
-    const winner = ensurePhoto(winnerId);
-    const loser = ensurePhoto(loserId);
-
-    const K = 32;
-    const expectedWinner = 1 / (1 + Math.pow(10, (loser.rating - winner.rating) / 400));
-    const expectedLoser = 1 / (1 + Math.pow(10, (winner.rating - loser.rating) / 400));
-
-    winner.rating = Math.max(0, Math.round(winner.rating + K * (1 - expectedWinner)));
-    loser.rating = Math.max(0, Math.round(loser.rating + K * (0 - expectedLoser)));
-    winner.wins += 1;
-    winner.totalVotes += 1;
-    loser.losses += 1;
-    loser.totalVotes += 1;
-  });
-
-  return state;
-}

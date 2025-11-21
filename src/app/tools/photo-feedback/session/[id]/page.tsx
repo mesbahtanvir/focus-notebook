@@ -232,9 +232,12 @@ export default function PhotoBattleVotingPage() {
       }
       setSelectedPhotoId(winner.id);
       setIsAnimating(true);
+
+      // Industry standard: 400ms for meaningful feedback animations
       const animationDelay = new Promise<void>(resolve => {
-        window.setTimeout(resolve, 1000);
+        window.setTimeout(resolve, 400);
       });
+
       let shouldAdvance = false;
       try {
         // Submit vote WITHOUT reloading session to prevent duplicate flash
@@ -273,7 +276,7 @@ export default function PhotoBattleVotingPage() {
 
     setIsAnimating(true);
 
-    // Short animation for skip
+    // Industry standard: 200ms for quick, dismissive actions
     setTimeout(() => {
       // Simply advance to next pair without voting
       setPairBuffer(prev => {
@@ -282,7 +285,7 @@ export default function PhotoBattleVotingPage() {
       });
 
       setIsAnimating(false);
-    }, 300);
+    }, 200);
   }, [currentSession, isAnimating, pair]);
 
   useEffect(() => {
@@ -382,8 +385,8 @@ export default function PhotoBattleVotingPage() {
             key={`${pairSequence}-${activePair.left.id}-${activePair.right.id}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
             className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2"
           >
             {[{ side: "left" as const, card: activePair.left }, { side: "right" as const, card: activePair.right }].map(({ side, card }, index) => {
@@ -394,9 +397,9 @@ export default function PhotoBattleVotingPage() {
               return (
                 <motion.div
                   key={card.id}
-                  initial={{ opacity: 0, x: index === 0 ? -30 : 30 }}
+                  initial={{ opacity: 0, x: index === 0 ? -20 : 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.4, delay: 0.1 + index * 0.1, ease: "easeOut" }}
+                  transition={{ duration: 0.3, delay: index * 0.05, ease: [0.4, 0, 0.2, 1] }}
                 >
                   <Card
                     className={`group relative flex h-full cursor-pointer overflow-hidden border-2 bg-white/5 transition-all ${
@@ -430,15 +433,15 @@ export default function PhotoBattleVotingPage() {
                       />
                       {isSelected && (
                         <motion.div
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.2 }}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.15, ease: "easeOut" }}
                           className="absolute inset-0 bg-black/40 flex items-center justify-center"
                         >
                           <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
+                            initial={{ scale: 0.85, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            transition={{ duration: 0.3, delay: 0.1 }}
+                            transition={{ duration: 0.2, ease: [0.34, 1.56, 0.64, 1] }}
                             className="flex items-center gap-2 text-white font-semibold text-lg drop-shadow-lg"
                           >
                             <CheckCircle2 className="w-6 h-6" />

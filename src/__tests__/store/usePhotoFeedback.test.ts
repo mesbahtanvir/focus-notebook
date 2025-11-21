@@ -444,15 +444,17 @@ describe("usePhotoFeedback gallery + session flow", () => {
       ],
     }));
 
-    mockDeleteObject.mockResolvedValue(undefined);
-    mockDeleteDoc.mockResolvedValue(undefined);
+    // Mock Cloud Function call (merge now happens server-side)
+    const mockMergeFunction = jest.fn().mockResolvedValue({ data: { success: true } });
+    mockHttpsCallable.mockReturnValue(mockMergeFunction);
 
-    const sessionPayload = {
+    // After merge, getDoc returns updated session with merged photos
+    const mergedPayload = {
       id: "session-merge",
       ownerId: "user-123",
       creatorName: "Alex",
-      photos: [primary, duplicate],
-      photoAliases: {},
+      photos: [{ ...primary, wins: 8, losses: 6, totalVotes: 15 }],
+      photoAliases: { duplicate: "primary" },
       secretKey: "secret",
       createdAt: new Date().toISOString(),
       updatedAt: "2024-01-01T00:00:00.000Z",
@@ -460,113 +462,49 @@ describe("usePhotoFeedback gallery + session flow", () => {
 
     mockGetDoc.mockResolvedValueOnce({
       exists: () => true,
-      data: () => ({
-        ...sessionPayload,
-      }),
-    });
-
-    const historyDocs = [
-      {
-        id: "m1",
-        data: () => ({ winnerId: "primary", loserId: "opponent", createdAt: "2024-01-01T00:00:00.000Z" }),
-      },
-      {
-        id: "m2",
-        data: () => ({ winnerId: "opponent", loserId: "duplicate", createdAt: "2024-01-01T01:00:00.000Z" }),
-      },
-      {
-        id: "m3",
-        data: () => ({ winnerId: "duplicate", loserId: "opponent", createdAt: "2024-01-01T02:00:00.000Z" }),
-      },
-    ];
-    mockGetDocs.mockImplementationOnce(() => ({ docs: historyDocs }));
-
-    mockRunTransaction.mockImplementationOnce(async (_db, updater: any) => {
-      const transaction = {
-        get: jest.fn().mockResolvedValue({
-          exists: () => true,
-          data: () => ({
-            ...sessionPayload,
-          }),
-        }),
-        update: jest.fn(),
-        set: jest.fn(),
-      };
-      await updater(transaction);
-      expect(transaction.update).toHaveBeenCalledWith(
-        expect.any(Object),
-        expect.objectContaining({
-          photoAliases: expect.objectContaining({ duplicate: "primary" }),
-          photos: expect.arrayContaining([expect.objectContaining({ id: "primary" })]),
-        })
-      );
+      id: "session-merge",
+      data: () => mergedPayload,
     });
 
     await act(async () => {
       await usePhotoFeedback.getState().mergeSessionPhotos("session-merge", "primary", "duplicate");
     });
 
-    expect(mockDeleteObject).toHaveBeenCalledWith(expect.objectContaining({ path: "images/original/duplicate.jpg" }));
-    expect(mockDeleteDoc).toHaveBeenCalledWith(
-      expect.objectContaining({ path: expect.stringContaining("users/user-123/photoLibrary/lib-duplicate") })
-    );
+    // Verify Cloud Function was called
+    expect(mockHttpsCallable).toHaveBeenCalledWith(expect.anything(), "mergePhotos");
+    expect(mockMergeFunction).toHaveBeenCalledWith({
+      sessionId: "session-merge",
+      targetPhotoId: "primary",
+      mergedPhotoId: "duplicate",
+    });
 
     const state = usePhotoFeedback.getState();
-    expect(state.results).toHaveLength(1);
     expect(state.currentSession?.photos).toHaveLength(1);
-    expect(state.userSessions[0].photos).toHaveLength(1);
-    expect(state.results[0].wins).toBe(2);
-    expect(state.results[0].losses).toBe(1);
-    expect(state.results[0].totalVotes).toBe(3);
-    expect(state.results[0].rating).toBe(1215);
+    expect(state.currentSession?.photoAliases).toEqual({ duplicate: "primary" });
     expect(state.library.find(photo => photo.id === "lib-duplicate")).toBeUndefined();
   });
 
   it("prevents merging photos when user does not own the session", async () => {
-    mockGetDoc.mockResolvedValueOnce({
-      exists: () => true,
-      data: () => ({
-        id: "session-merge",
-        ownerId: "other-user",
-        photos: [
-          { id: "primary", rating: 1200, wins: 1, losses: 1, totalVotes: 2 },
-          { id: "duplicate", rating: 1100, wins: 1, losses: 2, totalVotes: 3 },
-        ],
-        photoAliases: {},
-        secretKey: "secret",
-        createdAt: new Date().toISOString(),
-      }),
-    });
-
-    mockRunTransaction.mockImplementationOnce(async (_db, updater: any) => {
-      const transaction = {
-        get: jest.fn().mockResolvedValue({
-          exists: () => true,
-          data: () => ({
-            ownerId: "other-user",
-            photos: [
-              { id: "primary", rating: 1200, wins: 1, losses: 1, totalVotes: 2 },
-              { id: "duplicate", rating: 1100, wins: 1, losses: 2, totalVotes: 3 },
-            ],
-          }),
-        }),
-        update: jest.fn(),
-        set: jest.fn(),
-      };
-      await updater(transaction);
-    });
+    // Mock Cloud Function call to throw permission error
+    const mockMergeFunction = jest.fn().mockRejectedValue(
+      new Error("permission-denied: Only the session owner can merge photos")
+    );
+    mockHttpsCallable.mockReturnValue(mockMergeFunction);
 
     const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
     try {
       await expect(
         usePhotoFeedback.getState().mergeSessionPhotos("session-merge", "primary", "duplicate")
-      ).rejects.toThrow("You do not have permission to update this session.");
+      ).rejects.toThrow();
     } finally {
       consoleErrorSpy.mockRestore();
     }
 
-    expect(mockDeleteObject).not.toHaveBeenCalled();
-    expect(mockDeleteDoc).not.toHaveBeenCalled();
+    expect(mockMergeFunction).toHaveBeenCalledWith({
+      sessionId: "session-merge",
+      targetPhotoId: "primary",
+      mergedPhotoId: "duplicate",
+    });
   });
 
   it("throws when attempting to delete a photo from another user's session", async () => {
