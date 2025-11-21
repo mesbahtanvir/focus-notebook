@@ -181,20 +181,6 @@ export default function TravelHubPage() {
             New Feature
           </div>
         </Link>
-
-        {/* Packing Lists */}
-        <Link href="/tools/packing-list" className="card p-6 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <PackageCheck className="h-5 w-5 text-cyan-500" />
-              Packing Lists
-            </h3>
-            <ArrowRight className="h-5 w-5 text-gray-400" />
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Smart packing lists based on destination and duration
-          </p>
-        </Link>
       </div>
 
       {/* Travel Statistics */}

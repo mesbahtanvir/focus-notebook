@@ -183,38 +183,6 @@ test.describe('Errands Tool', () => {
   });
 });
 
-test.describe('Packing List Tool', () => {
-  test.beforeEach(async ({ page }) => {
-    await mockDateTime(page);
-    await setupMockAuth(page);
-  });
-
-  test('packing list page - initial state', async ({ page }) => {
-    await page.goto('/tools/packing-list');
-    await waitForPageReady(page);
-    await hideDynamicElements(page);
-    await page.waitForTimeout(1000);
-
-    await takeScreenshot(page, {
-      name: 'packing-list-initial',
-      fullPage: true,
-    });
-  });
-
-  test('packing list page - mobile viewport', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/tools/packing-list');
-    await waitForPageReady(page);
-    await hideDynamicElements(page);
-    await page.waitForTimeout(1000);
-
-    await takeScreenshot(page, {
-      name: 'packing-list-mobile',
-      fullPage: true,
-    });
-  });
-});
-
 test.describe('Tools Marketplace', () => {
   test.beforeEach(async ({ page }) => {
     await mockDateTime(page);
