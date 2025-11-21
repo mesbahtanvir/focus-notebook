@@ -93,44 +93,171 @@ export const submitPhotoVote = functions.https.onCall(async request => {
   return null;
 });
 
+/**
+ * Calculate Rating Deviation (RD) - Glicko-2 inspired confidence metric
+ * Higher RD = less confident in rating, needs more comparisons
+ * RD decreases as totalVotes increases, asymptotically approaching minimum
+ */
+function calculateRatingDeviation(totalVotes: number): number {
+  const MIN_RD = 30;  // Minimum deviation (very confident)
+  const MAX_RD = 350; // Maximum deviation (new photo)
+  const DECAY_RATE = 0.15; // How quickly confidence grows
+
+  // RD decays exponentially with votes: RD = MIN + (MAX - MIN) * e^(-decay * votes)
+  return MIN_RD + (MAX_RD - MIN_RD) * Math.exp(-DECAY_RATE * totalVotes);
+}
+
+/**
+ * Calculate expected match outcome using Glicko-2 formula
+ * Accounts for both rating difference and rating uncertainty
+ */
+function expectedScore(ratingA: number, ratingB: number, rdA: number, rdB: number): number {
+  const Q = Math.LN10 / 400;
+  const g = 1 / Math.sqrt(1 + 3 * Q * Q * (rdA * rdA + rdB * rdB) / (Math.PI * Math.PI));
+  return 1 / (1 + Math.pow(10, -g * (ratingA - ratingB) / 400));
+}
+
+/**
+ * Calculate information gain from a potential matchup
+ * Higher variance in outcome = more information gained
+ * Prioritizes uncertain matchups and photos with high RD
+ */
+function informationGain(photoA: BattlePhoto, photoB: BattlePhoto): number {
+  const rdA = calculateRatingDeviation(photoA.totalVotes);
+  const rdB = calculateRatingDeviation(photoB.totalVotes);
+
+  // Expected outcome probability
+  const expected = expectedScore(photoA.rating, photoB.rating, rdA, rdB);
+
+  // Variance in outcome (entropy): maximum when expected = 0.5
+  const outcomeVariance = expected * (1 - expected);
+
+  // Uncertainty factor: average of both RDs (normalized)
+  const uncertaintyFactor = (rdA + rdB) / (2 * 350);
+
+  // Combined information gain: balance outcome uncertainty with rating uncertainty
+  // Weight outcome variance more heavily (0.7) as it's more important for convergence
+  return (0.7 * outcomeVariance) + (0.3 * uncertaintyFactor);
+}
+
+/**
+ * Swiss-system inspired pairing with Glicko-2 confidence tracking
+ * Balances exploration (new/uncertain photos) with exploitation (refining rankings)
+ */
 function choosePairForRanking(photos: BattlePhoto[]): [BattlePhoto, BattlePhoto] {
   if (photos.length < 2) {
     throw new functions.https.HttpsError('failed-precondition', 'Need at least two photos for a battle.');
   }
 
-  // Always work with copies so the original array is not mutated.
-  const ranked = [...photos].map(photo => ({
+  // Normalize photos with defaults
+  const normalized = photos.map(photo => ({
     ...photo,
     rating: typeof photo.rating === 'number' ? photo.rating : 1200,
     totalVotes: typeof photo.totalVotes === 'number' ? photo.totalVotes : 0,
   }));
 
-  // Sort by how many votes they have (lowest first) so under-sampled photos get surfaced,
-  // then by rating to keep pairs relatively close and informative for Elo.
-  ranked.sort((a, b) => {
-    if (a.totalVotes !== b.totalVotes) return a.totalVotes - b.totalVotes;
-    return Math.abs(a.rating - 1200) - Math.abs(b.rating - 1200);
-  });
+  // Calculate rating deviation for each photo
+  const enriched = normalized.map(photo => ({
+    ...photo,
+    rd: calculateRatingDeviation(photo.totalVotes),
+  }));
 
-  const anchor = ranked[0];
-  const candidates = ranked.slice(1);
-  if (candidates.length === 1) {
-    const pair: [BattlePhoto, BattlePhoto] = Math.random() > 0.5 ? [anchor, candidates[0]] : [candidates[0], anchor];
+  // Phase 1: Exploration - if any photos have < 5 votes, prioritize them
+  const newPhotos = enriched.filter(p => p.totalVotes < 5);
+
+  if (newPhotos.length >= 2) {
+    // Bootstrap phase: pair new photos with each other for quick initial ratings
+    const shuffled = [...newPhotos].sort(() => Math.random() - 0.5);
+    const pair: [BattlePhoto, BattlePhoto] = Math.random() > 0.5
+      ? [shuffled[0], shuffled[1]]
+      : [shuffled[1], shuffled[0]];
     return pair;
   }
 
-  // Consider the next few lowest-voted photos and pick the one closest in rating to the anchor
-  // to quickly converge on a stable ordering.
-  const searchPool = candidates.slice(0, Math.min(5, candidates.length));
-  searchPool.sort((a, b) => {
-    const diffA = Math.abs(a.rating - anchor.rating);
-    const diffB = Math.abs(b.rating - anchor.rating);
-    if (diffA !== diffB) return diffA - diffB;
-    return a.totalVotes - b.totalVotes;
+  if (newPhotos.length === 1) {
+    // Pair the new photo with an established photo of medium rating
+    const newPhoto = newPhotos[0];
+    const established = enriched.filter(p => p.id !== newPhoto.id && p.totalVotes >= 5);
+
+    if (established.length > 0) {
+      // Sort by closeness to median rating
+      const medianRating = 1200;
+      established.sort((a, b) =>
+        Math.abs(a.rating - medianRating) - Math.abs(b.rating - medianRating)
+      );
+
+      // Pick from top 3 closest to median (adds variety)
+      const pool = established.slice(0, Math.min(3, established.length));
+      const opponent = pool[Math.floor(Math.random() * pool.length)];
+
+      const pair: [BattlePhoto, BattlePhoto] = Math.random() > 0.5
+        ? [newPhoto, opponent]
+        : [opponent, newPhoto];
+      return pair;
+    }
+  }
+
+  // Phase 2: Exploitation - all photos established, maximize information gain
+  // Use Swiss-system approach: pair photos with similar ratings but consider uncertainty
+
+  // Sort by a composite "priority score" that balances:
+  // 1. Rating deviation (uncertainty) - higher RD = higher priority
+  // 2. Total votes (inverse) - fewer votes = higher priority
+  const withPriority = enriched.map(photo => ({
+    ...photo,
+    priority: photo.rd / 350 + (1 / (1 + photo.totalVotes * 0.1)),
+  }));
+
+  withPriority.sort((a, b) => b.priority - a.priority);
+
+  // Select anchor from top 30% of priority (or at least top 2)
+  const anchorPoolSize = Math.max(2, Math.ceil(withPriority.length * 0.3));
+  const anchorPool = withPriority.slice(0, anchorPoolSize);
+  const anchor = anchorPool[Math.floor(Math.random() * anchorPool.length)];
+
+  // Find best opponents by calculating information gain
+  const candidates = withPriority
+    .filter(p => p.id !== anchor.id)
+    .map(opponent => ({
+      photo: opponent,
+      gain: informationGain(anchor, opponent),
+      ratingDiff: Math.abs(anchor.rating - opponent.rating),
+    }));
+
+  if (candidates.length === 0) {
+    throw new functions.https.HttpsError('failed-precondition', 'Need at least two photos for a battle.');
+  }
+
+  // Sort by information gain (descending), with rating difference as tiebreaker
+  candidates.sort((a, b) => {
+    const gainDiff = b.gain - a.gain;
+    if (Math.abs(gainDiff) > 0.01) return gainDiff;
+    return a.ratingDiff - b.ratingDiff; // Prefer closer ratings as tiebreaker
   });
 
-  const chosen = searchPool[0];
-  const pair: [BattlePhoto, BattlePhoto] = Math.random() > 0.5 ? [anchor, chosen] : [chosen, anchor];
+  // Select opponent from top candidates with weighted random sampling
+  // Top 20% of candidates, or at least top 3
+  const opponentPoolSize = Math.max(3, Math.ceil(candidates.length * 0.2));
+  const opponentPool = candidates.slice(0, opponentPoolSize);
+
+  // Weighted random selection: higher information gain = higher probability
+  const totalWeight = opponentPool.reduce((sum, c) => sum + c.gain, 0);
+  let random = Math.random() * totalWeight;
+
+  let chosen = opponentPool[0];
+  for (const candidate of opponentPool) {
+    random -= candidate.gain;
+    if (random <= 0) {
+      chosen = candidate;
+      break;
+    }
+  }
+
+  // Randomize order (left/right position)
+  const pair: [BattlePhoto, BattlePhoto] = Math.random() > 0.5
+    ? [anchor, chosen.photo]
+    : [chosen.photo, anchor];
+
   return pair;
 }
 

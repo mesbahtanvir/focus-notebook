@@ -174,13 +174,20 @@ export default function PhotoBattleVotingPage() {
       const initial: Pair[] = [];
       const seenKeys = new Set<string>();
 
-      for (let i = 0; i < PREFETCH_TARGET; i += 1) {
+      // Only try to get 2-3 initial pairs, not full PREFETCH_TARGET
+      // The rest will be fetched progressively
+      const initialTarget = Math.min(2, PREFETCH_TARGET);
+
+      for (let i = 0; i < initialTarget; i += 1) {
+        if (cancelled) break;
+
         try {
           let attempts = 0;
           let next = null;
+          const maxAttempts = 3;
 
           // Try up to 3 times to get a unique pair for initial load
-          while (attempts < 3) {
+          while (attempts < maxAttempts) {
             next = await getNextPair(currentSession.id);
             if (!next?.left || !next?.right) break;
 
@@ -189,11 +196,20 @@ export default function PhotoBattleVotingPage() {
               seenKeys.add(key);
               break;
             }
+
+            // If we've seen this pair, wait a bit before retrying
+            if (attempts < maxAttempts - 1) {
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
             attempts++;
           }
 
           if (next?.left && next?.right) {
-            initial.push(next);
+            // Only add if we got a unique pair (seenKeys was updated in the loop above)
+            const key = getPairKey(next.left, next.right);
+            if (seenKeys.has(key)) {
+              initial.push(next);
+            }
           } else {
             break;
           }
@@ -202,7 +218,7 @@ export default function PhotoBattleVotingPage() {
           break;
         }
       }
-      if (!cancelled) {
+      if (!cancelled && initial.length > 0) {
         setPairBuffer(initial);
       }
     };
