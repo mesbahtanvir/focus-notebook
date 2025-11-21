@@ -14,6 +14,7 @@ import { toolThemes } from '@/components/tools/themes';
 import { MapPin, Calendar, DollarSign, Trash2, TrendingDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { BudgetBreakdownCard } from '@/components/trip/BudgetBreakdownCard';
+import { PackingListCard } from '@/components/trip/PackingListCard';
 
 export default function TripDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -207,6 +208,8 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
         </div>
 
         {(isPlanning || hasBudgetBreakdown) && <BudgetBreakdownCard trip={trip} />}
+
+        <PackingListCard tripId={trip.id} tripStatus={trip.status} />
 
         {!isPlanning && budgetVsActual.length > 0 && (
           <Card className="p-6">
