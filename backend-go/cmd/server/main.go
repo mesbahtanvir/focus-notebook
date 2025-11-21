@@ -154,6 +154,10 @@ func main() {
 	importExportSvc := services.NewImportExportService(repo, logger)
 	logger.Info("Import/export service initialized")
 
+	// Initialize investment calculation service
+	investmentCalcSvc := services.NewInvestmentCalculationService(repo, logger)
+	logger.Info("Investment calculation service initialized")
+
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(
 		fbAdmin.Auth,
@@ -184,6 +188,9 @@ func main() {
 
 	// Import/export handler (always available)
 	importExportHandler := handlers.NewImportExportHandler(importExportSvc, logger)
+
+	// Investment calculation handler (always available)
+	investmentHandler := handlers.NewInvestmentHandler(investmentCalcSvc, logger)
 
 	// Create router
 	router := mux.NewRouter()
@@ -267,6 +274,14 @@ func main() {
 	exportRoutes.HandleFunc("", importExportHandler.ExportData).Methods("GET")
 	exportRoutes.HandleFunc("/summary", importExportHandler.GetExportSummary).Methods("GET")
 	logger.Info("Import/export endpoints registered")
+
+	// Investment calculation routes (authenticated)
+	portfolioRoutes := api.PathPrefix("/portfolio").Subrouter()
+	portfolioRoutes.HandleFunc("/{portfolioId}/metrics", investmentHandler.GetPortfolioMetrics).Methods("GET")
+	portfolioRoutes.HandleFunc("/{portfolioId}/snapshots", investmentHandler.GetPortfolioSnapshots).Methods("GET")
+	portfolioRoutes.HandleFunc("/projection", investmentHandler.GenerateProjection).Methods("POST")
+	portfolioRoutes.HandleFunc("/summary", investmentHandler.GetDashboardSummary).Methods("GET")
+	logger.Info("Investment calculation endpoints registered")
 
 	// TODO: Add more routes here as we implement handlers
 	// - /api/chat
