@@ -1,0 +1,218 @@
+# Focus Notebook - Backend Configuration
+
+server:
+  port: 8080
+  host: "0.0.0.0"
+  read_timeout: 30s
+  write_timeout: 30s
+  idle_timeout: 120s
+  max_header_bytes: 1048576  # 1MB
+
+  cors:
+    enabled: true
+    allowed_origins:
+      - http://localhost:3000
+      - http://localhost:3001
+      - https://focusnotebook.app
+      - https://www.focusnotebook.app
+    allowed_methods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+    allowed_headers:
+      - Authorization
+      - Content-Type
+      - X-Requested-With
+    expose_headers:
+      - Content-Length
+    allow_credentials: true
+    max_age: 3600
+
+firebase:
+  # Project ID - must match your Firebase project
+  project_id: ${FIREBASE_PROJECT_ID}
+
+  # Path to service account key JSON file
+  credentials_path: ./service-account-key.json
+
+  # Storage bucket name (e.g., your-project.firebasestorage.app)
+  storage_bucket: ${FIREBASE_STORAGE_BUCKET}
+
+  # Firestore database ID (default: "(default)")
+  database_id: "(default)"
+
+# AI/LLM Configuration
+openai:
+  api_key: ${OPENAI_API_KEY}
+  default_model: gpt-4o
+  max_tokens: 2000
+  temperature: 0.7
+  timeout: 60s
+  rate_limit:
+    requests_per_minute: 60
+    tokens_per_minute: 90000
+
+anthropic:
+  api_key: ${ANTHROPIC_API_KEY}
+  default_model: claude-3-sonnet-20240229
+  max_tokens: 2000
+  timeout: 60s
+  rate_limit:
+    requests_per_minute: 50
+
+# Stripe Configuration
+stripe:
+  secret_key: ${STRIPE_SECRET_KEY}
+  webhook_secret: ${STRIPE_WEBHOOK_SECRET}
+  api_version: "2023-10-16"
+  pro_price_id: ${STRIPE_PRO_PRICE_ID}
+  success_url: ${APP_BASE_URL}/settings/billing/success
+  cancel_url: ${APP_BASE_URL}/settings/billing
+
+# Plaid Configuration
+plaid:
+  client_id: ${PLAID_CLIENT_ID}
+  secret: ${PLAID_SECRET}
+  environment: ${PLAID_ENVIRONMENT:-sandbox}  # sandbox, development, production
+  products:
+    - transactions
+    - auth
+  country_codes:
+    - US
+    - CA
+  webhook_url: ${APP_BASE_URL}/api/plaid/webhook
+
+# Alpha Vantage (Stock Data)
+alpha_vantage:
+  api_key: ${ALPHA_VANTAGE_API_KEY}
+  timeout: 30s
+  rate_limit:
+    requests_per_minute: 5
+
+# Anonymous Session Configuration
+anonymous:
+  session_duration: 2h  # Must match frontend setting
+  ai_override_key: ${ANONYMOUS_AI_OVERRIDE_KEY}
+  cleanup_interval: 24h
+
+# Logging Configuration
+logging:
+  level: info  # debug, info, warn, error, fatal
+  format: json  # json or console
+  output: stdout  # stdout, stderr, or file path
+  enable_stacktrace: false
+  development: false
+
+# Metrics Configuration
+metrics:
+  enabled: true
+  path: /metrics
+  port: 9090  # Separate port for metrics
+
+# Background Workers
+workers:
+  enabled: true
+
+  # Thought processing queue
+  thought_queue:
+    enabled: true
+    interval: 10s
+    batch_size: 10
+    max_retries: 3
+
+  # Anonymous session cleanup
+  anonymous_cleanup:
+    enabled: true
+    interval: 24h
+    batch_size: 100
+
+  # Stock price refresh
+  stock_prices:
+    enabled: true
+    interval: 15m
+    batch_size: 50
+
+  # Daily portfolio snapshots
+  portfolio_snapshot:
+    enabled: true
+    cron: "0 0 * * *"  # Daily at midnight UTC
+
+  # Visa data update
+  visa_data_update:
+    enabled: true
+    cron: "0 2 * * 0"  # Weekly on Sunday at 2 AM UTC
+
+# Rate Limiting
+rate_limit:
+  enabled: true
+  requests_per_minute: 100
+  burst: 20
+
+  # Per-user rate limits
+  per_user:
+    free_tier: 10  # requests per minute
+    pro_tier: 60   # requests per minute
+
+# File Upload Limits
+upload:
+  max_file_size: 10485760  # 10MB in bytes
+  allowed_types:
+    csv:
+      - text/csv
+      - application/csv
+    pdf:
+      - application/pdf
+    images:
+      - image/jpeg
+      - image/jpg
+      - image/png
+      - image/webp
+
+# Cache Configuration
+cache:
+  enabled: true
+  ttl: 5m
+  max_entries: 10000
+
+  # Subscription cache
+  subscription:
+    ttl: 1m
+    max_entries: 1000
+
+# Retry Configuration
+retry:
+  max_attempts: 3
+  initial_backoff: 1s
+  max_backoff: 30s
+  multiplier: 2.0
+
+  # Which errors to retry
+  retryable_codes:
+    - 408  # Request Timeout
+    - 429  # Too Many Requests
+    - 500  # Internal Server Error
+    - 502  # Bad Gateway
+    - 503  # Service Unavailable
+    - 504  # Gateway Timeout
+
+# Health Check
+health:
+  enabled: true
+  path: /health
+  timeout: 5s
+
+  # Dependencies to check
+  checks:
+    firebase: true
+    openai: true
+    stripe: true
+    plaid: true
+
+# Development Settings
+development:
+  enabled: false
+  debug_routes: false
+  pretty_logs: true
+  disable_auth: false  # NEVER set to true in production
