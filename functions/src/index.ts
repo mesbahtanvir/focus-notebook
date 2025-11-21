@@ -53,7 +53,7 @@ import {
 } from './visaDataUpdater';
 import { generatePhotoThumbnail, getSignedImageUrl } from './photoThumbnails';
 import { runPlaceInsights } from './placeInsights';
-import { submitPhotoVote, getNextPhotoPair, mergePhotos } from './photoVotes';
+import { submitPhotoVote, getNextPhotoPair, getNextPhotoPairs, mergePhotos } from './photoVotes';
 import {
   createPackingList,
   updatePackingList,
@@ -111,6 +111,7 @@ export {
   getSignedImageUrl,
   submitPhotoVote,
   getNextPhotoPair,
+  getNextPhotoPairs,
   mergePhotos,
   // Places
   runPlaceInsights,

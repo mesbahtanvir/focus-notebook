@@ -17,32 +17,38 @@ interface Pair {
   right: BattlePhoto;
 }
 
-const PREFETCH_TARGET = 5;
+const BATCH_SIZE = 10;
+const REFETCH_THRESHOLD = 3;
 
 export default function PhotoBattleVotingPage() {
   const params = useParams();
   const sessionId = params.id as string;
-  const { currentSession, loadSession, submitVote, reloadSession, getNextPair, isLoading, error } = usePhotoFeedback();
+  const { currentSession, loadSession, submitVote, getNextPairs, isLoading, error } = usePhotoFeedback();
   const { user: authUser, loading: authLoading, signInAnonymously } = useAuth();
   const [pairBuffer, setPairBuffer] = useState<Pair[]>([]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const [loadedPhotos, setLoadedPhotos] = useState<Record<string, boolean>>({});
-  const [isFetchingPair, setIsFetchingPair] = useState(false);
+  const [isFetchingBatch, setIsFetchingBatch] = useState(false);
   const [displayedPair, setDisplayedPair] = useState<Pair | null>(null);
   const [pairSequence, setPairSequence] = useState(0);
+  const [initializedSessionId, setInitializedSessionId] = useState<string | null>(null);
 
+  // Load session when sessionId changes
   useEffect(() => {
     if (sessionId) {
-      // Clear all caches when loading a new session
-      setPairBuffer([]);
-      setDisplayedPair(null);
-      setPairSequence(0);
-      setLoadedPhotos({});
+      // Only clear buffer when session actually changes (not on every render)
+      if (initializedSessionId !== sessionId) {
+        setPairBuffer([]);
+        setDisplayedPair(null);
+        setPairSequence(0);
+        setLoadedPhotos({});
+        setInitializedSessionId(null);
+      }
 
       void loadSession(sessionId);
     }
-  }, [sessionId, loadSession]);
+  }, [sessionId, loadSession, initializedSessionId]);
 
   const lastSignInRef = useRef<number>(0);
   const ensureAnonymousSession = useCallback(async () => {
@@ -86,116 +92,59 @@ export default function PhotoBattleVotingPage() {
     }
   }, [pair, isAnimating, selectedPhotoId]);
 
-  // Helper to create a unique key for a pair
-  const getPairKey = useCallback((left: BattlePhoto, right: BattlePhoto) => {
-    const ids = [left.id, right.id].sort();
-    return `${ids[0]}_${ids[1]}`;
-  }, []);
+  // Fetch a batch of pairs (10 at a time)
+  const fetchNextBatch = useCallback(async () => {
+    if (!currentSession || currentSession.photos.length < 2 || isFetchingBatch) return;
 
-  const fetchNextPair = useCallback(async () => {
-    if (!currentSession || currentSession.photos.length < 2 || isFetchingPair) return;
-    setIsFetchingPair(true);
+    setIsFetchingBatch(true);
     try {
-      const next = await getNextPair(currentSession.id);
+      const newPairs = await getNextPairs(currentSession.id, BATCH_SIZE);
 
-      if (next?.left && next?.right) {
-        // Only check: don't add if it's identical to the last buffer item
-        // The improved backend algorithm handles variety, we just prevent immediate duplicates
-        setPairBuffer(prev => {
-          const lastPair = prev[prev.length - 1];
-          if (lastPair) {
-            const lastKey = getPairKey(lastPair.left, lastPair.right);
-            const nextKey = getPairKey(next.left, next.right);
-            if (lastKey === nextKey) {
-              // Silently skip if backend returns exact same pair (rare with new algorithm)
-              return prev;
-            }
-          }
-          return [...prev, next];
-        });
+      if (newPairs && newPairs.length > 0) {
+        // Append new pairs to buffer (never replace existing pairs)
+        setPairBuffer(prev => [...prev, ...newPairs]);
       }
     } catch (err) {
-      console.error("Failed to fetch next pair:", err);
+      console.error("Failed to fetch next batch of pairs:", err);
     } finally {
-      setIsFetchingPair(false);
+      setIsFetchingBatch(false);
     }
-  }, [currentSession, getNextPair, isFetchingPair, getPairKey]);
+  }, [currentSession, getNextPairs, isFetchingBatch]);
 
+  // Initialize buffer when session is ready and not yet initialized
   useEffect(() => {
     if (!currentSession || currentSession.photos.length < 2) {
       setPairBuffer([]);
+      setInitializedSessionId(null);
       return;
     }
-    let cancelled = false;
-    const loadInitial = async () => {
-      const initial: Pair[] = [];
-      const seenKeys = new Set<string>();
 
-      // Only try to get 2-3 initial pairs, not full PREFETCH_TARGET
-      // The rest will be fetched progressively
-      const initialTarget = Math.min(2, PREFETCH_TARGET);
+    // Only initialize once per session
+    if (initializedSessionId === currentSession.id) return;
 
-      for (let i = 0; i < initialTarget; i += 1) {
-        if (cancelled) break;
-
-        try {
-          let attempts = 0;
-          let next = null;
-          const maxAttempts = 3;
-
-          // Try up to 3 times to get a unique pair for initial load
-          while (attempts < maxAttempts) {
-            next = await getNextPair(currentSession.id);
-            if (!next?.left || !next?.right) break;
-
-            const key = getPairKey(next.left, next.right);
-            if (!seenKeys.has(key)) {
-              seenKeys.add(key);
-              break;
-            }
-
-            // If we've seen this pair, wait a bit before retrying
-            if (attempts < maxAttempts - 1) {
-              await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            attempts++;
-          }
-
-          if (next?.left && next?.right) {
-            // Only add if we got a unique pair (seenKeys was updated in the loop above)
-            const key = getPairKey(next.left, next.right);
-            if (seenKeys.has(key)) {
-              initial.push(next);
-            }
-          } else {
-            break;
-          }
-        } catch (err) {
-          console.error("Failed to seed pair buffer:", err);
-          break;
-        }
-      }
-      if (!cancelled && initial.length > 0) {
-        setPairBuffer(initial);
+    // Load initial batch
+    const initialize = async () => {
+      try {
+        const initialPairs = await getNextPairs(currentSession.id, BATCH_SIZE);
+        setPairBuffer(initialPairs);
+        setInitializedSessionId(currentSession.id);
+      } catch (err) {
+        console.error("Failed to initialize pair buffer:", err);
       }
     };
-    void loadInitial();
-    return () => {
-      cancelled = true;
-    };
-  }, [currentSession, getNextPair, getPairKey]);
 
+    void initialize();
+  }, [currentSession, getNextPairs, initializedSessionId]);
+
+  // Refetch when buffer runs low
   useEffect(() => {
     if (!currentSession || currentSession.photos.length < 2) return;
-    // Always maintain at least 3 pairs in buffer when not fetching
-    if (pairBuffer.length < 3 && !isFetchingPair) {
-      void fetchNextPair();
+
+    // When buffer drops below threshold and we're not already fetching, get more
+    if (pairBuffer.length < REFETCH_THRESHOLD && !isFetchingBatch && initializedSessionId === currentSession.id) {
+      void fetchNextBatch();
     }
-    // Keep prefetching up to target
-    if (pairBuffer.length + (isFetchingPair ? 1 : 0) < PREFETCH_TARGET) {
-      void fetchNextPair();
-    }
-  }, [pairBuffer.length, fetchNextPair, currentSession, isFetchingPair]);
+  }, [pairBuffer.length, fetchNextBatch, currentSession, isFetchingBatch, initializedSessionId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -240,7 +189,7 @@ export default function PhotoBattleVotingPage() {
 
       let shouldAdvance = false;
       try {
-        // Submit vote WITHOUT reloading session to prevent duplicate flash
+        // Submit vote (skipReload=true to prevent unnecessary session reload)
         await Promise.all([submitVote(currentSession.id, winner.id, loser.id, true), animationDelay]);
         shouldAdvance = true;
       } catch (err) {
@@ -253,22 +202,17 @@ export default function PhotoBattleVotingPage() {
       } finally {
         if (shouldAdvance) {
           // Advance to next pair (remove current from buffer)
-          // Keep up to 3 more pairs in buffer for smooth transitions
           setPairBuffer(prev => {
             if (prev.length === 0) return prev;
-            // Keep 3 items after removing current (positions 1, 2, 3)
-            return prev.slice(1, 4);
+            // Remove first pair, keep the rest
+            return prev.slice(1);
           });
-
-          // Reload session AFTER animation completes and pair advances
-          // This prevents duplicate flash by ensuring new data arrives after pair change
-          void reloadSession(currentSession.id);
         }
         setSelectedPhotoId(null);
         setIsAnimating(false);
       }
     },
-    [currentSession, submitVote, reloadSession, isAnimating, pair, authLoading, authUser, ensureAnonymousSession]
+    [currentSession, submitVote, isAnimating, pair, authLoading, authUser, ensureAnonymousSession]
   );
 
   const handleSkip = useCallback(() => {
@@ -281,7 +225,8 @@ export default function PhotoBattleVotingPage() {
       // Simply advance to next pair without voting
       setPairBuffer(prev => {
         if (prev.length === 0) return prev;
-        return prev.slice(1, 4);
+        // Remove first pair, keep the rest
+        return prev.slice(1);
       });
 
       setIsAnimating(false);
