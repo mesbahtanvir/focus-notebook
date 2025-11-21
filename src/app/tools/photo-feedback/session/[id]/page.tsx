@@ -35,6 +35,13 @@ export default function PhotoBattleVotingPage() {
 
   useEffect(() => {
     if (sessionId) {
+      // Clear all caches when loading a new session
+      setPairBuffer([]);
+      setDisplayedPair(null);
+      setPairSequence(0);
+      recentPairsRef.current.clear();
+      setLoadedPhotos({});
+
       void loadSession(sessionId);
     }
   }, [sessionId, loadSession]);
