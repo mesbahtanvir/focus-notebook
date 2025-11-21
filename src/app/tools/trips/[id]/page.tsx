@@ -5,12 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Expense, ExpenseCategory, useTrips } from '@/store/useTrips';
 import { ExpenseFormModal } from '@/components/trip/ExpenseFormModal';
-import { ToolHeader } from '@/components/tools/ToolHeader';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { toolThemes } from '@/components/tools/themes';
-import { MapPin, Calendar, DollarSign, Trash2, TrendingDown } from 'lucide-react';
+import { MapPin, Calendar, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { BudgetBreakdownCard } from '@/components/trip/BudgetBreakdownCard';
 import { PackingListInline } from '@/components/trip/PackingListInline';
@@ -55,7 +53,6 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
   const remaining = getBudgetRemaining(trip.id);
   const budgetPercent = trip.budget > 0 ? (totalSpent / trip.budget) * 100 : 0;
   const isOverBudget = budgetPercent > 100;
-  const avgDaily = getAverageDailySpend(trip.id);
   const isPlanning = trip.status === 'planning';
   const canAddExpenses = true;
   const hasBudgetBreakdown = !!(trip.budgetBreakdown && Object.keys(trip.budgetBreakdown).length > 0);
@@ -115,96 +112,77 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
     }))
     .filter((item) => item.planned > 0 || item.actual > 0);
 
-  const theme = toolThemes.teal;
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       <div className="max-w-7xl mx-auto p-6 space-y-6">
-        <ToolHeader
-          title={trip.name}
-          emoji="✈️"
-          showBackButton
-          stats={[
-            {
-              label: 'Spent',
-              value: formatCurrency(totalSpent, trip.currency),
-              variant: isOverBudget ? 'warning' : 'default',
-            },
-            {
-              label: 'Remaining',
-              value: formatCurrency(remaining, trip.currency),
-              variant: remaining < 0 ? 'warning' : 'success',
-            },
-          ]}
-          theme={theme}
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="p-6">
-            <div className="flex items-start gap-3 mb-4">
-              <MapPin className="w-5 h-5 text-teal-600 mt-1" />
-              <div>
-                <h3 className="font-semibold text-gray-600 dark:text-gray-400 text-sm">
-                  Destination
-                </h3>
-                <p className="text-xl font-bold">{trip.destination}</p>
-              </div>
+        {/* Unified Header */}
+        <Card className="p-6 bg-white dark:bg-gray-900 border-teal-200 dark:border-teal-800">
+          <div className="space-y-4">
+            {/* Back button and emoji */}
+            <div className="flex items-start justify-between">
+              <Button
+                variant="ghost"
+                onClick={() => router.push('/tools/trips')}
+                className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 -ml-2"
+              >
+                ← Back to Trips
+              </Button>
+              <span className="text-4xl">✈️</span>
             </div>
-            <div className="flex items-start gap-3">
-              <Calendar className="w-5 h-5 text-teal-600 mt-1" />
-              <div>
-                <h3 className="font-semibold text-gray-600 dark:text-gray-400 text-sm">Dates</h3>
-                <p className="text-lg">
+
+            {/* Trip name */}
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                {trip.name}
+              </h1>
+              <div className="flex flex-wrap items-center gap-3 text-gray-600 dark:text-gray-400">
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4" />
+                  {trip.destination}
+                </span>
+                <span className="text-gray-400">•</span>
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4" />
                   {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
-                </p>
+                </span>
               </div>
             </div>
-          </Card>
 
-          <Card className="p-6">
-            <div className="space-y-3">
-              <div>
-                <h3 className="text-sm text-gray-600 dark:text-gray-400 mb-1">Budget</h3>
-                <p className="text-2xl font-bold">{formatCurrency(trip.budget, trip.currency)}</p>
+            {/* Budget info and progress */}
+            <div className="space-y-3 pt-2">
+              <div className="flex flex-wrap items-center gap-4 text-base">
+                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  Budget: {formatCurrency(trip.budget, trip.currency)}
+                </span>
+                <span className="text-gray-400">•</span>
+                <span className={isOverBudget ? 'text-red-600 font-semibold' : 'text-gray-700 dark:text-gray-300'}>
+                  Spent: {formatCurrency(totalSpent, trip.currency)}
+                </span>
+                <span className="text-gray-400">•</span>
+                <span className={remaining < 0 ? 'text-red-600 font-semibold' : 'text-teal-600 dark:text-teal-400 font-semibold'}>
+                  Remaining: {formatCurrency(remaining, trip.currency)}
+                </span>
               </div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
-                  <span>Usage</span>
-                  <span className={isOverBudget ? 'text-red-600 font-medium' : ''}>
-                    {budgetPercent.toFixed(0)}%
-                  </span>
+
+              {/* Progress bar with percentage */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                    <div
+                      className={`h-3 rounded-full transition-all ${
+                        isOverBudget ? 'bg-red-500' : 'bg-teal-500'
+                      }`}
+                      style={{ width: `${Math.min(budgetPercent, 100)}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full transition-all ${
-                      isOverBudget ? 'bg-red-500' : 'bg-teal-500'
-                    }`}
-                    style={{ width: `${Math.min(budgetPercent, 100)}%` }}
-                  />
-                </div>
+                <span className={`text-sm font-medium ${isOverBudget ? 'text-red-600' : 'text-gray-600 dark:text-gray-400'}`}>
+                  {budgetPercent.toFixed(0)}%
+                </span>
               </div>
             </div>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="p-6">
-            <h3 className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Spent</h3>
-            <p className={`text-2xl font-bold ${isOverBudget ? 'text-red-600' : 'text-teal-600'}`}>
-              {formatCurrency(totalSpent, trip.currency)}
-            </p>
-          </Card>
-
-          <Card className="p-6">
-            <h3 className="text-sm text-gray-600 dark:text-gray-400 mb-2">Avg Daily Spend</h3>
-            <p className="text-2xl font-bold">{formatCurrency(avgDaily, trip.currency)}</p>
-          </Card>
-
-          <Card className="p-6">
-            <h3 className="text-sm text-gray-600 dark:text-gray-400 mb-2">Expenses</h3>
-            <p className="text-2xl font-bold">{trip.expenses.length}</p>
-          </Card>
-        </div>
+          </div>
+        </Card>
 
         {(isPlanning || hasBudgetBreakdown) && <BudgetBreakdownCard trip={trip} />}
 
