@@ -26,6 +26,10 @@ import {
   RotateCcw,
   X,
   Zap,
+  ArrowRight,
+  ArrowLeft,
+  ChevronDown,
+  Clock,
 } from 'lucide-react';
 import type { PackingSectionId, PackingItemStatus, PackingList } from '@/types/packing-list';
 
@@ -572,7 +576,8 @@ export function PackingListModal({
                               {/* Group Items */}
                               <div className="space-y-2 ml-6 sm:ml-7">
                                 {group.items.map((item) => {
-                                  const isPacked = isItemPacked(packingList, item.id);
+                                  const itemStatus = getItemStatus(packingList, item.id);
+                                  const isPacked = itemStatus === 'packed';
 
                                   return (
                                     <div
@@ -580,6 +585,10 @@ export function PackingListModal({
                                       className={`flex items-start justify-between gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg border transition ${
                                         isPacked
                                           ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950/30'
+                                          : itemStatus === 'later'
+                                          ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30'
+                                          : itemStatus === 'no-need'
+                                          ? 'border-gray-300 bg-gray-100 dark:border-gray-600 dark:bg-gray-800'
                                           : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
                                       }`}
                                     >
@@ -591,6 +600,8 @@ export function PackingListModal({
                                       >
                                         {isPacked ? (
                                           <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                                        ) : itemStatus === 'later' ? (
+                                          <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 mt-0.5 flex-shrink-0" />
                                         ) : (
                                           <Circle className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 mt-0.5 flex-shrink-0" />
                                         )}
@@ -616,19 +627,56 @@ export function PackingListModal({
                                         </div>
                                       </button>
 
-                                      {item.custom && (
+                                      {/* Quick Pack Action Buttons */}
+                                      <div className="flex items-center gap-1">
                                         <button
-                                          onClick={() =>
-                                            handleDeleteCustomItem(
-                                              section.id,
-                                              item.id
-                                            )
-                                          }
-                                          className="p-1.5 sm:p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition flex-shrink-0"
+                                          onClick={() => handleSetItemStatus(item.id, 'packed')}
+                                          className={`p-1.5 sm:p-2 rounded-md transition-all ${
+                                            itemStatus === 'packed'
+                                              ? 'bg-green-500 text-white shadow-sm'
+                                              : 'hover:bg-green-100 dark:hover:bg-green-900/30 text-gray-400 hover:text-green-600 dark:hover:text-green-400'
+                                          }`}
+                                          title="Mark as packed (→)"
                                         >
-                                          <Trash2 className="w-4 h-4 text-red-500" />
+                                          <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                         </button>
-                                      )}
+                                        <button
+                                          onClick={() => handleSetItemStatus(item.id, 'later')}
+                                          className={`p-1.5 sm:p-2 rounded-md transition-all ${
+                                            itemStatus === 'later'
+                                              ? 'bg-amber-500 text-white shadow-sm'
+                                              : 'hover:bg-amber-100 dark:hover:bg-amber-900/30 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400'
+                                          }`}
+                                          title="Pack later (V)"
+                                        >
+                                          <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                        </button>
+                                        <button
+                                          onClick={() => handleSetItemStatus(item.id, 'no-need')}
+                                          className={`p-1.5 sm:p-2 rounded-md transition-all ${
+                                            itemStatus === 'no-need'
+                                              ? 'bg-gray-500 text-white shadow-sm'
+                                              : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-400'
+                                          }`}
+                                          title="Mark as not needed (←)"
+                                        >
+                                          <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                        </button>
+                                        {item.custom && (
+                                          <button
+                                            onClick={() =>
+                                              handleDeleteCustomItem(
+                                                section.id,
+                                                item.id
+                                              )
+                                            }
+                                            className="p-1.5 sm:p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-md transition text-gray-400 hover:text-red-500 flex-shrink-0"
+                                            title="Delete custom item"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
                                   );
                                 })}

@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,10 @@ import {
   Package,
   AlertTriangle,
   Zap,
+  Clock,
+  Keyboard,
+  ArrowRight,
+  ArrowLeft,
 } from 'lucide-react';
 import type { PackingSectionId, PackingItemStatus, PackingList } from '@/types/packing-list';
 
@@ -87,6 +91,8 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
   const [isExpanded, setIsExpanded] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedItemIndex, setSelectedItemIndex] = useState<number>(-1);
+  const [keyboardNavigationActive, setKeyboardNavigationActive] = useState(false);
 
   // Subscribe to packing list
   useEffect(() => {
@@ -186,6 +192,20 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
       .filter((s) => s !== null);
   }, [packingList, searchQuery]);
 
+  // Build flat list of all items for keyboard navigation
+  const allItems = useMemo(() => {
+    if (!packingList || showTimeline) return [];
+
+    return filteredSections.flatMap((section) =>
+      section.groups.flatMap((group) =>
+        group.items.map((item) => ({
+          ...item,
+          sectionId: section.id,
+        }))
+      )
+    );
+  }, [packingList, filteredSections, showTimeline]);
+
   const toggleSection = (sectionId: PackingSectionId) => {
     setExpandedSections((prev) => {
       const newSet = new Set(prev);
@@ -211,7 +231,7 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
     }
   };
 
-  const handleSetItemStatus = async (itemId: string, status: PackingItemStatus) => {
+  const handleSetItemStatus = useCallback(async (itemId: string, status: PackingItemStatus) => {
     try {
       await setItemStatus(tripId, itemId, status);
     } catch (error) {
@@ -222,7 +242,66 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
         variant: 'destructive',
       });
     }
-  };
+  }, [tripId, setItemStatus, toast]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!isExpanded || showTimeline || allItems.length === 0) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Navigation keys
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setKeyboardNavigationActive(true);
+        setSelectedItemIndex((prev) => {
+          const nextIndex = prev + 1;
+          return nextIndex >= allItems.length ? 0 : nextIndex;
+        });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setKeyboardNavigationActive(true);
+        setSelectedItemIndex((prev) => {
+          const nextIndex = prev - 1;
+          return nextIndex < 0 ? allItems.length - 1 : nextIndex;
+        });
+      }
+      // Action keys
+      else if (e.key === 'ArrowRight' && selectedItemIndex >= 0) {
+        e.preventDefault();
+        const item = allItems[selectedItemIndex];
+        handleSetItemStatus(item.id, 'packed');
+      } else if (e.key === 'ArrowLeft' && selectedItemIndex >= 0) {
+        e.preventDefault();
+        const item = allItems[selectedItemIndex];
+        handleSetItemStatus(item.id, 'no-need');
+      } else if ((e.key === 'v' || e.key === 'V') && selectedItemIndex >= 0) {
+        e.preventDefault();
+        const item = allItems[selectedItemIndex];
+        handleSetItemStatus(item.id, 'later');
+      }
+      // Escape to deactivate keyboard navigation
+      else if (e.key === 'Escape') {
+        setKeyboardNavigationActive(false);
+        setSelectedItemIndex(-1);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isExpanded, showTimeline, allItems, selectedItemIndex, handleSetItemStatus]);
+
+  // Scroll selected item into view
+  useEffect(() => {
+    if (selectedItemIndex >= 0 && keyboardNavigationActive) {
+      const element = document.getElementById(`packing-item-${allItems[selectedItemIndex]?.id}`);
+      element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [selectedItemIndex, keyboardNavigationActive, allItems]);
 
   const handleAddCustomItem = async (sectionId: PackingSectionId) => {
     if (!customItemName.trim()) return;
@@ -474,32 +553,49 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-2 flex-wrap">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowTimeline(!showTimeline)}
-              >
-                <Calendar className="w-4 h-4 mr-2" />
-                {showTimeline ? 'Hide' : 'Show'} Timeline
-              </Button>
+            <div className="flex gap-2 flex-wrap items-center justify-between">
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowTimeline(!showTimeline)}
+                >
+                  <Calendar className="w-4 h-4 mr-2" />
+                  {showTimeline ? 'Hide' : 'Show'} Timeline
+                </Button>
+                {!showTimeline && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setExpandedSections(
+                          new Set(['essentials', 'clothing', 'personal', 'tech', 'extras'])
+                        )
+                      }
+                    >
+                      Expand All
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setExpandedSections(new Set())}>
+                      Collapse All
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              {/* Keyboard Shortcuts Hint */}
               {!showTimeline && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setExpandedSections(
-                        new Set(['essentials', 'clothing', 'personal', 'tech', 'extras'])
-                      )
-                    }
-                  >
-                    Expand All
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setExpandedSections(new Set())}>
-                    Collapse All
-                  </Button>
-                </>
+                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 rounded-md">
+                  <Keyboard className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">
+                    Use <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-xs font-mono">↑</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-xs font-mono ml-1">↓</kbd> to navigate,
+                    <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-xs font-mono ml-1">→</kbd> packed,
+                    <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-xs font-mono ml-1">←</kbd> not needed,
+                    <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-xs font-mono ml-1">V</kbd> later
+                  </span>
+                  <span className="sm:hidden">Keyboard shortcuts available</span>
+                </div>
               )}
             </div>
           </div>
@@ -638,14 +734,24 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
                               {/* Group Items */}
                               <div className="space-y-2 ml-7">
                                 {group.items.map((item) => {
-                                  const isPacked = isItemPacked(packingList, item.id);
+                                  const itemStatus = getItemStatus(packingList, item.id);
+                                  const isPacked = itemStatus === 'packed';
+                                  const itemIndex = allItems.findIndex((i) => i.id === item.id);
+                                  const isSelected = keyboardNavigationActive && selectedItemIndex === itemIndex;
 
                                   return (
                                     <div
                                       key={item.id}
+                                      id={`packing-item-${item.id}`}
                                       className={`flex items-start justify-between gap-3 p-3 rounded-lg border transition ${
-                                        isPacked
+                                        isSelected
+                                          ? 'border-teal-500 bg-teal-50 dark:border-teal-500 dark:bg-teal-950/50 ring-2 ring-teal-500/50'
+                                          : isPacked
                                           ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950/30'
+                                          : itemStatus === 'later'
+                                          ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30'
+                                          : itemStatus === 'no-need'
+                                          ? 'border-gray-300 bg-gray-100 dark:border-gray-600 dark:bg-gray-800'
                                           : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
                                       }`}
                                     >
@@ -655,6 +761,8 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
                                       >
                                         {isPacked ? (
                                           <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                                        ) : itemStatus === 'later' ? (
+                                          <Clock className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
                                         ) : (
                                           <Circle className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
                                         )}
@@ -680,16 +788,53 @@ export function PackingListInline({ tripId, tripName, tripStatus }: PackingListI
                                         </div>
                                       </button>
 
-                                      {item.custom && (
+                                      {/* Quick Pack Action Buttons */}
+                                      <div className="flex items-center gap-1">
                                         <button
-                                          onClick={() =>
-                                            handleDeleteCustomItem(section.id, item.id)
-                                          }
-                                          className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition"
+                                          onClick={() => handleSetItemStatus(item.id, 'packed')}
+                                          className={`p-2 rounded-md transition-all ${
+                                            itemStatus === 'packed'
+                                              ? 'bg-green-500 text-white shadow-sm'
+                                              : 'hover:bg-green-100 dark:hover:bg-green-900/30 text-gray-400 hover:text-green-600 dark:hover:text-green-400'
+                                          }`}
+                                          title="Mark as packed (→)"
                                         >
-                                          <Trash2 className="w-4 h-4 text-red-500" />
+                                          <ArrowRight className="w-4 h-4" />
                                         </button>
-                                      )}
+                                        <button
+                                          onClick={() => handleSetItemStatus(item.id, 'later')}
+                                          className={`p-2 rounded-md transition-all ${
+                                            itemStatus === 'later'
+                                              ? 'bg-amber-500 text-white shadow-sm'
+                                              : 'hover:bg-amber-100 dark:hover:bg-amber-900/30 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400'
+                                          }`}
+                                          title="Pack later (V)"
+                                        >
+                                          <ChevronDown className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          onClick={() => handleSetItemStatus(item.id, 'no-need')}
+                                          className={`p-2 rounded-md transition-all ${
+                                            itemStatus === 'no-need'
+                                              ? 'bg-gray-500 text-white shadow-sm'
+                                              : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-400'
+                                          }`}
+                                          title="Mark as not needed (←)"
+                                        >
+                                          <ArrowLeft className="w-4 h-4" />
+                                        </button>
+                                        {item.custom && (
+                                          <button
+                                            onClick={() =>
+                                              handleDeleteCustomItem(section.id, item.id)
+                                            }
+                                            className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-md transition text-gray-400 hover:text-red-500"
+                                            title="Delete custom item"
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
                                   );
                                 })}
