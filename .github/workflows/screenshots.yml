@@ -48,12 +48,12 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Build application
-        run: npm run build
+        run: npm run build --workspace=apps/web
         env:
           NODE_ENV: production
 
       - name: Run screenshot tests
-        run: npm run test:screenshots
+        run: npm run test:screenshots --workspace=apps/web
         env:
           CI: true
           PLAYWRIGHT_BASE_URL: http://localhost:3000
@@ -63,7 +63,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: playwright-report/
+          path: apps/web/playwright-report/
           retention-days: 30
 
       - name: Upload screenshots on failure
@@ -72,9 +72,9 @@ jobs:
         with:
           name: screenshot-diffs
           path: |
-            test-results/
-            e2e/**/*-actual.png
-            e2e/**/*-diff.png
+            apps/web/test-results/
+            apps/web/e2e/**/*-actual.png
+            apps/web/e2e/**/*-diff.png
           retention-days: 30
 
       - name: Comment on PR with results
