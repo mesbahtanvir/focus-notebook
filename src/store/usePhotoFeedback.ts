@@ -458,14 +458,64 @@ export const usePhotoFeedback = create<State>((set, get) => ({
     if (!target) return;
 
     try {
-      const storageRef = ref(storage, target.storagePath);
-      await deleteObject(storageRef).catch(error => {
-        console.warn('Unable to delete photo file (continuing):', error);
+      // First, remove the photo from all active battle sessions
+      const sessionsRef = collection(db, 'photoBattles');
+      const q = query(sessionsRef, where('ownerId', '==', user.uid));
+      const sessionSnaps = await getDocs(q);
+
+      const updatePromises = sessionSnaps.docs.map(async sessionDoc => {
+        const sessionData = sessionDoc.data() as PhotoBattle;
+        const photoIndex = sessionData.photos.findIndex(p => p.libraryId === photoId);
+
+        // If this session contains the photo, remove it
+        if (photoIndex !== -1) {
+          const updatedPhotos = sessionData.photos.filter(p => p.libraryId !== photoId);
+          await updateDoc(doc(db, 'photoBattles', sessionDoc.id), {
+            photos: updatedPhotos,
+            updatedAt: serverTimestamp(),
+          });
+        }
       });
+
+      await Promise.all(updatePromises);
+
+      // Then delete from storage (main photo + thumbnail if exists)
+      const deletePromises: Promise<void>[] = [];
+
+      // Delete main photo
+      const storageRef = ref(storage, target.storagePath);
+      deletePromises.push(
+        deleteObject(storageRef).catch(error => {
+          console.warn('Unable to delete photo file (continuing):', error);
+        })
+      );
+
+      // Delete thumbnail if it exists
+      if (target.thumbnailPath) {
+        const thumbnailRef = ref(storage, target.thumbnailPath);
+        deletePromises.push(
+          deleteObject(thumbnailRef).catch(error => {
+            console.warn('Unable to delete thumbnail file (continuing):', error);
+          })
+        );
+      }
+
+      await Promise.all(deletePromises);
+
+      // Delete from library
       await deleteDoc(doc(db, `users/${user.uid}/photoLibrary`, photoId));
+
+      // Update local state
       set(state => ({
         library: state.library.filter(photo => photo.id !== photoId),
         userSessions: state.userSessions,
+        // If currentSession is affected, update it
+        currentSession: state.currentSession && state.currentSession.ownerId === user.uid
+          ? {
+              ...state.currentSession,
+              photos: state.currentSession.photos.filter(p => p.libraryId !== photoId),
+            }
+          : state.currentSession,
       }));
     } catch (error) {
       console.error('Failed to delete gallery photo:', error);
@@ -482,20 +532,53 @@ export const usePhotoFeedback = create<State>((set, get) => ({
     set({ libraryLoading: true, error: null });
 
     try {
+      // First, clear all photos from all battle sessions
+      const sessionsRef = collection(db, 'photoBattles');
+      const q = query(sessionsRef, where('ownerId', '==', user.uid));
+      const sessionSnaps = await getDocs(q);
+
+      const sessionUpdatePromises = sessionSnaps.docs.map(async sessionDoc => {
+        await updateDoc(doc(db, 'photoBattles', sessionDoc.id), {
+          photos: [],
+          updatedAt: serverTimestamp(),
+        });
+      });
+
+      await Promise.all(sessionUpdatePromises);
+
+      // Then delete all photos from library and storage (including thumbnails)
       const libraryRef = collection(db, `users/${user.uid}/photoLibrary`);
       const snaps = await getDocs(libraryRef);
       const photos = snaps.docs.map(item => item.data() as PhotoLibraryItem);
 
       for (const photo of photos) {
+        // Delete main photo
         try {
           await deleteObject(ref(storage, photo.storagePath));
         } catch (fileError) {
           console.warn('Unable to delete photo file (continuing):', fileError);
         }
+
+        // Delete thumbnail if exists
+        if (photo.thumbnailPath) {
+          try {
+            await deleteObject(ref(storage, photo.thumbnailPath));
+          } catch (fileError) {
+            console.warn('Unable to delete thumbnail file (continuing):', fileError);
+          }
+        }
+
+        // Delete from Firestore
         await deleteDoc(doc(db, `users/${user.uid}/photoLibrary`, photo.id));
       }
 
-      set({ library: [], libraryLoading: false });
+      set({
+        library: [],
+        libraryLoading: false,
+        currentSession: get().currentSession && get().currentSession?.ownerId === user.uid
+          ? { ...get().currentSession!, photos: [] }
+          : get().currentSession,
+      });
     } catch (error) {
       console.error('Failed to delete gallery', error);
       set({ libraryLoading: false });
@@ -619,6 +702,7 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         return;
       }
 
+      // Delete photo storage files (main + thumbnail)
       if (ensuredRemovedPhoto.storagePath) {
         const storageRef = ref(storage, ensuredRemovedPhoto.storagePath);
         await deleteObject(storageRef).catch(error => {
@@ -626,6 +710,14 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         });
       }
 
+      if (ensuredRemovedPhoto.thumbnailPath) {
+        const thumbnailRef = ref(storage, ensuredRemovedPhoto.thumbnailPath);
+        await deleteObject(thumbnailRef).catch(error => {
+          console.warn('Unable to delete battle photo thumbnail (continuing):', error);
+        });
+      }
+
+      // Delete from library if it has a library entry
       const removedLibraryId = ensuredRemovedPhoto.libraryId;
       if (removedLibraryId) {
         await deleteDoc(doc(db, `users/${user.uid}/photoLibrary`, removedLibraryId)).catch(error => {
@@ -723,11 +815,21 @@ export const usePhotoFeedback = create<State>((set, get) => ({
         });
       });
 
+      // Delete merged photo's storage files (main + thumbnail)
       const storageRef = ref(storage, mergedPhoto.storagePath);
       await deleteObject(storageRef).catch(error => {
         console.warn('Unable to delete merged photo file (continuing):', error);
       });
 
+      // Delete thumbnail if it exists
+      if (mergedPhoto.thumbnailPath) {
+        const thumbnailRef = ref(storage, mergedPhoto.thumbnailPath);
+        await deleteObject(thumbnailRef).catch(error => {
+          console.warn('Unable to delete merged photo thumbnail (continuing):', error);
+        });
+      }
+
+      // Delete from library if it has a library entry
       if (mergedPhoto.libraryId) {
         await deleteDoc(doc(db, `users/${user.uid}/photoLibrary`, mergedPhoto.libraryId)).catch(error => {
           console.warn('Unable to remove merged library entry (continuing):', error);
