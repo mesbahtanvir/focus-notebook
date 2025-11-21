@@ -150,6 +150,10 @@ func main() {
 	spendingAnalyticsSvc := services.NewSpendingAnalyticsService(repo, logger)
 	logger.Info("Spending analytics service initialized")
 
+	// Initialize import/export service
+	importExportSvc := services.NewImportExportService(repo, logger)
+	logger.Info("Import/export service initialized")
+
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(
 		fbAdmin.Auth,
@@ -177,6 +181,9 @@ func main() {
 
 	// Analytics handler (always available)
 	analyticsHandler := handlers.NewAnalyticsHandler(dashboardAnalyticsSvc, spendingAnalyticsSvc, logger)
+
+	// Import/export handler (always available)
+	importExportHandler := handlers.NewImportExportHandler(importExportSvc, logger)
 
 	// Create router
 	router := mux.NewRouter()
@@ -250,6 +257,16 @@ func main() {
 	analyticsRoutes.HandleFunc("/dashboard", analyticsHandler.GetDashboardAnalytics).Methods("GET")
 	analyticsRoutes.HandleFunc("/spending", analyticsHandler.GetSpendingAnalytics).Methods("GET")
 	logger.Info("Analytics endpoints registered")
+
+	// Import/export routes (authenticated)
+	importRoutes := api.PathPrefix("/import").Subrouter()
+	importRoutes.HandleFunc("/validate", importExportHandler.ValidateImport).Methods("POST")
+	importRoutes.HandleFunc("/execute", importExportHandler.ExecuteImport).Methods("POST")
+
+	exportRoutes := api.PathPrefix("/export").Subrouter()
+	exportRoutes.HandleFunc("", importExportHandler.ExportData).Methods("GET")
+	exportRoutes.HandleFunc("/summary", importExportHandler.GetExportSummary).Methods("GET")
+	logger.Info("Import/export endpoints registered")
 
 	// TODO: Add more routes here as we implement handlers
 	// - /api/chat
