@@ -1,0 +1,560 @@
+/**
+ * PackingListModal - Full-screen guided packing experience
+ * Displays complete packing checklist with sections, custom items, and timeline
+ */
+
+'use client';
+
+import { useState, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { usePackingLists } from '@/store/usePackingLists';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Search,
+  CheckCircle2,
+  Circle,
+  Plus,
+  Trash2,
+  Calendar,
+  Sparkles,
+  RotateCcw,
+  X,
+} from 'lucide-react';
+import type { PackingSectionId } from '@/types/packing-list';
+
+interface PackingListModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  tripId: string;
+  tripName: string;
+}
+
+export function PackingListModal({
+  isOpen,
+  onClose,
+  tripId,
+  tripName,
+}: PackingListModalProps) {
+  const { toast } = useToast();
+  const {
+    getPackingList,
+    getProgress,
+    togglePacked,
+    addCustomItem,
+    deleteCustomItem,
+    toggleTimelineTask,
+  } = usePackingLists();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expandedSections, setExpandedSections] = useState<Set<PackingSectionId>>(
+    new Set(['essentials', 'clothing', 'personal', 'tech', 'extras'])
+  );
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [addingToSection, setAddingToSection] = useState<PackingSectionId | null>(null);
+  const [customItemName, setCustomItemName] = useState('');
+  const [customItemQuantity, setCustomItemQuantity] = useState('');
+
+  const packingList = getPackingList(tripId);
+  const progress = getProgress(tripId);
+
+  // Filter sections and items based on search
+  const filteredSections = useMemo(() => {
+    if (!packingList) return [];
+
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return packingList.sections;
+
+    return packingList.sections
+      .map((section) => {
+        const filteredGroups = section.groups
+          .map((group) => {
+            const filteredItems = group.items.filter((item) => {
+              const searchText = [
+                item.name,
+                item.description,
+                item.tip,
+                item.quantity,
+              ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+              return searchText.includes(query);
+            });
+
+            if (filteredItems.length === 0) return null;
+
+            return {
+              ...group,
+              items: filteredItems,
+            };
+          })
+          .filter((g) => g !== null);
+
+        if (filteredGroups.length === 0) return null;
+
+        return {
+          ...section,
+          groups: filteredGroups,
+        };
+      })
+      .filter((s) => s !== null);
+  }, [packingList, searchQuery]);
+
+  const toggleSection = (sectionId: PackingSectionId) => {
+    setExpandedSections((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(sectionId)) {
+        newSet.delete(sectionId);
+      } else {
+        newSet.add(sectionId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleTogglePacked = async (itemId: string, currentlyPacked: boolean) => {
+    try {
+      await togglePacked(tripId, itemId, !currentlyPacked);
+    } catch (error) {
+      console.error('Error toggling packed:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update item. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleAddCustomItem = async (sectionId: PackingSectionId) => {
+    if (!customItemName.trim()) return;
+
+    try {
+      await addCustomItem(tripId, sectionId, {
+        name: customItemName.trim(),
+        quantity: customItemQuantity.trim() || undefined,
+        custom: true,
+      });
+
+      setCustomItemName('');
+      setCustomItemQuantity('');
+      setAddingToSection(null);
+
+      toast({
+        title: 'Item added',
+        description: 'Your custom item has been added to the packing list.',
+      });
+    } catch (error) {
+      console.error('Error adding custom item:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add item. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteCustomItem = async (sectionId: PackingSectionId, itemId: string) => {
+    try {
+      await deleteCustomItem(tripId, sectionId, itemId);
+      toast({
+        title: 'Item deleted',
+        description: 'Custom item has been removed.',
+      });
+    } catch (error) {
+      console.error('Error deleting custom item:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete item. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleToggleTimelineTask = async (taskId: string) => {
+    try {
+      await toggleTimelineTask(tripId, taskId);
+    } catch (error) {
+      console.error('Error toggling timeline task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update timeline. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  if (!isOpen || !packingList) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="p-6 pb-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                📦 Packing for {tripName}
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {progress.packed}/{progress.total} items packed •{' '}
+                {progress.percentage}% complete
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mt-4">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full transition-all ${
+                  progress.percentage === 100 ? 'bg-green-500' : 'bg-teal-500'
+                }`}
+                style={{ width: `${progress.percentage}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Toolbar */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0 space-y-3">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search items (e.g. passport, adapter, sunscreen)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowTimeline(!showTimeline)}
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              {showTimeline ? 'Hide' : 'Show'} Timeline
+            </Button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {showTimeline ? (
+            /* Timeline View */
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Trip Timeline
+              </h3>
+
+              {packingList.timelinePhases.map((phase) => (
+                <div
+                  key={phase.id}
+                  className="rounded-lg border border-gray-200 dark:border-gray-800 p-4"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-2xl">{phase.emoji}</span>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+                        {phase.title}
+                      </h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {phase.summary}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {phase.tasks.map((task) => {
+                      const isCompleted =
+                        packingList.timelineCompleted?.includes(task.id) || false;
+
+                      return (
+                        <button
+                          key={task.id}
+                          onClick={() => handleToggleTimelineTask(task.id)}
+                          className={`w-full flex items-start gap-3 p-3 rounded-lg border text-left transition ${
+                            isCompleted
+                              ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950/30'
+                              : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
+                          }`}
+                        >
+                          {isCompleted ? (
+                            <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                          ) : (
+                            <Circle className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                          )}
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{task.title}</p>
+                            {task.description && (
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                {task.description}
+                              </p>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* Packing Sections View */
+            <div className="space-y-6">
+              {filteredSections.length === 0 ? (
+                <div className="py-16 text-center">
+                  <Sparkles className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600 dark:text-gray-400">
+                    No items match your search
+                  </p>
+                </div>
+              ) : (
+                filteredSections.map((section) => {
+                  const isExpanded = expandedSections.has(section.id);
+                  const sectionItems = section.groups.flatMap((g) => g.items);
+                  const packedCount = sectionItems.filter((item) =>
+                    packingList.packedItemIds.includes(item.id)
+                  ).length;
+
+                  return (
+                    <div
+                      key={section.id}
+                      className="rounded-lg border border-gray-200 dark:border-gray-800"
+                    >
+                      {/* Section Header */}
+                      <button
+                        onClick={() => toggleSection(section.id)}
+                        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{section.emoji}</span>
+                          <div className="text-left">
+                            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                              {section.title}
+                            </h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              {section.summary}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge
+                            variant={
+                              packedCount === sectionItems.length
+                                ? 'default'
+                                : 'outline'
+                            }
+                            className={
+                              packedCount === sectionItems.length
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                : ''
+                            }
+                          >
+                            {packedCount}/{sectionItems.length}
+                          </Badge>
+                          <span className="text-gray-400">
+                            {isExpanded ? '▼' : '▶'}
+                          </span>
+                        </div>
+                      </button>
+
+                      {/* Section Content */}
+                      {isExpanded && (
+                        <div className="p-4 pt-0 space-y-4">
+                          {section.groups.map((group) => (
+                            <div key={group.id}>
+                              {/* Group Header */}
+                              <div className="flex items-start gap-2 mb-2">
+                                {group.icon && (
+                                  <span className="text-lg">{group.icon}</span>
+                                )}
+                                <div>
+                                  <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                                    {group.title}
+                                  </h4>
+                                  {group.description && (
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                                      {group.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Group Items */}
+                              <div className="space-y-2 ml-7">
+                                {group.items.map((item) => {
+                                  const isPacked =
+                                    packingList.packedItemIds.includes(item.id);
+
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      className={`flex items-start justify-between gap-3 p-3 rounded-lg border transition ${
+                                        isPacked
+                                          ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950/30'
+                                          : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
+                                      }`}
+                                    >
+                                      <button
+                                        onClick={() =>
+                                          handleTogglePacked(item.id, isPacked)
+                                        }
+                                        className="flex items-start gap-3 flex-1 text-left"
+                                      >
+                                        {isPacked ? (
+                                          <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                                        ) : (
+                                          <Circle className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                                        )}
+                                        <div className="flex-1">
+                                          <div className="font-medium text-sm">
+                                            {item.name}
+                                            {item.quantity && (
+                                              <span className="ml-2 text-xs text-gray-500">
+                                                ({item.quantity})
+                                              </span>
+                                            )}
+                                          </div>
+                                          {item.description && (
+                                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                              {item.description}
+                                            </p>
+                                          )}
+                                          {item.tip && (
+                                            <p className="text-xs text-teal-600 dark:text-teal-400 mt-1">
+                                              💡 {item.tip}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </button>
+
+                                      {item.custom && (
+                                        <button
+                                          onClick={() =>
+                                            handleDeleteCustomItem(
+                                              section.id,
+                                              item.id
+                                            )
+                                          }
+                                          className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition"
+                                        >
+                                          <Trash2 className="w-4 h-4 text-red-500" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Add Custom Item */}
+                          {addingToSection === section.id ? (
+                            <div className="ml-7 p-3 rounded-lg border border-dashed border-teal-300 dark:border-teal-700 bg-teal-50 dark:bg-teal-950/20">
+                              <div className="space-y-2">
+                                <Input
+                                  placeholder="Item name"
+                                  value={customItemName}
+                                  onChange={(e) =>
+                                    setCustomItemName(e.target.value)
+                                  }
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      handleAddCustomItem(section.id);
+                                    }
+                                  }}
+                                  autoFocus
+                                />
+                                <Input
+                                  placeholder="Quantity (optional)"
+                                  value={customItemQuantity}
+                                  onChange={(e) =>
+                                    setCustomItemQuantity(e.target.value)
+                                  }
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      handleAddCustomItem(section.id);
+                                    }
+                                  }}
+                                />
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() =>
+                                      handleAddCustomItem(section.id)
+                                    }
+                                    className="bg-teal-600 hover:bg-teal-700"
+                                  >
+                                    Add Item
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setAddingToSection(null);
+                                      setCustomItemName('');
+                                      setCustomItemQuantity('');
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setAddingToSection(section.id)}
+                              className="ml-7 flex items-center gap-2 text-sm text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Add custom item
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 pt-4 border-t border-gray-200 dark:border-gray-800 flex-shrink-0 flex justify-between items-center">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            {progress.percentage === 100 ? (
+              <span className="text-green-600 dark:text-green-400 font-medium">
+                🎉 All packed! You're ready to go!
+              </span>
+            ) : (
+              <span>
+                Keep going! {progress.total - progress.packed} items remaining
+              </span>
+            )}
+          </div>
+          <Button onClick={onClose} className="bg-teal-600 hover:bg-teal-700">
+            Save & Close
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
