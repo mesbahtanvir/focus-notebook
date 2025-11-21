@@ -361,9 +361,7 @@ export const mergePhotos = functions.https.onCall(async request => {
   }
 
   const sessionRef = db.collection('photoBattles').doc(sessionId);
-
-  // Store merged photo data before transaction for cleanup
-  let mergedPhotoData: BattlePhoto | undefined;
+  let mergedLibraryId: string | undefined;
   let ownerId: string | undefined;
 
   // Run transaction to merge photos atomically
@@ -390,8 +388,8 @@ export const mergePhotos = functions.https.onCall(async request => {
       throw new functions.https.HttpsError('not-found', 'Photos not found in session');
     }
 
-    // Store merged photo data for cleanup
-    mergedPhotoData = { ...mergedPhoto };
+    // Store the merged photo's library ID for cleanup
+    mergedLibraryId = mergedPhoto.libraryId;
 
     // Combine stats: wins, losses, totalVotes, rating (weighted average)
     const totalVotes = targetPhoto.totalVotes + mergedPhoto.totalVotes;
@@ -421,36 +419,18 @@ export const mergePhotos = functions.https.onCall(async request => {
     });
   });
 
-  // After transaction, clean up merged photo resources (not in transaction to avoid blocking)
-  if (mergedPhotoData) {
-    // Delete storage files
-    if (mergedPhotoData.storagePath) {
-      try {
-        await admin.storage().bucket().file(mergedPhotoData.storagePath).delete();
-      } catch (error) {
-        console.warn(`Failed to delete merged photo file: ${mergedPhotoData.storagePath}`, error);
-      }
-    }
-
-    if (mergedPhotoData.thumbnailPath) {
-      try {
-        await admin.storage().bucket().file(mergedPhotoData.thumbnailPath).delete();
-      } catch (error) {
-        console.warn(`Failed to delete merged thumbnail: ${mergedPhotoData.thumbnailPath}`, error);
-      }
-    }
-
-    // Delete library entry if it exists
-    if (mergedPhotoData.libraryId && ownerId) {
-      try {
-        await db.collection('users')
-          .doc(ownerId)
-          .collection('photoLibrary')
-          .doc(mergedPhotoData.libraryId)
-          .delete();
-      } catch (error) {
-        console.warn(`Failed to delete library entry: ${mergedPhotoData.libraryId}`, error);
-      }
+  // After transaction, delete the merged photo's library entry
+  // Keep storage files for now to avoid breaking cached URLs
+  // The PhotoCleanupMigration will clean up orphaned storage files later
+  if (mergedLibraryId && ownerId) {
+    try {
+      await db.collection('users')
+        .doc(ownerId)
+        .collection('photoLibrary')
+        .doc(mergedLibraryId)
+        .delete();
+    } catch (error) {
+      console.warn(`Failed to delete merged photo library entry: ${mergedLibraryId}`, error);
     }
   }
 
