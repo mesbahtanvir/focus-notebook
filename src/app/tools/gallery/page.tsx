@@ -3,12 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
-import { ArrowLeft, Upload, Trash2, X, Loader2, CheckCircle2, Circle, AlertTriangle, GitMerge } from "lucide-react";
+import { Upload, Trash2, X, Loader2, CheckCircle2, Circle, AlertTriangle, Image as ImageIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toastError, toastSuccess } from "@/lib/toast-presets";
 import { usePhotoLibrary, type PhotoLibraryItem, type UploadProgressEvent } from "@/store/usePhotoLibrary";
-import { useDatingFeedback } from "@/store/useDatingFeedback";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInfiniteGallery } from "@/hooks/useInfiniteGallery";
 
@@ -80,19 +79,17 @@ async function resizeImageIfNeeded(file: File): Promise<File> {
   });
 }
 
-export default function GalleryManagerPage() {
+export default function GalleryPage() {
   const {
     uploadPhotos,
     loadLibrary,
     library,
-    isLoading: libraryLoading,
+    isLoading,
     deletePhoto,
     deleteAllPhotos,
   } = usePhotoLibrary();
-  const { mergeSessionPhotos, loadSession } = useDatingFeedback();
   const { user, isAnonymous } = useAuth();
   const canManage = !!user && !isAnonymous;
-  const sessionId = user?.uid;
 
   const [uploadStatus, setUploadStatus] = useState<{ current: number; total: number } | null>(null);
   const [galleryPage, setGalleryPage] = useState(0);
@@ -100,12 +97,9 @@ export default function GalleryManagerPage() {
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   const [uploadJobs, setUploadJobs] = useState<Record<string, UploadProgressEvent>>({});
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
-  const [bulkAction, setBulkAction] = useState<"selected" | "all" | "poor" | null>(null);
+  const [bulkAction, setBulkAction] = useState<"selected" | "all" | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
-  const [isMerging, setIsMerging] = useState(false);
-  const [isDeletingPoor, setIsDeletingPoor] = useState(false);
-  const [showMergeConfirm, setShowMergeConfirm] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<PhotoLibraryItem | null>(null);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [previewDimensions, setPreviewDimensions] = useState<{ width: number; height: number } | null>(null);
@@ -116,13 +110,8 @@ export default function GalleryManagerPage() {
   useEffect(() => {
     if (canManage) {
       void loadLibrary();
-      if (sessionId) {
-        void loadSession(sessionId).catch(err => {
-          console.error("Failed to load session for merging:", err);
-        });
-      }
     }
-  }, [canManage, loadLibrary, loadSession, sessionId]);
+  }, [canManage, loadLibrary]);
 
   useEffect(() => {
     const maxPage = Math.max(0, Math.ceil(Math.max(library.length, 1) / PHOTOS_PER_PAGE) - 1);
@@ -145,7 +134,6 @@ export default function GalleryManagerPage() {
   }, [library]);
 
   useEffect(() => {
-    // Reset zoom whenever a new photo is opened
     setPreviewZoom(1);
     if (!previewPhoto) {
       setPreviewDimensions(null);
@@ -181,12 +169,6 @@ export default function GalleryManagerPage() {
   const activeUploadJobs = Object.values(uploadJobs);
   const selectedCount = selectedPhotoIds.size;
   const allSelected = library.length > 0 && selectedCount === library.length;
-  const poorPerformers = library.filter(photo => {
-    const totalVotes = photo.stats?.totalVotes ?? 0;
-    const yesVotes = photo.stats?.yesVotes ?? 0;
-    return totalVotes >= 5 && yesVotes === 0;
-  });
-  const poorCount = poorPerformers.length;
 
   const togglePhotoSelection = (photoId: string) => {
     if (!canManage) return;
@@ -279,61 +261,6 @@ export default function GalleryManagerPage() {
     }
   };
 
-  const handleMergeClick = () => {
-    if (!canManage || selectedCount !== 2 || !sessionId) return;
-    setShowMergeConfirm(true);
-  };
-
-  const handleMergeConfirm = async () => {
-    if (!canManage || selectedCount !== 2 || !sessionId) return;
-    const [targetId, mergedId] = Array.from(selectedPhotoIds);
-    setIsMerging(true);
-    setShowMergeConfirm(false);
-    try {
-      await mergeSessionPhotos(sessionId, targetId, mergedId);
-      toastSuccess({
-        title: "Photos merged successfully!",
-        description: "The voting stats have been combined and the duplicate photo has been removed.",
-      });
-      setSelectedPhotoIds(new Set([targetId]));
-    } catch (error) {
-      toastError({
-        title: "Merge failed",
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setIsMerging(false);
-    }
-  };
-
-  const handleDeletePoorPerformers = async () => {
-    if (!canManage || poorCount === 0) return;
-    setIsDeletingPoor(true);
-    try {
-      for (const photo of poorPerformers) {
-        await deletePhoto(photo.id);
-      }
-      toastSuccess({
-        title: "Poor performers removed",
-        description: `${poorCount} photo${poorCount === 1 ? "" : "s"} with zero wins deleted.`,
-      });
-      setSelectedPhotoIds(prev => {
-        if (prev.size === 0) return prev;
-        const next = new Set(prev);
-        poorPerformers.forEach(photo => next.delete(photo.id));
-        return next;
-      });
-    } catch (error) {
-      toastError({
-        title: "Delete failed",
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setIsDeletingPoor(false);
-      setBulkAction(null);
-    }
-  };
-
   const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canManage) return;
     const files = Array.from(e.target.files || []);
@@ -401,8 +328,8 @@ export default function GalleryManagerPage() {
   };
 
   const galleryHeaderDescription = library.length === 0
-    ? "Grab the floating button to add your first shots."
-    : "Tap images to select them, then clean up or clear everything in a couple clicks.";
+    ? "Upload your first photos to get started."
+    : "Manage your photo library. Use photos in other tools like Dating Photo Feedback.";
 
   const summaryLabel = selectedCount > 0
     ? `${selectedCount} selected`
@@ -415,13 +342,11 @@ export default function GalleryManagerPage() {
       void handleBulkDelete();
     } else if (bulkAction === "all") {
       void handleDeleteAll();
-    } else if (bulkAction === "poor") {
-      void handleDeletePoorPerformers();
     }
   };
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 text-slate-900 dark:from-slate-950 dark:via-purple-950/60 dark:to-slate-900 dark:text-white">
+    <div className="relative min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 text-slate-900 dark:from-slate-950 dark:via-indigo-950/60 dark:to-slate-900 dark:text-white">
       <input
         ref={fileInputRef}
         type="file"
@@ -429,27 +354,18 @@ export default function GalleryManagerPage() {
         accept="image/*"
         multiple
         onChange={handleGalleryUpload}
-        disabled={libraryLoading}
+        disabled={isLoading}
       />
 
       <div className="flex min-h-screen flex-col">
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/80 backdrop-blur px-6 pt-10 pb-6 dark:border-white/10 dark:bg-slate-950/80">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
-              <p className="text-sm uppercase tracking-[0.3em] text-purple-600 dark:text-purple-300/80">Gallery Manager</p>
-              <h1 className="text-4xl font-bold text-slate-900 dark:text-white">Curate your battle photos</h1>
-              <p className="text-sm text-slate-600 dark:text-purple-100/80 max-w-2xl">{galleryHeaderDescription}</p>
+              <p className="text-sm uppercase tracking-[0.3em] text-indigo-600 dark:text-indigo-200 mb-1">Photo Gallery</p>
+              <h1 className="text-4xl font-bold text-slate-900 dark:text-white">Your Photo Library</h1>
+              <p className="text-sm text-slate-600 dark:text-indigo-100/80 max-w-2xl">{galleryHeaderDescription}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                className="text-slate-700 border-slate-200 dark:text-white dark:border-white/20"
-                asChild
-              >
-                <Link href="/tools/photo-feedback" className="gap-2">
-                  <ArrowLeft className="h-4 w-4" /> Back to overview
-                </Link>
-              </Button>
               <Button
                 variant="outline"
                 className="text-slate-700 border-slate-200 dark:text-white dark:border-white/30"
@@ -482,40 +398,29 @@ export default function GalleryManagerPage() {
               >
                 Delete all
               </Button>
-              <Button
-                variant="outline"
-                className="text-purple-600 border-purple-200 hover:bg-purple-50 dark:text-purple-200 dark:border-purple-400/40 dark:hover:bg-purple-400/10"
-                onClick={handleMergeClick}
-                disabled={!canManage || selectedCount !== 2 || isMerging || !sessionId}
-              >
-                <GitMerge className="h-4 w-4 mr-2" />
-                {isMerging ? "Merging..." : selectedCount === 2 ? "Merge selected" : "Select 2 to merge"}
-              </Button>
-              <Button
-                variant="outline"
-                className="text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-300 dark:border-amber-400/40 dark:hover:bg-amber-400/10"
-                onClick={() => setBulkAction("poor")}
-                disabled={poorCount === 0 || isDeletingPoor}
-              >
-                Delete poor performers
-              </Button>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 pb-24">
+        <main className="flex-1 pb-24 px-6 pt-6">
           {!canManage ? (
             <Card className="mx-auto max-w-3xl border border-slate-200 bg-white p-8 text-slate-900 dark:border-white/10 dark:bg-white/10 dark:text-white">
-              <p className="text-lg font-semibold mb-2">Sign in required</p>
-              <p className="text-sm text-slate-600 dark:text-white/80">
-                Uploading photos and editing your gallery require a full account. Head back to the battle dashboard and
-                sign in to keep curating your images.
-              </p>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-indigo-100 dark:bg-indigo-500/20 rounded-full">
+                  <ImageIcon className="h-6 w-6 text-indigo-600 dark:text-indigo-300" />
+                </div>
+                <div>
+                  <p className="text-lg font-semibold mb-1">Sign in required</p>
+                  <p className="text-sm text-slate-600 dark:text-white/80">
+                    Create an account to start building your photo library.
+                  </p>
+                </div>
+              </div>
               <Button
                 asChild
-                className="mt-6 bg-purple-600 text-white hover:bg-purple-700 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white"
+                className="mt-4 bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white"
               >
-                <Link href="/tools/photo-feedback">Return to dashboard</Link>
+                <Link href="/tools">Browse tools</Link>
               </Button>
             </Card>
           ) : (
@@ -524,7 +429,7 @@ export default function GalleryManagerPage() {
                 <div className="text-sm text-slate-600 dark:text-white/70">
                   {summaryLabel}
                   {uploadStatus && (
-                    <span className="ml-3 inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-xs text-purple-700 dark:bg-white/10 dark:text-white">
+                    <span className="ml-3 inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs text-indigo-700 dark:bg-white/10 dark:text-white">
                       Uploading {uploadStatus.current}/{uploadStatus.total}
                     </span>
                   )}
@@ -538,14 +443,16 @@ export default function GalleryManagerPage() {
                 className="flex-1 overflow-y-auto px-6 pb-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
               >
                 {library.length === 0 ? (
-                  <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-slate-600 dark:text-white/80">
+                  <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-slate-600 dark:text-white/80 min-h-[400px]">
+                    <div className="p-6 bg-indigo-100 dark:bg-indigo-500/20 rounded-full">
+                      <ImageIcon className="h-12 w-12 text-indigo-600 dark:text-indigo-300" />
+                    </div>
                     <p className="text-lg font-semibold text-slate-900 dark:text-white">Your gallery is empty</p>
                     <p className="max-w-md text-sm">
-                      Use the floating action button in the corner to start uploading photos. They will automatically be
-                      added to your battle.
+                      Upload photos to build your library. Use them across multiple tools in Focus Notebook.
                     </p>
                     <Button
-                      className="bg-purple-600 text-white hover:bg-purple-700 dark:bg-white/10 dark:hover:bg-white/20"
+                      className="bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-white/10 dark:hover:bg-white/20 mt-2"
                       onClick={() => fileInputRef.current?.click()}
                     >
                       <Upload className="h-4 w-4 mr-2" /> Upload photos
@@ -554,17 +461,14 @@ export default function GalleryManagerPage() {
                 ) : (
                   <div className="grid gap-4 pt-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                     {visiblePhotos.map(item => {
-                      const totalVotes = item.stats?.totalVotes ?? 0;
-                      const winRate = totalVotes > 0 ? Math.round(((item.stats?.yesVotes ?? 0) / totalVotes) * 100) : null;
-                      const sessionCount = item.stats?.sessionCount ?? 0;
                       const isSelected = selectedPhotoIds.has(item.id);
-                      const gridUrl = item.url;
+                      const gridUrl = item.thumbnailUrl || item.url;
 
                       return (
                         <div
                           key={item.id}
-                          className={`group relative overflow-hidden rounded-3xl border bg-white/80 text-left text-gray-900 transition-all dark:bg-slate-900/70 ${
-                            isSelected ? "border-purple-400 ring-2 ring-purple-300/60" : "border-white/0"
+                          className={`group relative overflow-hidden rounded-3xl border bg-white/80 text-left text-gray-900 transition-all dark:bg-slate-900/70 cursor-pointer ${
+                            isSelected ? "border-indigo-400 ring-2 ring-indigo-300/60" : "border-white/0"
                           }`}
                           onClick={() => setPreviewPhoto(item)}
                           role="presentation"
@@ -576,7 +480,7 @@ export default function GalleryManagerPage() {
                               togglePhotoSelection(item.id);
                             }}
                             className={`absolute left-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border text-white transition ${
-                              isSelected ? "bg-purple-600 border-purple-500" : "bg-black/40 border-white/30"
+                              isSelected ? "bg-indigo-600 border-indigo-500" : "bg-black/40 border-white/30"
                             }`}
                             aria-label={isSelected ? "Deselect photo" : "Select photo"}
                           >
@@ -601,24 +505,14 @@ export default function GalleryManagerPage() {
                               sizes="(max-width: 768px) 50vw, 240px"
                               className="object-cover"
                             />
-                            {winRate !== null && (
-                              <span className="absolute bottom-3 left-3 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white">
-                                {winRate}% win • {totalVotes} votes
-                              </span>
-                            )}
                           </div>
                           <div className="space-y-1 border-t border-white/10 p-4 text-xs text-gray-600 dark:text-gray-300">
                             <p className="font-semibold text-gray-900 dark:text-gray-50">
-                              Uploaded {new Date(item.createdAt).toLocaleDateString()}
+                              {new Date(item.createdAt).toLocaleDateString()}
                             </p>
-                            {totalVotes > 0 ? (
-                              <p>
-                                In {sessionCount} session{sessionCount === 1 ? "" : "s"} • {totalVotes} battle
-                                {totalVotes === 1 ? "" : "s"}
-                              </p>
-                            ) : (
-                              <p className="text-gray-500">No votes yet</p>
-                            )}
+                            <p className="text-gray-500 dark:text-gray-400">
+                              Uploaded {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
                           </div>
                         </div>
                       );
@@ -627,7 +521,7 @@ export default function GalleryManagerPage() {
                 )}
 
                 {showUploadQueue && (
-                  <Card className="mt-8 bg-white/90 text-gray-900 dark:bg-slate-900/80 dark:text-white">
+                  <Card className="mt-8 bg-white/90 text-gray-900 dark:bg-slate-900/80 dark:text-white p-4">
                     <p className="text-sm font-semibold mb-3">Upload queue</p>
                     <div className="space-y-2">
                       {activeUploadJobs.map(job => {
@@ -643,7 +537,7 @@ export default function GalleryManagerPage() {
                             ? "text-red-600"
                             : job.status === "completed"
                               ? "text-green-600"
-                              : "text-purple-600";
+                              : "text-indigo-600";
 
                         return (
                           <div key={job.id} className="rounded-2xl border border-white/10 bg-white/60 dark:bg-white/10 p-3">
@@ -658,7 +552,7 @@ export default function GalleryManagerPage() {
                                     ? "bg-red-500"
                                     : job.status === "completed"
                                       ? "bg-green-500"
-                                      : "bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500"
+                                      : "bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"
                                 }`}
                                 style={{ width: `${Math.min(100, progressPercent)}%` }}
                               />
@@ -682,7 +576,7 @@ export default function GalleryManagerPage() {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="fixed bottom-6 right-6 z-30 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 px-5 py-3 text-base font-semibold shadow-2xl transition hover:scale-105"
+          className="fixed bottom-6 right-6 z-30 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 px-5 py-3 text-base font-semibold text-white shadow-2xl transition hover:scale-105"
         >
           <Upload className="h-5 w-5" /> Upload photos
         </button>
@@ -758,7 +652,7 @@ export default function GalleryManagerPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-semibold">Remove this photo?</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">This action permanently deletes the image and its stats.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">This action permanently deletes the image.</p>
               </div>
               <button
                 type="button"
@@ -786,7 +680,7 @@ export default function GalleryManagerPage() {
               >
                 {deletingPhotoId === photoPendingDelete.id ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Deleting…
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" /> Deleting…
                   </>
                 ) : (
                   "Delete photo"
@@ -804,26 +698,20 @@ export default function GalleryManagerPage() {
             <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
               <AlertTriangle className="h-5 w-5" />
               <h3 className="text-lg font-semibold">
-                {bulkAction === "selected"
-                  ? "Delete selected photos?"
-                  : bulkAction === "poor"
-                    ? "Delete poor performers?"
-                    : "Delete entire gallery?"}
+                {bulkAction === "selected" ? "Delete selected photos?" : "Delete entire gallery?"}
               </h3>
             </div>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
               {bulkAction === "selected"
                 ? `This will permanently delete ${selectedCount} photo${selectedCount === 1 ? "" : "s"}.`
-                : bulkAction === "poor"
-                  ? `This removes ${poorCount} photo${poorCount === 1 ? "" : "s"} that never won despite at least five battles.`
-                  : "This removes every image and its stats. You can't undo this."}
+                : "This removes every image. You can't undo this."}
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Button
                 variant="outline"
                 className="flex-1"
                 onClick={() => setBulkAction(null)}
-                disabled={isBulkDeleting || isDeletingAll || isDeletingPoor}
+                disabled={isBulkDeleting || isDeletingAll}
               >
                 Cancel
               </Button>
@@ -831,76 +719,15 @@ export default function GalleryManagerPage() {
                 type="button"
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                 onClick={confirmBulkAction}
-                disabled={
-                  (bulkAction === "selected" && isBulkDeleting) ||
-                  (bulkAction === "all" && isDeletingAll) ||
-                  (bulkAction === "poor" && isDeletingPoor)
-                }
+                disabled={(bulkAction === "selected" && isBulkDeleting) || (bulkAction === "all" && isDeletingAll)}
               >
-                {(bulkAction === "selected" && isBulkDeleting) ||
-                (bulkAction === "all" && isDeletingAll) ||
-                (bulkAction === "poor" && isDeletingPoor) ? (
+                {(bulkAction === "selected" && isBulkDeleting) || (bulkAction === "all" && isDeletingAll) ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     Working…
                   </>
                 ) : (
-                  bulkAction === "selected"
-                    ? "Delete selected"
-                    : bulkAction === "poor"
-                      ? "Delete poor performers"
-                      : "Delete all"
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showMergeConfirm && selectedCount === 2 && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/70" onClick={() => setShowMergeConfirm(false)} />
-          <div className="relative z-10 w-full max-w-md rounded-3xl bg-white p-6 text-gray-900 shadow-2xl dark:bg-slate-900 dark:text-white">
-            <div className="flex items-center gap-3 text-purple-600 dark:text-purple-400 mb-3">
-              <GitMerge className="h-5 w-5" />
-              <h3 className="text-lg font-semibold">Combine these photos?</h3>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-              When you merge duplicates, all voting stats (wins, losses, rating) will be combined into one photo.
-              The second photo will be permanently removed.
-            </p>
-            <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 p-4 mb-5">
-              <p className="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-2">💡 Merge tip</p>
-              <p className="text-xs text-gray-700 dark:text-gray-300">
-                Use this to clean up duplicate uploads or combine photos that represent the same shot.
-                The first selected photo will keep its image, while inheriting all battle history.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setShowMergeConfirm(false)}
-                disabled={isMerging}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
-                onClick={handleMergeConfirm}
-                disabled={isMerging}
-              >
-                {isMerging ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Merging…
-                  </>
-                ) : (
-                  <>
-                    <GitMerge className="h-4 w-4 mr-2" />
-                    Merge photos
-                  </>
+                  bulkAction === "selected" ? "Delete selected" : "Delete all"
                 )}
               </Button>
             </div>

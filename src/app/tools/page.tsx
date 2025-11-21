@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart, DollarSign, MapPin, Calendar as CalendarIcon, TrendingUp, Heart } from "lucide-react";
+import { Lightbulb, Brain, Target, Smile, CheckSquare, MessageCircle, ArrowRight, Sparkles, FileText, ShoppingBag, Users, Plane, Search, LineChart, DollarSign, MapPin, Calendar as CalendarIcon, TrendingUp, Heart, Image as ImageIcon } from "lucide-react";
 
 const TOOLS = [
   {
@@ -269,6 +269,17 @@ const TOOLS = [
     bgGradient: "from-pink-50 to-purple-50",
     borderColor: "border-pink-300",
     priority: "low" as const,
+  },
+  {
+    key: "gallery",
+    title: "Photo Gallery",
+    description: "Manage your photo library. Upload, organize, and use photos across different tools.",
+    icon: ImageIcon,
+    emoji: "📸",
+    gradient: "from-blue-400 to-indigo-500",
+    bgGradient: "from-blue-50 to-indigo-50",
+    borderColor: "border-blue-300",
+    priority: "medium" as const,
   },
 ];
 
