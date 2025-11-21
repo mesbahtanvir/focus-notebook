@@ -93,6 +93,20 @@ func main() {
 		logger.Warn("Stripe not configured - billing features will not work")
 	}
 
+	// Initialize Plaid client
+	var plaidClient *clients.PlaidClient
+	if cfg.Plaid.ClientID != "" && cfg.Plaid.Secret != "" {
+		var err error
+		plaidClient, err = clients.NewPlaidClient(&cfg.Plaid, logger)
+		if err != nil {
+			logger.Error("Failed to initialize Plaid client", zap.Error(err))
+		} else {
+			logger.Info("Plaid client initialized")
+		}
+	} else {
+		logger.Warn("Plaid not configured - banking features will not work")
+	}
+
 	// Initialize repository
 	repo := repository.NewFirestoreRepository(fbAdmin.Firestore)
 
@@ -123,6 +137,13 @@ func main() {
 		logger.Info("Stripe billing service initialized")
 	}
 
+	// Initialize Plaid service
+	var plaidService *services.PlaidService
+	if plaidClient != nil {
+		plaidService = services.NewPlaidService(plaidClient, repo, logger)
+		logger.Info("Plaid service initialized")
+	}
+
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(
 		fbAdmin.Auth,
@@ -141,6 +162,11 @@ func main() {
 	var stripeHandler *handlers.StripeHandler
 	if stripeBillingSvc != nil {
 		stripeHandler = handlers.NewStripeHandler(stripeClient, stripeBillingSvc, logger)
+	}
+
+	var plaidHandler *handlers.PlaidHandler
+	if plaidService != nil {
+		plaidHandler = handlers.NewPlaidHandler(plaidService, logger)
 	}
 
 	// Create router
@@ -192,11 +218,28 @@ func main() {
 		logger.Warn("Stripe endpoints disabled (Stripe not configured)")
 	}
 
+	// Plaid banking routes
+	if plaidHandler != nil {
+		// Webhook endpoint (no auth - Plaid webhooks)
+		router.HandleFunc("/api/plaid/webhook", plaidHandler.HandleWebhook).Methods("POST")
+
+		// Authenticated Plaid endpoints
+		plaidRoutes := api.PathPrefix("/plaid").Subrouter()
+		plaidRoutes.HandleFunc("/create-link-token", plaidHandler.CreateLinkToken).Methods("POST")
+		plaidRoutes.HandleFunc("/exchange-public-token", plaidHandler.ExchangePublicToken).Methods("POST")
+		plaidRoutes.HandleFunc("/create-relink-token", plaidHandler.CreateRelinkToken).Methods("POST")
+		plaidRoutes.HandleFunc("/mark-relinking", plaidHandler.MarkRelinking).Methods("POST")
+		plaidRoutes.HandleFunc("/trigger-sync", plaidHandler.TriggerSync).Methods("POST")
+
+		logger.Info("Plaid endpoints registered")
+	} else {
+		logger.Warn("Plaid endpoints disabled (Plaid not configured)")
+	}
+
 	// TODO: Add more routes here as we implement handlers
 	// - /api/chat
 	// - /api/predict-investment
 	// - /api/spending/*
-	// - /api/plaid/*
 	// - /api/photo/*
 	// etc.
 

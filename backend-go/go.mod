@@ -8,7 +8,7 @@ require (
 	firebase.google.com/go/v4 v4.13.0
 	github.com/anthropics/anthropic-sdk-go v0.2.0-alpha.2
 	github.com/gorilla/mux v1.8.1
-	github.com/plaid/plaid-go/v12 v12.0.0
+	github.com/plaid/plaid-go/v20 v20.0.0
 	github.com/prometheus/client_golang v1.18.0
 	github.com/sashabaranov/go-openai v1.18.3
 	github.com/stripe/stripe-go/v76 v76.16.0
