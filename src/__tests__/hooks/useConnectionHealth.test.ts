@@ -14,6 +14,24 @@ jest.mock('@/lib/data/subscribe', () => ({
   })),
 }));
 
+const createMockHealth = (overrides: Partial<ConnectionHealth> = {}): ConnectionHealth => ({
+  status: 'healthy',
+  isOnline: true,
+  isBackground: false,
+  circuitBreakers: {},
+  offlineQueue: {
+    size: 0,
+    processing: false,
+  },
+  performance: {
+    averageDuration: 50,
+    successRate: 1.0,
+    retryRate: 0,
+  },
+  issues: [],
+  ...overrides,
+});
+
 describe('useConnectionHealth', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -30,11 +48,7 @@ describe('useConnectionHealth', () => {
   });
 
   it('should return initial health when available', async () => {
-    const initialHealth: ConnectionHealth = {
-      isOnline: true,
-      latency: 50,
-      lastCheck: Date.now(),
-    };
+    const initialHealth = createMockHealth();
 
     mockGetHealth.mockReturnValue(initialHealth);
     mockSubscribe.mockImplementation(() => mockUnsubscribe);
@@ -66,11 +80,13 @@ describe('useConnectionHealth', () => {
 
     const { result } = renderHook(() => useConnectionHealth());
 
-    const newHealth: ConnectionHealth = {
-      isOnline: true,
-      latency: 100,
-      lastCheck: Date.now(),
-    };
+    const newHealth = createMockHealth({
+      performance: {
+        averageDuration: 100,
+        successRate: 0.95,
+        retryRate: 0.05,
+      },
+    });
 
     act(() => {
       if (healthCallback) {
@@ -94,11 +110,10 @@ describe('useConnectionHealth', () => {
 
     const { result } = renderHook(() => useConnectionHealth());
 
-    const offlineHealth: ConnectionHealth = {
+    const offlineHealth = createMockHealth({
+      status: 'unhealthy',
       isOnline: false,
-      latency: null,
-      lastCheck: Date.now(),
-    };
+    });
 
     act(() => {
       if (healthCallback) {
@@ -108,10 +123,11 @@ describe('useConnectionHealth', () => {
 
     await waitFor(() => {
       expect(result.current?.isOnline).toBe(false);
+      expect(result.current?.status).toBe('unhealthy');
     });
   });
 
-  it('should handle high latency', async () => {
+  it('should handle degraded performance', async () => {
     let healthCallback: any;
 
     mockGetHealth.mockReturnValue(null);
@@ -122,20 +138,24 @@ describe('useConnectionHealth', () => {
 
     const { result } = renderHook(() => useConnectionHealth());
 
-    const slowHealth: ConnectionHealth = {
-      isOnline: true,
-      latency: 5000,
-      lastCheck: Date.now(),
-    };
+    const degradedHealth = createMockHealth({
+      status: 'degraded',
+      performance: {
+        averageDuration: 5000,
+        successRate: 0.8,
+        retryRate: 0.2,
+      },
+    });
 
     act(() => {
       if (healthCallback) {
-        healthCallback(slowHealth);
+        healthCallback(degradedHealth);
       }
     });
 
     await waitFor(() => {
-      expect(result.current?.latency).toBe(5000);
+      expect(result.current?.status).toBe('degraded');
+      expect(result.current?.performance.averageDuration).toBe(5000);
     });
   });
 
@@ -161,11 +181,9 @@ describe('useConnectionHealth', () => {
 
     const { result } = renderHook(() => useConnectionHealth());
 
-    const health1: ConnectionHealth = {
-      isOnline: true,
-      latency: 50,
-      lastCheck: Date.now(),
-    };
+    const health1 = createMockHealth({
+      performance: { averageDuration: 50, successRate: 1.0, retryRate: 0 },
+    });
 
     act(() => {
       if (healthCallback) {
@@ -174,14 +192,12 @@ describe('useConnectionHealth', () => {
     });
 
     await waitFor(() => {
-      expect(result.current?.latency).toBe(50);
+      expect(result.current?.performance.averageDuration).toBe(50);
     });
 
-    const health2: ConnectionHealth = {
-      isOnline: true,
-      latency: 150,
-      lastCheck: Date.now(),
-    };
+    const health2 = createMockHealth({
+      performance: { averageDuration: 150, successRate: 0.9, retryRate: 0.1 },
+    });
 
     act(() => {
       if (healthCallback) {
@@ -190,18 +206,14 @@ describe('useConnectionHealth', () => {
     });
 
     await waitFor(() => {
-      expect(result.current?.latency).toBe(150);
+      expect(result.current?.performance.averageDuration).toBe(150);
     });
   });
 
   it('should handle transition from online to offline', async () => {
     let healthCallback: any;
 
-    const initialHealth: ConnectionHealth = {
-      isOnline: true,
-      latency: 50,
-      lastCheck: Date.now(),
-    };
+    const initialHealth = createMockHealth();
 
     mockGetHealth.mockReturnValue(initialHealth);
     mockSubscribe.mockImplementation((callback) => {
@@ -215,11 +227,10 @@ describe('useConnectionHealth', () => {
       expect(result.current?.isOnline).toBe(true);
     });
 
-    const offlineHealth: ConnectionHealth = {
+    const offlineHealth = createMockHealth({
+      status: 'unhealthy',
       isOnline: false,
-      latency: null,
-      lastCheck: Date.now(),
-    };
+    });
 
     act(() => {
       if (healthCallback) {
@@ -244,5 +255,64 @@ describe('useConnectionHealth', () => {
 
     // Should still be 1 (not called again)
     expect(mockSubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('should handle background state', async () => {
+    let healthCallback: any;
+
+    mockGetHealth.mockReturnValue(null);
+    mockSubscribe.mockImplementation((callback) => {
+      healthCallback = callback;
+      return mockUnsubscribe;
+    });
+
+    const { result } = renderHook(() => useConnectionHealth());
+
+    const backgroundHealth = createMockHealth({
+      isBackground: true,
+      backgroundDuration: 60000,
+    });
+
+    act(() => {
+      if (healthCallback) {
+        healthCallback(backgroundHealth);
+      }
+    });
+
+    await waitFor(() => {
+      expect(result.current?.isBackground).toBe(true);
+      expect(result.current?.backgroundDuration).toBe(60000);
+    });
+  });
+
+  it('should handle offline queue status', async () => {
+    let healthCallback: any;
+
+    mockGetHealth.mockReturnValue(null);
+    mockSubscribe.mockImplementation((callback) => {
+      healthCallback = callback;
+      return mockUnsubscribe;
+    });
+
+    const { result } = renderHook(() => useConnectionHealth());
+
+    const queuedHealth = createMockHealth({
+      offlineQueue: {
+        size: 10,
+        processing: true,
+        oldestQueuedAt: Date.now() - 5000,
+      },
+    });
+
+    act(() => {
+      if (healthCallback) {
+        healthCallback(queuedHealth);
+      }
+    });
+
+    await waitFor(() => {
+      expect(result.current?.offlineQueue.size).toBe(10);
+      expect(result.current?.offlineQueue.processing).toBe(true);
+    });
   });
 });

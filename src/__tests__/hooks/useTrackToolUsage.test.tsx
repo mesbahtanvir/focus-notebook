@@ -57,12 +57,12 @@ describe('useTrackToolUsage', () => {
 
     const { rerender } = renderHook(
       ({ toolName }) => useTrackToolUsage(toolName),
-      { initialProps: { toolName: 'tasks' as const } }
+      { initialProps: { toolName: 'tasks' as any } }
     );
 
     expect(mockTrackToolClick).toHaveBeenCalledWith('tasks');
 
-    rerender({ toolName: 'thoughts' as const });
+    rerender({ toolName: 'thoughts' as any });
 
     expect(mockTrackToolClick).toHaveBeenCalledWith('thoughts');
   });

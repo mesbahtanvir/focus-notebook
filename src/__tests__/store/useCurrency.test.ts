@@ -32,14 +32,14 @@ describe('useCurrency store', () => {
       expect(result.current.currency).toBe('USD');
     });
 
-    it('should update currency to EUR', () => {
+    it('should update currency to BDT', () => {
       const { result } = renderHook(() => useCurrency());
 
       act(() => {
-        result.current.setCurrency('EUR');
+        result.current.setCurrency('BDT');
       });
 
-      expect(result.current.currency).toBe('EUR');
+      expect(result.current.currency).toBe('BDT');
     });
 
     it('should update currency to CAD', () => {
@@ -52,34 +52,14 @@ describe('useCurrency store', () => {
       expect(result.current.currency).toBe('CAD');
     });
 
-    it('should update currency to GBP', () => {
+    it('should update currency to COP', () => {
       const { result } = renderHook(() => useCurrency());
 
       act(() => {
-        result.current.setCurrency('GBP');
+        result.current.setCurrency('COP');
       });
 
-      expect(result.current.currency).toBe('GBP');
-    });
-
-    it('should update currency to JPY', () => {
-      const { result } = renderHook(() => useCurrency());
-
-      act(() => {
-        result.current.setCurrency('JPY');
-      });
-
-      expect(result.current.currency).toBe('JPY');
-    });
-
-    it('should update currency to AUD', () => {
-      const { result } = renderHook(() => useCurrency());
-
-      act(() => {
-        result.current.setCurrency('AUD');
-      });
-
-      expect(result.current.currency).toBe('AUD');
+      expect(result.current.currency).toBe('COP');
     });
 
     it('should allow multiple currency changes', () => {
@@ -91,9 +71,9 @@ describe('useCurrency store', () => {
       expect(result.current.currency).toBe('USD');
 
       act(() => {
-        result.current.setCurrency('EUR');
+        result.current.setCurrency('BDT');
       });
-      expect(result.current.currency).toBe('EUR');
+      expect(result.current.currency).toBe('BDT');
 
       act(() => {
         result.current.setCurrency('CAD');
