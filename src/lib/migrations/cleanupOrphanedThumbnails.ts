@@ -70,46 +70,34 @@ export async function cleanupOrphanedThumbnails(userId: string): Promise<Migrati
     }
 
     // Step 3: Clean up orphaned storage files
-    const userStorageRef = ref(storage, `users/${userId}/photos`);
+    // Check multiple storage locations:
+    // 1. Legacy path: users/${userId}/photo-library/
+    // 2. Current paths: images/original/${userId}/ and images/thumb/${userId}/
+    const storagePaths = [
+      `users/${userId}/photo-library`,
+      `images/original/${userId}`,
+      `images/thumb/${userId}`,
+    ];
 
-    try {
-      const storageList = await listAll(userStorageRef);
+    for (const storagePath of storagePaths) {
+      const storageRef = ref(storage, storagePath);
 
-      for (const itemRef of storageList.items) {
-        // Check if this file is referenced by any valid photo
-        const isValid = validStoragePaths.has(itemRef.fullPath);
+      try {
+        const storageList = await listAll(storageRef);
 
-        if (!isValid) {
-          try {
-            // Verify file exists before trying to delete
-            await getMetadata(itemRef);
-            await deleteObject(itemRef);
-            result.orphanedThumbnailsDeleted++;
-            console.log(`[Migration] Deleted orphaned file: ${itemRef.fullPath}`);
-          } catch (error) {
-            // File might already be deleted or metadata fetch failed
-            if ((error as any).code !== 'storage/object-not-found') {
-              const errMsg = `Failed to delete ${itemRef.fullPath}: ${error instanceof Error ? error.message : String(error)}`;
-              result.errors.push(errMsg);
-              console.warn(`[Migration] ${errMsg}`);
-            }
-          }
-        }
-      }
-
-      // Also check subdirectories (like thumbnails/)
-      for (const prefixRef of storageList.prefixes) {
-        const subList = await listAll(prefixRef);
-        for (const itemRef of subList.items) {
+        for (const itemRef of storageList.items) {
+          // Check if this file is referenced by any valid photo
           const isValid = validStoragePaths.has(itemRef.fullPath);
 
           if (!isValid) {
             try {
+              // Verify file exists before trying to delete
               await getMetadata(itemRef);
               await deleteObject(itemRef);
               result.orphanedThumbnailsDeleted++;
               console.log(`[Migration] Deleted orphaned file: ${itemRef.fullPath}`);
             } catch (error) {
+              // File might already be deleted or metadata fetch failed
               if ((error as any).code !== 'storage/object-not-found') {
                 const errMsg = `Failed to delete ${itemRef.fullPath}: ${error instanceof Error ? error.message : String(error)}`;
                 result.errors.push(errMsg);
@@ -118,13 +106,38 @@ export async function cleanupOrphanedThumbnails(userId: string): Promise<Migrati
             }
           }
         }
-      }
-    } catch (storageError) {
-      // User might not have any photos in storage yet
-      if ((storageError as any).code !== 'storage/object-not-found') {
-        const errMsg = `Storage cleanup error: ${storageError instanceof Error ? storageError.message : String(storageError)}`;
-        result.errors.push(errMsg);
-        console.warn(`[Migration] ${errMsg}`);
+
+        // Also check subdirectories
+        for (const prefixRef of storageList.prefixes) {
+          const subList = await listAll(prefixRef);
+          for (const itemRef of subList.items) {
+            const isValid = validStoragePaths.has(itemRef.fullPath);
+
+            if (!isValid) {
+              try {
+                await getMetadata(itemRef);
+                await deleteObject(itemRef);
+                result.orphanedThumbnailsDeleted++;
+                console.log(`[Migration] Deleted orphaned file: ${itemRef.fullPath}`);
+              } catch (error) {
+                if ((error as any).code !== 'storage/object-not-found') {
+                  const errMsg = `Failed to delete ${itemRef.fullPath}: ${error instanceof Error ? error.message : String(error)}`;
+                  result.errors.push(errMsg);
+                  console.warn(`[Migration] ${errMsg}`);
+                }
+              }
+            }
+          }
+        }
+      } catch (storageError) {
+        // User might not have any photos in this storage path
+        if ((storageError as any).code !== 'storage/object-not-found' && (storageError as any).code !== 'storage/unauthorized') {
+          const errMsg = `Storage cleanup error for ${storagePath}: ${storageError instanceof Error ? storageError.message : String(storageError)}`;
+          result.errors.push(errMsg);
+          console.warn(`[Migration] ${errMsg}`);
+        } else {
+          console.log(`[Migration] No photos found at ${storagePath} or permission denied (skipping)`);
+        }
       }
     }
 
