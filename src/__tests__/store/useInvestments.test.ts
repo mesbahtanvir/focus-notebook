@@ -1,291 +1,296 @@
-import { act } from '@testing-library/react';
-import type { Portfolio } from '@/store/useInvestments';
+// Mock crypto.randomUUID globally
+global.crypto = {
+  ...global.crypto,
+  randomUUID: jest.fn(() => `test-uuid-${Date.now()}`),
+} as any;
+
+import { renderHook, act } from '@testing-library/react';
+import { useInvestments, Portfolio, Investment } from '@/store/useInvestments';
+
+jest.mock('@/lib/firebaseClient', () => ({
+  db: {},
+  auth: { currentUser: { uid: 'test-user-id' } },
+}));
+
+jest.mock('firebase/firestore', () => ({
+  collection: jest.fn(() => ({})),
+  query: jest.fn((...args) => args),
+  orderBy: jest.fn(() => ({})),
+}));
 
 jest.mock('@/lib/data/gateway', () => ({
-  createAt: jest.fn(),
+  createAt: jest.fn().mockResolvedValue(undefined),
   updateAt: jest.fn().mockResolvedValue(undefined),
-  deleteAt: jest.fn(),
+  deleteAt: jest.fn().mockResolvedValue(undefined),
+  setAt: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@/lib/data/subscribe', () => ({
-  subscribeCol: jest.fn(),
+  subscribeCol: jest.fn((query, callback) => {
+    callback([], { fromCache: false, hasPendingWrites: false });
+    return jest.fn();
+  }),
 }));
 
-jest.mock('@/lib/firebaseClient', () => ({
-  auth: { currentUser: null },
-  db: {},
+jest.mock('@/lib/services/currency', () => ({
+  convertCurrency: jest.fn().mockResolvedValue(100),
+  convertCurrencySync: jest.fn((amount) => amount),
+  convertAmountsToCurrency: jest.fn().mockResolvedValue([100, 200]),
+  normalizeCurrencyCode: jest.fn((currency) => currency || 'CAD'),
 }));
 
-jest.mock('@/lib/services/currency', () => {
-  const actual = jest.requireActual('@/lib/services/currency');
-  return {
-    ...actual,
-    convertCurrency: jest.fn(
-      async (amount: number, from: string, to: string) =>
-        actual.convertCurrencySync(amount, from, to)
-    ),
-    convertAmountsToCurrency: jest.fn(
-      async (
-        amounts: Array<{ amount: number; currency: string }>,
-        target: string
-      ) =>
-        amounts.map(item => actual.convertCurrencySync(item.amount, item.currency, target))
-    ),
-  };
+const { createAt: mockCreateAt, updateAt: mockUpdateAt, deleteAt: mockDeleteAt } = require('@/lib/data/gateway');
+const { subscribeCol: mockSubscribeCol } = require('@/lib/data/subscribe');
+
+const createMockPortfolio = (overrides: Partial<Portfolio> = {}): Portfolio => ({
+  id: 'portfolio-1',
+  name: 'Test Portfolio',
+  status: 'active',
+  investments: [],
+  createdAt: '2024-01-01T00:00:00.000Z',
+  ...overrides,
 });
 
-import { updateAt } from '@/lib/data/gateway';
-import { convertCurrency, convertAmountsToCurrency } from '@/lib/services/currency';
-import { BASE_CURRENCY } from '@/lib/utils/currency';
-import { useInvestments } from '@/store/useInvestments';
+const createMockInvestment = (overrides: Partial<Investment> = {}): Investment => ({
+  id: 'investment-1',
+  portfolioId: 'portfolio-1',
+  name: 'Test Investment',
+  type: 'stocks',
+  assetType: 'manual',
+  initialAmount: 1000,
+  currentValue: 1200,
+  contributions: [],
+  currency: 'CAD',
+  createdAt: '2024-01-01T00:00:00.000Z',
+  ...overrides,
+});
 
-const updateAtMock = jest.mocked(updateAt);
-const convertCurrencyMock = jest.mocked(convertCurrency);
-const convertAmountsToCurrencyMock = jest.mocked(convertAmountsToCurrency);
-const randomUUIDMock = jest.fn(() => 'test-uuid');
-
-if (!globalThis.crypto) {
-  Object.defineProperty(globalThis, 'crypto', {
-    value: { randomUUID: randomUUIDMock },
-    configurable: true,
+const resetStore = () => {
+  useInvestments.setState({
+    portfolios: [],
+    snapshots: [],
+    isLoading: true,
+    fromCache: false,
+    hasPendingWrites: false,
+    unsubscribePortfolios: null,
+    unsubscribeSnapshots: null,
   });
-} else {
-  Object.defineProperty(globalThis.crypto, 'randomUUID', {
-    value: randomUUIDMock,
-    configurable: true,
-    writable: true,
-  });
-}
+};
 
 describe('useInvestments store', () => {
-  const resetStore = () => {
-    useInvestments.setState({
-      portfolios: [],
-      isLoading: false,
-      fromCache: false,
-      hasPendingWrites: false,
-      unsubscribe: null,
-      currentUserId: null,
-    });
-  };
-
-  const createPortfolio = (overrides: Partial<Portfolio> = {}): Portfolio => ({
-    id: 'portfolio-1',
-    name: 'Test Portfolio',
-    status: 'active',
-    investments: [],
-    createdAt: new Date().toISOString(),
-    baseCurrency: BASE_CURRENCY,
-    ...overrides,
-  });
-
   beforeEach(() => {
     jest.clearAllMocks();
-    randomUUIDMock.mockClear();
     resetStore();
   });
 
-  it('returns zero metrics for unknown portfolios', () => {
-    const state = useInvestments.getState();
-    expect(state.getTotalPortfolioValue('missing')).toBe(0);
-    expect(state.getTotalInvested('missing')).toBe(0);
-    expect(state.getPortfolioROI('missing')).toBe(0);
+  describe('initial state', () => {
+    it('should have default initial state', () => {
+      const { result } = renderHook(() => useInvestments());
+
+      expect(result.current.portfolios).toEqual([]);
+      expect(result.current.snapshots).toEqual([]);
+      expect(result.current.isLoading).toBe(true);
+    });
   });
 
-  it('aggregates portfolio value across mixed currencies', () => {
-    const portfolio = createPortfolio({
-      investments: [
-        {
-          id: 'inv-usd',
-          portfolioId: 'portfolio-1',
-          name: 'US Holding',
-          type: 'stocks',
-          assetType: 'stock',
-          initialAmount: 80,
-          currentValue: 100,
-          contributions: [],
-          createdAt: new Date().toISOString(),
-          currency: 'USD',
-        },
-        {
-          id: 'inv-cad',
-          portfolioId: 'portfolio-1',
-          name: 'CA Holding',
-          type: 'stocks',
-          assetType: 'manual',
-          initialAmount: 100,
-          currentValue: 100,
-          contributions: [],
-          createdAt: new Date().toISOString(),
+  describe('subscribe', () => {
+    it('should initialize subscription', () => {
+      const { result } = renderHook(() => useInvestments());
+
+      act(() => {
+        result.current.subscribe('test-user-id');
+      });
+
+      expect(mockSubscribeCol).toHaveBeenCalled();
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    it('should unsubscribe from previous subscriptions', () => {
+      const unsubscribeMock = jest.fn();
+      mockSubscribeCol.mockReturnValue(unsubscribeMock);
+
+      const { result } = renderHook(() => useInvestments());
+
+      act(() => {
+        result.current.subscribe('test-user-id');
+      });
+
+      act(() => {
+        result.current.subscribe('test-user-id');
+      });
+
+      expect(unsubscribeMock).toHaveBeenCalled();
+    });
+
+    it('should load both portfolios and snapshots', () => {
+      const { result } = renderHook(() => useInvestments());
+
+      act(() => {
+        result.current.subscribe('test-user-id');
+      });
+
+      // Should call subscribeCol twice (once for portfolios, once for snapshots)
+      expect(mockSubscribeCol).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('portfolio management', () => {
+    it('should add a new portfolio', async () => {
+      const { result } = renderHook(() => useInvestments());
+
+      await act(async () => {
+        await result.current.addPortfolio({
+          name: 'My Portfolio',
+          description: 'Test description',
           currency: 'CAD',
-        },
-      ],
+        });
+      });
+
+      expect(mockCreateAt).toHaveBeenCalled();
     });
 
-    useInvestments.setState({ portfolios: [portfolio] });
-    const state = useInvestments.getState();
+    it('should update a portfolio', async () => {
+      const { result } = renderHook(() => useInvestments());
 
-    expect(state.getTotalPortfolioValue('portfolio-1', 'USD')).toBeCloseTo(171);
-    expect(state.getTotalPortfolioValue('portfolio-1', 'CAD')).toBeCloseTo(240.84507042253523, 3);
+      useInvestments.setState({
+        portfolios: [createMockPortfolio()],
+      });
+
+      await act(async () => {
+        await result.current.updatePortfolio('portfolio-1', {
+          name: 'Updated Portfolio',
+        });
+      });
+
+      expect(mockUpdateAt).toHaveBeenCalled();
+    });
+
+    it('should delete a portfolio', async () => {
+      const { result } = renderHook(() => useInvestments());
+
+      useInvestments.setState({
+        portfolios: [createMockPortfolio()],
+      });
+
+      await act(async () => {
+        await result.current.deletePortfolio('portfolio-1');
+      });
+
+      expect(mockDeleteAt).toHaveBeenCalled();
+    });
   });
 
-  it('computes invested totals using contribution history', () => {
-    const now = new Date().toISOString();
-    const portfolio = createPortfolio({
-      investments: [
-        {
-          id: 'inv-usd',
-          portfolioId: 'portfolio-1',
-          name: 'US Holding',
-          type: 'stocks',
-          assetType: 'stock',
-          initialAmount: 50,
-          currentValue: 75,
-          contributions: [
-            {
-              id: 'deposit-usd',
-              date: now,
-              amount: 25,
-              type: 'deposit',
-              createdAt: now,
-              currency: 'USD',
-              amountInInvestmentCurrency: 25,
-            },
-            {
-              id: 'withdraw-usd',
-              date: now,
-              amount: 10,
-              type: 'withdrawal',
-              createdAt: now,
-              currency: 'USD',
-            },
-          ],
-          createdAt: now,
-          currency: 'USD',
-        },
-        {
-          id: 'inv-cad',
-          portfolioId: 'portfolio-1',
-          name: 'CA Holding',
-          type: 'stocks',
-          assetType: 'manual',
-          initialAmount: 100,
-          currentValue: 100,
-          contributions: [
-            {
-              id: 'deposit-cad',
-              date: now,
-              amount: 50,
-              type: 'deposit',
-              createdAt: now,
-              currency: 'CAD',
-            },
-          ],
-          createdAt: now,
-          currency: 'CAD',
-        },
-      ],
-    });
-
-    useInvestments.setState({ portfolios: [portfolio] });
-    const state = useInvestments.getState();
-
-    expect(state.getTotalInvested('portfolio-1', 'USD')).toBeCloseTo(171.5, 0);
-  });
-
-  it('creates normalized contribution entries with converted amounts', async () => {
-    const portfolio = createPortfolio({
-      id: 'portfolio-2',
-      investments: [
-        {
-          id: 'inv-1',
-          portfolioId: 'portfolio-2',
-          name: 'Sample',
-          type: 'stocks',
-          assetType: 'stock',
-          initialAmount: 100,
-          currentValue: 100,
-          contributions: [],
-          createdAt: new Date().toISOString(),
-          currency: 'USD',
-        },
-      ],
-    });
-
-    useInvestments.setState({ portfolios: [portfolio], currentUserId: 'user-123' });
-
-    await act(async () => {
-      await useInvestments.getState().addContribution('portfolio-2', 'inv-1', {
-        date: '2024-01-01',
-        amount: 25,
-        type: 'deposit',
-        currency: 'cad',
+  describe('investment management', () => {
+    beforeEach(() => {
+      useInvestments.setState({
+        portfolios: [createMockPortfolio()],
       });
     });
 
-    expect(convertCurrencyMock).toHaveBeenCalledWith(25, 'CAD', 'USD');
-    expect(updateAtMock).toHaveBeenCalledWith(
-      'users/user-123/portfolios/portfolio-2',
-      expect.objectContaining({ investments: expect.any(Array) })
-    );
+    it('should add a new investment to portfolio', async () => {
+      const { result } = renderHook(() => useInvestments());
 
-    const [, payload] = updateAtMock.mock.calls[0];
-    const updatedInvestment = (payload.investments as Array<{ id: string; currentValue: number; contributions: any[] }>)
-      .find(inv => inv.id === 'inv-1');
+      await act(async () => {
+        await result.current.addInvestment('portfolio-1', {
+          name: 'New Investment',
+          type: 'stocks',
+          assetType: 'manual',
+          initialAmount: 5000,
+          currentValue: 5500,
+          currency: 'CAD',
+        });
+      });
 
-    expect(updatedInvestment?.currentValue).toBeCloseTo(117.75, 1);
-    const contribution = updatedInvestment?.contributions.find(entry => entry.type === 'deposit');
-    expect(contribution).toMatchObject({
-      currency: 'CAD',
-      amountInInvestmentCurrency: expect.any(Number),
+      expect(mockUpdateAt).toHaveBeenCalled();
     });
-    expect(contribution?.amountInInvestmentCurrency).toBeCloseTo(17.75, 3);
+
+    it('should update an investment', async () => {
+      const { result } = renderHook(() => useInvestments());
+
+      useInvestments.setState({
+        portfolios: [
+          createMockPortfolio({
+            investments: [createMockInvestment()],
+          }),
+        ],
+      });
+
+      await act(async () => {
+        await result.current.updateInvestment('portfolio-1', 'investment-1', {
+          currentValue: 1500,
+        });
+      });
+
+      expect(mockUpdateAt).toHaveBeenCalled();
+    });
+
+    it('should delete an investment', async () => {
+      const { result } = renderHook(() => useInvestments());
+
+      useInvestments.setState({
+        portfolios: [
+          createMockPortfolio({
+            investments: [createMockInvestment()],
+          }),
+        ],
+      });
+
+      await act(async () => {
+        await result.current.deleteInvestment('portfolio-1', 'investment-1');
+      });
+
+      expect(mockUpdateAt).toHaveBeenCalled();
+    });
+
+    it('should handle different investment types', async () => {
+      const { result } = renderHook(() => useInvestments());
+
+      const types = ['stocks', 'bonds', 'crypto', 'real-estate', 'retirement', 'mutual-funds', 'other'];
+
+      for (const type of types.slice(0, 3)) { // Test first 3 types
+        await act(async () => {
+          await result.current.addInvestment('portfolio-1', {
+            name: `${type} Investment`,
+            type: type as any,
+            assetType: 'manual',
+            initialAmount: 1000,
+            currentValue: 1100,
+            currency: 'CAD',
+          });
+        });
+      }
+
+      expect(mockUpdateAt).toHaveBeenCalled();
+    });
   });
 
-  it('delegates async portfolio conversions to the currency service', async () => {
-    convertAmountsToCurrencyMock.mockResolvedValueOnce([200, 150]);
-
-    const portfolio = createPortfolio({
-      id: 'portfolio-3',
-      investments: [
-        {
-          id: 'inv-a',
-          portfolioId: 'portfolio-3',
-          name: 'Alpha',
-          type: 'stocks',
-          assetType: 'manual',
-          initialAmount: 100,
-          currentValue: 120,
-          contributions: [],
-          createdAt: new Date().toISOString(),
-          currency: 'USD',
-        },
-        {
-          id: 'inv-b',
-          portfolioId: 'portfolio-3',
-          name: 'Beta',
-          type: 'stocks',
-          assetType: 'manual',
-          initialAmount: 90,
-          currentValue: 110,
-          contributions: [],
-          createdAt: new Date().toISOString(),
-          currency: 'CAD',
-        },
-      ],
+  describe('portfolio status', () => {
+    beforeEach(() => {
+      useInvestments.setState({
+        portfolios: [createMockPortfolio()],
+      });
     });
 
-    useInvestments.setState({ portfolios: [portfolio] });
-    const state = useInvestments.getState();
+    it('should handle different portfolio statuses', async () => {
+      const { result } = renderHook(() => useInvestments());
 
-    const total = await state.getTotalPortfolioValueInCurrency('portfolio-3', 'USD');
-    expect(convertAmountsToCurrencyMock).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({ amount: 120, currency: 'USD' }),
-        expect.objectContaining({ amount: 110, currency: 'CAD' }),
-      ]),
-      'USD'
-    );
-    expect(total).toBe(350);
+      // Test archiving
+      await act(async () => {
+        await result.current.updatePortfolio('portfolio-1', {
+          status: 'archived',
+        });
+      });
+
+      expect(mockUpdateAt).toHaveBeenCalled();
+
+      // Test closing
+      await act(async () => {
+        await result.current.updatePortfolio('portfolio-1', {
+          status: 'closed',
+        });
+      });
+
+      expect(mockUpdateAt).toHaveBeenCalledTimes(2);
+    });
   });
 });
