@@ -27,7 +27,7 @@ export function InteractivePackingMode({
 }: InteractivePackingModeProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [showKeyboardHints, setShowKeyboardHints] = useState(false);
-  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | 'down' | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
 
   // Mount the portal only on client side
@@ -37,10 +37,12 @@ export function InteractivePackingMode({
 
   // Motion values for swipe gestures
   const x = useMotionValue(0);
+  const y = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-25, 25]);
   const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0.5, 1, 1, 1, 0.5]);
   const swipeRightOpacity = useTransform(x, [0, 100], [0, 0.9]);
   const swipeLeftOpacity = useTransform(x, [-100, 0], [0.9, 0]);
+  const swipeDownOpacity = useTransform(y, [0, 100], [0, 0.9]);
 
   // Get all items that need attention (unpacked or later)
   const allItems = packingList.sections.flatMap((section) =>
@@ -117,12 +119,14 @@ export function InteractivePackingMode({
         setIsAnimating(false);
         setSwipeDirection(null);
         x.set(0);
+        y.set(0);
       }, 300);
     } catch (error) {
       console.error('[Quick Pack] Error setting item status:', error);
       setIsAnimating(false);
       setSwipeDirection(null);
       x.set(0);
+      y.set(0);
     }
   };
 
@@ -201,8 +205,13 @@ export function InteractivePackingMode({
     const threshold = 100;
     const { offset, velocity } = info;
 
+    // Swipe down = Pack Later
+    if (offset.y > threshold || velocity.y > 500) {
+      setSwipeDirection('down');
+      handleAction('later');
+    }
     // Swipe right = Packed
-    if (offset.x > threshold || velocity.x > 500) {
+    else if (offset.x > threshold || velocity.x > 500) {
       setSwipeDirection('right');
       handleAction('packed');
     }
@@ -214,6 +223,7 @@ export function InteractivePackingMode({
     // Not enough swipe, return to center
     else {
       x.set(0);
+      y.set(0);
     }
   };
 
@@ -373,7 +383,7 @@ export function InteractivePackingMode({
                   <div><kbd className="px-2 py-1 bg-white/20 rounded">Esc</kbd> - Exit</div>
                 </div>
                 <div className="mt-2 text-center opacity-75">
-                  Swipe right ➡ Packed • Swipe left ⬅ No Need
+                  Swipe right ➡ Packed • Swipe left ⬅ No Need • Swipe down ⬇ Later
                 </div>
               </motion.div>
             )}
@@ -384,9 +394,9 @@ export function InteractivePackingMode({
         <AnimatePresence mode="wait">
           <motion.div
             key={currentItem.id}
-            style={{ x, rotate, opacity }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
+            style={{ x, y, rotate, opacity }}
+            drag
+            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
             dragElastic={0.7}
             onDragEnd={handleDragEnd}
             initial={{ scale: 0.8, opacity: 0, rotateY: -90 }}
@@ -394,7 +404,8 @@ export function InteractivePackingMode({
             exit={{
               scale: 0.8,
               opacity: 0,
-              x: swipeDirection === 'right' ? 300 : swipeDirection === 'left' ? -300 : 0
+              x: swipeDirection === 'right' ? 300 : swipeDirection === 'left' ? -300 : 0,
+              y: swipeDirection === 'down' ? 300 : 0
             }}
             transition={{ type: 'spring', duration: 0.5 }}
             className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden cursor-grab active:cursor-grabbing relative"
@@ -415,6 +426,14 @@ export function InteractivePackingMode({
               }}
             >
               <XCircle className="w-16 h-16 text-white" />
+            </motion.div>
+            <motion.div
+              className="absolute inset-0 bg-amber-500 flex items-end justify-center pb-8 pointer-events-none z-10"
+              style={{
+                opacity: swipeDownOpacity,
+              }}
+            >
+              <Clock className="w-16 h-16 text-white" />
             </motion.div>
 
             {/* Section Badge */}
