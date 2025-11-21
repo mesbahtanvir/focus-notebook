@@ -12,6 +12,7 @@ import type {
   PackingList,
   PackingItem,
   PackingSectionId,
+  PackingItemStatus,
   CustomItemsState,
   AISuggestion,
   CreatePackingListRequest,
@@ -20,6 +21,8 @@ import type {
   UpdatePackingListResponse,
   TogglePackedRequest,
   TogglePackedResponse,
+  SetItemStatusRequest,
+  SetItemStatusResponse,
   AddCustomItemRequest,
   AddCustomItemResponse,
   DeleteCustomItemRequest,
@@ -37,6 +40,7 @@ interface PackingListsState {
   unsubscribe: (tripId: string) => void;
   createPackingList: (tripId: string) => Promise<PackingList>;
   togglePacked: (tripId: string, itemId: string, packed: boolean) => Promise<void>;
+  setItemStatus: (tripId: string, itemId: string, status: PackingItemStatus) => Promise<void>;
   addCustomItem: (tripId: string, sectionId: PackingSectionId, item: Omit<PackingItem, 'id'>) => Promise<string>;
   deleteCustomItem: (tripId: string, sectionId: PackingSectionId, itemId: string) => Promise<void>;
   toggleTimelineTask: (tripId: string, taskId: string) => Promise<void>;
@@ -156,6 +160,15 @@ export const usePackingLists = create<PackingListsState>((set, get) => ({
     await toggleFn({ tripId, itemId, packed });
   },
 
+  setItemStatus: async (tripId: string, itemId: string, status: PackingItemStatus) => {
+    const setStatusFn = httpsCallable<SetItemStatusRequest, SetItemStatusResponse>(
+      functionsClient,
+      'setPackingItemStatus'
+    );
+
+    await setStatusFn({ tripId, itemId, status });
+  },
+
   addCustomItem: async (
     tripId: string,
     sectionId: PackingSectionId,
@@ -230,8 +243,17 @@ export const usePackingLists = create<PackingListsState>((set, get) => ({
       });
     });
 
-    // Count packed items
-    const packedCount = packingList.packedItemIds.length;
+    // Count packed items - support both old and new format
+    let packedCount = 0;
+    if (packingList.itemStatuses) {
+      // New format: count items with status 'packed'
+      packedCount = Object.values(packingList.itemStatuses).filter(
+        (status) => status === 'packed'
+      ).length;
+    } else {
+      // Fallback to old format
+      packedCount = packingList.packedItemIds?.length || 0;
+    }
 
     const percentage = totalItems === 0 ? 0 : Math.round((packedCount / totalItems) * 100);
 

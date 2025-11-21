@@ -22,6 +22,7 @@ import type {
   PackingSection,
   CustomItemsState,
   PackingSectionId,
+  PackingItemStatus,
   CreatePackingListRequest,
   CreatePackingListResponse,
   UpdatePackingListRequest,
@@ -32,6 +33,8 @@ import type {
   DeleteCustomItemResponse,
   TogglePackedRequest,
   TogglePackedResponse,
+  SetItemStatusRequest,
+  SetItemStatusResponse,
   TimelinePhase,
   TimelinePhaseId,
   PackingGroup,
@@ -272,6 +275,7 @@ export const createPackingList = functions.https.onCall<
     userId,
     sections,
     packedItemIds: [],
+    itemStatuses: {},
     customItems: createEmptyCustomItems(),
     timelinePhases,
     timelineCompleted: [],
@@ -365,6 +369,66 @@ export const togglePackedItem = functions.https.onCall<
   }
 
   await packingListRef.update({
+    packedItemIds,
+    updatedAt: Date.now(),
+  });
+
+  return { success: true };
+});
+
+/**
+ * Cloud Function: Set packing item status (new three-state system)
+ */
+export const setPackingItemStatus = functions.https.onCall<
+  SetItemStatusRequest,
+  Promise<SetItemStatusResponse>
+>(async (request) => {
+  const userId = request.auth?.uid;
+  if (!userId) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const { tripId, itemId, status } = request.data;
+
+  if (!tripId || !itemId || !status) {
+    throw new HttpsError('invalid-argument', 'tripId, itemId, and status are required');
+  }
+
+  // Validate status
+  const validStatuses: PackingItemStatus[] = ['unpacked', 'packed', 'later', 'no-need'];
+  if (!validStatuses.includes(status)) {
+    throw new HttpsError('invalid-argument', `Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+  }
+
+  // Verify trip ownership
+  await verifyTripOwnership(userId, tripId);
+
+  // Update item status
+  const packingListRef = db.doc(`users/${userId}/trips/${tripId}/packingList/data`);
+  const doc = await packingListRef.get();
+
+  if (!doc.exists) {
+    throw new HttpsError('not-found', 'Packing list not found');
+  }
+
+  const data = doc.data() as PackingList;
+  const itemStatuses = data.itemStatuses || {};
+
+  // Update the status
+  itemStatuses[itemId] = status;
+
+  // For backward compatibility, also update packedItemIds
+  let packedItemIds = data.packedItemIds || [];
+  if (status === 'packed') {
+    if (!packedItemIds.includes(itemId)) {
+      packedItemIds.push(itemId);
+    }
+  } else {
+    packedItemIds = packedItemIds.filter((id) => id !== itemId);
+  }
+
+  await packingListRef.update({
+    itemStatuses,
     packedItemIds,
     updatedAt: Date.now(),
   });

@@ -6,7 +6,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Expense, ExpenseCategory, useTrips } from '@/store/useTrips';
 import { ExpenseFormModal } from '@/components/trip/ExpenseFormModal';
 import { ToolHeader } from '@/components/tools/ToolHeader';
-import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -266,7 +265,17 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
         )}
 
         <div>
-          <h2 className="text-2xl font-bold mb-4">Expenses</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold">Expenses</h2>
+            {!isPlanning && (
+              <Button
+                onClick={() => setIsExpenseFormOpen(true)}
+                className="bg-teal-600 hover:bg-teal-700"
+              >
+                Add Expense
+              </Button>
+            )}
+          </div>
           {isPlanning ? (
             <Card className="p-8 text-center">
               <p className="text-gray-600 dark:text-gray-400">
@@ -317,6 +326,11 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
                           <p className="text-lg font-bold">
                             {formatCurrency(expense.amount, expense.currency)}
                           </p>
+                          {expense.currency !== trip.currency && (
+                            <p className="text-xs text-gray-500">
+                              ({expense.currency})
+                            </p>
+                          )}
                         </div>
                         <Button
                           variant="ghost"
@@ -338,10 +352,6 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
             <h3 className="font-semibold mb-2">Notes</h3>
             <p className="text-gray-700 dark:text-gray-300">{trip.notes}</p>
           </Card>
-        )}
-
-        {canAddExpenses && (
-          <FloatingActionButton onClick={() => setIsExpenseFormOpen(true)} title="Add" />
         )}
 
         <ExpenseFormModal

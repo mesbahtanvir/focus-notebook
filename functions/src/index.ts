@@ -58,6 +58,7 @@ import {
   createPackingList,
   updatePackingList,
   togglePackedItem,
+  setPackingItemStatus,
   addCustomPackingItem,
   deleteCustomPackingItem,
 } from './packingList';
@@ -116,6 +117,7 @@ export {
   createPackingList,
   updatePackingList,
   togglePackedItem,
+  setPackingItemStatus,
   addCustomPackingItem,
   deleteCustomPackingItem,
 };
