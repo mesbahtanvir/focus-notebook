@@ -147,6 +147,8 @@ func main() {
 	// Initialize analytics services
 	dashboardAnalyticsSvc := services.NewDashboardAnalyticsService(repo, logger)
 	logger.Info("Dashboard analytics service initialized")
+	spendingAnalyticsSvc := services.NewSpendingAnalyticsService(repo, logger)
+	logger.Info("Spending analytics service initialized")
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(
@@ -174,7 +176,7 @@ func main() {
 	}
 
 	// Analytics handler (always available)
-	analyticsHandler := handlers.NewAnalyticsHandler(dashboardAnalyticsSvc, logger)
+	analyticsHandler := handlers.NewAnalyticsHandler(dashboardAnalyticsSvc, spendingAnalyticsSvc, logger)
 
 	// Create router
 	router := mux.NewRouter()
@@ -246,6 +248,7 @@ func main() {
 	// Analytics routes (authenticated)
 	analyticsRoutes := api.PathPrefix("/analytics").Subrouter()
 	analyticsRoutes.HandleFunc("/dashboard", analyticsHandler.GetDashboardAnalytics).Methods("GET")
+	analyticsRoutes.HandleFunc("/spending", analyticsHandler.GetSpendingAnalytics).Methods("GET")
 	logger.Info("Analytics endpoints registered")
 
 	// TODO: Add more routes here as we implement handlers
