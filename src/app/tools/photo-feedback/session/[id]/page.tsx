@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { usePhotoFeedback, type BattlePhoto } from "@/store/usePhotoFeedback";
 import { toastError } from "@/lib/toast-presets";
 import { useAuth } from "@/contexts/AuthContext";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Pair {
   left: BattlePhoto;
@@ -28,6 +29,7 @@ export default function PhotoBattleVotingPage() {
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const [loadedPhotos, setLoadedPhotos] = useState<Record<string, boolean>>({});
   const [isFetchingPair, setIsFetchingPair] = useState(false);
+  const [displayedPair, setDisplayedPair] = useState<Pair | null>(null);
   const recentPairsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -69,6 +71,13 @@ export default function PhotoBattleVotingPage() {
 
   const canVote = currentSession && currentSession.photos.length >= 2;
   const pair = pairBuffer[0] ?? null;
+
+  // Update displayed pair when pair changes and not animating
+  useEffect(() => {
+    if (pair && !isAnimating) {
+      setDisplayedPair(pair);
+    }
+  }, [pair, isAnimating]);
 
   // Helper to create a unique key for a pair
   const getPairKey = useCallback((left: BattlePhoto, right: BattlePhoto) => {
@@ -262,19 +271,19 @@ export default function PhotoBattleVotingPage() {
   );
 
   useEffect(() => {
-    if (!pair || isAnimating) return;
+    if (!displayedPair || isAnimating) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "ArrowLeft") {
         event.preventDefault();
-        void handleVote(pair.left, pair.right);
+        void handleVote(displayedPair.left, displayedPair.right);
       } else if (event.key === "ArrowRight") {
         event.preventDefault();
-        void handleVote(pair.right, pair.left);
+        void handleVote(displayedPair.right, displayedPair.left);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [pair, isAnimating, handleVote]);
+  }, [displayedPair, isAnimating, handleVote]);
 
   useEffect(() => {
     setSelectedPhotoId(null);
@@ -321,7 +330,17 @@ export default function PhotoBattleVotingPage() {
     );
   }
 
-  if (!pair) {
+  if (!displayedPair && !pair) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <Loader2 className="w-10 h-10 animate-spin text-purple-200" />
+        <p className="text-sm text-purple-100">Picking great photos to compare…</p>
+      </div>
+    );
+  }
+
+  const activePair = displayedPair || pair;
+  if (!activePair) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex flex-col items-center justify-center gap-4 p-6 text-center">
         <Loader2 className="w-10 h-10 animate-spin text-purple-200" />
@@ -340,57 +359,82 @@ export default function PhotoBattleVotingPage() {
           Voting with {authUser?.email ? `account ${authUser.email}` : "a temporary account"}
         </p>
 
-        <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2">
-          {[{ side: "left" as const, card: pair.left }, { side: "right" as const, card: pair.right }].map(({ side, card }) => {
-            const isSelected = selectedPhotoId === card.id;
-            const displayUrl = card.url;
-            const previewUrl = card.thumbnailUrl || displayUrl;
-            const isLoaded = loadedPhotos[card.id] !== false;
-            return (
-              <Card
-                key={card.id}
-                className={`group relative flex h-full cursor-pointer overflow-hidden border-2 bg-white/5 transition-all ${
-                  isSelected ? "border-white ring-2 ring-white/70" : "border-white/10 hover:border-white/40"
-                } ${isAnimating ? "pointer-events-none opacity-70" : ""}`}
-                onClick={() => handleVote(card, side === "left" ? pair.right : pair.left)}
-              >
-                <div className="relative w-full overflow-hidden rounded-lg aspect-[3/4] min-h-[280px]">
-                  {!isLoaded && previewUrl && previewUrl !== displayUrl && (
-                    <div
-                      className="absolute inset-0 bg-cover bg-center blur-sm scale-105"
-                      style={{ backgroundImage: `url(${previewUrl})` }}
-                      aria-hidden
-                    />
-                  )}
-                  <Image
-                    src={displayUrl}
-                    alt="Photo option"
-                    fill
-                    className="relative object-contain"
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                    priority={true}
-                    quality={85}
-                    unoptimized={displayUrl.includes('googleusercontent.com') || displayUrl.includes('firebasestorage.googleapis.com')}
-                    onLoadingComplete={() =>
-                      setLoadedPhotos(prev => ({
-                        ...prev,
-                        [card.id]: true,
-                      }))
-                    }
-                  />
-                  {isSelected && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center animate-fade-in">
-                      <div className="flex items-center gap-2 text-white font-semibold text-lg drop-shadow-lg">
-                        <CheckCircle2 className="w-6 h-6" />
-                        Selected
-                      </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activePair.left.id + activePair.right.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2"
+          >
+            {[{ side: "left" as const, card: activePair.left }, { side: "right" as const, card: activePair.right }].map(({ side, card }, index) => {
+              const isSelected = selectedPhotoId === card.id;
+              const displayUrl = card.url;
+              const previewUrl = card.thumbnailUrl || displayUrl;
+              const isLoaded = loadedPhotos[card.id] !== false;
+              return (
+                <motion.div
+                  key={card.id}
+                  initial={{ opacity: 0, x: index === 0 ? -30 : 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, delay: 0.1 + index * 0.1, ease: "easeOut" }}
+                >
+                  <Card
+                    className={`group relative flex h-full cursor-pointer overflow-hidden border-2 bg-white/5 transition-all ${
+                      isSelected ? "border-white ring-2 ring-white/70" : "border-white/10 hover:border-white/40"
+                    } ${isAnimating ? "pointer-events-none opacity-70" : ""}`}
+                    onClick={() => handleVote(card, side === "left" ? activePair.right : activePair.left)}
+                  >
+                    <div className="relative w-full overflow-hidden rounded-lg aspect-[3/4] min-h-[280px]">
+                      {!isLoaded && previewUrl && previewUrl !== displayUrl && (
+                        <div
+                          className="absolute inset-0 bg-cover bg-center blur-sm scale-105"
+                          style={{ backgroundImage: `url(${previewUrl})` }}
+                          aria-hidden
+                        />
+                      )}
+                      <Image
+                        src={displayUrl}
+                        alt="Photo option"
+                        fill
+                        className="relative object-contain"
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        priority={true}
+                        quality={85}
+                        unoptimized={displayUrl.includes('googleusercontent.com') || displayUrl.includes('firebasestorage.googleapis.com')}
+                        onLoadingComplete={() =>
+                          setLoadedPhotos(prev => ({
+                            ...prev,
+                            [card.id]: true,
+                          }))
+                        }
+                      />
+                      {isSelected && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.2 }}
+                          className="absolute inset-0 bg-black/40 flex items-center justify-center"
+                        >
+                          <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ duration: 0.3, delay: 0.1 }}
+                            className="flex items-center gap-2 text-white font-semibold text-lg drop-shadow-lg"
+                          >
+                            <CheckCircle2 className="w-6 h-6" />
+                            Selected
+                          </motion.div>
+                        </motion.div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
