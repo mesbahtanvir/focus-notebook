@@ -94,13 +94,36 @@ export function InvestmentFormModal({
   const quantity = watch('quantity');
   const currency = watch('currency');
 
+  // Reset form when investment changes (for edit mode)
   useEffect(() => {
     if (investment) {
+      reset({
+        name: investment.name,
+        type: investment.type,
+        assetType: investment.assetType,
+        ticker: investment.ticker || '',
+        quantity: investment.quantity || 0,
+        initialAmount: investment.initialAmount,
+        currentValue: investment.currentValue,
+        notes: investment.notes || '',
+        currency: investment.currency || DEFAULT_CURRENCY,
+      });
       setCurrentStockPrice(investment.currentPricePerShare ?? null);
     } else {
+      reset({
+        name: '',
+        type: 'stocks',
+        assetType: 'manual',
+        ticker: '',
+        quantity: 0,
+        initialAmount: 0,
+        currentValue: 0,
+        notes: '',
+        currency: DEFAULT_CURRENCY,
+      });
       setCurrentStockPrice(null);
     }
-  }, [investment]);
+  }, [investment, reset]);
 
   // Auto-fetch stock price when ticker changes
   useEffect(() => {
