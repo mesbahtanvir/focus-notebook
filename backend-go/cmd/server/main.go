@@ -144,6 +144,10 @@ func main() {
 		logger.Info("Plaid service initialized")
 	}
 
+	// Initialize analytics services
+	dashboardAnalyticsSvc := services.NewDashboardAnalyticsService(repo, logger)
+	logger.Info("Dashboard analytics service initialized")
+
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(
 		fbAdmin.Auth,
@@ -168,6 +172,9 @@ func main() {
 	if plaidService != nil {
 		plaidHandler = handlers.NewPlaidHandler(plaidService, logger)
 	}
+
+	// Analytics handler (always available)
+	analyticsHandler := handlers.NewAnalyticsHandler(dashboardAnalyticsSvc, logger)
 
 	// Create router
 	router := mux.NewRouter()
@@ -235,6 +242,11 @@ func main() {
 	} else {
 		logger.Warn("Plaid endpoints disabled (Plaid not configured)")
 	}
+
+	// Analytics routes (authenticated)
+	analyticsRoutes := api.PathPrefix("/analytics").Subrouter()
+	analyticsRoutes.HandleFunc("/dashboard", analyticsHandler.GetDashboardAnalytics).Methods("GET")
+	logger.Info("Analytics endpoints registered")
 
 	// TODO: Add more routes here as we implement handlers
 	// - /api/chat
