@@ -541,11 +541,13 @@ describe('useFocus store', () => {
     it('should delete session', async () => {
       const { result } = renderHook(() => useFocus());
 
-      useFocus.setState({
-        sessions: [
-          { id: 'session-1', tasks: [], duration: 30, startTime: '2024-01-01', currentTaskIndex: 0, isActive: false, isOnBreak: false, breaks: [] } as FocusSession,
-          { id: 'session-2', tasks: [], duration: 60, startTime: '2024-01-01', currentTaskIndex: 0, isActive: false, isOnBreak: false, breaks: [] } as FocusSession,
-        ],
+      act(() => {
+        useFocus.setState({
+          sessions: [
+            { id: 'session-1', tasks: [], duration: 30, startTime: '2024-01-01', currentTaskIndex: 0, isActive: false, isOnBreak: false, breaks: [] } as FocusSession,
+            { id: 'session-2', tasks: [], duration: 60, startTime: '2024-01-01', currentTaskIndex: 0, isActive: false, isOnBreak: false, breaks: [] } as FocusSession,
+          ],
+        });
       });
 
       await act(async () => {
@@ -560,8 +562,10 @@ describe('useFocus store', () => {
     it('should clear completed session', () => {
       const { result } = renderHook(() => useFocus());
 
-      useFocus.setState({
-        completedSession: { id: 'session-1', tasks: [], duration: 30, startTime: '2024-01-01', currentTaskIndex: 0, isActive: false, isOnBreak: false, breaks: [] } as FocusSession,
+      act(() => {
+        useFocus.setState({
+          completedSession: { id: 'session-1', tasks: [], duration: 30, startTime: '2024-01-01', currentTaskIndex: 0, isActive: false, isOnBreak: false, breaks: [] } as FocusSession,
+        });
       });
 
       act(() => {
@@ -589,11 +593,13 @@ describe('useFocus store', () => {
     it('should apply task order preferences', () => {
       const { result } = renderHook(() => useFocus());
 
-      useFocus.setState({
-        taskOrderPreferences: {
-          'task-2': { score: 0, updatedAt: '2024-01-01' },
-          'task-1': { score: 1, updatedAt: '2024-01-01' },
-        },
+      act(() => {
+        useFocus.setState({
+          taskOrderPreferences: {
+            'task-2': { score: 0, updatedAt: '2024-01-01' },
+            'task-1': { score: 1, updatedAt: '2024-01-01' },
+          },
+        });
       });
 
       const tasks = [

@@ -143,8 +143,10 @@ describe('useInvestments store', () => {
     it('should update a portfolio', async () => {
       const { result } = renderHook(() => useInvestments());
 
-      useInvestments.setState({
-        portfolios: [createMockPortfolio()],
+      act(() => {
+        useInvestments.setState({
+          portfolios: [createMockPortfolio()],
+        });
       });
 
       await act(async () => {
@@ -159,8 +161,10 @@ describe('useInvestments store', () => {
     it('should delete a portfolio', async () => {
       const { result } = renderHook(() => useInvestments());
 
-      useInvestments.setState({
-        portfolios: [createMockPortfolio()],
+      act(() => {
+        useInvestments.setState({
+          portfolios: [createMockPortfolio()],
+        });
       });
 
       await act(async () => {
@@ -198,12 +202,14 @@ describe('useInvestments store', () => {
     it('should update an investment', async () => {
       const { result } = renderHook(() => useInvestments());
 
-      useInvestments.setState({
-        portfolios: [
-          createMockPortfolio({
-            investments: [createMockInvestment()],
-          }),
-        ],
+      act(() => {
+        useInvestments.setState({
+          portfolios: [
+            createMockPortfolio({
+              investments: [createMockInvestment()],
+            }),
+          ],
+        });
       });
 
       await act(async () => {
