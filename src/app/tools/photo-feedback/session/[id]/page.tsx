@@ -267,18 +267,18 @@ export default function PhotoBattleVotingPage() {
 
   if (isLoading || !currentSession) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex flex-col items-center justify-center gap-4 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex flex-col items-center justify-center gap-4 p-6 md:p-8">
         {error ? (
-          <Card className="p-8 bg-white/10 border border-white/20 text-center max-w-md">
-            <p className="text-lg font-semibold mb-4">{error}</p>
-            <Link href="/tools/photo-feedback" className="text-purple-200 underline">
+          <Card className="p-6 md:p-8 bg-white/10 border border-white/20 text-center max-w-md md:max-w-lg">
+            <p className="text-base md:text-lg font-semibold mb-4">{error}</p>
+            <Link href="/tools/photo-feedback" className="text-purple-200 hover:text-purple-100 underline text-sm md:text-base">
               Go back
             </Link>
           </Card>
         ) : (
           <>
-            <Loader2 className="w-10 h-10 animate-spin text-purple-300" />
-            <p className="text-sm text-purple-100">Loading showdown…</p>
+            <Loader2 className="w-10 h-10 md:w-12 md:h-12 animate-spin text-purple-300" />
+            <p className="text-sm md:text-base text-purple-100">Loading showdown…</p>
           </>
         )}
       </div>
@@ -287,9 +287,9 @@ export default function PhotoBattleVotingPage() {
 
   if (!canVote) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex flex-col items-center justify-center gap-4 p-6 text-center">
-        <p className="text-xl font-semibold">Need at least two photos to start the battle.</p>
-        <Link href="/tools/photo-feedback" className="text-purple-200 underline">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex flex-col items-center justify-center gap-4 p-6 md:p-8 text-center">
+        <p className="text-lg md:text-xl font-semibold max-w-md">Need at least two photos to start the battle.</p>
+        <Link href="/tools/photo-feedback" className="text-purple-200 hover:text-purple-100 underline text-sm md:text-base">
           Upload more photos
         </Link>
       </div>
@@ -298,9 +298,9 @@ export default function PhotoBattleVotingPage() {
 
   if (!displayedPair && !pair) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex flex-col items-center justify-center gap-4 p-6 text-center">
-        <Loader2 className="w-10 h-10 animate-spin text-purple-200" />
-        <p className="text-sm text-purple-100">Picking great photos to compare…</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex flex-col items-center justify-center gap-4 p-6 md:p-8 text-center">
+        <Loader2 className="w-10 h-10 md:w-12 md:h-12 animate-spin text-purple-200" />
+        <p className="text-sm md:text-base text-purple-100">Picking great photos to compare…</p>
       </div>
     );
   }
@@ -308,20 +308,20 @@ export default function PhotoBattleVotingPage() {
   const activePair = displayedPair || pair;
   if (!activePair) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex flex-col items-center justify-center gap-4 p-6 text-center">
-        <Loader2 className="w-10 h-10 animate-spin text-purple-200" />
-        <p className="text-sm text-purple-100">Picking great photos to compare…</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex flex-col items-center justify-center gap-4 p-6 md:p-8 text-center">
+        <Loader2 className="w-10 h-10 md:w-12 md:h-12 animate-spin text-purple-200" />
+        <p className="text-sm md:text-base text-purple-100">Picking great photos to compare…</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-4 md:p-8">
-      <div className="max-w-6xl mx-auto flex h-full min-h-[70vh] flex-col gap-2 md:gap-4">
-        <p className="text-center text-sm text-purple-100/80">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-4 md:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto flex h-full min-h-[70vh] flex-col gap-3 md:gap-4">
+        <p className="text-center text-sm md:text-base text-purple-100/80">
           Click a photo or press ← / → to choose which shot looks better.
         </p>
-        <p className="text-center text-xs text-purple-200/70">
+        <p className="text-center text-xs md:text-sm text-purple-200/70">
           Voting with {authUser?.email ? `account ${authUser.email}` : "a temporary account"}
         </p>
 
@@ -332,7 +332,7 @@ export default function PhotoBattleVotingPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-            className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2"
+            className="grid flex-1 grid-cols-1 gap-4 md:gap-6 lg:grid-cols-2"
           >
             {[{ side: "left" as const, card: activePair.left }, { side: "right" as const, card: activePair.right }].map(({ side, card }, index) => {
               const isSelected = selectedPhotoId === card.id;
@@ -352,7 +352,7 @@ export default function PhotoBattleVotingPage() {
                     } ${isAnimating ? "pointer-events-none opacity-70" : ""}`}
                     onClick={() => handleVote(card, side === "left" ? activePair.right : activePair.left)}
                   >
-                    <div className="relative w-full overflow-hidden rounded-lg aspect-[3/4] min-h-[280px]">
+                    <div className="relative w-full overflow-hidden rounded-lg aspect-[3/4] min-h-[320px] md:min-h-[400px] lg:min-h-[380px]">
                       {!isLoaded && previewUrl && previewUrl !== displayUrl && (
                         <div
                           className="absolute inset-0 bg-cover bg-center blur-sm scale-105"
@@ -402,16 +402,16 @@ export default function PhotoBattleVotingPage() {
           </motion.div>
         </AnimatePresence>
 
-        <div className="flex justify-center mt-4">
+        <div className="flex justify-center mt-4 md:mt-6">
           <Button
             onClick={handleSkip}
             disabled={isAnimating}
             variant="outline"
-            className="bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 transition-all"
+            className="bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 transition-all px-4 py-2 md:px-6 md:py-3"
           >
-            <SkipForward className="h-4 w-4 mr-2" />
+            <SkipForward className="h-4 w-4 md:h-5 md:w-5 mr-2" />
             Skip this pair
-            <span className="ml-2 text-xs text-white/60">(Esc or ↓)</span>
+            <span className="ml-2 text-xs md:text-sm text-white/60">(Esc or ↓)</span>
           </Button>
         </div>
       </div>
