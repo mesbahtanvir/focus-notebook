@@ -132,7 +132,7 @@ describe('useFocus store', () => {
         },
       ];
 
-      mockSubscribeCol.mockImplementation((query, callback) => {
+      mockSubscribeCol.mockImplementation((query: any, callback: any) => {
         callback(mockSessions, { fromCache: false, hasPendingWrites: false });
         return jest.fn();
       });
@@ -543,8 +543,8 @@ describe('useFocus store', () => {
 
       useFocus.setState({
         sessions: [
-          { id: 'session-1', tasks: [], duration: 30 } as FocusSession,
-          { id: 'session-2', tasks: [], duration: 60 } as FocusSession,
+          { id: 'session-1', tasks: [], duration: 30, startTime: '2024-01-01', currentTaskIndex: 0, isActive: false, isOnBreak: false, breaks: [] } as FocusSession,
+          { id: 'session-2', tasks: [], duration: 60, startTime: '2024-01-01', currentTaskIndex: 0, isActive: false, isOnBreak: false, breaks: [] } as FocusSession,
         ],
       });
 
@@ -561,7 +561,7 @@ describe('useFocus store', () => {
       const { result } = renderHook(() => useFocus());
 
       useFocus.setState({
-        completedSession: { id: 'session-1', tasks: [], duration: 30 } as FocusSession,
+        completedSession: { id: 'session-1', tasks: [], duration: 30, startTime: '2024-01-01', currentTaskIndex: 0, isActive: false, isOnBreak: false, breaks: [] } as FocusSession,
       });
 
       act(() => {

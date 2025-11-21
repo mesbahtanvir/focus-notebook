@@ -1,8 +1,12 @@
 // Mock crypto.randomUUID globally
-global.crypto = {
-  ...global.crypto,
-  randomUUID: jest.fn(() => `test-uuid-${Date.now()}`),
-} as any;
+let idCounter = 0;
+const mockRandomUUID = () => `test-uuid-${idCounter++}`;
+Object.defineProperty(global, 'crypto', {
+  value: {
+    randomUUID: mockRandomUUID,
+  },
+  writable: true,
+});
 
 import { renderHook, act } from '@testing-library/react';
 import { useInvestments, Portfolio, Investment } from '@/store/useInvestments';
@@ -68,12 +72,11 @@ const createMockInvestment = (overrides: Partial<Investment> = {}): Investment =
 const resetStore = () => {
   useInvestments.setState({
     portfolios: [],
-    snapshots: [],
     isLoading: true,
     fromCache: false,
     hasPendingWrites: false,
-    unsubscribePortfolios: null,
-    unsubscribeSnapshots: null,
+    unsubscribe: null,
+    currentUserId: null,
   });
 };
 
@@ -88,7 +91,6 @@ describe('useInvestments store', () => {
       const { result } = renderHook(() => useInvestments());
 
       expect(result.current.portfolios).toEqual([]);
-      expect(result.current.snapshots).toEqual([]);
       expect(result.current.isLoading).toBe(true);
     });
   });
@@ -121,17 +123,6 @@ describe('useInvestments store', () => {
 
       expect(unsubscribeMock).toHaveBeenCalled();
     });
-
-    it('should load both portfolios and snapshots', () => {
-      const { result } = renderHook(() => useInvestments());
-
-      act(() => {
-        result.current.subscribe('test-user-id');
-      });
-
-      // Should call subscribeCol twice (once for portfolios, once for snapshots)
-      expect(mockSubscribeCol).toHaveBeenCalledTimes(2);
-    });
   });
 
   describe('portfolio management', () => {
@@ -142,7 +133,7 @@ describe('useInvestments store', () => {
         await result.current.addPortfolio({
           name: 'My Portfolio',
           description: 'Test description',
-          currency: 'CAD',
+          status: 'active',
         });
       });
 
