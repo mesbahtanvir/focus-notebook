@@ -22,7 +22,12 @@ export default function CurrentFocusGoal({
     return null;
   }
 
-  const progress = projectsTotal > 0 ? (projectsCompleted / projectsTotal) * 100 : 0;
+  // Use goal's own progress field if available, otherwise calculate from projects
+  // Note: This is a simplified implementation. Ideally, we should query the entity graph
+  // to get projects/tasks actually linked to this specific goal.
+  const progress = goal.progress !== undefined && goal.progress !== null
+    ? goal.progress
+    : (projectsTotal > 0 ? (projectsCompleted / projectsTotal) * 100 : 0);
 
   return (
     <motion.div

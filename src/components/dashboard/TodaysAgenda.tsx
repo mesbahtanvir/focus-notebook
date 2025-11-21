@@ -8,11 +8,17 @@ interface TodaysAgendaProps {
 }
 
 export default function TodaysAgenda({ tasks }: TodaysAgendaProps) {
-  // Filter tasks with due date = today
-  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-  const todaysTasks = tasks.filter(
-    (task) => !task.done && task.dueDate === today
-  );
+  // Filter tasks with due date = today (proper date comparison)
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+  const todaysTasks = tasks.filter((task) => {
+    if (task.done || !task.dueDate) return false;
+
+    const dueDate = new Date(task.dueDate);
+    return dueDate >= todayStart && dueDate <= todayEnd;
+  });
 
   if (todaysTasks.length === 0) {
     return null;
