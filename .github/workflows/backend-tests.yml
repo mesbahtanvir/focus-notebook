@@ -1,0 +1,166 @@
+name: Backend Go Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend-go/**'
+      - '.github/workflows/backend-tests.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend-go/**'
+      - '.github/workflows/backend-tests.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  test:
+    name: Run Go Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend-go
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: backend-go/go.sum
+
+      - name: Verify dependencies
+        run: |
+          go version
+          go mod download
+          go mod verify
+
+      - name: Run go mod tidy check
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run tests
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Display test coverage
+        run: go tool cover -func=coverage.out
+
+      - name: Generate coverage report
+        if: github.event_name == 'pull_request'
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}')
+          echo "## Test Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Total Coverage:** $COVERAGE" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Coverage by Package" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          go tool cover -func=coverage.out >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload coverage to artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: backend-go/coverage.out
+          retention-days: 7
+
+  lint:
+    name: Run Go Lint
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend-go
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: backend-go/go.sum
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          working-directory: backend-go
+          args: --timeout=5m
+
+  build:
+    name: Build Backend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend-go
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: backend-go/go.sum
+
+      - name: Download dependencies
+        run: |
+          go mod download
+          go mod verify
+
+      - name: Build
+        run: |
+          go build -v ./...
+          go build -v -o bin/server ./cmd/server
+
+      - name: Verify binary
+        run: |
+          ls -lh bin/
+          file bin/server
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend-go
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: backend-go/go.sum
+
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: '-no-fail -fmt sarif -out results.sarif ./...'
+        continue-on-error: true
+        env:
+          GOPATH: /home/runner/go
+
+      - name: Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+        continue-on-error: true
