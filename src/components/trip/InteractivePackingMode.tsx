@@ -26,7 +26,6 @@ export function InteractivePackingMode({
   onClose,
 }: InteractivePackingModeProps) {
   const [isMounted, setIsMounted] = useState(false);
-  const [showKeyboardHints, setShowKeyboardHints] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | 'down' | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -135,29 +134,20 @@ export function InteractivePackingMode({
     const handleKeyPress = (e: KeyboardEvent) => {
       if (isAnimating || !currentItem) return;
 
-      // Show hints when ? is pressed
-      if (e.key === '?' || e.key === '/') {
-        e.preventDefault();
-        setShowKeyboardHints((prev) => !prev);
-        return;
-      }
-
-      switch (e.key.toLowerCase()) {
-        case 'p':
-        case 'enter':
+      switch (e.key) {
+        case 'ArrowRight':
           e.preventDefault();
           handleAction('packed');
           break;
-        case 'l':
+        case 'ArrowDown':
           e.preventDefault();
           handleAction('later');
           break;
-        case 'n':
-        case 'x':
+        case 'ArrowLeft':
           e.preventDefault();
           handleAction('no-need');
           break;
-        case 'escape':
+        case 'Escape':
           e.preventDefault();
           onClose();
           break;
@@ -342,21 +332,12 @@ export function InteractivePackingMode({
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowKeyboardHints((prev) => !prev)}
-                className="p-2 hover:bg-white/20 rounded-full transition"
-                title="Keyboard shortcuts"
-              >
-                <Keyboard className="w-5 h-5" />
-              </button>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-white/20 rounded-full transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-full transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
           <div className="w-full bg-white/30 rounded-full h-3 overflow-hidden">
             <motion.div
@@ -366,28 +347,6 @@ export function InteractivePackingMode({
               transition={{ duration: 0.3 }}
             />
           </div>
-
-          {/* Keyboard Hints */}
-          <AnimatePresence>
-            {showKeyboardHints && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mt-3 bg-white/10 backdrop-blur-sm rounded-lg p-3 text-white text-xs"
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  <div><kbd className="px-2 py-1 bg-white/20 rounded">P</kbd> or <kbd className="px-2 py-1 bg-white/20 rounded">Enter</kbd> - Packed</div>
-                  <div><kbd className="px-2 py-1 bg-white/20 rounded">L</kbd> - Later</div>
-                  <div><kbd className="px-2 py-1 bg-white/20 rounded">N</kbd> or <kbd className="px-2 py-1 bg-white/20 rounded">X</kbd> - No Need</div>
-                  <div><kbd className="px-2 py-1 bg-white/20 rounded">Esc</kbd> - Exit</div>
-                </div>
-                <div className="mt-2 text-center opacity-75">
-                  Swipe right ➡ Packed • Swipe left ⬅ No Need • Swipe down ⬇ Later
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </motion.div>
 
         {/* Item Card */}
