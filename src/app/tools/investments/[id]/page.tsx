@@ -15,7 +15,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toolThemes } from '@/components/tools/themes';
-import { Trash2, Plus, RefreshCw, Sparkles, Camera, Pencil } from 'lucide-react';
+import { Trash2, Plus, RefreshCw, Sparkles, Camera, Pencil, LayoutGrid, List } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/store/useSettings';
 import { fetchStockHistory } from '@/lib/services/stockApi';
@@ -54,6 +54,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   const [predictions, setPredictions] = useState<any>(null);
   const [showPredictions, setShowPredictions] = useState(false);
   const [portfolioTotals, setPortfolioTotals] = useState({ totalValue: 0, totalInvested: 0, roi: 0 });
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   useEffect(() => {
     if (user?.uid) {
@@ -334,7 +335,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? 'Refreshing...' : 'Refresh Stock Prices'}
+                {isRefreshing ? 'Refreshing...' : 'Refresh All Prices'}
               </Button>
 
               <Button
@@ -445,7 +446,29 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
         )}
 
         <div>
-          <h2 className="text-2xl font-bold mb-4">Investments</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Investments</h2>
+            {portfolio.investments.length > 0 && (
+              <div className="flex gap-2">
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                >
+                  <List className="w-4 h-4 mr-2" />
+                  List
+                </Button>
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                >
+                  <LayoutGrid className="w-4 h-4 mr-2" />
+                  Grid
+                </Button>
+              </div>
+            )}
+          </div>
           {portfolio.investments.length === 0 ? (
             <Card className="p-8 text-center">
               <p className="text-gray-600 dark:text-gray-400 mb-4">
@@ -460,6 +483,122 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
               >
                 Add First Investment
               </Button>
+            </Card>
+          ) : viewMode === 'list' ? (
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Investment
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Initial
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Current
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Gain/Loss
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        ROI
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                    {portfolio.investments.map((investment) => {
+                      const initialAmount = convertFromCurrency(investment.initialAmount, investment.currency);
+                      const currentAmount = convertFromCurrency(investment.currentValue, investment.currency);
+                      const investmentGain = currentAmount - initialAmount;
+                      const investmentROI =
+                        initialAmount > 0
+                          ? ((investmentGain / initialAmount) * 100)
+                          : 0;
+                      const isInvestmentPositive = investmentGain >= 0;
+
+                      return (
+                        <tr key={investment.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-start gap-3">
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                  {investment.name}
+                                </div>
+                                <div className="flex gap-2 mt-1">
+                                  <Badge variant="outline" className="text-xs">
+                                    {investment.type}
+                                  </Badge>
+                                  {investment.ticker && (
+                                    <Badge variant="outline" className="text-xs font-mono bg-blue-50 text-blue-700">
+                                      {investment.ticker}
+                                    </Badge>
+                                  )}
+                                  {investment.assetType === 'stock' && (
+                                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                                      Auto-Tracked
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium font-mono tabular-nums text-gray-900 dark:text-gray-100">
+                            {formatAmount(initialAmount)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium font-mono tabular-nums text-amber-600">
+                            {formatAmount(currentAmount)}
+                          </td>
+                          <td className={`px-6 py-4 whitespace-nowrap text-right text-sm font-medium font-mono tabular-nums ${isInvestmentPositive ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatAmount(investmentGain)}
+                          </td>
+                          <td className={`px-6 py-4 whitespace-nowrap text-right text-sm font-medium font-mono tabular-nums ${isInvestmentPositive ? 'text-green-600' : 'text-red-600'}`}>
+                            {investmentROI.toFixed(2)}%
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex gap-1 justify-end">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setInvestmentToEdit(investment);
+                                  setIsInvestmentFormOpen(true);
+                                }}
+                                title="Edit"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedInvestment(investment);
+                                  setIsContributionFormOpen(true);
+                                }}
+                                title="Add Contribution"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteInvestment(investment.id)}
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </Card>
           ) : (
             <div className="space-y-4">
@@ -652,7 +791,8 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
                 );
               })}
             </div>
-          )}
+          )
+          }
         </div>
 
         <FloatingActionButton
