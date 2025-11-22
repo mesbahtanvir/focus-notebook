@@ -78,10 +78,11 @@ describe('Phase 2: Delete Functionality', () => {
       expect(fileContent).toContain('handleDeleteProcessedThought');
       expect(fileContent).toContain('Trash2');
       expect(fileContent).toContain('onClick={() => handleDeleteProcessedThought');
-      
-      // Should remove cbtAnalysis and cbt-processed tag
+
+      // Should remove cbtAnalysis and clear toolProcessing.cbt
       expect(fileContent).toContain('cbtAnalysis: undefined');
-      expect(fileContent).toContain('.filter(tag => tag !== \'cbt-processed\')');
+      expect(fileContent).toContain('toolProcessing:');
+      expect(fileContent).toContain('cbt: undefined');
     });
 
     it('should have Trash2 icon imported in CBT page', async () => {
@@ -136,17 +137,18 @@ describe('Phase 2: Delete Functionality', () => {
   });
 
   describe('CBT Delete Handler - Logic Validation', () => {
-    it('should remove cbt-processed tag and clear cbtAnalysis', async () => {
+    it('should clear cbtAnalysis and toolProcessing', async () => {
       const fs = require('fs');
       const path = require('path');
       const filePath = path.join(process.cwd(), 'src/app/tools/cbt/page.tsx');
       const fileContent = fs.readFileSync(filePath, 'utf8');
-      
-      // Should filter out cbt-processed tag
-      expect(fileContent).toContain('.filter(tag => tag !== \'cbt-processed\')');
-      
+
       // Should set cbtAnalysis to undefined
       expect(fileContent).toContain('cbtAnalysis: undefined');
+
+      // Should clear toolProcessing.cbt
+      expect(fileContent).toContain('toolProcessing:');
+      expect(fileContent).toContain('cbt: undefined');
     });
 
     it('should pass thoughtId to updateThought correctly', async () => {

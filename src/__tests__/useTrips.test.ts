@@ -442,8 +442,9 @@ describe('useTrips store', () => {
 
     it('converts total spent to CAD when calculating average daily spend', () => {
       const tripId = 'trip-daily';
-      const startDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString();
-      const endDate = new Date(Date.now()).toISOString();
+      const baseDate = new Date('2024-01-11T00:00:00Z');
+      const startDate = new Date('2024-01-01T00:00:00Z').toISOString();
+      const endDate = baseDate.toISOString();
 
       act(() => {
         useTrips.setState({
