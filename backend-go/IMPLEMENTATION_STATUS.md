@@ -55,7 +55,7 @@
 | Stripe | ✅ Complete | `internal/clients/stripe.go` | Payment processing |
 | Plaid | ✅ Complete | `internal/clients/plaid.go` | Banking integration |
 | Rate Limiter | ✅ Complete | `internal/clients/ratelimiter.go` | Token bucket rate limiting |
-| Alpha Vantage | ❌ Missing | Need for stock data | |
+| Alpha Vantage | ✅ Complete | `internal/clients/alphavantage.go` | Stock market data |
 
 ---
 
@@ -99,17 +99,17 @@
 | Service | Status | File | Notes |
 |---------|--------|------|-------|
 | Plaid Service | ✅ Complete | `services/plaid.go` | Link, sync, webhooks |
-| Transaction Categorization | ❌ Missing | Need `services/categorization.go` | AI categorization |
+| Transaction Categorization | ✅ Complete | `services/transaction_categorization.go` | AI categorization (GPT-4o) |
 | Subscription Detection | ❌ Missing | Need `services/subscription_detection.go` | Detect recurring charges |
 | Trip Linking | ❌ Missing | Need `services/trip_linking.go` | Link transactions to trips |
-| CSV Processing | ❌ Missing | Need `services/csv_processing.go` | Parse bank statements |
+| CSV Processing | ✅ Complete | `services/csv_processing.go` | Parse bank statements |
 
 ### Investment
 
 | Service | Status | File | Notes |
 |---------|--------|------|-------|
 | Investment Calculations | ✅ Complete | `services/investment_calculations.go` | Metrics, projections |
-| Stock Service | ❌ Missing | Need `services/stock.go` | Real-time stock data |
+| Stock Service | ✅ Complete | `services/stock.go` | Real-time stock data, Alpha Vantage integration |
 | Market Data Updater | ❌ Missing | Need worker for price updates | |
 | Portfolio Snapshots | ❌ Missing | Need worker for daily snapshots | |
 
@@ -221,9 +221,9 @@
 | - Portfolio Snapshots | ✅ Complete | | `GET /api/portfolio/{id}/snapshots` |
 | - Generate Projection | ✅ Complete | | `POST /api/portfolio/projection` |
 | - Dashboard Summary | ✅ Complete | | `GET /api/portfolio/summary` |
-| Stock Handler | ❌ Missing | Need `handlers/stock.go` | 3 endpoints needed |
-| - Get Stock Price | ❌ Missing | | `GET /api/stock-price` |
-| - Get Stock History | ❌ Missing | | `GET /api/stock-history` |
+| Stock Handler | ✅ Complete | `handlers/stock.go` | 2 endpoints |
+| - Get Stock Price | ✅ Complete | | `POST /api/stock-price` |
+| - Get Stock History | ✅ Complete | | `POST /api/stock-history` |
 | - Predict Investment | ❌ Missing | | `POST /api/predict-investment` |
 
 ### Entity Graph
@@ -240,12 +240,12 @@
 
 | Handler | Status | File | Endpoints |
 |---------|--------|------|-----------|
-| Spending Handler | ❌ Missing | Need `handlers/spending.go` | 5 endpoints needed |
+| Spending Handler | ⚠️ Partial | `handlers/spending.go` | 2 of 5 endpoints |
 | - Categorize Transaction | ❌ Missing | | `POST /api/spending/categorize` |
 | - Link to Trip | ❌ Missing | | `POST /api/spending/link-trip` |
-| - Delete CSV | ❌ Missing | | `POST /api/spending/delete-csv` |
+| - Delete CSV | ✅ Complete | | `POST /api/spending/delete-csv` |
 | - Delete All Transactions | ❌ Missing | | `POST /api/spending/delete-all` |
-| - Process CSV | ❌ Missing | | `POST /api/spending/process-csv` |
+| - Process CSV | ✅ Complete | | `POST /api/spending/process-csv` |
 
 ### Photos
 
@@ -308,6 +308,7 @@
 |-------|--------|------|-------|
 | Common Models | ✅ Complete | `internal/models/common.go` | BaseDocument, Timestamps |
 | Thought Models | ✅ Complete | `internal/models/thought.go` | Thought, ProcessedThought |
+| Transaction Models | ✅ Complete | `internal/models/transaction.go` | Transaction, CSV, Enhanced |
 | Other Models | ❌ Missing | Need model files | Task, Goal, Trip, Portfolio, etc. |
 
 **Need to create:**
@@ -316,7 +317,6 @@
 - `models/project.go`
 - `models/trip.go`
 - `models/portfolio.go`
-- `models/transaction.go`
 - `models/photo.go`
 - `models/packing_list.go`
 - etc.
@@ -374,12 +374,12 @@
 |----------|-------|----------|---------|---------|------------|
 | Infrastructure | 11 | 9 | 1 | 1 | 82% |
 | Auth & Authorization | 5 | 5 | 0 | 0 | 100% |
-| External Clients | 7 | 6 | 0 | 1 | 86% |
-| Services | 22 | 11 | 0 | 11 | 50% |
-| API Handlers | 17 | 8 | 0 | 9 | 47% |
+| External Clients | 7 | 7 | 0 | 0 | 100% |
+| Services | 22 | 14 | 0 | 8 | 64% |
+| API Handlers | 17 | 9 | 1 | 7 | 53% |
 | Background Workers | 7 | 0 | 0 | 7 | 0% |
 | Storage Triggers | 3 | 0 | 0 | 3 | 0% |
-| **TOTAL** | **72** | **39** | **1** | **32** | **54%** |
+| **TOTAL** | **72** | **44** | **2** | **26** | **61%** |
 
 ### By Priority
 
@@ -399,13 +399,13 @@
 | Banking (Plaid) | 6 | 6 | 0 | 100% |
 | Analytics | 2 | 2 | 0 | 100% |
 | Import/Export | 4 | 4 | 0 | 100% |
-| Investment | 7 | 4 | 3 | 57% |
+| Investment | 7 | 6 | 1 | 86% |
 | Entity Graph | 4 | 4 | 0 | 100% |
-| Spending | 5 | 0 | 5 | 0% |
+| Spending | 5 | 2 | 3 | 40% |
 | Photos | 3 | 0 | 3 | 0% |
 | Packing Lists | 3 | 0 | 3 | 0% |
 | Places & Visa | 2 | 0 | 2 | 0% |
-| **TOTAL** | **49** | **32** | **17** | **65%** |
+| **TOTAL** | **49** | **36** | **13** | **73%** |
 
 ---
 
@@ -413,28 +413,40 @@
 
 ### Immediate Priorities (Week 1)
 
-1. **Worker Infrastructure** 🔴 High
+1. **Remaining Spending Endpoints** 🔴 High
+   - Categorize single transaction
+   - Link transaction to trip
+   - Delete all transactions
+
+2. **Photo Service** 🔴 High
+   - Implement `services/photo.go`
+   - Thumbnail generation
+   - Elo voting algorithm
+   - CDN URL generation
+
+3. **Chat Service** 🔴 High
+   - Implement `services/chat.go`
+   - AI conversation interface
+   - Context management
+
+### Short-term (Weeks 2-4)
+
+4. **Worker Infrastructure** 🔴 High
    - Create `cmd/worker/main.go`
    - Implement scheduler
    - Add monitoring
 
-2. **Stock Service** 🔴 High
-   - Implement `services/stock.go`
-   - Alpha Vantage client
-   - API endpoints
+5. **Market Data Worker** 🔴 High
+   - Hourly stock price updates
+   - Use existing stock service
 
-3. **CSV Processing** 🔴 High
-   - Implement `services/csv_processing.go`
-   - File parser
-   - Storage trigger
+6. **Predict Investment Endpoint** 🔴 High
+   - AI-powered investment predictions
+   - Integration with portfolio data
 
-### Short-term (Weeks 2-4)
-
-4. **Photo Service** 🔴 High
-5. **Chat Service** 🔴 High
-6. **Spending Endpoints** 🔴 High
-7. **Transaction Categorization** 🔴 High
-8. **Market Data Worker** 🔴 High
+7. **Storage Trigger for CSV** 🔴 High
+   - Cloud Storage trigger setup
+   - Auto-process on file upload
 
 ### Medium-term (Weeks 5-8)
 
