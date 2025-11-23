@@ -15,13 +15,13 @@ import {
   ToolCard,
   EmptyState
 } from "@/components/tools";
-import { 
-  filterUnprocessedThoughts, 
-  filterProcessedThoughts, 
+import {
+  filterUnprocessedThoughts,
+  filterProcessedThoughts,
   calculateCBTStats,
   formatDate,
   formatDetailedDate,
-  addCBTProcessedTag 
+  markCBTAsProcessed
 } from "@/lib/cbtUtils";
 
 export default function CBTPage() {
@@ -47,12 +47,10 @@ export default function CBTPage() {
   }, [thoughts, searchQuery]);
 
   const handleProcessComplete = (thought: Thought, cbtData: any) => {
-    // Update thought with CBT analysis and add "cbt-processed" tag
-    const updatedTags = addCBTProcessedTag(thought.tags || []);
-
+    // Update thought with CBT analysis and mark as processed
     updateThought(thought.id, {
       cbtAnalysis: cbtData,
-      tags: updatedTags,
+      toolProcessing: markCBTAsProcessed('manual'),
     });
 
     setSelectedThought(null);
@@ -62,12 +60,12 @@ export default function CBTPage() {
     const thought = thoughts.find(t => t.id === thoughtId);
     if (!thought) return;
 
-    // Remove cbt-processed tag and clear cbtAnalysis
-    const updatedTags = (thought.tags || []).filter(tag => tag !== 'cbt-processed');
-    
+    // Clear cbtAnalysis and toolProcessing
     await updateThought(thoughtId, {
       cbtAnalysis: undefined,
-      tags: updatedTags,
+      toolProcessing: thought.toolProcessing
+        ? { ...thought.toolProcessing, cbt: undefined }
+        : undefined,
     });
   };
 
