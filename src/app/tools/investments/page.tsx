@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInvestments } from '@/store/useInvestments';
-import { PortfolioCard } from '@/components/investment/PortfolioCard';
+import { PortfolioTable } from '@/components/investment/PortfolioTable';
 import { PortfolioFormModal } from '@/components/investment/PortfolioFormModal';
 import { ToolHeader } from '@/components/tools/ToolHeader';
 import { SearchAndFilters } from '@/components/tools/SearchAndFilters';
@@ -539,16 +539,7 @@ function InvestmentsPageContent() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
-            {filteredPortfolios.map((portfolio, index) => (
-              <PortfolioCard
-                key={portfolio.id}
-                portfolio={portfolio}
-                index={index}
-                currency={currency}
-              />
-            ))}
-          </div>
+          <PortfolioTable portfolios={filteredPortfolios} currency={currency} />
         )}
 
         <FloatingActionButton onClick={() => setIsFormOpen(true)} title="Add" />
