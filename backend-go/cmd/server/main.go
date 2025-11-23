@@ -10,9 +10,11 @@ import (
 	"syscall"
 	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
+	"google.golang.org/api/option"
 
 	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/clients"
 	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/config"
@@ -58,6 +60,21 @@ func main() {
 
 	logger.Info("Firebase initialized successfully")
 
+	// Initialize Cloud Storage client (for CSV processing)
+	storageClient, err := storage.NewClient(ctx, option.WithCredentialsFile(cfg.Firebase.CredentialsPath))
+	if err != nil {
+		logger.Warn("Failed to initialize Cloud Storage client", zap.Error(err))
+	} else {
+		logger.Info("Cloud Storage client initialized")
+	}
+	defer func() {
+		if storageClient != nil {
+			if err := storageClient.Close(); err != nil {
+				logger.Error("Failed to close Cloud Storage client", zap.Error(err))
+			}
+		}
+	}()
+
 	// Initialize AI clients
 	var openaiClient *clients.OpenAIClient
 	if cfg.OpenAI.APIKey != "" {
@@ -82,6 +99,13 @@ func main() {
 	// Check if at least one AI client is available
 	if openaiClient == nil && anthropicClient == nil {
 		logger.Warn("No AI clients configured - thought processing will not work")
+	}
+
+	// Initialize transaction categorization service
+	var categorizationSvc *services.TransactionCategorizationService
+	if openaiClient != nil {
+		categorizationSvc = services.NewTransactionCategorizationService(openaiClient, logger)
+		logger.Info("Transaction categorization service initialized")
 	}
 
 	// Initialize Stripe client
@@ -178,6 +202,21 @@ func main() {
 		logger.Info("Stock service initialized")
 	}
 
+	// Initialize CSV processing service
+	var csvProcessingSvc *services.CSVProcessingService
+	if storageClient != nil && categorizationSvc != nil {
+		csvProcessingSvc = services.NewCSVProcessingService(
+			repo,
+			storageClient,
+			categorizationSvc,
+			cfg.Firebase.StorageBucket,
+			logger,
+		)
+		logger.Info("CSV processing service initialized")
+	} else {
+		logger.Warn("CSV processing service disabled (Cloud Storage or categorization not available)")
+	}
+
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(
 		fbAdmin.Auth,
@@ -220,6 +259,13 @@ func main() {
 	if stockService != nil {
 		stockHandler = handlers.NewStockHandler(stockService, logger)
 		logger.Info("Stock handler initialized")
+	}
+
+	// Spending handler
+	var spendingHandler *handlers.SpendingHandler
+	if csvProcessingSvc != nil {
+		spendingHandler = handlers.NewSpendingHandler(csvProcessingSvc, logger)
+		logger.Info("Spending handler initialized")
 	}
 
 	// Create router
@@ -330,10 +376,21 @@ func main() {
 		logger.Warn("Stock endpoints disabled (Alpha Vantage not configured)")
 	}
 
+	// Spending routes (authenticated)
+	if spendingHandler != nil {
+		spendingRoutes := api.PathPrefix("/spending").Subrouter()
+		spendingRoutes.HandleFunc("/process-csv", spendingHandler.ProcessCSV).Methods("POST")
+		spendingRoutes.HandleFunc("/delete-csv", spendingHandler.DeleteCSV).Methods("POST")
+		logger.Info("Spending endpoints registered")
+	} else {
+		logger.Warn("Spending endpoints disabled (CSV processing service not available)")
+	}
+
 	// TODO: Add more routes here as we implement handlers
 	// - /api/chat
 	// - /api/predict-investment
-	// - /api/spending/*
+	// - /api/spending/categorize-transaction
+	// - /api/spending/link-to-trip
 	// - /api/photo/*
 	// etc.
 
