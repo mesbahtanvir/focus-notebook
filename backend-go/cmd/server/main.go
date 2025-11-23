@@ -107,6 +107,15 @@ func main() {
 		logger.Warn("Plaid not configured - banking features will not work")
 	}
 
+	// Initialize Alpha Vantage client
+	var alphaVantageClient *clients.AlphaVantageClient
+	if cfg.AlphaVantage.APIKey != "" {
+		alphaVantageClient = clients.NewAlphaVantageClient(&cfg.AlphaVantage, logger)
+		logger.Info("Alpha Vantage client initialized")
+	} else {
+		logger.Warn("Alpha Vantage not configured - stock price features will not work")
+	}
+
 	// Initialize repository
 	repo := repository.NewFirestoreRepository(fbAdmin.Firestore)
 
@@ -162,6 +171,13 @@ func main() {
 	entityGraphSvc := services.NewEntityGraphService(repo, logger)
 	logger.Info("Entity graph service initialized")
 
+	// Initialize stock service
+	var stockService *services.StockService
+	if alphaVantageClient != nil {
+		stockService = services.NewStockService(repo, alphaVantageClient, logger)
+		logger.Info("Stock service initialized")
+	}
+
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(
 		fbAdmin.Auth,
@@ -198,6 +214,13 @@ func main() {
 
 	// Entity graph handler (always available)
 	entityGraphHandler := handlers.NewEntityGraphHandler(entityGraphSvc, logger)
+
+	// Stock handler
+	var stockHandler *handlers.StockHandler
+	if stockService != nil {
+		stockHandler = handlers.NewStockHandler(stockService, logger)
+		logger.Info("Stock handler initialized")
+	}
 
 	// Create router
 	router := mux.NewRouter()
@@ -297,6 +320,15 @@ func main() {
 	entityGraphRoutes.HandleFunc("/tools", entityGraphHandler.GetToolRelationships).Methods("GET")
 	entityGraphRoutes.HandleFunc("/stats", entityGraphHandler.GetRelationshipStats).Methods("GET")
 	logger.Info("Entity graph endpoints registered")
+
+	// Stock routes (authenticated)
+	if stockHandler != nil {
+		api.HandleFunc("/stock-price", stockHandler.GetStockPrice).Methods("POST")
+		api.HandleFunc("/stock-history", stockHandler.GetStockHistory).Methods("POST")
+		logger.Info("Stock endpoints registered")
+	} else {
+		logger.Warn("Stock endpoints disabled (Alpha Vantage not configured)")
+	}
 
 	// TODO: Add more routes here as we implement handlers
 	// - /api/chat
