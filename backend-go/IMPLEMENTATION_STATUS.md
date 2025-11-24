@@ -240,11 +240,11 @@
 
 | Handler | Status | File | Endpoints |
 |---------|--------|------|-----------|
-| Spending Handler | ⚠️ Partial | `handlers/spending.go` | 2 of 5 endpoints |
-| - Categorize Transaction | ❌ Missing | | `POST /api/spending/categorize` |
-| - Link to Trip | ❌ Missing | | `POST /api/spending/link-trip` |
+| Spending Handler | ✅ Complete | `handlers/spending.go` | 5 of 5 endpoints |
+| - Categorize Transaction | ✅ Complete | | `POST /api/spending/categorize` |
+| - Link to Trip | ✅ Complete | | `POST /api/spending/link-trip` |
 | - Delete CSV | ✅ Complete | | `POST /api/spending/delete-csv` |
-| - Delete All Transactions | ❌ Missing | | `POST /api/spending/delete-all` |
+| - Delete All Transactions | ✅ Complete | | `POST /api/spending/delete-all` |
 | - Process CSV | ✅ Complete | | `POST /api/spending/process-csv` |
 
 ### Photos
@@ -376,10 +376,10 @@
 | Auth & Authorization | 5 | 5 | 0 | 0 | 100% |
 | External Clients | 7 | 7 | 0 | 0 | 100% |
 | Services | 22 | 14 | 0 | 8 | 64% |
-| API Handlers | 17 | 9 | 1 | 7 | 53% |
+| API Handlers | 17 | 10 | 0 | 7 | 59% |
 | Background Workers | 7 | 0 | 0 | 7 | 0% |
 | Storage Triggers | 3 | 0 | 0 | 3 | 0% |
-| **TOTAL** | **72** | **44** | **2** | **26** | **61%** |
+| **TOTAL** | **72** | **45** | **1** | **26** | **63%** |
 
 ### By Priority
 
@@ -401,11 +401,11 @@
 | Import/Export | 4 | 4 | 0 | 100% |
 | Investment | 7 | 6 | 1 | 86% |
 | Entity Graph | 4 | 4 | 0 | 100% |
-| Spending | 5 | 2 | 3 | 40% |
+| Spending | 5 | 5 | 0 | 100% |
 | Photos | 3 | 0 | 3 | 0% |
 | Packing Lists | 3 | 0 | 3 | 0% |
 | Places & Visa | 2 | 0 | 2 | 0% |
-| **TOTAL** | **49** | **36** | **13** | **73%** |
+| **TOTAL** | **49** | **39** | **10** | **80%** |
 
 ---
 
@@ -413,21 +413,23 @@
 
 ### Immediate Priorities (Week 1)
 
-1. **Remaining Spending Endpoints** 🔴 High
-   - Categorize single transaction
-   - Link transaction to trip
-   - Delete all transactions
-
-2. **Photo Service** 🔴 High
+1. **Photo Service** 🔴 High
    - Implement `services/photo.go`
    - Thumbnail generation
    - Elo voting algorithm
    - CDN URL generation
+   - 3 API endpoints needed
 
-3. **Chat Service** 🔴 High
+2. **Chat Service** 🔴 High
    - Implement `services/chat.go`
    - AI conversation interface
    - Context management
+   - 1 API endpoint needed
+
+3. **Predict Investment Endpoint** 🔴 High
+   - AI-powered investment predictions
+   - Integration with portfolio data
+   - Complete Investment category (7/7)
 
 ### Short-term (Weeks 2-4)
 
@@ -440,28 +442,46 @@
    - Hourly stock price updates
    - Use existing stock service
 
-6. **Predict Investment Endpoint** 🔴 High
-   - AI-powered investment predictions
-   - Integration with portfolio data
-
-7. **Storage Trigger for CSV** 🔴 High
+6. **Storage Trigger for CSV** 🔴 High
    - Cloud Storage trigger setup
    - Auto-process on file upload
 
+7. **Packing List Service** 🟡 Medium
+   - AI-powered packing list generation
+   - Template management
+   - 3 API endpoints needed
+
 ### Medium-term (Weeks 5-8)
 
-9. **Packing List Service** 🟡 Medium
-10. **Trip Linking Service** 🟡 Medium
-11. **DEXA Scan Service** 🟡 Medium
-12. **Visa Service** 🟡 Medium
-13. **All Background Workers** 🟡 Medium
+8. **Trip Linking Service** 🟡 Medium
+   - AI-powered transaction-to-trip linking
+   - Background worker implementation
+
+9. **DEXA Scan Service** 🟡 Medium
+   - PDF parsing for body composition data
+
+10. **Visa Service** 🟡 Medium
+    - Visa requirements data service
+
+11. **All Background Workers** 🟡 Medium
+    - Portfolio snapshots
+    - Anonymous cleanup
+    - Subscription detection
 
 ### Long-term (Weeks 9+)
 
-14. **Place Insights** 🟢 Low
-15. **Complete Test Coverage** 🟡 Medium
-16. **API Documentation** 🟡 Medium
-17. **Frontend Migration** 🔴 High
+12. **Place Insights** 🟢 Low
+    - AI-generated place insights
+
+13. **Complete Test Coverage** 🟡 Medium
+    - Unit tests for all services
+    - Integration tests
+
+14. **API Documentation** 🟡 Medium
+    - OpenAPI/Swagger spec
+
+15. **Frontend Migration** 🔴 High
+    - Migrate frontend to use Go backend APIs
 
 ---
 
