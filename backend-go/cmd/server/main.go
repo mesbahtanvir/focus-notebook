@@ -249,6 +249,17 @@ func main() {
 	packingListService := services.NewPackingListService(repo, logger)
 	logger.Info("Packing list service initialized")
 
+	// Initialize place insights service
+	var placeInsightsService *services.PlaceInsightsService
+	if openaiClient != nil {
+		placeInsightsService = services.NewPlaceInsightsService(openaiClient, logger)
+		logger.Info("Place insights service initialized")
+	}
+
+	// Initialize visa service
+	visaService := services.NewVisaService(repo, logger)
+	logger.Info("Visa service initialized")
+
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(
 		fbAdmin.Auth,
@@ -317,6 +328,17 @@ func main() {
 	// Packing list handler (always available)
 	packingListHandler := handlers.NewPackingListHandler(packingListService, logger)
 	logger.Info("Packing list handler initialized")
+
+	// Place insights handler
+	var placeInsightsHandler *handlers.PlaceInsightsHandler
+	if placeInsightsService != nil {
+		placeInsightsHandler = handlers.NewPlaceInsightsHandler(placeInsightsService, logger)
+		logger.Info("Place insights handler initialized")
+	}
+
+	// Visa handler (always available)
+	visaHandler := handlers.NewVisaHandler(visaService, logger)
+	logger.Info("Visa handler initialized")
 
 	// Create router
 	router := mux.NewRouter()
@@ -469,8 +491,17 @@ func main() {
 	packingRoutes.HandleFunc("/toggle-item", packingListHandler.SetItemStatus).Methods("POST")
 	logger.Info("Packing list endpoints registered (3 endpoints)")
 
-	// TODO: Add more routes here as we implement handlers
-	// etc.
+	// Place insights routes (authenticated, requires AI access)
+	if placeInsightsHandler != nil {
+		api.HandleFunc("/place-insights", placeInsightsHandler.GenerateInsights).Methods("POST")
+		logger.Info("Place insights endpoint registered")
+	} else {
+		logger.Warn("Place insights endpoint disabled (no AI clients configured)")
+	}
+
+	// Visa routes (authenticated)
+	api.HandleFunc("/visa-requirements", visaHandler.GetVisaRequirements).Methods("GET")
+	logger.Info("Visa requirements endpoint registered")
 
 	// Log registered routes
 	logger.Info("Routes registered",
