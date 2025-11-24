@@ -108,6 +108,13 @@ func main() {
 		logger.Info("Transaction categorization service initialized")
 	}
 
+	// Initialize chat service
+	var chatService *services.ChatService
+	if openaiClient != nil || anthropicClient != nil {
+		chatService = services.NewChatService(openaiClient, anthropicClient, logger)
+		logger.Info("Chat service initialized")
+	}
+
 	// Initialize Stripe client
 	var stripeClient *clients.StripeClient
 	if cfg.Stripe.SecretKey != "" {
@@ -268,6 +275,13 @@ func main() {
 		logger.Info("Spending handler initialized")
 	}
 
+	// Chat handler
+	var chatHandler *handlers.ChatHandler
+	if chatService != nil {
+		chatHandler = handlers.NewChatHandler(chatService, logger)
+		logger.Info("Chat handler initialized")
+	}
+
 	// Create router
 	router := mux.NewRouter()
 
@@ -389,8 +403,15 @@ func main() {
 		logger.Warn("Spending endpoints disabled (CSV processing service not available)")
 	}
 
+	// Chat route (authenticated, requires AI access)
+	if chatHandler != nil {
+		api.HandleFunc("/chat", chatHandler.Chat).Methods("POST")
+		logger.Info("Chat endpoint registered")
+	} else {
+		logger.Warn("Chat endpoint disabled (no AI clients configured)")
+	}
+
 	// TODO: Add more routes here as we implement handlers
-	// - /api/chat
 	// - /api/predict-investment
 	// - /api/photo/*
 	// etc.
