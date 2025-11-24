@@ -231,6 +231,20 @@ func main() {
 		logger.Warn("CSV processing service disabled (Cloud Storage or categorization not available)")
 	}
 
+	// Initialize photo service
+	var photoService *services.PhotoService
+	if storageClient != nil {
+		photoService = services.NewPhotoService(
+			repo,
+			storageClient,
+			cfg.Firebase.StorageBucket,
+			logger,
+		)
+		logger.Info("Photo service initialized")
+	} else {
+		logger.Warn("Photo service disabled (Cloud Storage not available)")
+	}
+
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(
 		fbAdmin.Auth,
@@ -287,6 +301,13 @@ func main() {
 	if chatService != nil {
 		chatHandler = handlers.NewChatHandler(chatService, logger)
 		logger.Info("Chat handler initialized")
+	}
+
+	// Photo handler
+	var photoHandler *handlers.PhotoHandler
+	if photoService != nil {
+		photoHandler = handlers.NewPhotoHandler(photoService, logger)
+		logger.Info("Photo handler initialized")
 	}
 
 	// Create router
@@ -419,8 +440,21 @@ func main() {
 		logger.Warn("Chat endpoint disabled (no AI clients configured)")
 	}
 
+	// Photo routes (vote endpoint allows anonymous, others require auth)
+	if photoHandler != nil {
+		photoRoutes := api.PathPrefix("/photo").Subrouter()
+		// Vote can be submitted by anonymous users
+		photoRoutes.HandleFunc("/vote", photoHandler.SubmitVote).Methods("POST")
+		// Next pair can be fetched anonymously
+		photoRoutes.HandleFunc("/next-pair", photoHandler.GetNextPair).Methods("POST")
+		// Signed URL requires authentication
+		photoRoutes.HandleFunc("/signed-url", photoHandler.GetSignedURL).Methods("POST")
+		logger.Info("Photo endpoints registered (3 endpoints)")
+	} else {
+		logger.Warn("Photo endpoints disabled (Cloud Storage not available)")
+	}
+
 	// TODO: Add more routes here as we implement handlers
-	// - /api/photo/*
 	// - /api/packing-list/*
 	// etc.
 

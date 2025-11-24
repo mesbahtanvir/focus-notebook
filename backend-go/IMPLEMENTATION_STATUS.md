@@ -132,9 +132,9 @@
 
 | Service | Status | File | Notes |
 |---------|--------|------|-------|
-| Photo Service | ❌ Missing | Need `services/photo.go` | Thumbnails, voting, CDN |
-| Image Processing | ❌ Missing | Need thumbnail generation | |
-| Elo Rating | ❌ Missing | Need photo voting algorithm | |
+| Photo Service | ✅ Complete | `services/photo.go` | Elo rating, Swiss pairing, signed URLs |
+| Image Processing | ❌ Missing | Need thumbnail generation | Storage trigger |
+| Thumbnail Worker | ❌ Missing | Need worker implementation | |
 
 ### Travel
 
@@ -253,10 +253,10 @@
 
 | Handler | Status | File | Endpoints |
 |---------|--------|------|-----------|
-| Photo Handler | ❌ Missing | Need `handlers/photo.go` | 3 endpoints needed |
-| - Submit Vote | ❌ Missing | | `POST /api/photo/vote` |
-| - Get Next Pair | ❌ Missing | | `GET /api/photo/next-pair` |
-| - Get Signed URL | ❌ Missing | | `GET /api/photo/signed-url` |
+| Photo Handler | ✅ Complete | `handlers/photo.go` | 3 endpoints |
+| - Submit Vote | ✅ Complete | | `POST /api/photo/vote` |
+| - Get Next Pair | ✅ Complete | | `POST /api/photo/next-pair` |
+| - Get Signed URL | ✅ Complete | | `POST /api/photo/signed-url` |
 
 ### Packing Lists
 
@@ -377,11 +377,11 @@
 | Infrastructure | 11 | 9 | 1 | 1 | 82% |
 | Auth & Authorization | 5 | 5 | 0 | 0 | 100% |
 | External Clients | 7 | 7 | 0 | 0 | 100% |
-| Services | 23 | 16 | 0 | 7 | 70% |
+| Services | 24 | 17 | 0 | 7 | 71% |
 | API Handlers | 17 | 11 | 0 | 6 | 65% |
 | Background Workers | 7 | 0 | 0 | 7 | 0% |
 | Storage Triggers | 3 | 0 | 0 | 3 | 0% |
-| **TOTAL** | **73** | **47** | **1** | **25** | **64%** |
+| **TOTAL** | **74** | **48** | **1** | **25** | **65%** |
 
 ### By Priority
 
@@ -404,10 +404,10 @@
 | Investment | 7 | 7 | 0 | 100% |
 | Entity Graph | 4 | 4 | 0 | 100% |
 | Spending | 5 | 5 | 0 | 100% |
-| Photos | 3 | 0 | 3 | 0% |
+| Photos | 3 | 3 | 0 | 100% |
 | Packing Lists | 3 | 0 | 3 | 0% |
 | Places & Visa | 2 | 0 | 2 | 0% |
-| **TOTAL** | **49** | **41** | **8** | **84%** |
+| **TOTAL** | **49** | **44** | **5** | **90%** |
 
 ---
 
@@ -415,46 +415,41 @@
 
 ### Immediate Priorities (Week 1)
 
-1. **Photo Service** 🔴 High
-   - Implement `services/photo.go`
-   - Thumbnail generation
-   - Elo voting algorithm
-   - CDN URL generation
+1. **Packing List Service** 🔴 High
+   - AI-powered packing list generation
+   - Template management
    - 3 API endpoints needed
+   - Would complete Packing Lists category to 100% (3/3)
+   - Would bring us to 47/49 endpoints (96%)
 
 ### Short-term (Weeks 2-4)
 
-3. **Worker Infrastructure** 🔴 High
+2. **Worker Infrastructure** 🔴 High
    - Create `cmd/worker/main.go`
    - Implement scheduler
    - Add monitoring
 
-4. **Market Data Worker** 🔴 High
+3. **Market Data Worker** 🔴 High
    - Hourly stock price updates
    - Use existing stock service
 
-5. **Storage Trigger for CSV** 🔴 High
+4. **Storage Trigger for CSV** 🔴 High
    - Cloud Storage trigger setup
    - Auto-process on file upload
 
-6. **Packing List Service** 🟡 Medium
-   - AI-powered packing list generation
-   - Template management
-   - 3 API endpoints needed
-
 ### Medium-term (Weeks 5-8)
 
-7. **Trip Linking Service** 🟡 Medium
+5. **Trip Linking Service** 🟡 Medium
    - AI-powered transaction-to-trip linking
    - Background worker implementation
 
-8. **DEXA Scan Service** 🟡 Medium
+6. **DEXA Scan Service** 🟡 Medium
    - PDF parsing for body composition data
 
-9. **Visa Service** 🟡 Medium
+7. **Visa Service** 🟡 Medium
    - Visa requirements data service
 
-10. **All Background Workers** 🟡 Medium
+8. **All Background Workers** 🟡 Medium
     - Portfolio snapshots
     - Anonymous cleanup
     - Subscription detection
