@@ -2,7 +2,7 @@
 
 > **Quick reference guide showing what's implemented vs. what needs to be built**
 
-**Last Updated:** 2025-11-23
+**Last Updated:** 2025-11-24
 
 ---
 
@@ -110,6 +110,7 @@
 |---------|--------|------|-------|
 | Investment Calculations | ✅ Complete | `services/investment_calculations.go` | Metrics, projections |
 | Stock Service | ✅ Complete | `services/stock.go` | Real-time stock data, Alpha Vantage integration |
+| Investment Prediction | ✅ Complete | `services/investment_prediction.go` | AI-powered price predictions |
 | Market Data Updater | ❌ Missing | Need worker for price updates | |
 | Portfolio Snapshots | ❌ Missing | Need worker for daily snapshots | |
 
@@ -222,10 +223,10 @@
 | - Portfolio Snapshots | ✅ Complete | | `GET /api/portfolio/{id}/snapshots` |
 | - Generate Projection | ✅ Complete | | `POST /api/portfolio/projection` |
 | - Dashboard Summary | ✅ Complete | | `GET /api/portfolio/summary` |
-| Stock Handler | ✅ Complete | `handlers/stock.go` | 2 endpoints |
+| Stock Handler | ✅ Complete | `handlers/stock.go` | 3 endpoints |
 | - Get Stock Price | ✅ Complete | | `POST /api/stock-price` |
 | - Get Stock History | ✅ Complete | | `POST /api/stock-history` |
-| - Predict Investment | ❌ Missing | | `POST /api/predict-investment` |
+| - Predict Investment | ✅ Complete | | `POST /api/predict-investment` |
 
 ### Entity Graph
 
@@ -376,11 +377,11 @@
 | Infrastructure | 11 | 9 | 1 | 1 | 82% |
 | Auth & Authorization | 5 | 5 | 0 | 0 | 100% |
 | External Clients | 7 | 7 | 0 | 0 | 100% |
-| Services | 22 | 15 | 0 | 7 | 68% |
+| Services | 23 | 16 | 0 | 7 | 70% |
 | API Handlers | 17 | 11 | 0 | 6 | 65% |
 | Background Workers | 7 | 0 | 0 | 7 | 0% |
 | Storage Triggers | 3 | 0 | 0 | 3 | 0% |
-| **TOTAL** | **72** | **46** | **1** | **25** | **64%** |
+| **TOTAL** | **73** | **47** | **1** | **25** | **64%** |
 
 ### By Priority
 
@@ -400,13 +401,13 @@
 | Banking (Plaid) | 6 | 6 | 0 | 100% |
 | Analytics | 2 | 2 | 0 | 100% |
 | Import/Export | 4 | 4 | 0 | 100% |
-| Investment | 7 | 6 | 1 | 86% |
+| Investment | 7 | 7 | 0 | 100% |
 | Entity Graph | 4 | 4 | 0 | 100% |
 | Spending | 5 | 5 | 0 | 100% |
 | Photos | 3 | 0 | 3 | 0% |
 | Packing Lists | 3 | 0 | 3 | 0% |
 | Places & Visa | 2 | 0 | 2 | 0% |
-| **TOTAL** | **49** | **40** | **9** | **82%** |
+| **TOTAL** | **49** | **41** | **8** | **84%** |
 
 ---
 
@@ -414,13 +415,7 @@
 
 ### Immediate Priorities (Week 1)
 
-1. **Predict Investment Endpoint** 🔴 High
-   - AI-powered investment predictions
-   - Integration with portfolio data
-   - Complete Investment category to 100% (7/7)
-   - Would bring us to 41/49 endpoints (84%)
-
-2. **Photo Service** 🔴 High
+1. **Photo Service** 🔴 High
    - Implement `services/photo.go`
    - Thumbnail generation
    - Elo voting algorithm

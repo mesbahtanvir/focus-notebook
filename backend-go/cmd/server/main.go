@@ -209,6 +209,13 @@ func main() {
 		logger.Info("Stock service initialized")
 	}
 
+	// Initialize investment prediction service
+	var predictionService *services.InvestmentPredictionService
+	if openaiClient != nil {
+		predictionService = services.NewInvestmentPredictionService(openaiClient, logger)
+		logger.Info("Investment prediction service initialized")
+	}
+
 	// Initialize CSV processing service
 	var csvProcessingSvc *services.CSVProcessingService
 	if storageClient != nil && categorizationSvc != nil {
@@ -263,8 +270,8 @@ func main() {
 
 	// Stock handler
 	var stockHandler *handlers.StockHandler
-	if stockService != nil {
-		stockHandler = handlers.NewStockHandler(stockService, logger)
+	if stockService != nil || predictionService != nil {
+		stockHandler = handlers.NewStockHandler(stockService, predictionService, logger)
 		logger.Info("Stock handler initialized")
 	}
 
@@ -385,9 +392,10 @@ func main() {
 	if stockHandler != nil {
 		api.HandleFunc("/stock-price", stockHandler.GetStockPrice).Methods("POST")
 		api.HandleFunc("/stock-history", stockHandler.GetStockHistory).Methods("POST")
-		logger.Info("Stock endpoints registered")
+		api.HandleFunc("/predict-investment", stockHandler.PredictInvestment).Methods("POST")
+		logger.Info("Stock endpoints registered (3 endpoints)")
 	} else {
-		logger.Warn("Stock endpoints disabled (Alpha Vantage not configured)")
+		logger.Warn("Stock endpoints disabled")
 	}
 
 	// Spending routes (authenticated)
@@ -412,8 +420,8 @@ func main() {
 	}
 
 	// TODO: Add more routes here as we implement handlers
-	// - /api/predict-investment
 	// - /api/photo/*
+	// - /api/packing-list/*
 	// etc.
 
 	// Log registered routes
