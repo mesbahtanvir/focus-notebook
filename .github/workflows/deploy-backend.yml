@@ -1,0 +1,282 @@
+name: Deploy Go Backend to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+      - production
+    paths:
+      - 'backend-go/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  SERVICE_NAME: focus-notebook-backend
+  REGISTRY_REGION: us-central1
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  # Run tests before deploying
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend-go
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: backend-go/go.sum
+
+      - name: Run tests
+        run: |
+          go mod download
+          go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Check test coverage
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
+          echo "Total coverage: $COVERAGE%"
+          if (( $(echo "$COVERAGE < 50" | bc -l) )); then
+            echo "❌ Coverage is below 50%"
+            exit 1
+          fi
+
+  # Build and push Docker image
+  build:
+    name: Build and Push Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      image-url: ${{ steps.build-image.outputs.image }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine environment
+        id: environment
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "env=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/production" ]]; then
+            echo "env=production" >> $GITHUB_OUTPUT
+          else
+            echo "env=staging" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker to use gcloud as credential helper
+        run: |
+          gcloud auth configure-docker ${{ env.REGISTRY_REGION }}-docker.pkg.dev
+
+      - name: Build and push Docker image
+        id: build-image
+        run: |
+          ENV=${{ steps.environment.outputs.env }}
+          IMAGE_TAG="${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/backend/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          IMAGE_LATEST="${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/backend/${{ env.SERVICE_NAME }}:${ENV}-latest"
+
+          cd backend-go
+
+          docker build \
+            --tag "$IMAGE_TAG" \
+            --tag "$IMAGE_LATEST" \
+            --build-arg VERSION=${{ github.sha }} \
+            --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+            .
+
+          docker push "$IMAGE_TAG"
+          docker push "$IMAGE_LATEST"
+
+          echo "image=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Generate deployment summary
+        run: |
+          echo "## 🐳 Docker Image Built" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ steps.build-image.outputs.image }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** \`${{ steps.environment.outputs.env }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+
+  # Deploy to Cloud Run (Staging)
+  deploy-staging:
+    name: Deploy to Staging
+    needs: build
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}-staging
+          image: ${{ needs.build.outputs.image-url }}
+          region: ${{ env.REGION }}
+          flags: |
+            --cpu=2
+            --memory=2Gi
+            --min-instances=0
+            --max-instances=10
+            --timeout=300
+            --concurrency=80
+            --port=8080
+            --allow-unauthenticated
+          env_vars: |
+            ENVIRONMENT=staging
+            GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+          secrets: |
+            OPENAI_API_KEY=openai-api-key:latest
+            ANTHROPIC_API_KEY=anthropic-api-key:latest
+            STRIPE_SECRET_KEY=stripe-secret-key-staging:latest
+            STRIPE_WEBHOOK_SECRET=stripe-webhook-secret-staging:latest
+            PLAID_CLIENT_ID=plaid-client-id-staging:latest
+            PLAID_SECRET=plaid-secret-staging:latest
+            ALPHA_VANTAGE_API_KEY=alpha-vantage-api-key:latest
+
+      - name: Generate deployment summary
+        run: |
+          echo "## 🚀 Deployed to Staging" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Service URL:** ${{ steps.deploy.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Region:** \`${{ env.REGION }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ needs.build.outputs.image-url }}\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Run health check
+        run: |
+          URL="${{ steps.deploy.outputs.url }}/health"
+          echo "Running health check: $URL"
+
+          for i in {1..5}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+            echo "Attempt $i failed (HTTP $STATUS), retrying..."
+            sleep 10
+          done
+
+          echo "❌ Health check failed after 5 attempts"
+          exit 1
+
+  # Deploy to Cloud Run (Production)
+  deploy-production:
+    name: Deploy to Production
+    needs: build
+    if: github.ref == 'refs/heads/production' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}-production
+          image: ${{ needs.build.outputs.image-url }}
+          region: ${{ env.REGION }}
+          flags: |
+            --cpu=4
+            --memory=4Gi
+            --min-instances=1
+            --max-instances=50
+            --timeout=300
+            --concurrency=80
+            --port=8080
+            --allow-unauthenticated
+          env_vars: |
+            ENVIRONMENT=production
+            GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+          secrets: |
+            OPENAI_API_KEY=openai-api-key:latest
+            ANTHROPIC_API_KEY=anthropic-api-key:latest
+            STRIPE_SECRET_KEY=stripe-secret-key-production:latest
+            STRIPE_WEBHOOK_SECRET=stripe-webhook-secret-production:latest
+            PLAID_CLIENT_ID=plaid-client-id-production:latest
+            PLAID_SECRET=plaid-secret-production:latest
+            ALPHA_VANTAGE_API_KEY=alpha-vantage-api-key:latest
+
+      - name: Generate deployment summary
+        run: |
+          echo "## 🚀 Deployed to Production" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Service URL:** ${{ steps.deploy.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Region:** \`${{ env.REGION }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ needs.build.outputs.image-url }}\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Run health check
+        run: |
+          URL="${{ steps.deploy.outputs.url }}/health"
+          echo "Running health check: $URL"
+
+          for i in {1..5}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+            echo "Attempt $i failed (HTTP $STATUS), retrying..."
+            sleep 10
+          done
+
+          echo "❌ Health check failed after 5 attempts"
+          exit 1
+
+      - name: Notify deployment
+        if: success()
+        run: |
+          echo "🎉 Production deployment successful!"
+          echo "Service is now live at: ${{ steps.deploy.outputs.url }}"
