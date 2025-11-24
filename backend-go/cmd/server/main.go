@@ -10,9 +10,11 @@ import (
 	"syscall"
 	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
+	"google.golang.org/api/option"
 
 	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/clients"
 	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/config"
@@ -58,6 +60,21 @@ func main() {
 
 	logger.Info("Firebase initialized successfully")
 
+	// Initialize Cloud Storage client (for CSV processing)
+	storageClient, err := storage.NewClient(ctx, option.WithCredentialsFile(cfg.Firebase.CredentialsPath))
+	if err != nil {
+		logger.Warn("Failed to initialize Cloud Storage client", zap.Error(err))
+	} else {
+		logger.Info("Cloud Storage client initialized")
+	}
+	defer func() {
+		if storageClient != nil {
+			if err := storageClient.Close(); err != nil {
+				logger.Error("Failed to close Cloud Storage client", zap.Error(err))
+			}
+		}
+	}()
+
 	// Initialize AI clients
 	var openaiClient *clients.OpenAIClient
 	if cfg.OpenAI.APIKey != "" {
@@ -84,6 +101,20 @@ func main() {
 		logger.Warn("No AI clients configured - thought processing will not work")
 	}
 
+	// Initialize transaction categorization service
+	var categorizationSvc *services.TransactionCategorizationService
+	if openaiClient != nil {
+		categorizationSvc = services.NewTransactionCategorizationService(openaiClient, logger)
+		logger.Info("Transaction categorization service initialized")
+	}
+
+	// Initialize chat service
+	var chatService *services.ChatService
+	if openaiClient != nil || anthropicClient != nil {
+		chatService = services.NewChatService(openaiClient, anthropicClient, logger)
+		logger.Info("Chat service initialized")
+	}
+
 	// Initialize Stripe client
 	var stripeClient *clients.StripeClient
 	if cfg.Stripe.SecretKey != "" {
@@ -105,6 +136,15 @@ func main() {
 		}
 	} else {
 		logger.Warn("Plaid not configured - banking features will not work")
+	}
+
+	// Initialize Alpha Vantage client
+	var alphaVantageClient *clients.AlphaVantageClient
+	if cfg.AlphaVantage.APIKey != "" {
+		alphaVantageClient = clients.NewAlphaVantageClient(&cfg.AlphaVantage, logger)
+		logger.Info("Alpha Vantage client initialized")
+	} else {
+		logger.Warn("Alpha Vantage not configured - stock price features will not work")
 	}
 
 	// Initialize repository
@@ -162,6 +202,64 @@ func main() {
 	entityGraphSvc := services.NewEntityGraphService(repo, logger)
 	logger.Info("Entity graph service initialized")
 
+	// Initialize stock service
+	var stockService *services.StockService
+	if alphaVantageClient != nil {
+		stockService = services.NewStockService(repo, alphaVantageClient, logger)
+		logger.Info("Stock service initialized")
+	}
+
+	// Initialize investment prediction service
+	var predictionService *services.InvestmentPredictionService
+	if openaiClient != nil {
+		predictionService = services.NewInvestmentPredictionService(openaiClient, logger)
+		logger.Info("Investment prediction service initialized")
+	}
+
+	// Initialize CSV processing service
+	var csvProcessingSvc *services.CSVProcessingService
+	if storageClient != nil && categorizationSvc != nil {
+		csvProcessingSvc = services.NewCSVProcessingService(
+			repo,
+			storageClient,
+			categorizationSvc,
+			cfg.Firebase.StorageBucket,
+			logger,
+		)
+		logger.Info("CSV processing service initialized")
+	} else {
+		logger.Warn("CSV processing service disabled (Cloud Storage or categorization not available)")
+	}
+
+	// Initialize photo service
+	var photoService *services.PhotoService
+	if storageClient != nil {
+		photoService = services.NewPhotoService(
+			repo,
+			storageClient,
+			cfg.Firebase.StorageBucket,
+			logger,
+		)
+		logger.Info("Photo service initialized")
+	} else {
+		logger.Warn("Photo service disabled (Cloud Storage not available)")
+	}
+
+	// Initialize packing list service
+	packingListService := services.NewPackingListService(repo, logger)
+	logger.Info("Packing list service initialized")
+
+	// Initialize place insights service
+	var placeInsightsService *services.PlaceInsightsService
+	if openaiClient != nil {
+		placeInsightsService = services.NewPlaceInsightsService(openaiClient, logger)
+		logger.Info("Place insights service initialized")
+	}
+
+	// Initialize visa service
+	visaService := services.NewVisaService(repo, logger)
+	logger.Info("Visa service initialized")
+
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(
 		fbAdmin.Auth,
@@ -198,6 +296,49 @@ func main() {
 
 	// Entity graph handler (always available)
 	entityGraphHandler := handlers.NewEntityGraphHandler(entityGraphSvc, logger)
+
+	// Stock handler
+	var stockHandler *handlers.StockHandler
+	if stockService != nil || predictionService != nil {
+		stockHandler = handlers.NewStockHandler(stockService, predictionService, logger)
+		logger.Info("Stock handler initialized")
+	}
+
+	// Spending handler
+	var spendingHandler *handlers.SpendingHandler
+	if csvProcessingSvc != nil {
+		spendingHandler = handlers.NewSpendingHandler(csvProcessingSvc, logger)
+		logger.Info("Spending handler initialized")
+	}
+
+	// Chat handler
+	var chatHandler *handlers.ChatHandler
+	if chatService != nil {
+		chatHandler = handlers.NewChatHandler(chatService, logger)
+		logger.Info("Chat handler initialized")
+	}
+
+	// Photo handler
+	var photoHandler *handlers.PhotoHandler
+	if photoService != nil {
+		photoHandler = handlers.NewPhotoHandler(photoService, logger)
+		logger.Info("Photo handler initialized")
+	}
+
+	// Packing list handler (always available)
+	packingListHandler := handlers.NewPackingListHandler(packingListService, logger)
+	logger.Info("Packing list handler initialized")
+
+	// Place insights handler
+	var placeInsightsHandler *handlers.PlaceInsightsHandler
+	if placeInsightsService != nil {
+		placeInsightsHandler = handlers.NewPlaceInsightsHandler(placeInsightsService, logger)
+		logger.Info("Place insights handler initialized")
+	}
+
+	// Visa handler (always available)
+	visaHandler := handlers.NewVisaHandler(visaService, logger)
+	logger.Info("Visa handler initialized")
 
 	// Create router
 	router := mux.NewRouter()
@@ -298,12 +439,69 @@ func main() {
 	entityGraphRoutes.HandleFunc("/stats", entityGraphHandler.GetRelationshipStats).Methods("GET")
 	logger.Info("Entity graph endpoints registered")
 
-	// TODO: Add more routes here as we implement handlers
-	// - /api/chat
-	// - /api/predict-investment
-	// - /api/spending/*
-	// - /api/photo/*
-	// etc.
+	// Stock routes (authenticated)
+	if stockHandler != nil {
+		api.HandleFunc("/stock-price", stockHandler.GetStockPrice).Methods("POST")
+		api.HandleFunc("/stock-history", stockHandler.GetStockHistory).Methods("POST")
+		api.HandleFunc("/predict-investment", stockHandler.PredictInvestment).Methods("POST")
+		logger.Info("Stock endpoints registered (3 endpoints)")
+	} else {
+		logger.Warn("Stock endpoints disabled")
+	}
+
+	// Spending routes (authenticated)
+	if spendingHandler != nil {
+		spendingRoutes := api.PathPrefix("/spending").Subrouter()
+		spendingRoutes.HandleFunc("/process-csv", spendingHandler.ProcessCSV).Methods("POST")
+		spendingRoutes.HandleFunc("/delete-csv", spendingHandler.DeleteCSV).Methods("POST")
+		spendingRoutes.HandleFunc("/categorize", spendingHandler.CategorizeTransaction).Methods("POST")
+		spendingRoutes.HandleFunc("/link-trip", spendingHandler.LinkTransactionToTrip).Methods("POST")
+		spendingRoutes.HandleFunc("/delete-all", spendingHandler.DeleteAllTransactions).Methods("POST")
+		logger.Info("Spending endpoints registered (5 endpoints)")
+	} else {
+		logger.Warn("Spending endpoints disabled (CSV processing service not available)")
+	}
+
+	// Chat route (authenticated, requires AI access)
+	if chatHandler != nil {
+		api.HandleFunc("/chat", chatHandler.Chat).Methods("POST")
+		logger.Info("Chat endpoint registered")
+	} else {
+		logger.Warn("Chat endpoint disabled (no AI clients configured)")
+	}
+
+	// Photo routes (vote endpoint allows anonymous, others require auth)
+	if photoHandler != nil {
+		photoRoutes := api.PathPrefix("/photo").Subrouter()
+		// Vote can be submitted by anonymous users
+		photoRoutes.HandleFunc("/vote", photoHandler.SubmitVote).Methods("POST")
+		// Next pair can be fetched anonymously
+		photoRoutes.HandleFunc("/next-pair", photoHandler.GetNextPair).Methods("POST")
+		// Signed URL requires authentication
+		photoRoutes.HandleFunc("/signed-url", photoHandler.GetSignedURL).Methods("POST")
+		logger.Info("Photo endpoints registered (3 endpoints)")
+	} else {
+		logger.Warn("Photo endpoints disabled (Cloud Storage not available)")
+	}
+
+	// Packing list routes (authenticated)
+	packingRoutes := api.PathPrefix("/packing-list").Subrouter()
+	packingRoutes.HandleFunc("/create", packingListHandler.CreatePackingList).Methods("POST")
+	packingRoutes.HandleFunc("/update", packingListHandler.UpdatePackingList).Methods("POST")
+	packingRoutes.HandleFunc("/toggle-item", packingListHandler.SetItemStatus).Methods("POST")
+	logger.Info("Packing list endpoints registered (3 endpoints)")
+
+	// Place insights routes (authenticated, requires AI access)
+	if placeInsightsHandler != nil {
+		api.HandleFunc("/place-insights", placeInsightsHandler.GenerateInsights).Methods("POST")
+		logger.Info("Place insights endpoint registered")
+	} else {
+		logger.Warn("Place insights endpoint disabled (no AI clients configured)")
+	}
+
+	// Visa routes (authenticated)
+	api.HandleFunc("/visa-requirements", visaHandler.GetVisaRequirements).Methods("GET")
+	logger.Info("Visa requirements endpoint registered")
 
 	// Log registered routes
 	logger.Info("Routes registered",

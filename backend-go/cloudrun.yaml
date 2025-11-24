@@ -1,0 +1,128 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: focus-notebook-backend
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/ingress-status: all
+spec:
+  template:
+    metadata:
+      annotations:
+        # Auto-scaling configuration
+        autoscaling.knative.dev/minScale: '0'
+        autoscaling.knative.dev/maxScale: '10'
+
+        # Resource limits
+        run.googleapis.com/cpu-throttling: 'true'
+        run.googleapis.com/startup-cpu-boost: 'true'
+
+        # VPC Connector (if needed for Firestore/Cloud Storage private access)
+        # run.googleapis.com/vpc-access-connector: projects/PROJECT_ID/locations/REGION/connectors/CONNECTOR_NAME
+        # run.googleapis.com/vpc-access-egress: private-ranges-only
+
+        # Cloud SQL (if needed)
+        # run.googleapis.com/cloudsql-instances: PROJECT_ID:REGION:INSTANCE_NAME
+
+        # Execution environment
+        run.googleapis.com/execution-environment: gen2
+
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      serviceAccountName: backend-service-account@PROJECT_ID.iam.gserviceaccount.com
+
+      containers:
+      - name: backend
+        image: REGION-docker.pkg.dev/PROJECT_ID/backend/focus-notebook-backend:latest
+
+        ports:
+        - name: http1
+          containerPort: 8080
+
+        env:
+        - name: ENVIRONMENT
+          value: production
+        - name: GCP_PROJECT_ID
+          value: PROJECT_ID
+        - name: PORT
+          value: '8080'
+        - name: LOG_LEVEL
+          value: info
+
+        # Secrets mounted from Secret Manager
+        # OpenAI API Key
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: openai-api-key
+
+        # Anthropic API Key
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: anthropic-api-key
+
+        # Stripe
+        - name: STRIPE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: stripe-secret-key-production
+
+        - name: STRIPE_WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: stripe-webhook-secret-production
+
+        # Plaid
+        - name: PLAID_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: plaid-client-id-production
+
+        - name: PLAID_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: plaid-secret-production
+
+        - name: PLAID_ENVIRONMENT
+          value: production
+
+        # Alpha Vantage
+        - name: ALPHA_VANTAGE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: alpha-vantage-api-key
+
+        resources:
+          limits:
+            cpu: '4'
+            memory: 4Gi
+          requests:
+            cpu: '2'
+            memory: 2Gi
+
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3

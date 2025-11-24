@@ -14,10 +14,10 @@ type Config struct {
 	Firebase   FirebaseConfig   `yaml:"firebase"`
 	OpenAI     OpenAIConfig     `yaml:"openai"`
 	Anthropic  AnthropicConfig  `yaml:"anthropic"`
-	Stripe     StripeConfig     `yaml:"stripe"`
-	Plaid      PlaidConfig      `yaml:"plaid"`
-	AlphaV     AlphaVConfig     `yaml:"alpha_vantage"`
-	Anonymous  AnonymousConfig  `yaml:"anonymous"`
+	Stripe       StripeConfig         `yaml:"stripe"`
+	Plaid        PlaidConfig          `yaml:"plaid"`
+	AlphaVantage AlphaVantageConfig   `yaml:"alpha_vantage"`
+	Anonymous    AnonymousConfig      `yaml:"anonymous"`
 	Logging    LoggingConfig    `yaml:"logging"`
 	Metrics    MetricsConfig    `yaml:"metrics"`
 	Workers    WorkersConfig    `yaml:"workers"`
@@ -96,7 +96,7 @@ type PlaidConfig struct {
 	WebhookURL   string   `yaml:"webhook_url"`
 }
 
-type AlphaVConfig struct {
+type AlphaVantageConfig struct {
 	APIKey    string        `yaml:"api_key"`
 	Timeout   time.Duration `yaml:"timeout"`
 	RateLimit struct {

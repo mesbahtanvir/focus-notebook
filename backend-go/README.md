@@ -287,33 +287,103 @@ Current coverage: **80%+** across all packages
 
 ## Deployment
 
-### Cloud Run (Recommended)
+The backend is deployed to **Google Cloud Run** with automated CI/CD via GitHub Actions.
 
+### Quick Start Deployment
+
+**Option 1: Automated (Recommended)**
+
+Push to the appropriate branch:
 ```bash
-# Build and deploy
-gcloud builds submit --tag gcr.io/PROJECT_ID/focus-backend
-gcloud run deploy focus-backend \
-  --image gcr.io/PROJECT_ID/focus-backend \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated
+# Deploy to staging
+git push origin main
+
+# Deploy to production
+git push origin production
 ```
 
-### Kubernetes
-
-See `k8s/` directory for Kubernetes manifests.
-
-### VPS (DigitalOcean, Linode, etc.)
+**Option 2: Manual Deployment**
 
 ```bash
-# Build binary
-GOOS=linux GOARCH=amd64 go build -o server ./cmd/server
+# Set your GCP project
+export GCP_PROJECT_ID="your-project-id"
 
-# Copy to server
-scp server user@your-server:/opt/focus-backend/
+# Deploy to staging
+cd scripts
+./deploy.sh staging
 
-# Set up systemd service (see docs/deployment.md)
+# Deploy to production
+./deploy.sh production
 ```
+
+### First-Time Setup
+
+**1. Run the setup script** (one-time):
+```bash
+cd scripts
+GCP_PROJECT_ID=your-project-id ./setup-gcp.sh
+```
+
+This creates:
+- ✅ Artifact Registry repository
+- ✅ Cloud Run service accounts
+- ✅ Workload Identity for GitHub Actions
+- ✅ Secret Manager secrets
+
+**2. Configure GitHub Secrets** (printed by setup script):
+- `GCP_PROJECT_ID`
+- `GCP_WORKLOAD_IDENTITY_PROVIDER`
+- `GCP_SERVICE_ACCOUNT`
+
+**3. Add API keys to Secret Manager**:
+```bash
+echo -n "sk-..." | gcloud secrets versions add openai-api-key --data-file=-
+echo -n "sk-ant-..." | gcloud secrets versions add anthropic-api-key --data-file=-
+# ... etc (see setup script output)
+```
+
+### Deployment Workflow
+
+The GitHub Actions workflow (`.github/workflows/deploy-backend.yml`) automatically:
+
+1. ✅ Runs all tests (must pass)
+2. ✅ Checks test coverage (must be >50%)
+3. ✅ Builds Docker image
+4. ✅ Pushes to Artifact Registry
+5. ✅ Deploys to Cloud Run
+6. ✅ Runs health checks
+
+### Environments
+
+| Environment | Trigger | Resources | Auto-scale |
+|-------------|---------|-----------|------------|
+| **Staging** | Push to `main` | 2 CPU, 2GB RAM | 0-10 instances |
+| **Production** | Push to `production` | 4 CPU, 4GB RAM | 1-50 instances |
+
+### Documentation
+
+- **📘 Full Deployment Guide**: [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)
+- **🔧 Scripts Reference**: [scripts/README.md](./scripts/README.md)
+- **🚀 GitHub Actions**: [.github/workflows/deploy-backend.yml](../.github/workflows/deploy-backend.yml)
+
+### Monitoring
+
+View logs and metrics:
+```bash
+# Real-time logs
+gcloud run services logs tail focus-notebook-backend-staging --region=us-central1
+
+# Service URL
+gcloud run services describe focus-notebook-backend-staging \
+  --region=us-central1 \
+  --format='value(status.url)'
+
+# Health check
+curl $(gcloud run services describe focus-notebook-backend-staging \
+  --region=us-central1 --format='value(status.url)')/health
+```
+
+Cloud Console: https://console.cloud.google.com/run
 
 ## Monitoring
 
