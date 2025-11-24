@@ -245,6 +245,10 @@ func main() {
 		logger.Warn("Photo service disabled (Cloud Storage not available)")
 	}
 
+	// Initialize packing list service
+	packingListService := services.NewPackingListService(repo, logger)
+	logger.Info("Packing list service initialized")
+
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(
 		fbAdmin.Auth,
@@ -309,6 +313,10 @@ func main() {
 		photoHandler = handlers.NewPhotoHandler(photoService, logger)
 		logger.Info("Photo handler initialized")
 	}
+
+	// Packing list handler (always available)
+	packingListHandler := handlers.NewPackingListHandler(packingListService, logger)
+	logger.Info("Packing list handler initialized")
 
 	// Create router
 	router := mux.NewRouter()
@@ -454,8 +462,14 @@ func main() {
 		logger.Warn("Photo endpoints disabled (Cloud Storage not available)")
 	}
 
+	// Packing list routes (authenticated)
+	packingRoutes := api.PathPrefix("/packing-list").Subrouter()
+	packingRoutes.HandleFunc("/create", packingListHandler.CreatePackingList).Methods("POST")
+	packingRoutes.HandleFunc("/update", packingListHandler.UpdatePackingList).Methods("POST")
+	packingRoutes.HandleFunc("/toggle-item", packingListHandler.SetItemStatus).Methods("POST")
+	logger.Info("Packing list endpoints registered (3 endpoints)")
+
 	// TODO: Add more routes here as we implement handlers
-	// - /api/packing-list/*
 	// etc.
 
 	// Log registered routes

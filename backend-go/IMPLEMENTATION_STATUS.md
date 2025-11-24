@@ -140,7 +140,7 @@
 
 | Service | Status | File | Notes |
 |---------|--------|------|-------|
-| Packing List Generator | ❌ Missing | Need `services/packing_list.go` | AI-powered packing lists |
+| Packing List Service | ✅ Complete | `services/packing_list.go` | Template-based packing lists |
 | Visa Data Service | ❌ Missing | Need `services/visa.go` | Visa requirements |
 
 ### Body Progress
@@ -262,10 +262,10 @@
 
 | Handler | Status | File | Endpoints |
 |---------|--------|------|-----------|
-| Packing List Handler | ❌ Missing | Need `handlers/packing_list.go` | 3 endpoints needed |
-| - Create Packing List | ❌ Missing | | `POST /api/packing-list/create` |
-| - Update Packing List | ❌ Missing | | `POST /api/packing-list/update` |
-| - Toggle Item | ❌ Missing | | `POST /api/packing-list/toggle-item` |
+| Packing List Handler | ✅ Complete | `handlers/packing_list.go` | 3 endpoints |
+| - Create Packing List | ✅ Complete | | `POST /api/packing-list/create` |
+| - Update Packing List | ✅ Complete | | `POST /api/packing-list/update` |
+| - Toggle Item | ✅ Complete | | `POST /api/packing-list/toggle-item` |
 
 ### Places & Visa
 
@@ -377,11 +377,11 @@
 | Infrastructure | 11 | 9 | 1 | 1 | 82% |
 | Auth & Authorization | 5 | 5 | 0 | 0 | 100% |
 | External Clients | 7 | 7 | 0 | 0 | 100% |
-| Services | 24 | 17 | 0 | 7 | 71% |
+| Services | 25 | 18 | 0 | 7 | 72% |
 | API Handlers | 17 | 11 | 0 | 6 | 65% |
 | Background Workers | 7 | 0 | 0 | 7 | 0% |
 | Storage Triggers | 3 | 0 | 0 | 3 | 0% |
-| **TOTAL** | **74** | **48** | **1** | **25** | **65%** |
+| **TOTAL** | **75** | **49** | **1** | **25** | **65%** |
 
 ### By Priority
 
@@ -405,9 +405,9 @@
 | Entity Graph | 4 | 4 | 0 | 100% |
 | Spending | 5 | 5 | 0 | 100% |
 | Photos | 3 | 3 | 0 | 100% |
-| Packing Lists | 3 | 0 | 3 | 0% |
+| Packing Lists | 3 | 3 | 0 | 100% |
 | Places & Visa | 2 | 0 | 2 | 0% |
-| **TOTAL** | **49** | **44** | **5** | **90%** |
+| **TOTAL** | **49** | **47** | **2** | **96%** |
 
 ---
 
@@ -415,12 +415,11 @@
 
 ### Immediate Priorities (Week 1)
 
-1. **Packing List Service** 🔴 High
-   - AI-powered packing list generation
-   - Template management
-   - 3 API endpoints needed
-   - Would complete Packing Lists category to 100% (3/3)
-   - Would bring us to 47/49 endpoints (96%)
+1. **Places & Visa Services** 🟡 Medium
+   - Place insights generation
+   - Visa requirements lookup
+   - 2 API endpoints needed
+   - Would complete ALL API endpoints to 100% (49/49)
 
 ### Short-term (Weeks 2-4)
 
