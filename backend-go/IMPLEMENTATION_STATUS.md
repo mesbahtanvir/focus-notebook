@@ -83,7 +83,7 @@
 | Thought Processing | ✅ Complete | `services/thought_processing.go` | Process, reprocess, revert |
 | Context Gatherer | ✅ Complete | `services/context_gatherer.go` | Gather context for AI |
 | Action Processor | ✅ Complete | `services/action_processor.go` | Process CBT actions |
-| Chat Service | ❌ Missing | Need `services/chat.go` | AI chat interface |
+| Chat Service | ✅ Complete | `services/chat.go` | OpenAI & Anthropic chat interface |
 | Place Insights | ❌ Missing | Need `services/place_insights.go` | AI place insights |
 
 ### Billing & Subscriptions
@@ -167,7 +167,8 @@
 | - Process Thought | ✅ Complete | | `POST /api/process-thought` |
 | - Reprocess Thought | ✅ Complete | | `POST /api/reprocess-thought` |
 | - Revert Processing | ✅ Complete | | `POST /api/revert-thought-processing` |
-| Chat Handler | ❌ Missing | Need `handlers/chat.go` | `POST /api/chat` |
+| Chat Handler | ✅ Complete | `handlers/chat.go` | 1 endpoint |
+| - Chat | ✅ Complete | | `POST /api/chat` |
 
 ### Stripe Billing
 
@@ -375,11 +376,11 @@
 | Infrastructure | 11 | 9 | 1 | 1 | 82% |
 | Auth & Authorization | 5 | 5 | 0 | 0 | 100% |
 | External Clients | 7 | 7 | 0 | 0 | 100% |
-| Services | 22 | 14 | 0 | 8 | 64% |
-| API Handlers | 17 | 10 | 0 | 7 | 59% |
+| Services | 22 | 15 | 0 | 7 | 68% |
+| API Handlers | 17 | 11 | 0 | 6 | 65% |
 | Background Workers | 7 | 0 | 0 | 7 | 0% |
 | Storage Triggers | 3 | 0 | 0 | 3 | 0% |
-| **TOTAL** | **72** | **45** | **1** | **26** | **63%** |
+| **TOTAL** | **72** | **46** | **1** | **25** | **64%** |
 
 ### By Priority
 
@@ -394,7 +395,7 @@
 | Category | Total Needed | Implemented | Missing | % Complete |
 |----------|--------------|-------------|---------|------------|
 | Core | 2 | 2 | 0 | 100% |
-| Thought Processing | 4 | 3 | 1 | 75% |
+| Thought Processing | 4 | 4 | 0 | 100% |
 | Billing (Stripe) | 7 | 7 | 0 | 100% |
 | Banking (Plaid) | 6 | 6 | 0 | 100% |
 | Analytics | 2 | 2 | 0 | 100% |
@@ -405,7 +406,7 @@
 | Photos | 3 | 0 | 3 | 0% |
 | Packing Lists | 3 | 0 | 3 | 0% |
 | Places & Visa | 2 | 0 | 2 | 0% |
-| **TOTAL** | **49** | **39** | **10** | **80%** |
+| **TOTAL** | **49** | **40** | **9** | **82%** |
 
 ---
 
@@ -413,74 +414,69 @@
 
 ### Immediate Priorities (Week 1)
 
-1. **Photo Service** 🔴 High
+1. **Predict Investment Endpoint** 🔴 High
+   - AI-powered investment predictions
+   - Integration with portfolio data
+   - Complete Investment category to 100% (7/7)
+   - Would bring us to 41/49 endpoints (84%)
+
+2. **Photo Service** 🔴 High
    - Implement `services/photo.go`
    - Thumbnail generation
    - Elo voting algorithm
    - CDN URL generation
    - 3 API endpoints needed
 
-2. **Chat Service** 🔴 High
-   - Implement `services/chat.go`
-   - AI conversation interface
-   - Context management
-   - 1 API endpoint needed
-
-3. **Predict Investment Endpoint** 🔴 High
-   - AI-powered investment predictions
-   - Integration with portfolio data
-   - Complete Investment category (7/7)
-
 ### Short-term (Weeks 2-4)
 
-4. **Worker Infrastructure** 🔴 High
+3. **Worker Infrastructure** 🔴 High
    - Create `cmd/worker/main.go`
    - Implement scheduler
    - Add monitoring
 
-5. **Market Data Worker** 🔴 High
+4. **Market Data Worker** 🔴 High
    - Hourly stock price updates
    - Use existing stock service
 
-6. **Storage Trigger for CSV** 🔴 High
+5. **Storage Trigger for CSV** 🔴 High
    - Cloud Storage trigger setup
    - Auto-process on file upload
 
-7. **Packing List Service** 🟡 Medium
+6. **Packing List Service** 🟡 Medium
    - AI-powered packing list generation
    - Template management
    - 3 API endpoints needed
 
 ### Medium-term (Weeks 5-8)
 
-8. **Trip Linking Service** 🟡 Medium
+7. **Trip Linking Service** 🟡 Medium
    - AI-powered transaction-to-trip linking
    - Background worker implementation
 
-9. **DEXA Scan Service** 🟡 Medium
+8. **DEXA Scan Service** 🟡 Medium
    - PDF parsing for body composition data
 
-10. **Visa Service** 🟡 Medium
-    - Visa requirements data service
+9. **Visa Service** 🟡 Medium
+   - Visa requirements data service
 
-11. **All Background Workers** 🟡 Medium
+10. **All Background Workers** 🟡 Medium
     - Portfolio snapshots
     - Anonymous cleanup
     - Subscription detection
 
 ### Long-term (Weeks 9+)
 
-12. **Place Insights** 🟢 Low
+11. **Place Insights** 🟢 Low
     - AI-generated place insights
 
-13. **Complete Test Coverage** 🟡 Medium
+12. **Complete Test Coverage** 🟡 Medium
     - Unit tests for all services
     - Integration tests
 
-14. **API Documentation** 🟡 Medium
+13. **API Documentation** 🟡 Medium
     - OpenAPI/Swagger spec
 
-15. **Frontend Migration** 🔴 High
+14. **Frontend Migration** 🔴 High
     - Migrate frontend to use Go backend APIs
 
 ---
