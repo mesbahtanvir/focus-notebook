@@ -295,3 +295,209 @@ func (s *CSVProcessingService) updateStatement(
 
 	return s.repo.Create(ctx, path, data)
 }
+
+// CategoryMapping represents a transaction category with confidence
+type CategoryMapping struct {
+	Level1     string
+	Level2     string
+	Confidence float64
+}
+
+// CategorizeTransaction categorizes a single transaction
+func (s *CSVProcessingService) CategorizeTransaction(
+	ctx context.Context,
+	userID string,
+	merchant string,
+	description string,
+	plaidCategories []string,
+) (*CategoryMapping, error) {
+	s.logger.Info("Categorizing transaction",
+		zap.String("uid", userID),
+		zap.String("merchant", merchant),
+	)
+
+	// Use the categorization service to categorize
+	// For now, use the enhanced transaction method with a single item
+	csvTx := []models.CSVTransaction{
+		{
+			Date:        time.Now().Format("2006-01-02"),
+			Description: description,
+			Amount:      0, // Amount not needed for categorization
+		},
+	}
+
+	result, err := s.categorizationSvc.EnhanceTransactions(ctx, csvTx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to categorize: %w", err)
+	}
+
+	if len(result.Transactions) == 0 {
+		return &CategoryMapping{
+			Level1:     "Other",
+			Level2:     "",
+			Confidence: 0.5,
+		}, nil
+	}
+
+	enhanced := result.Transactions[0]
+
+	// Map category to level1/level2 structure
+	// The category from categorization service is already in the right format
+	return &CategoryMapping{
+		Level1:     enhanced.Category,
+		Level2:     "", // We don't have level2 in our current implementation
+		Confidence: 0.85,
+	}, nil
+}
+
+// LinkTransactionToTrip manually links a transaction to a trip
+func (s *CSVProcessingService) LinkTransactionToTrip(
+	ctx context.Context,
+	userID string,
+	transactionID string,
+	tripID string,
+	confidence float64,
+	reasoning string,
+) error {
+	s.logger.Info("Linking transaction to trip",
+		zap.String("uid", userID),
+		zap.String("transactionId", transactionID),
+		zap.String("tripId", tripID),
+	)
+
+	// Get trip details
+	tripPath := fmt.Sprintf("users/%s/trips/%s", userID, tripID)
+	tripData, err := s.repo.Get(ctx, tripPath)
+	if err != nil {
+		return fmt.Errorf("trip not found: %w", err)
+	}
+
+	tripName, _ := tripData["name"].(string)
+	tripDestination, _ := tripData["destination"].(string)
+
+	// Update transaction
+	txPath := fmt.Sprintf("users/%s/transactions/%s", userID, transactionID)
+
+	updateData := map[string]interface{}{
+		"tripLinkStatus":    "linked",
+		"tripLinkUpdatedAt": time.Now().UnixMilli(),
+		"tripLink": map[string]interface{}{
+			"tripId":          tripID,
+			"tripName":        tripName,
+			"tripDestination": tripDestination,
+			"confidence":      confidence,
+			"method":          "manual",
+			"reasoning":       reasoning,
+			"linkedAt":        time.Now().UnixMilli(),
+		},
+	}
+
+	if err := s.repo.Update(ctx, txPath, updateData); err != nil {
+		return fmt.Errorf("failed to update transaction: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteAllTransactionsSummary summarizes deletion results
+type DeleteAllTransactionsSummary struct {
+	TransactionsDeleted       int
+	ProcessingStatusesDeleted int
+	StatementsDeleted         int
+	QueuedJobsDeleted         int
+}
+
+// DeleteAllTransactions deletes all transactions and related data for a user
+func (s *CSVProcessingService) DeleteAllTransactions(
+	ctx context.Context,
+	userID string,
+) (*DeleteAllTransactionsSummary, error) {
+	s.logger.Info("Deleting all transactions for user", zap.String("uid", userID))
+
+	summary := &DeleteAllTransactionsSummary{}
+
+	// Delete transactions
+	transactionsDeleted, err := s.deleteCollectionInBatches(
+		ctx,
+		fmt.Sprintf("users/%s/transactions", userID),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete transactions: %w", err)
+	}
+	summary.TransactionsDeleted = transactionsDeleted
+
+	// Delete CSV processing status
+	statusDeleted, err := s.deleteCollectionInBatches(
+		ctx,
+		fmt.Sprintf("users/%s/csvProcessingStatus", userID),
+	)
+	if err != nil {
+		s.logger.Warn("Failed to delete CSV processing status", zap.Error(err))
+	}
+	summary.ProcessingStatusesDeleted = statusDeleted
+
+	// Delete statements
+	statementsDeleted, err := s.deleteCollectionInBatches(
+		ctx,
+		fmt.Sprintf("users/%s/statements", userID),
+	)
+	if err != nil {
+		s.logger.Warn("Failed to delete statements", zap.Error(err))
+	}
+	summary.StatementsDeleted = statementsDeleted
+
+	// TODO: Delete queued CSV batch jobs
+	// This would require querying a global collection with userID filter
+	// For now, we'll skip this
+
+	s.logger.Info("Deleted all transactions",
+		zap.String("uid", userID),
+		zap.Int("transactions", transactionsDeleted),
+		zap.Int("statements", statementsDeleted),
+	)
+
+	return summary, nil
+}
+
+// deleteCollectionInBatches deletes all documents in a collection path
+func (s *CSVProcessingService) deleteCollectionInBatches(
+	ctx context.Context,
+	collectionPath string,
+) (int, error) {
+	deleted := 0
+	batchSize := FirestoreBatchLimit
+
+	for {
+		// List documents in the collection
+		docs, err := s.repo.List(ctx, collectionPath, batchSize)
+		if err != nil {
+			return deleted, fmt.Errorf("failed to list documents: %w", err)
+		}
+
+		if len(docs) == 0 {
+			break
+		}
+
+		// Delete in batch
+		for _, doc := range docs {
+			if id, ok := doc["id"].(string); ok {
+				path := fmt.Sprintf("%s/%s", collectionPath, id)
+				if err := s.repo.Delete(ctx, path); err != nil {
+					s.logger.Warn("Failed to delete document",
+						zap.String("path", path),
+						zap.Error(err),
+					)
+					continue
+				}
+				deleted++
+			}
+		}
+
+		// If we got fewer documents than batch size, we're done
+		if len(docs) < batchSize {
+			break
+		}
+	}
+
+	return deleted, nil
+}

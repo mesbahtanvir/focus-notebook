@@ -381,7 +381,10 @@ func main() {
 		spendingRoutes := api.PathPrefix("/spending").Subrouter()
 		spendingRoutes.HandleFunc("/process-csv", spendingHandler.ProcessCSV).Methods("POST")
 		spendingRoutes.HandleFunc("/delete-csv", spendingHandler.DeleteCSV).Methods("POST")
-		logger.Info("Spending endpoints registered")
+		spendingRoutes.HandleFunc("/categorize", spendingHandler.CategorizeTransaction).Methods("POST")
+		spendingRoutes.HandleFunc("/link-trip", spendingHandler.LinkTransactionToTrip).Methods("POST")
+		spendingRoutes.HandleFunc("/delete-all", spendingHandler.DeleteAllTransactions).Methods("POST")
+		logger.Info("Spending endpoints registered (5 endpoints)")
 	} else {
 		logger.Warn("Spending endpoints disabled (CSV processing service not available)")
 	}
@@ -389,8 +392,6 @@ func main() {
 	// TODO: Add more routes here as we implement handlers
 	// - /api/chat
 	// - /api/predict-investment
-	// - /api/spending/categorize-transaction
-	// - /api/spending/link-to-trip
 	// - /api/photo/*
 	// etc.
 
