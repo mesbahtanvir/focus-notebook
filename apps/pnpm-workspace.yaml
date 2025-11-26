@@ -1,0 +1,6 @@
+packages:
+  - "web"
+  - "functions"
+  - "mobile"
+  - "e2e"
+  - "packages/*"

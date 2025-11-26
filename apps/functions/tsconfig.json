@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "outDir": "lib",
+    "rootDir": "..",
+    "sourceMap": true,
+    "strict": true,
+    "target": "es2017",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@focus/shared": ["../packages/shared/src"],
+      "@focus/shared/*": ["../packages/shared/src/*"]
+    }
+  },
+  "compileOnSave": true,
+  "include": [
+    "src",
+    "../packages/shared/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/__tests__/**",
+    "node_modules"
+  ]
+}

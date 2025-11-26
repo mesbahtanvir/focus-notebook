@@ -1,0 +1,38 @@
+{
+  "functions": {
+    "source": "functions",
+    "predeploy": [
+      "pnpm --filter @focus/functions run build"
+    ],
+    "runtime": "nodejs22"
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "hosting": {
+    "source": "web",
+    "frameworksBackend": {
+      "region": "us-central1"
+    }
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099,
+      "host": "localhost"
+    },
+    "firestore": {
+      "port": 8080,
+      "host": "localhost"
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000,
+      "host": "localhost"
+    },
+    "singleProjectMode": true
+  }
+}
