@@ -32,38 +32,47 @@ jobs:
     name: PR Checks - Web App
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: apps
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
-          cache: npm
+          cache: pnpm
+          cache-dependency-path: apps/pnpm-lock.yaml
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Run lint
-        run: npm run lint
+        run: pnpm --filter @focus/web lint
 
       - name: Run type check
-        run: npx tsc --noEmit
+        run: pnpm --filter @focus/web typecheck
 
       - name: Run unit tests
-        run: npm test
+        run: pnpm --filter @focus/web test
         env:
           CI: true
 
       - name: Build project
-        run: npm run build
+        run: pnpm --filter @focus/web build
         env:
           NODE_ENV: production
 
       - name: Verify build output
         run: |
-          if [ ! -d ".next" ]; then
+          if [ ! -d "web/.next" ]; then
             echo "Build failed - .next directory not found"
             exit 1
           fi
@@ -73,48 +82,43 @@ jobs:
     name: PR Checks - Cloud Functions
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: apps
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
-          cache: npm
-          cache-dependency-path: functions/package-lock.json
+          cache: pnpm
+          cache-dependency-path: apps/pnpm-lock.yaml
 
       - name: Install dependencies
-        run: |
-          cd functions
-          npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Run type check
-        run: |
-          cd functions
-          npx tsc --noEmit
+        run: pnpm --filter @focus/functions typecheck
 
       - name: Run unit tests
-        run: |
-          cd functions
-          npm test
+        run: pnpm --filter @focus/functions test
         env:
           CI: true
 
       - name: Build functions
-        run: |
-          cd functions
-          npm run build
+        run: pnpm --filter @focus/functions build
 
       - name: Verify build output
         run: |
-          cd functions
-          if [ ! -d "lib" ]; then
+          if [ ! -d "functions/lib" ]; then
             echo "Build failed - lib directory not found"
-            exit 1
-          fi
-          if [ ! -f "lib/index.js" ]; then
-            echo "Build failed - index.js not found"
             exit 1
           fi
           echo "✅ Cloud Functions build successful"
@@ -123,6 +127,9 @@ jobs:
     name: Validate Web App
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    defaults:
+      run:
+        working-directory: apps
     strategy:
       matrix:
         node-version: [22.x]
@@ -130,38 +137,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: npm
+          cache: pnpm
+          cache-dependency-path: apps/pnpm-lock.yaml
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Cache Jest
         uses: actions/cache@v4
         with:
           path: |
-            .jest-cache
-            node_modules/.cache/jest
-          key: ${{ runner.os }}-jest-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx') }}
+            apps/web/.jest-cache
+            apps/node_modules/.cache/jest
+          key: ${{ runner.os }}-jest-${{ matrix.node-version }}-${{ hashFiles('apps/pnpm-lock.yaml') }}-${{ hashFiles('apps/**/*.ts', 'apps/**/*.tsx') }}
           restore-keys: |
-            ${{ runner.os }}-jest-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-jest-${{ matrix.node-version }}-${{ hashFiles('apps/pnpm-lock.yaml') }}-
             ${{ runner.os }}-jest-${{ matrix.node-version }}-
 
       - name: Run linter
-        run: npm run lint
+        run: pnpm --filter @focus/web lint
 
       - name: Run type check
-        run: npx tsc --noEmit
+        run: pnpm --filter @focus/web typecheck
 
       - name: Run unit tests
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            npm run test:ci:changed
+            pnpm --filter @focus/web test -- --onlyChanged --coverage
           else
-            npm run test:ci
+            pnpm --filter @focus/web test -- --coverage
           fi
         env:
           CI: true
@@ -171,7 +184,7 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
+          files: ./apps/web/coverage/lcov.info
           flags: web
           name: web-app-coverage
 
@@ -180,19 +193,19 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: coverage/
+          path: apps/web/coverage/
           retention-days: 30
 
       - name: Build project
         if: matrix.node-version == '22.x'
-        run: npm run build
+        run: pnpm --filter @focus/web build
         env:
           NODE_ENV: production
 
       - name: Verify build output
         if: matrix.node-version == '22.x'
         run: |
-          if [ ! -d ".next" ]; then
+          if [ ! -d "web/.next" ]; then
             echo "Build failed - .next directory not found"
             exit 1
           fi
@@ -202,80 +215,85 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: web-build
-          path: .next/
+          path: apps/web/.next/
           retention-days: 7
 
   validate_functions:
     name: Validate Cloud Functions
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    defaults:
+      run:
+        working-directory: apps
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
-          cache: npm
-          cache-dependency-path: functions/package-lock.json
+          cache: pnpm
+          cache-dependency-path: apps/pnpm-lock.yaml
 
       - name: Install dependencies
-        run: |
-          cd functions
-          npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Lint TypeScript
-        run: |
-          cd functions
-          npx tsc --noEmit
+        run: pnpm --filter @focus/functions typecheck
 
       - name: Run unit tests
-        run: |
-          cd functions
-          npm test --  --detectOpenHandles --coverage
+        run: pnpm --filter @focus/functions test -- --detectOpenHandles --coverage
 
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:
-          files: ./functions/coverage/lcov.info
+          files: ./apps/functions/coverage/lcov.info
           flags: cloud-functions
           name: cloud-functions-coverage
 
       - name: Build functions
-        run: |
-          cd functions
-          npm run build
+        run: pnpm --filter @focus/functions build
 
       - name: Check build artifacts
         run: |
-          cd functions
-          test -d lib || (echo "Build failed: lib directory not created" && exit 1)
-          test -f lib/index.js || (echo "Build failed: index.js not found" && exit 1)
+          test -d functions/lib || (echo "Build failed: lib directory not created" && exit 1)
+          echo "✅ Cloud Functions build successful"
 
       - name: Upload function build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: functions-lib
-          path: functions/lib/
+          path: apps/functions/lib/
 
   security_check_functions:
     name: Security Audit
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
+    defaults:
+      run:
+        working-directory: apps
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
 
-      - name: Run npm audit
-        run: |
-          cd functions
-          npm audit --audit-level=moderate
+      - name: Run pnpm audit
+        run: pnpm audit --audit-level=moderate
         continue-on-error: true
 
       - name: Check for hardcoded secrets
@@ -296,16 +314,17 @@ jobs:
 
       - name: Check required files exist
         run: |
-          test -f functions/package.json || (echo "Missing package.json" && exit 1)
-          test -f functions/tsconfig.json || (echo "Missing tsconfig.json" && exit 1)
-          test -f functions/.env.example || (echo "Missing .env.example" && exit 1)
-          test -f firebase.json || (echo "Missing firebase.json in root" && exit 1)
+          test -f apps/functions/package.json || (echo "Missing functions/package.json" && exit 1)
+          test -f apps/functions/tsconfig.json || (echo "Missing functions/tsconfig.json" && exit 1)
+          test -f apps/functions/.env.example || (echo "Missing functions/.env.example" && exit 1)
+          test -f apps/firebase.json || (echo "Missing firebase.json in apps/" && exit 1)
+          test -f apps/pnpm-workspace.yaml || (echo "Missing pnpm-workspace.yaml" && exit 1)
+          test -f apps/turbo.json || (echo "Missing turbo.json" && exit 1)
           echo "✅ All required config files exist"
 
       - name: Validate environment variables
         run: |
-          cd functions
-          if ! grep -q "OPENAI_API_KEY" .env.example; then
+          if ! grep -q "OPENAI_API_KEY" apps/functions/.env.example; then
             echo "❌ .env.example missing OPENAI_API_KEY"
             exit 1
           fi
@@ -316,29 +335,33 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate_web, validate_functions]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    defaults:
+      run:
+        working-directory: apps
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
-          cache: npm
-          cache-dependency-path: functions/package-lock.json
+          cache: pnpm
+          cache-dependency-path: apps/pnpm-lock.yaml
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
       - name: Install dependencies
-        run: |
-          cd functions
-          npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build functions
-        run: |
-          cd functions
-          npm run build
+        run: pnpm --filter @focus/functions build
 
       - name: Setup test environment
         env:

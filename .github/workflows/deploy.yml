@@ -36,21 +36,27 @@ jobs:
     runs-on: ubuntu-latest
     needs: check_ci_success
     if: needs.check_ci_success.outputs.deploy == 'true'
+    defaults:
+      run:
+        working-directory: apps
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
-          cache: npm
-          cache-dependency-path: functions/package-lock.json
+          cache: pnpm
+          cache-dependency-path: apps/pnpm-lock.yaml
 
       - name: Install dependencies
-        run: |
-          cd functions
-          npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Generate environment file
         env:
@@ -76,9 +82,7 @@ jobs:
           PY
 
       - name: Build functions
-        run: |
-          cd functions
-          npm run build
+        run: pnpm --filter @focus/functions build
 
       - name: Deploy to Firebase
         uses: w9jds/firebase-action@master
@@ -87,6 +91,7 @@ jobs:
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          PROJECT_PATH: ./apps
 
       - name: Comment deployment success on related PRs
         if: success()
