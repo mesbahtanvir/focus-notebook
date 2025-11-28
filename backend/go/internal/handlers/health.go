@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/utils"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/pkg/firebase"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/utils"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/pkg/firebase"
 )
 
 // HealthHandler handles health check requests

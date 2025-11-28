@@ -8,9 +8,9 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/google/uuid"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/models"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/repository"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/utils"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/models"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/repository"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/utils"
 	"go.uber.org/zap"
 )
 

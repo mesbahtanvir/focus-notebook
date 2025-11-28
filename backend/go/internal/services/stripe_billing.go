@@ -8,9 +8,9 @@ import (
 	"github.com/stripe/stripe-go/v76"
 	"go.uber.org/zap"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/clients"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/models"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/repository"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/clients"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/models"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/repository"
 )
 
 const (

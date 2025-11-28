@@ -42,7 +42,7 @@ linters-settings:
         disabled: false
 
   goimports:
-    local-prefixes: github.com/mesbahtanvir/focus-notebook/backend-go
+    local-prefixes: github.com/mesbahtanvir/focus-notebook/backend/go
 
   gosec:
     excludes:

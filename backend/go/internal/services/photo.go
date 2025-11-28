@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/repository/interfaces"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/repository/interfaces"
 	"go.uber.org/zap"
 	"google.golang.org/api/option"
 )

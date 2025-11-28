@@ -9,8 +9,8 @@ import (
 	"cloud.google.com/go/firestore"
 	"go.uber.org/zap"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/clients"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/repository"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/clients"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/repository"
 )
 
 // PlaidService handles Plaid banking operations

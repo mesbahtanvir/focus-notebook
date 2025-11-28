@@ -6,7 +6,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/repository"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/repository"
 )
 
 // MockRepository is a mock implementation of Repository for testing

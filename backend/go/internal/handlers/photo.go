@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/services"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/utils"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/services"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/utils"
 	"go.uber.org/zap"
 )
 

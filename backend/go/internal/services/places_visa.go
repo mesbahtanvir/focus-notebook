@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/clients"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/repository/interfaces"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/clients"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/repository/interfaces"
 	"go.uber.org/zap"
 )
 

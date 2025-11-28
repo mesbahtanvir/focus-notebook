@@ -16,14 +16,14 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/api/option"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/clients"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/config"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/handlers"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/middleware"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/repository"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/services"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/utils"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/pkg/firebase"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/clients"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/config"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/handlers"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/middleware"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/repository"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/services"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/utils"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/pkg/firebase"
 )
 
 func main() {

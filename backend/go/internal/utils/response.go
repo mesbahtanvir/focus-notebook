@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/models"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/models"
 )
 
 // RespondJSON sends a JSON response

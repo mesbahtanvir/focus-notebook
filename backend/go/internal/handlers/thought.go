@@ -6,9 +6,9 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/models"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/services"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/utils"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/models"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/services"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/utils"
 )
 
 // ThoughtHandler handles thought processing requests

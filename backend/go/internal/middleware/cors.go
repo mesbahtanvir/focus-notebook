@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/config"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/config"
 )
 
 // CORS middleware handles Cross-Origin Resource Sharing

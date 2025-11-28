@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/repository/interfaces"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/repository/interfaces"
 	"go.uber.org/zap"
 )
 

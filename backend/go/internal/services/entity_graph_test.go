@@ -6,7 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/repository/mocks"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/repository/mocks"
 )
 
 func TestEntityGraphService_QueryRelationships(t *testing.T) {

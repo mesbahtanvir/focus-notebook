@@ -4,7 +4,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/config"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/config"
 )
 
 // NewLogger creates a new zap logger based on configuration

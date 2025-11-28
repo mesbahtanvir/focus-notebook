@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/clients"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/repository"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/clients"
+	"github.com/mesbahtanvir/focus-notebook/backend/go/internal/repository"
 	"go.uber.org/zap"
 )
 

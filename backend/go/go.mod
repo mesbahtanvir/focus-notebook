@@ -1,4 +1,4 @@
-module github.com/mesbahtanvir/focus-notebook/backend-go
+module github.com/mesbahtanvir/focus-notebook/backend/go
 
 go 1.21
 
