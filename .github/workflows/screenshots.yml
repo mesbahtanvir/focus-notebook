@@ -31,6 +31,7 @@ jobs:
         with:
           node-version: '22.x'
           cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Setup Java (for Firebase emulators)
         uses: actions/setup-java@v4
@@ -42,18 +43,18 @@ jobs:
         run: npm install -g firebase-tools
 
       - name: Install dependencies
-        run: npm ci
+        run: cd frontend && npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: cd frontend && npx playwright install --with-deps chromium
 
       - name: Build application
-        run: npm run build
+        run: cd frontend && npm run build
         env:
           NODE_ENV: production
 
       - name: Run screenshot tests
-        run: npm run test:screenshots
+        run: cd frontend && npm run test:screenshots
         env:
           CI: true
           PLAYWRIGHT_BASE_URL: http://localhost:3000
@@ -63,7 +64,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: playwright-report/
+          path: frontend/playwright-report/
           retention-days: 30
 
       - name: Upload screenshots on failure
@@ -72,9 +73,9 @@ jobs:
         with:
           name: screenshot-diffs
           path: |
-            test-results/
-            e2e/**/*-actual.png
-            e2e/**/*-diff.png
+            frontend/test-results/
+            frontend/e2e/**/*-actual.png
+            frontend/e2e/**/*-diff.png
           retention-days: 30
 
       - name: Comment on PR with results
@@ -136,6 +137,7 @@ jobs:
         with:
           node-version: '22.x'
           cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Setup Java (for Firebase emulators)
         uses: actions/setup-java@v4
@@ -147,18 +149,18 @@ jobs:
         run: npm install -g firebase-tools
 
       - name: Install dependencies
-        run: npm ci
+        run: cd frontend && npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: cd frontend && npx playwright install --with-deps chromium
 
       - name: Build application
-        run: npm run build
+        run: cd frontend && npm run build
         env:
           NODE_ENV: production
 
       - name: Update screenshot baselines
-        run: npm run test:screenshots:update
+        run: cd frontend && npm run test:screenshots:update
         env:
           CI: true
           PLAYWRIGHT_BASE_URL: http://localhost:3000
@@ -167,7 +169,7 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add e2e/**/*.png
+          git add frontend/e2e/**/*.png
           if git diff --staged --quiet; then
             echo "No baseline changes to commit"
           else

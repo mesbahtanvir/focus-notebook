@@ -6,7 +6,7 @@ on:
       - main
       - production
     paths:
-      - 'backend-go/**'
+      - 'backend/go/**'
       - '.github/workflows/deploy-backend.yml'
   workflow_dispatch:
     inputs:
@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./backend-go
+        working-directory: ./backend/go
 
     steps:
       - name: Checkout code
@@ -46,7 +46,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
-          cache-dependency-path: backend-go/go.sum
+          cache-dependency-path: backend/go/go.sum
 
       - name: Run tests
         run: |
@@ -105,7 +105,7 @@ jobs:
           IMAGE_TAG="${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/backend/${{ env.SERVICE_NAME }}:${{ github.sha }}"
           IMAGE_LATEST="${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/backend/${{ env.SERVICE_NAME }}:${ENV}-latest"
 
-          cd backend-go
+          cd backend/go
 
           docker build \
             --tag "$IMAGE_TAG" \
