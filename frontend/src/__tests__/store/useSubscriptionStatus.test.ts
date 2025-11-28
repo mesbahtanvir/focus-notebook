@@ -12,7 +12,7 @@ jest.mock('@/lib/data/subscribe', () => ({
   }),
 }));
 
-jest.mock('../../../shared/subscription', () => ({
+jest.mock('@shared/subscription', () => ({
   evaluateAiEntitlement: jest.fn((subscription) => {
     if (!subscription) return { allowed: false, code: 'no-record' };
     if (subscription.status === 'active') return { allowed: true, code: 'allowed' };
@@ -33,7 +33,7 @@ const { subscribeDoc: mockSubscribeDoc } = require('@/lib/data/subscribe') as {
 const {
   evaluateAiEntitlement: mockEvaluateAiEntitlement,
   hasActivePro: mockHasActivePro,
-} = require('../../../shared/subscription');
+} = require('@shared/subscription');
 
 const resetStore = () => {
   useSubscriptionStatus.setState({

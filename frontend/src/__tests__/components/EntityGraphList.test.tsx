@@ -34,7 +34,7 @@ jest.mock('@/store/useMoods', () => ({
 }));
 
 // Mock toolSpecs
-jest.mock('../../../shared/toolSpecs', () => ({
+jest.mock('@shared/toolSpecs', () => ({
   getToolSpecById: jest.fn((id: string) => ({
     id,
     title: `${id.charAt(0).toUpperCase()}${id.slice(1)}`,
