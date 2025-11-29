@@ -63,7 +63,7 @@ jobs:
 
       - name: Verify build output
         run: |
-          if [ ! -d ".next" ]; then
+          if [ ! -d "frontend/web/.next" ]; then
             echo "Build failed - .next directory not found"
             exit 1
           fi
@@ -82,33 +82,33 @@ jobs:
         with:
           node-version: '22.x'
           cache: npm
-          cache-dependency-path: functions/package-lock.json
+          cache-dependency-path: frontend/functions/package-lock.json
 
       - name: Install dependencies
         run: |
-          cd functions
+          cd frontend/functions
           npm ci
 
       - name: Run type check
         run: |
-          cd functions
+          cd frontend/functions
           npx tsc --noEmit
 
       - name: Run unit tests
         run: |
-          cd functions
+          cd frontend/functions
           npm test
         env:
           CI: true
 
       - name: Build functions
         run: |
-          cd functions
+          cd frontend/functions
           npm run build
 
       - name: Verify build output
         run: |
-          cd functions
+          cd frontend/functions
           if [ ! -d "lib" ]; then
             echo "Build failed - lib directory not found"
             exit 1
@@ -192,7 +192,7 @@ jobs:
       - name: Verify build output
         if: matrix.node-version == '22.x'
         run: |
-          if [ ! -d ".next" ]; then
+          if [ ! -d "frontend/web/.next" ]; then
             echo "Build failed - .next directory not found"
             exit 1
           fi
@@ -202,7 +202,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: web-build
-          path: .next/
+          path: frontend/web/.next/
           retention-days: 7
 
   validate_functions:
@@ -218,38 +218,38 @@ jobs:
         with:
           node-version: '22.x'
           cache: npm
-          cache-dependency-path: functions/package-lock.json
+          cache-dependency-path: frontend/functions/package-lock.json
 
       - name: Install dependencies
         run: |
-          cd functions
+          cd frontend/functions
           npm ci
 
       - name: Lint TypeScript
         run: |
-          cd functions
+          cd frontend/functions
           npx tsc --noEmit
 
       - name: Run unit tests
         run: |
-          cd functions
+          cd frontend/functions
           npm test --  --detectOpenHandles --coverage
 
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:
-          files: ./functions/coverage/lcov.info
+          files: ./frontend/functions/coverage/lcov.info
           flags: cloud-functions
           name: cloud-functions-coverage
 
       - name: Build functions
         run: |
-          cd functions
+          cd frontend/functions
           npm run build
 
       - name: Check build artifacts
         run: |
-          cd functions
+          cd frontend/functions
           test -d lib || (echo "Build failed: lib directory not created" && exit 1)
           test -f lib/index.js || (echo "Build failed: index.js not found" && exit 1)
 
@@ -257,7 +257,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: functions-lib
-          path: functions/lib/
+          path: frontend/functions/lib/
 
   security_check_functions:
     name: Security Audit
@@ -274,13 +274,13 @@ jobs:
 
       - name: Run npm audit
         run: |
-          cd functions
+          cd frontend/functions
           npm audit --audit-level=moderate
         continue-on-error: true
 
       - name: Check for hardcoded secrets
         run: |
-          if grep -r "sk-[a-zA-Z0-9]\{20,\}" functions/src/ --exclude-dir=node_modules --exclude-dir=lib; then
+          if grep -r "sk-[a-zA-Z0-9]\{20,\}" frontend/functions/src/ --exclude-dir=node_modules --exclude-dir=lib; then
             echo "⚠️ Potential hardcoded API keys found!"
             exit 1
           fi
@@ -296,15 +296,15 @@ jobs:
 
       - name: Check required files exist
         run: |
-          test -f functions/package.json || (echo "Missing package.json" && exit 1)
-          test -f functions/tsconfig.json || (echo "Missing tsconfig.json" && exit 1)
-          test -f functions/.env.example || (echo "Missing .env.example" && exit 1)
+          test -f frontend/functions/package.json || (echo "Missing package.json" && exit 1)
+          test -f frontend/functions/tsconfig.json || (echo "Missing tsconfig.json" && exit 1)
+          test -f frontend/functions/.env.example || (echo "Missing .env.example" && exit 1)
           test -f firebase.json || (echo "Missing firebase.json in root" && exit 1)
           echo "✅ All required config files exist"
 
       - name: Validate environment variables
         run: |
-          cd functions
+          cd frontend/functions
           if ! grep -q "OPENAI_API_KEY" .env.example; then
             echo "❌ .env.example missing OPENAI_API_KEY"
             exit 1
@@ -325,19 +325,19 @@ jobs:
         with:
           node-version: '22.x'
           cache: npm
-          cache-dependency-path: functions/package-lock.json
+          cache-dependency-path: frontend/functions/package-lock.json
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
       - name: Install dependencies
         run: |
-          cd functions
+          cd frontend/functions
           npm ci
 
       - name: Build functions
         run: |
-          cd functions
+          cd frontend/functions
           npm run build
 
       - name: Setup test environment
@@ -352,7 +352,7 @@ jobs:
           python - <<'PY'
           import os, pathlib
 
-          env_path = pathlib.Path('functions/.env')
+          env_path = pathlib.Path('frontend/functions/.env')
           env_path.write_text('\n'.join([
               f"OPENAI_API_KEY={os.environ['OPENAI_KEY']}",
               f"STRIPE_SECRET={os.environ['STRIPE_SECRET']}",
