@@ -6,7 +6,11 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 )
+
+// Ensure FirestoreRepository implements interfaces.Repository
+var _ interfaces.Repository = (*FirestoreRepository)(nil)
 
 // FirestoreRepository handles Firestore CRUD operations
 type FirestoreRepository struct {
@@ -18,6 +22,65 @@ func NewFirestoreRepository(client *firestore.Client) *FirestoreRepository {
 	return &FirestoreRepository{
 		client: client,
 	}
+}
+
+// Client returns the underlying Firestore client
+func (r *FirestoreRepository) Client() *firestore.Client {
+	return r.client
+}
+
+// Collection returns a collection reference
+func (r *FirestoreRepository) Collection(path string) *firestore.CollectionRef {
+	return r.client.Collection(path)
+}
+
+// Batch returns a new write batch
+func (r *FirestoreRepository) Batch() *firestore.WriteBatch {
+	return r.client.Batch()
+}
+
+// Get retrieves a document and returns its data as a map
+func (r *FirestoreRepository) Get(ctx context.Context, path string) (map[string]interface{}, error) {
+	ref := r.client.Doc(path)
+	snap, err := ref.Get(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get document at %s: %w", path, err)
+	}
+	return snap.Data(), nil
+}
+
+// Create creates a new document (alias for CreateDocument)
+func (r *FirestoreRepository) Create(ctx context.Context, path string, data map[string]interface{}) error {
+	return r.CreateDocument(ctx, path, data)
+}
+
+// Update updates a document (alias for UpdateDocument)
+func (r *FirestoreRepository) Update(ctx context.Context, path string, data map[string]interface{}) error {
+	return r.UpdateDocument(ctx, path, data)
+}
+
+// Delete deletes a document (alias for DeleteDocument)
+func (r *FirestoreRepository) Delete(ctx context.Context, path string) error {
+	return r.DeleteDocument(ctx, path)
+}
+
+// List retrieves documents from a collection with optional limit
+func (r *FirestoreRepository) List(ctx context.Context, collectionPath string, limit int) ([]map[string]interface{}, error) {
+	query := r.client.Collection(collectionPath).Query
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+
+	docs, err := query.Documents(ctx).GetAll()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list collection %s: %w", collectionPath, err)
+	}
+
+	result := make([]map[string]interface{}, len(docs))
+	for i, doc := range docs {
+		result[i] = doc.Data()
+	}
+	return result, nil
 }
 
 // CreateDocument creates a new document with metadata
@@ -119,7 +182,7 @@ func (r *FirestoreRepository) GetDocument(ctx context.Context, path string) (*fi
 }
 
 // QueryCollection queries a collection with optional filters
-func (r *FirestoreRepository) QueryCollection(ctx context.Context, collectionPath string, opts ...QueryOption) ([]*firestore.DocumentSnapshot, error) {
+func (r *FirestoreRepository) QueryCollection(ctx context.Context, collectionPath string, opts ...interfaces.QueryOption) ([]*firestore.DocumentSnapshot, error) {
 	query := r.client.Collection(collectionPath).Query
 
 	// Apply options
@@ -140,8 +203,8 @@ func (r *FirestoreRepository) GetCollection(ctx context.Context, collectionPath 
 	return r.QueryCollection(ctx, collectionPath)
 }
 
-// QueryOption is a function that modifies a Firestore query
-type QueryOption func(firestore.Query) firestore.Query
+// QueryOption is a function that modifies a Firestore query (alias for interfaces.QueryOption)
+type QueryOption = interfaces.QueryOption
 
 // Where adds a where clause to the query
 func Where(field string, op string, value interface{}) QueryOption {
