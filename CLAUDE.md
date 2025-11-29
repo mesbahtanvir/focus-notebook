@@ -628,7 +628,6 @@ npx playwright test --headed
 **For major features (optional)**:
 - Integration tests with Firebase emulators
 - Manual testing in multiple browsers
-- Lighthouse performance audits
 
 **Important**: Screenshot tests are time-consuming and UI changes frequently. Run them only when preparing for a release, not for every PR or commit.
 
