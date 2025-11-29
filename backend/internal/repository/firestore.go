@@ -142,7 +142,11 @@ func (r *FirestoreRepository) UpdateDocument(ctx context.Context, path string, u
 
 	// Convert to []firestore.Update
 	var fieldUpdates []firestore.Update
-	for key, value := range cleanUpdates {
+	cleanMap, ok := cleanUpdates.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("failed to convert updates to map")
+	}
+	for key, value := range cleanMap {
 		fieldUpdates = append(fieldUpdates, firestore.Update{
 			Path:  key,
 			Value: value,

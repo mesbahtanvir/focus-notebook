@@ -13,24 +13,24 @@ import (
 
 // PlaidClient wraps the Plaid API client
 type PlaidClient struct {
-	client      *plaid.APIClient
-	environment plaid.Environment
-	clientID    string
-	secret      string
-	products    []plaid.Products
+	client       *plaid.APIClient
+	environment  plaid.Environment
+	clientID     string
+	secret       string
+	products     []plaid.Products
 	countryCodes []plaid.CountryCode
-	webhookURL  string
-	logger      *zap.Logger
+	webhookURL   string
+	logger       *zap.Logger
 }
 
 // PlaidConfig holds initialization parameters
 type PlaidClientConfig struct {
-	ClientID    string
-	Secret      string
-	Environment string // "sandbox", "development", or "production"
-	Products    []string
+	ClientID     string
+	Secret       string
+	Environment  string // "sandbox", "development", or "production"
+	Products     []string
 	CountryCodes []string
-	WebhookURL  string
+	WebhookURL   string
 }
 
 // NewPlaidClient creates a new Plaid client
@@ -104,11 +104,11 @@ func NewPlaidClient(cfg *config.PlaidConfig, logger *zap.Logger) (*PlaidClient, 
 
 // CreateLinkTokenRequest holds parameters for link token creation
 type CreateLinkTokenRequest struct {
-	UserID       string
-	UserEmail    string
-	Platform     string // "web", "ios", or "android"
-	RedirectURI  string // Optional redirect URI for OAuth
-	AccessToken  string // Optional: for update mode
+	UserID      string
+	UserEmail   string
+	Platform    string // "web", "ios", or "android"
+	RedirectURI string // Optional redirect URI for OAuth
+	AccessToken string // Optional: for update mode
 }
 
 // CreateLinkTokenResponse holds the link token result
@@ -173,7 +173,7 @@ func (c *PlaidClient) CreateLinkToken(ctx context.Context, req CreateLinkTokenRe
 	}
 	defer httpResp.Body.Close()
 
-	expiration, _ := time.Parse(time.RFC3339, response.GetExpiration())
+	expiration := response.GetExpiration()
 
 	c.logger.Info("Link token created",
 		zap.String("userId", req.UserID),
@@ -226,13 +226,13 @@ func (c *PlaidClient) ExchangePublicToken(ctx context.Context, req ExchangePubli
 
 // GetItemResponse holds item information
 type GetItemResponse struct {
-	ItemID        string
-	InstitutionID string
-	Webhook       string
+	ItemID            string
+	InstitutionID     string
+	Webhook           string
 	AvailableProducts []string
 	BilledProducts    []string
-	Error         *string
-	UpdateType    string
+	Error             *string
+	UpdateType        string
 }
 
 // GetItem retrieves information about a Plaid item
@@ -251,10 +251,14 @@ func (c *PlaidClient) GetItem(ctx context.Context, accessToken string) (*GetItem
 	item := response.GetItem()
 	result := &GetItemResponse{
 		ItemID:            item.GetItemId(),
-		InstitutionID:     item.InstitutionId.Get(),
 		Webhook:           item.GetWebhook(),
 		AvailableProducts: []string{},
 		BilledProducts:    []string{},
+	}
+
+	// Handle nullable institution ID
+	if item.InstitutionId.IsSet() && item.InstitutionId.Get() != nil {
+		result.InstitutionID = *item.InstitutionId.Get()
 	}
 
 	// Convert products to strings
@@ -266,10 +270,11 @@ func (c *PlaidClient) GetItem(ctx context.Context, accessToken string) (*GetItem
 	}
 
 	// Check for errors
-	if item.Error != nil {
-		errorStr := item.Error.GetErrorMessage()
+	if item.Error.IsSet() && item.Error.Get() != nil {
+		plaidErr := item.Error.Get()
+		errorStr := plaidErr.GetErrorMessage()
 		result.Error = &errorStr
-		result.UpdateType = string(item.Error.GetErrorType())
+		result.UpdateType = string(plaidErr.GetErrorType())
 	}
 
 	c.logger.Debug("Item retrieved",
@@ -391,16 +396,16 @@ func (c *PlaidClient) GetAccounts(ctx context.Context, accessToken string) ([]Ac
 
 // Transaction holds transaction information
 type Transaction struct {
-	TransactionID    string
-	AccountID        string
-	Amount           float64
-	IsoCurrency      string
-	Date             string
-	AuthorizedDate   *string
-	Name             string
-	MerchantName     *string
-	Pending          bool
-	Category         []string
+	TransactionID           string
+	AccountID               string
+	Amount                  float64
+	IsoCurrency             string
+	Date                    string
+	AuthorizedDate          *string
+	Name                    string
+	MerchantName            *string
+	Pending                 bool
+	Category                []string
 	PersonalFinanceCategory *string
 }
 
@@ -412,9 +417,9 @@ type SyncTransactionsRequest struct {
 
 // SyncTransactionsResponse holds the sync result
 type SyncTransactionsResponse struct {
-	Added    []Transaction
-	Modified []Transaction
-	Removed  []RemovedTransaction
+	Added      []Transaction
+	Modified   []Transaction
+	Removed    []RemovedTransaction
 	NextCursor string
 	HasMore    bool
 }
@@ -467,7 +472,8 @@ func (c *PlaidClient) SyncTransactions(ctx context.Context, req SyncTransactions
 		if merchantName := txn.GetMerchantName(); merchantName != "" {
 			transaction.MerchantName = &merchantName
 		}
-		if pfc := txn.PersonalFinanceCategory; pfc != nil {
+		if txn.PersonalFinanceCategory.IsSet() && txn.PersonalFinanceCategory.Get() != nil {
+			pfc := txn.PersonalFinanceCategory.Get()
 			pfcStr := pfc.GetPrimary()
 			transaction.PersonalFinanceCategory = &pfcStr
 		}

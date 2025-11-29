@@ -46,7 +46,7 @@ func NewStripeClient(cfg *config.StripeConfig, logger *zap.Logger) (*StripeClien
 }
 
 // CreateCheckoutSession creates a Stripe Checkout session for subscription
-func (c *StripeClient) CreateCheckoutSession(customerEmail string, successURL, cancelURL string) (*checkout.Session, error) {
+func (c *StripeClient) CreateCheckoutSession(customerEmail string, successURL, cancelURL string) (*stripe.CheckoutSession, error) {
 	// Use configured URLs if not provided
 	if successURL == "" {
 		successURL = c.successURL
@@ -98,7 +98,7 @@ func (c *StripeClient) CreateCheckoutSession(customerEmail string, successURL, c
 }
 
 // CreatePortalSession creates a Stripe billing portal session
-func (c *StripeClient) CreatePortalSession(customerID string, returnURL string) (*billingportal.Session, error) {
+func (c *StripeClient) CreatePortalSession(customerID string, returnURL string) (*stripe.BillingPortalSession, error) {
 	if customerID == "" {
 		return nil, fmt.Errorf("customer ID is required")
 	}
