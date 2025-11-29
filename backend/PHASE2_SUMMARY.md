@@ -335,7 +335,7 @@ Phase 2 successfully implements the complete AI-powered thought processing servi
 ### 1. Prerequisites
 
 ```bash
-cd backend-go
+cd backend
 
 # Add API keys to .env
 echo "OPENAI_API_KEY=sk-..." >> .env
@@ -343,7 +343,7 @@ echo "FIREBASE_PROJECT_ID=your-project" >> .env
 echo "FIREBASE_STORAGE_BUCKET=your-bucket.firebasestorage.app" >> .env
 
 # Download Firebase service account key
-# Place in backend-go/service-account-key.json
+# Place in backend/service-account-key.json
 ```
 
 ### 2. Start Server

@@ -23,7 +23,7 @@ A high-performance Golang backend service that replaces Firebase Cloud Functions
 ## Project Structure
 
 ```
-backend-go/
+backend/
 ├── cmd/
 │   ├── server/          # HTTP API server
 │   └── worker/          # Background workers
@@ -51,7 +51,7 @@ backend-go/
 ### 1. Clone and Navigate
 
 ```bash
-cd backend-go
+cd backend
 ```
 
 ### 2. Install Dependencies
@@ -63,7 +63,7 @@ go mod download
 ### 3. Firebase Setup
 
 1. Download your Firebase Admin SDK service account key
-2. Save it as `service-account-key.json` in the `backend-go` directory
+2. Save it as `service-account-key.json` in the `backend` directory
 3. Update `config/config.yaml` with your Firebase project ID
 
 ### 4. Environment Variables

@@ -13,7 +13,7 @@ import (
 	"github.com/stripe/stripe-go/v76/webhook"
 	"go.uber.org/zap"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/config"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/config"
 )
 
 // StripeClient wraps the Stripe API client

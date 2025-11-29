@@ -8,7 +8,7 @@ import (
 	"github.com/plaid/plaid-go/v20/plaid"
 	"go.uber.org/zap"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/config"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/config"
 )
 
 // PlaidClient wraps the Plaid API client

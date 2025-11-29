@@ -8,8 +8,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/repository/mocks"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/services"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/mocks"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/services"
 )
 
 func TestAnalyticsHandler_GetDashboardAnalytics(t *testing.T) {

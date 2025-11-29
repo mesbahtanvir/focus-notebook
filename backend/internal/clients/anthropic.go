@@ -9,7 +9,7 @@ import (
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"go.uber.org/zap"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/config"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/config"
 )
 
 // AnthropicClient wraps the Anthropic API client

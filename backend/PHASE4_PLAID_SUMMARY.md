@@ -496,7 +496,7 @@ if plaidHandler != nil {
 }
 ```
 
-### 5. backend-go/go.mod (Updated)
+### 5. backend/go.mod (Updated)
 
 **Changes**:
 - Updated Plaid dependency from v12 to v20

@@ -7,8 +7,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/models"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/repository"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/models"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository"
 )
 
 // ActionProcessor executes AI-suggested actions

@@ -25,7 +25,7 @@ A 40+ page deep-dive analysis covering:
 #### Project Structure (22 files, 3,789 lines of code)
 
 ```
-backend-go/
+backend/
 ├── cmd/server/main.go           ✅ HTTP server entrypoint
 ├── pkg/firebase/admin.go        ✅ Firebase Admin SDK setup
 ├── internal/
@@ -240,12 +240,12 @@ Matches TypeScript gateway pattern:
 1. **Get Firebase credentials:**
    ```bash
    # Download service-account-key.json from Firebase Console
-   cp service-account-key.json backend-go/
+   cp service-account-key.json backend/
    ```
 
 2. **Configure environment:**
    ```bash
-   cd backend-go
+   cd backend
    cp .env.example .env
    # Edit .env with your credentials
    ```

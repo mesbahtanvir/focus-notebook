@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/models"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/models"
 )
 
 // ParseCSVLine parses a single CSV line handling quoted fields properly (RFC 4180)

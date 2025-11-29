@@ -11,8 +11,8 @@ import (
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/repository/mocks"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/services"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/mocks"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/services"
 )
 
 func TestInvestmentHandler_GetPortfolioMetrics(t *testing.T) {

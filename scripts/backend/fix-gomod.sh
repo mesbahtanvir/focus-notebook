@@ -12,7 +12,7 @@ cd "$(dirname "$0")/.."
 
 # Check if we're in the right directory
 if [ ! -f "go.mod" ]; then
-    echo "❌ Error: go.mod not found. Are you in the backend-go directory?"
+    echo "❌ Error: go.mod not found. Are you in the backend directory?"
     exit 1
 fi
 

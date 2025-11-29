@@ -55,7 +55,7 @@ Before deploying, ensure you have:
 The automated setup script configures all necessary GCP resources:
 
 ```bash
-cd backend-go
+cd backend
 
 # Set your GCP Project ID
 export GCP_PROJECT_ID="your-project-id"
@@ -140,7 +140,7 @@ The setup script prints these values at the end. Copy them to GitHub Secrets.
 ### Local Build and Test
 
 ```bash
-cd backend-go
+cd backend
 
 # Build Docker image
 docker build -t focus-notebook-backend:local .
@@ -165,7 +165,7 @@ SERVICE_NAME="focus-notebook-backend-staging"
 IMAGE="us-central1-docker.pkg.dev/${PROJECT_ID}/backend/focus-notebook-backend:latest"
 
 # Build and push image
-gcloud builds submit --tag "$IMAGE" backend-go/
+gcloud builds submit --tag "$IMAGE" backend/
 
 # Deploy to Cloud Run
 gcloud run deploy "$SERVICE_NAME" \

@@ -7,7 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/repository/mocks"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/mocks"
 )
 
 func TestDashboardAnalyticsService_ComputeAnalytics(t *testing.T) {

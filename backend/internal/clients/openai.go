@@ -8,7 +8,7 @@ import (
 	"github.com/sashabaranov/go-openai"
 	"go.uber.org/zap"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/config"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/config"
 )
 
 // OpenAIClient wraps the OpenAI API client with retry and rate limiting

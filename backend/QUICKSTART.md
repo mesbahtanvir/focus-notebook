@@ -14,7 +14,7 @@ Get the Golang backend up and running in under 10 minutes.
 2. Select your project
 3. Go to **Project Settings** > **Service Accounts**
 4. Click **Generate New Private Key**
-5. Save the JSON file as `service-account-key.json` in the `backend-go/` directory
+5. Save the JSON file as `service-account-key.json` in the `backend/` directory
 
 ⚠️ **Important:** Never commit this file to version control! It's already in `.gitignore`.
 
@@ -23,7 +23,7 @@ Get the Golang backend up and running in under 10 minutes.
 Copy the example environment file:
 
 ```bash
-cd backend-go
+cd backend
 cp .env.example .env
 ```
 
@@ -200,7 +200,7 @@ curl -X POST http://localhost:8080/api/process-thought \
 ### Issue: "Failed to initialize Firebase"
 
 **Solution:** Check that:
-1. `service-account-key.json` exists in `backend-go/` directory
+1. `service-account-key.json` exists in `backend/` directory
 2. File has correct permissions (readable)
 3. `FIREBASE_PROJECT_ID` in `.env` matches your project
 

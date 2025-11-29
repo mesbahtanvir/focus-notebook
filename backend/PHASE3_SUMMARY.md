@@ -244,7 +244,7 @@ if stripeHandler != nil {
 }
 ```
 
-### 5. backend-go/.gitignore (Fixed)
+### 5. backend/.gitignore (Fixed)
 
 **Issue**: Original `.gitignore` had `server` which blocked `cmd/server/` directory
 
@@ -259,7 +259,7 @@ if stripeHandler != nil {
 
 **Impact**: Allowed `cmd/server/main.go` to be tracked by Git
 
-### 6. backend-go/go.sum (Generated)
+### 6. backend/go.sum (Generated)
 
 **Purpose**: Lock file for Go dependencies
 
@@ -871,7 +871,7 @@ export APP_BASE_URL="https://focusnotebook.app"
 
 1. **Build**:
    ```bash
-   cd backend-go
+   cd backend
    go build -o server ./cmd/server
    ```
 

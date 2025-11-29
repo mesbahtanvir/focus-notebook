@@ -391,7 +391,7 @@ const uid = decoded.uid;
 ### Project Structure
 
 ```
-backend-go/
+backend/
 ├── cmd/
 │   ├── server/              # Main HTTP server
 │   │   └── main.go

@@ -106,7 +106,7 @@ Focus Notebook currently relies heavily on Firebase for:
 
 ### ✅ Core Infrastructure (Go Backend)
 
-**Location:** `/backend-go`
+**Location:** `/backend`
 
 1. **HTTP Server** (`cmd/server/main.go`)
    - Gorilla Mux router

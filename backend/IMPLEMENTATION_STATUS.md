@@ -360,7 +360,7 @@
 
 | Document | Status | Notes |
 |----------|--------|-------|
-| README | ✅ Complete | `backend-go/README.md` |
+| README | ✅ Complete | `backend/README.md` |
 | Migration Plan | ✅ Complete | `MIGRATION_PLAN.md` (root) |
 | Implementation Status | ✅ Complete | This document |
 | API Documentation | ❌ Missing | Need OpenAPI/Swagger spec |
@@ -494,7 +494,7 @@ All API endpoints have been implemented! The next focus areas are:
 **To update this document:**
 ```bash
 # Run this to get current test coverage
-cd backend-go
+cd backend
 go test -cover ./...
 
 # Update percentages in this document

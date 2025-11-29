@@ -6,7 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/utils"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/utils"
 )
 
 // Recovery middleware recovers from panics

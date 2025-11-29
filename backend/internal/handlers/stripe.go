@@ -7,9 +7,9 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/clients"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/services"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/utils"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/clients"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/services"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/utils"
 )
 
 // StripeHandler handles Stripe billing requests

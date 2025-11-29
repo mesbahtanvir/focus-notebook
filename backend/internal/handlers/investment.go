@@ -8,8 +8,8 @@ import (
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/services"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/utils"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/services"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/utils"
 )
 
 // InvestmentHandler handles investment calculation requests

@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/repository"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository"
 )
 
 // EntityGraphService handles entity graph operations

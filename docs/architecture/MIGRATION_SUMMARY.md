@@ -11,7 +11,7 @@
 
 ### What's Already Built (54% Complete)
 
-The Go backend in `/backend-go` has:
+The Go backend in `/backend` has:
 
 ✅ **Infrastructure** (82% complete)
 - HTTP server with Gorilla Mux
@@ -165,7 +165,7 @@ The Go backend in `/backend-go` has:
 
 1. **Review Migration Plan** (1 day)
    - Read `MIGRATION_PLAN.md` (comprehensive guide)
-   - Read `backend-go/IMPLEMENTATION_STATUS.md` (detailed checklist)
+   - Read `backend/IMPLEMENTATION_STATUS.md` (detailed checklist)
    - Get stakeholder approval
 
 2. **Complete Worker Infrastructure** (2 days)
@@ -204,17 +204,17 @@ All migration documentation is ready:
    - Rollback plans
    - Risk assessment
 
-2. **`backend-go/IMPLEMENTATION_STATUS.md`** - Current status
+2. **`backend/IMPLEMENTATION_STATUS.md`** - Current status
    - What's implemented vs missing
    - Detailed checklist
    - Progress tracking
 
-3. **`backend-go/QUICKSTART.md`** - Developer guide
+3. **`backend/QUICKSTART.md`** - Developer guide
    - Setup instructions
    - Development workflow
    - Testing guide
 
-4. **`backend-go/README.md`** - Overview
+4. **`backend/README.md`** - Overview
    - Architecture
    - Features
    - Deployment
@@ -227,7 +227,7 @@ All migration documentation is ready:
 
 ```bash
 # 1. Navigate to backend
-cd backend-go
+cd backend
 
 # 2. Install dependencies
 go mod download
@@ -246,7 +246,7 @@ go run cmd/server/main.go
 curl http://localhost:8080/health
 ```
 
-See `backend-go/QUICKSTART.md` for detailed setup.
+See `backend/QUICKSTART.md` for detailed setup.
 
 ### For Project Managers
 
@@ -342,8 +342,8 @@ See `backend-go/QUICKSTART.md` for detailed setup.
 ## ✅ Checklist for Starting
 
 - [ ] Read `MIGRATION_PLAN.md`
-- [ ] Read `backend-go/IMPLEMENTATION_STATUS.md`
-- [ ] Review `backend-go/QUICKSTART.md`
+- [ ] Read `backend/IMPLEMENTATION_STATUS.md`
+- [ ] Review `backend/QUICKSTART.md`
 - [ ] Set up Go backend locally
 - [ ] Test health endpoint
 - [ ] Run existing tests
@@ -395,4 +395,4 @@ The Go backend migration is **well underway** with solid infrastructure and 32 A
 **Last Updated:** 2025-11-23
 **Next Review:** Weekly
 
-**Ready to start? See `backend-go/QUICKSTART.md` for setup instructions!**
+**Ready to start? See `backend/QUICKSTART.md` for setup instructions!**

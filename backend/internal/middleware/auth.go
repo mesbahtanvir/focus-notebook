@@ -10,8 +10,8 @@ import (
 	"firebase.google.com/go/v4/auth"
 	"cloud.google.com/go/firestore"
 
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/models"
-	"github.com/mesbahtanvir/focus-notebook/backend-go/internal/utils"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/models"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/utils"
 )
 
 const (
