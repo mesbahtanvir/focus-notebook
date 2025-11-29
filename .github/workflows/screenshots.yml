@@ -73,8 +73,8 @@ jobs:
           name: screenshot-diffs
           path: |
             test-results/
-            e2e/**/*-actual.png
-            e2e/**/*-diff.png
+            frontend/e2e/**/*-actual.png
+            frontend/e2e/**/*-diff.png
           retention-days: 30
 
       - name: Comment on PR with results
@@ -167,7 +167,7 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add e2e/**/*.png
+          git add frontend/e2e/**/*.png
           if git diff --staged --quiet; then
             echo "No baseline changes to commit"
           else

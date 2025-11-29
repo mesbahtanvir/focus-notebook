@@ -21,7 +21,7 @@
         "frontend/web/*"
       ],
       "@/mobile/*": [
-        "mobile/*"
+        "frontend/mobile/*"
       ]
     },
     "types": [

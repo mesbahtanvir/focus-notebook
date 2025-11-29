@@ -87,18 +87,18 @@ npm run lint && npm test && npm run build
 
 ```
 /focus-notebook/
-├── frontend/               # All TypeScript code
+├── frontend/               # All TypeScript/JavaScript code
 │   ├── web/               # Next.js application
+│   │   └── public/        # Static assets
 │   ├── functions/         # Firebase Cloud Functions
-│   └── shared/            # Shared types/utilities
+│   ├── shared/            # Shared types/utilities
+│   ├── mobile/            # Capacitor mobile components
+│   └── e2e/               # Playwright end-to-end tests
 ├── backend/               # Go API server
 ├── prompts/               # LLM prompt templates (YAML)
 ├── scripts/               # Utility scripts
 ├── docs/                  # Documentation
 │   └── architecture/      # Architecture docs & analysis
-├── e2e/                   # Playwright end-to-end tests
-├── mobile/                # Capacitor mobile app
-├── public/                # Static assets
 ├── .github/               # GitHub workflows
 ├── firebase.json          # Firebase configuration
 ├── firestore.rules        # Firestore security rules

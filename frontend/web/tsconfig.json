@@ -4,7 +4,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@/mobile/*": ["../../mobile/*"]
+      "@/mobile/*": ["../mobile/*"]
     }
   },
   "include": [
