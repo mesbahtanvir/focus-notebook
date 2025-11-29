@@ -6,10 +6,10 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
+    "dev": "next dev frontend/web",
+    "build": "next build frontend/web",
+    "start": "next start frontend/web",
+    "lint": "next lint frontend/web",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:changed": "jest --onlyChanged",

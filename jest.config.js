@@ -2,7 +2,7 @@ const nextJest = require('next/jest')
 
 const createJestConfig = nextJest({
   // Provide the path to your Next.js app to load next.config.js and .env files in your test environment
-  dir: './',
+  dir: './frontend/web',
 })
 
 // Add any custom config to be passed to Jest
@@ -21,10 +21,10 @@ const customJestConfig = {
   bail: process.env.CI ? 1 : false,
 
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-    '^\\.\\./\\.\\./shared/(.*)\\.js$': '<rootDir>/shared/$1.ts',
-    '^\\.\\./shared/(.*)\\.js$': '<rootDir>/shared/$1.ts',
-    '^shared/(.*)\\.js$': '<rootDir>/shared/$1.ts',
+    '^@/(.*)$': '<rootDir>/frontend/web/$1',
+    '^\\.\\./\\.\\./shared/(.*)\\.js$': '<rootDir>/frontend/shared/$1.ts',
+    '^\\.\\./shared/(.*)\\.js$': '<rootDir>/frontend/shared/$1.ts',
+    '^shared/(.*)\\.js$': '<rootDir>/frontend/shared/$1.ts',
   },
   transform: {
     '^.+\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
@@ -32,13 +32,14 @@ const customJestConfig = {
   testPathIgnorePatterns: [
     '<rootDir>/.next/',
     '<rootDir>/node_modules/',
-    '<rootDir>/src/__tests__/utils/builders/', // Ignore builder files (not tests)
-    '<rootDir>/src/__tests__/utils/testHelpers', // Ignore test helpers (not tests)
-    '<rootDir>/functions/', // Ignore all functions tests (functions has its own test suite)
+    '<rootDir>/frontend/web/__tests__/utils/builders/', // Ignore builder files (not tests)
+    '<rootDir>/frontend/web/__tests__/utils/testHelpers', // Ignore test helpers (not tests)
+    '<rootDir>/frontend/functions/', // Ignore all functions tests (functions has its own test suite)
     '<rootDir>/e2e/', // Ignore Playwright e2e tests (run separately with Playwright)
+    '<rootDir>/backend/', // Ignore Go backend
   ],
   modulePathIgnorePatterns: [
-    '<rootDir>/functions/lib/',
+    '<rootDir>/frontend/functions/lib/',
   ],
   transformIgnorePatterns: [
     '/node_modules/(?!(react-markdown|vfile|vfile-message|unist-util-stringify-position|unist-util-position|unist-util-generated|unist-util-is|unist-util-visit|unist-util-visit-parents|unist-util-find-all-after|unist-util-find-after|unist-util-find-before|unist-util-find-all-before|unist-util-remove-position|unist-util-is|unist-util-stringify-position|unist-util-position|unist-util-generated|bail|is-plain-obj|trough|vfile|vfile-message)/)',

@@ -11,10 +11,27 @@ import * as yaml from 'yaml';
 import { CONFIG } from './config';
 import { logLLMInteraction, formatPromptForLogging, type LlmLogTrigger } from './utils/aiPromptLogger';
 
-const ENHANCE_TRANSACTIONS_PROMPT_PATH = path.join(
-  __dirname,
-  '../prompts/enhance-transactions.prompt.yml'
-);
+const PROMPT_FILE_NAME = 'enhance-transactions.prompt.yml';
+
+function resolvePromptPath(): string {
+  const candidatePaths = [
+    path.join(__dirname, '../../../prompts', PROMPT_FILE_NAME),
+    path.join(__dirname, '../../prompts', PROMPT_FILE_NAME),
+    path.join(__dirname, '../prompts', PROMPT_FILE_NAME),
+    path.join(process.cwd(), 'prompts', PROMPT_FILE_NAME),
+  ];
+
+  const fsSync = require('fs');
+  for (const candidate of candidatePaths) {
+    if (fsSync.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    `Prompt file "${PROMPT_FILE_NAME}" not found. Checked: ${candidatePaths.join(', ')}`
+  );
+}
 
 interface CSVTransaction {
   date: string;
@@ -136,7 +153,8 @@ function normalizeAiResponse(
  */
 async function loadPrompt(): Promise<any> {
   try {
-    const promptContent = await fs.readFile(ENHANCE_TRANSACTIONS_PROMPT_PATH, 'utf8');
+    const promptPath = resolvePromptPath();
+    const promptContent = await fs.readFile(promptPath, 'utf8');
     return yaml.parse(promptContent);
   } catch (error) {
     console.error('Failed to load prompt:', error);
@@ -248,7 +266,7 @@ async function enhanceTransactions(
 
   const promptForLog = formatPromptForLogging(systemMessage, userMessage);
   const logMetadata = {
-    promptFile: ENHANCE_TRANSACTIONS_PROMPT_PATH,
+    promptFile: PROMPT_FILE_NAME,
     model: modelName,
     batchSize: transactions.length,
     ...logging?.metadata,

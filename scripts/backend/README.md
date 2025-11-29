@@ -170,7 +170,7 @@ gcloud services enable run.googleapis.com artifactregistry.googleapis.com
 
 Fix failing tests before deploying:
 ```bash
-cd backend-go
+cd backend
 go test -v ./...
 ```
 
