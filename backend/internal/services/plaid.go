@@ -10,18 +10,18 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/clients"
-	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 )
 
 // PlaidService handles Plaid banking operations
 type PlaidService struct {
 	plaidClient *clients.PlaidClient
-	repo        *repository.FirestoreRepository
+	repo        interfaces.Repository
 	logger      *zap.Logger
 }
 
 // NewPlaidService creates a new Plaid service
-func NewPlaidService(plaidClient *clients.PlaidClient, repo *repository.FirestoreRepository, logger *zap.Logger) *PlaidService {
+func NewPlaidService(plaidClient *clients.PlaidClient, repo interfaces.Repository, logger *zap.Logger) *PlaidService {
 	return &PlaidService{
 		plaidClient: plaidClient,
 		repo:        repo,
@@ -77,9 +77,12 @@ func (s *PlaidService) CreateRelinkToken(ctx context.Context, req CreateRelinkTo
 
 	// Verify ownership
 	itemPath := fmt.Sprintf("plaidItems/%s", req.ItemID)
-	itemData, err := s.repo.GetDocument(ctx, itemPath)
+	itemData, err := s.repo.Get(ctx, itemPath)
 	if err != nil {
 		return nil, fmt.Errorf("item not found: %w", err)
+	}
+	if itemData == nil {
+		return nil, fmt.Errorf("item not found")
 	}
 
 	if itemData["uid"] != req.UID {
@@ -249,9 +252,12 @@ func (s *PlaidService) MarkRelinking(ctx context.Context, req MarkRelinkingReque
 
 	// Verify ownership
 	itemPath := fmt.Sprintf("plaidItems/%s", req.ItemID)
-	itemData, err := s.repo.GetDocument(ctx, itemPath)
+	itemData, err := s.repo.Get(ctx, itemPath)
 	if err != nil {
 		return fmt.Errorf("item not found: %w", err)
+	}
+	if itemData == nil {
+		return fmt.Errorf("item not found")
 	}
 
 	if itemData["uid"] != req.UID {
@@ -301,9 +307,12 @@ func (s *PlaidService) TriggerSync(ctx context.Context, req TriggerSyncRequest) 
 
 	// Verify ownership
 	itemPath := fmt.Sprintf("plaidItems/%s", req.ItemID)
-	itemData, err := s.repo.GetDocument(ctx, itemPath)
+	itemData, err := s.repo.Get(ctx, itemPath)
 	if err != nil {
 		return nil, fmt.Errorf("item not found: %w", err)
+	}
+	if itemData == nil {
+		return nil, fmt.Errorf("item not found")
 	}
 
 	if itemData["uid"] != req.UID {
@@ -364,9 +373,13 @@ func (s *PlaidService) handleTransactionsWebhook(ctx context.Context, code strin
 		go func() {
 			syncCtx := context.Background()
 			itemPath := fmt.Sprintf("plaidItems/%s", itemID)
-			itemData, err := s.repo.GetDocument(syncCtx, itemPath)
+			itemData, err := s.repo.Get(syncCtx, itemPath)
 			if err != nil {
 				s.logger.Error("Failed to get item for webhook sync", zap.Error(err))
+				return
+			}
+			if itemData == nil {
+				s.logger.Error("Item not found for webhook sync")
 				return
 			}
 
@@ -531,9 +544,12 @@ func (s *PlaidService) syncTransactions(ctx context.Context, itemID string, acce
 // getAccessToken retrieves and decrypts the access token for an item
 func (s *PlaidService) getAccessToken(ctx context.Context, itemID string) (string, error) {
 	itemPath := fmt.Sprintf("plaidItems/%s", itemID)
-	itemData, err := s.repo.GetDocument(ctx, itemPath)
+	itemData, err := s.repo.Get(ctx, itemPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to get item: %w", err)
+	}
+	if itemData == nil {
+		return "", fmt.Errorf("item not found")
 	}
 
 	encryptedToken, ok := itemData["kmsRef"].(string)

@@ -11,17 +11,14 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/config"
 )
 
 const (
 	AlphaVantageBaseURL = "https://www.alphavantage.co/query"
 	AlphaVantageSource  = "Alpha Vantage"
 )
-
-// AlphaVantageConfig contains configuration for Alpha Vantage API
-type AlphaVantageConfig struct {
-	APIKey string
-}
 
 // AlphaVantageClient handles interactions with Alpha Vantage API
 type AlphaVantageClient struct {
@@ -93,11 +90,15 @@ type TimeSeriesDay struct {
 }
 
 // NewAlphaVantageClient creates a new Alpha Vantage API client
-func NewAlphaVantageClient(config *AlphaVantageConfig, logger *zap.Logger) *AlphaVantageClient {
+func NewAlphaVantageClient(cfg *config.AlphaVantageConfig, logger *zap.Logger) *AlphaVantageClient {
+	timeout := cfg.Timeout
+	if timeout == 0 {
+		timeout = 30 * time.Second
+	}
 	return &AlphaVantageClient{
-		apiKey: config.APIKey,
+		apiKey: cfg.APIKey,
 		client: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: timeout,
 		},
 		logger: logger,
 	}
