@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
 
@@ -286,7 +287,7 @@ func (s *EntityGraphService) GetLinkedEntities(
 // collectLinkedIDs collects linked entity IDs from relationships
 func (s *EntityGraphService) collectLinkedIDs(
 	ctx context.Context,
-	query repository.Query,
+	query firestore.Query,
 	excludeEntityType EntityType,
 	direction string, // "source" or "target"
 	linkedIDs map[EntityType]map[string]bool,
