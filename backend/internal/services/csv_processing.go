@@ -9,7 +9,7 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/google/uuid"
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/models"
-	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/utils"
 	"go.uber.org/zap"
 )
@@ -21,16 +21,16 @@ const (
 
 // CSVProcessingService handles CSV file processing
 type CSVProcessingService struct {
-	repo                 repository.Repository
-	storageClient        *storage.Client
-	categorizationSvc    *TransactionCategorizationService
-	logger               *zap.Logger
-	bucketName           string
+	repo              interfaces.Repository
+	storageClient     *storage.Client
+	categorizationSvc *TransactionCategorizationService
+	logger            *zap.Logger
+	bucketName        string
 }
 
 // NewCSVProcessingService creates a new CSV processing service
 func NewCSVProcessingService(
-	repo repository.Repository,
+	repo interfaces.Repository,
 	storageClient *storage.Client,
 	categorizationSvc *TransactionCategorizationService,
 	bucketName string,

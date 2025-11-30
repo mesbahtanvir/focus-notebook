@@ -5,27 +5,27 @@ import (
 	"fmt"
 
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/clients"
-	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 	"go.uber.org/zap"
 )
 
 // StockService handles stock-related operations
 type StockService struct {
-	repo              repository.Repository
+	repo               interfaces.Repository
 	alphaVantageClient *clients.AlphaVantageClient
-	logger            *zap.Logger
+	logger             *zap.Logger
 }
 
 // NewStockService creates a new stock service
 func NewStockService(
-	repo repository.Repository,
+	repo interfaces.Repository,
 	alphaVantageClient *clients.AlphaVantageClient,
 	logger *zap.Logger,
 ) *StockService {
 	return &StockService{
-		repo:              repo,
+		repo:               repo,
 		alphaVantageClient: alphaVantageClient,
-		logger:            logger,
+		logger:             logger,
 	}
 }
 

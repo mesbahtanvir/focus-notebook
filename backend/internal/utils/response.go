@@ -20,11 +20,21 @@ func RespondJSON(w http.ResponseWriter, data interface{}, statusCode int) {
 	}
 }
 
+// WriteJSON is an alias for RespondJSON
+func WriteJSON(w http.ResponseWriter, data interface{}, statusCode int) {
+	RespondJSON(w, data, statusCode)
+}
+
 // RespondError sends an error response
 func RespondError(w http.ResponseWriter, message string, statusCode int) {
 	RespondJSON(w, models.ErrorResponse{
 		Error: message,
 	}, statusCode)
+}
+
+// WriteError is an alias for RespondError
+func WriteError(w http.ResponseWriter, message string, statusCode int) {
+	RespondError(w, message, statusCode)
 }
 
 // RespondSuccess sends a success response

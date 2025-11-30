@@ -14,7 +14,7 @@ import (
 
 const (
 	AnonymousSessionCollection = "anonymousSessions"
-	SubscriptionStatusDoc      = "current"
+	// Note: SubscriptionStatusDoc is defined in stripe_billing.go
 )
 
 // SubscriptionService handles subscription and AI entitlement checks
@@ -83,7 +83,7 @@ func (s *SubscriptionService) checkAnonymousAIAccess(ctx context.Context, uid st
 	// Check expiry
 	if session.ExpiresAt.Before(time.Now()) {
 		// Mark as expired
-		_, err := s.repo.SetDocument(ctx, sessionPath, map[string]interface{}{
+		err := s.repo.SetDocument(ctx, sessionPath, map[string]interface{}{
 			"status":         "expired",
 			"cleanupPending": true,
 			"expiredAt":      time.Now(),

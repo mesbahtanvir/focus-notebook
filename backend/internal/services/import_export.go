@@ -11,38 +11,38 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
 
-	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 )
 
 // ImportExportService handles import/export operations
 type ImportExportService struct {
-	repo   repository.Repository
+	repo   interfaces.Repository
 	logger *zap.Logger
 }
 
 // NewImportExportService creates a new import/export service
-func NewImportExportService(repo repository.Repository, logger *zap.Logger) *ImportExportService {
+func NewImportExportService(repo interfaces.Repository, logger *zap.Logger) *ImportExportService {
 	return &ImportExportService{
 		repo:   repo,
 		logger: logger,
 	}
 }
 
-// EntityType represents the type of entity being imported/exported
-type EntityType string
+// ImportExportEntityType represents the type of entity being imported/exported
+type ImportExportEntityType string
 
 const (
-	EntityTypeTasks         EntityType = "tasks"
-	EntityTypeProjects      EntityType = "projects"
-	EntityTypeGoals         EntityType = "goals"
-	EntityTypeThoughts      EntityType = "thoughts"
-	EntityTypeMoods         EntityType = "moods"
-	EntityTypeFocusSessions EntityType = "focusSessions"
-	EntityTypePeople        EntityType = "people"
-	EntityTypePortfolios    EntityType = "portfolios"
-	EntityTypeSpending      EntityType = "spending"
-	EntityTypeRelationships EntityType = "relationships"
-	EntityTypeLLMLogs       EntityType = "llmLogs"
+	ImportExportEntityTypeTasks         ImportExportEntityType = "tasks"
+	ImportExportEntityTypeProjects      ImportExportEntityType = "projects"
+	ImportExportEntityTypeGoals         ImportExportEntityType = "goals"
+	ImportExportEntityTypeThoughts      ImportExportEntityType = "thoughts"
+	ImportExportEntityTypeMoods         ImportExportEntityType = "moods"
+	ImportExportEntityTypeFocusSessions ImportExportEntityType = "focusSessions"
+	ImportExportEntityTypePeople        ImportExportEntityType = "people"
+	ImportExportEntityTypePortfolios    ImportExportEntityType = "portfolios"
+	ImportExportEntityTypeSpending      ImportExportEntityType = "spending"
+	ImportExportEntityTypeRelationships ImportExportEntityType = "relationships"
+	ImportExportEntityTypeLLMLogs       ImportExportEntityType = "llmLogs"
 )
 
 // EntityCollection represents a collection of entities
@@ -871,15 +871,6 @@ func (s *ImportExportService) queryToMaps(ctx context.Context, query firestore.Q
 	}
 
 	return results
-}
-
-// Helper to convert []string to []interface{}
-func toInterfaceSlice(slice []string) []interface{} {
-	result := make([]interface{}, len(slice))
-	for i, v := range slice {
-		result[i] = v
-	}
-	return result
 }
 
 // GetExportSummary calculates summary statistics for export preview

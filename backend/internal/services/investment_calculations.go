@@ -9,17 +9,17 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
 
-	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 )
 
 // InvestmentCalculationService handles investment calculation operations
 type InvestmentCalculationService struct {
-	repo   repository.Repository
+	repo   interfaces.Repository
 	logger *zap.Logger
 }
 
 // NewInvestmentCalculationService creates a new investment calculation service
-func NewInvestmentCalculationService(repo repository.Repository, logger *zap.Logger) *InvestmentCalculationService {
+func NewInvestmentCalculationService(repo interfaces.Repository, logger *zap.Logger) *InvestmentCalculationService {
 	return &InvestmentCalculationService{
 		repo:   repo,
 		logger: logger,

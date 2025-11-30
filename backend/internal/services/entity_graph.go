@@ -2,23 +2,22 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
 
-	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 )
 
 // EntityGraphService handles entity graph operations
 type EntityGraphService struct {
-	repo   repository.Repository
+	repo   interfaces.Repository
 	logger *zap.Logger
 }
 
 // NewEntityGraphService creates a new entity graph service
-func NewEntityGraphService(repo repository.Repository, logger *zap.Logger) *EntityGraphService {
+func NewEntityGraphService(repo interfaces.Repository, logger *zap.Logger) *EntityGraphService {
 	return &EntityGraphService{
 		repo:   repo,
 		logger: logger,
