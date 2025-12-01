@@ -8,12 +8,20 @@ import { isSafariBrowser, getBrowserName } from "@/lib/utils/browserDetection";
 
 function normalizeStorageBucket(rawBucket?: string): string {
   if (!rawBucket) {
+    // During build time, return a placeholder value instead of throwing
+    if (typeof window === 'undefined') {
+      return 'placeholder.firebasestorage.app';
+    }
     throw new Error('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET is not configured');
   }
 
   let bucket = rawBucket.trim();
 
   if (!bucket) {
+    // During build time, return a placeholder value instead of throwing
+    if (typeof window === 'undefined') {
+      return 'placeholder.firebasestorage.app';
+    }
     throw new Error('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET cannot be empty');
   }
 
@@ -41,15 +49,18 @@ function normalizeStorageBucket(rawBucket?: string): string {
   return bucket;
 }
 
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-  storageBucket: normalizeStorageBucket(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET),
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
-};
+function getFirebaseConfig() {
+  return {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'placeholder',
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'placeholder.firebaseapp.com',
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'placeholder',
+    storageBucket: normalizeStorageBucket(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET),
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '0',
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || 'placeholder',
+  };
+}
 
+const firebaseConfig = getFirebaseConfig();
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
