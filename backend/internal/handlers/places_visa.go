@@ -115,9 +115,9 @@ func NewVisaHandler(visaService *services.VisaService, logger *zap.Logger) *Visa
 
 // GetVisaRequirementsResponse represents the response with visa requirements
 type GetVisaRequirementsResponse struct {
-	Success      bool                          `json:"success"`
-	Count        int                           `json:"count"`
-	Requirements []services.VisaRequirement    `json:"requirements"`
+	Success      bool                       `json:"success"`
+	Count        int                        `json:"count"`
+	Requirements []services.VisaRequirement `json:"requirements"`
 }
 
 // GetVisaRequirements handles GET /api/visa-requirements

@@ -67,15 +67,15 @@ type CSVProcessingStatus struct {
 
 // Statement represents a CSV statement record
 type Statement struct {
-	ID              string    `firestore:"id" json:"id"`
-	FileName        string    `firestore:"fileName" json:"fileName"`
-	StoragePath     string    `firestore:"storagePath" json:"storagePath"`
-	Status          string    `firestore:"status" json:"status"` // processing, completed, error
-	Source          string    `firestore:"source" json:"source"`
-	ProcessedCount  int       `firestore:"processedCount" json:"processedCount"`
-	Error           string    `firestore:"error,omitempty" json:"error,omitempty"`
-	TotalBatches    int       `firestore:"totalBatches,omitempty" json:"totalBatches,omitempty"`
-	ProcessedBatches int      `firestore:"processedBatches,omitempty" json:"processedBatches,omitempty"`
-	UploadedAt      time.Time `firestore:"uploadedAt" json:"uploadedAt"`
-	UpdatedAt       time.Time `firestore:"updatedAt" json:"updatedAt"`
+	ID               string    `firestore:"id" json:"id"`
+	FileName         string    `firestore:"fileName" json:"fileName"`
+	StoragePath      string    `firestore:"storagePath" json:"storagePath"`
+	Status           string    `firestore:"status" json:"status"` // processing, completed, error
+	Source           string    `firestore:"source" json:"source"`
+	ProcessedCount   int       `firestore:"processedCount" json:"processedCount"`
+	Error            string    `firestore:"error,omitempty" json:"error,omitempty"`
+	TotalBatches     int       `firestore:"totalBatches,omitempty" json:"totalBatches,omitempty"`
+	ProcessedBatches int       `firestore:"processedBatches,omitempty" json:"processedBatches,omitempty"`
+	UploadedAt       time.Time `firestore:"uploadedAt" json:"uploadedAt"`
+	UpdatedAt        time.Time `firestore:"updatedAt" json:"updatedAt"`
 }

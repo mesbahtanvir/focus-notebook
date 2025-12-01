@@ -46,9 +46,9 @@ type HistoricalDataPoint struct {
 
 // StockHistory represents historical stock data
 type StockHistory struct {
-	Symbol string                 `json:"symbol"`
-	Data   []HistoricalDataPoint  `json:"data"`
-	Source string                 `json:"source"`
+	Symbol string                `json:"symbol"`
+	Data   []HistoricalDataPoint `json:"data"`
+	Source string                `json:"source"`
 }
 
 // AlphaVantageGlobalQuoteResponse is the API response structure

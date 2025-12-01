@@ -130,28 +130,28 @@ func TestEntityGraphHandler_GetLinkedEntities(t *testing.T) {
 	})
 
 	tests := []struct {
-		name        string
-		entityType  string
-		entityID    string
-		wantStatus  int
+		name       string
+		entityType string
+		entityID   string
+		wantStatus int
 	}{
 		{
-			name:        "valid entity",
-			entityType:  "project",
-			entityID:    "proj1",
-			wantStatus:  http.StatusOK,
+			name:       "valid entity",
+			entityType: "project",
+			entityID:   "proj1",
+			wantStatus: http.StatusOK,
 		},
 		{
-			name:        "empty entity type",
-			entityType:  "",
-			entityID:    "proj1",
-			wantStatus:  http.StatusBadRequest,
+			name:       "empty entity type",
+			entityType: "",
+			entityID:   "proj1",
+			wantStatus: http.StatusBadRequest,
 		},
 		{
-			name:        "empty entity ID",
-			entityType:  "project",
-			entityID:    "",
-			wantStatus:  http.StatusBadRequest,
+			name:       "empty entity ID",
+			entityType: "project",
+			entityID:   "",
+			wantStatus: http.StatusBadRequest,
 		},
 	}
 

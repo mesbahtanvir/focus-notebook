@@ -16,13 +16,13 @@ import (
 
 // ThoughtProcessingService processes thoughts with AI
 type ThoughtProcessingService struct {
-	repo              *repository.FirestoreRepository
-	openaiClient      *clients.OpenAIClient
-	anthropicClient   *clients.AnthropicClient
-	contextGatherer   *ContextGathererService
-	subscriptionSvc   *SubscriptionService
-	actionProcessor   *ActionProcessor
-	logger            *zap.Logger
+	repo            *repository.FirestoreRepository
+	openaiClient    *clients.OpenAIClient
+	anthropicClient *clients.AnthropicClient
+	contextGatherer *ContextGathererService
+	subscriptionSvc *SubscriptionService
+	actionProcessor *ActionProcessor
+	logger          *zap.Logger
 }
 
 // NewThoughtProcessingService creates a new thought processing service
@@ -155,9 +155,9 @@ func (s *ThoughtProcessingService) ProcessThought(ctx context.Context, thoughtID
 	}
 
 	updates := map[string]interface{}{
-		"tags":                tags,
-		"aiProcessingStatus":  "completed",
-		"processedAt":         time.Now(),
+		"tags":               tags,
+		"aiProcessingStatus": "completed",
+		"processedAt":        time.Now(),
 		"aiMetadata": map[string]interface{}{
 			"model":           response.Model,
 			"tokensUsed":      response.TokensUsed,

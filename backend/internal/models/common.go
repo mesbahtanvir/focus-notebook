@@ -15,30 +15,30 @@ type BaseModel struct {
 
 // AnonymousSession represents an anonymous user session
 type AnonymousSession struct {
-	UID            string    `firestore:"uid" json:"uid"`
-	CreatedAt      time.Time `firestore:"createdAt" json:"createdAt"`
-	ExpiresAt      time.Time `firestore:"expiresAt" json:"expiresAt"`
+	UID            string     `firestore:"uid" json:"uid"`
+	CreatedAt      time.Time  `firestore:"createdAt" json:"createdAt"`
+	ExpiresAt      time.Time  `firestore:"expiresAt" json:"expiresAt"`
 	ExpiredAt      *time.Time `firestore:"expiredAt,omitempty" json:"expiredAt,omitempty"`
-	CleanupPending bool      `firestore:"cleanupPending" json:"cleanupPending"`
-	AllowAi        bool      `firestore:"allowAi" json:"allowAi"`
-	CiOverrideKey  *string   `firestore:"ciOverrideKey,omitempty" json:"ciOverrideKey,omitempty"`
-	Status         string    `firestore:"status" json:"status"` // active, expired, signed-out
-	UpdatedAt      time.Time `firestore:"updatedAt" json:"updatedAt"`
+	CleanupPending bool       `firestore:"cleanupPending" json:"cleanupPending"`
+	AllowAi        bool       `firestore:"allowAi" json:"allowAi"`
+	CiOverrideKey  *string    `firestore:"ciOverrideKey,omitempty" json:"ciOverrideKey,omitempty"`
+	Status         string     `firestore:"status" json:"status"` // active, expired, signed-out
+	UpdatedAt      time.Time  `firestore:"updatedAt" json:"updatedAt"`
 }
 
 // SubscriptionStatus represents a user's subscription status
 type SubscriptionStatus struct {
-	ID                   string                 `firestore:"id" json:"id"`
-	Tier                 string                 `firestore:"tier" json:"tier"` // free, pro
-	Status               string                 `firestore:"status" json:"status"` // active, trialing, past_due, etc.
-	StripeCustomerID     *string                `firestore:"stripeCustomerId,omitempty" json:"stripeCustomerId,omitempty"`
-	StripeSubscriptionID *string                `firestore:"stripeSubscriptionId,omitempty" json:"stripeSubscriptionId,omitempty"`
-	PriceID              *string                `firestore:"priceId,omitempty" json:"priceId,omitempty"`
-	CurrentPeriodEnd     *time.Time             `firestore:"currentPeriodEnd,omitempty" json:"currentPeriodEnd,omitempty"`
-	CancelAtPeriodEnd    *bool                  `firestore:"cancelAtPeriodEnd,omitempty" json:"cancelAtPeriodEnd,omitempty"`
-	TrialEndsAt          *time.Time             `firestore:"trialEndsAt,omitempty" json:"trialEndsAt,omitempty"`
+	ID                   string                    `firestore:"id" json:"id"`
+	Tier                 string                    `firestore:"tier" json:"tier"`     // free, pro
+	Status               string                    `firestore:"status" json:"status"` // active, trialing, past_due, etc.
+	StripeCustomerID     *string                   `firestore:"stripeCustomerId,omitempty" json:"stripeCustomerId,omitempty"`
+	StripeSubscriptionID *string                   `firestore:"stripeSubscriptionId,omitempty" json:"stripeSubscriptionId,omitempty"`
+	PriceID              *string                   `firestore:"priceId,omitempty" json:"priceId,omitempty"`
+	CurrentPeriodEnd     *time.Time                `firestore:"currentPeriodEnd,omitempty" json:"currentPeriodEnd,omitempty"`
+	CancelAtPeriodEnd    *bool                     `firestore:"cancelAtPeriodEnd,omitempty" json:"cancelAtPeriodEnd,omitempty"`
+	TrialEndsAt          *time.Time                `firestore:"trialEndsAt,omitempty" json:"trialEndsAt,omitempty"`
 	Entitlements         *SubscriptionEntitlements `firestore:"entitlements,omitempty" json:"entitlements,omitempty"`
-	UpdatedAt            time.Time              `firestore:"updatedAt" json:"updatedAt"`
+	UpdatedAt            time.Time                 `firestore:"updatedAt" json:"updatedAt"`
 }
 
 // SubscriptionEntitlements defines what features are available

@@ -42,14 +42,14 @@ type PredictionDataPoint struct {
 
 // InvestmentPrediction represents the AI's investment prediction
 type InvestmentPrediction struct {
-	Predictions      []PredictionDataPoint `json:"predictions"`
-	Trend            string                `json:"trend"` // bullish, bearish, neutral
-	Summary          string                `json:"summary"`
-	Reasoning        string                `json:"reasoning"`
-	RiskFactors      []string              `json:"riskFactors"`
-	TargetPrice30Days float64              `json:"targetPrice30Days"`
-	SupportLevel     float64               `json:"supportLevel"`
-	ResistanceLevel  float64               `json:"resistanceLevel"`
+	Predictions       []PredictionDataPoint `json:"predictions"`
+	Trend             string                `json:"trend"` // bullish, bearish, neutral
+	Summary           string                `json:"summary"`
+	Reasoning         string                `json:"reasoning"`
+	RiskFactors       []string              `json:"riskFactors"`
+	TargetPrice30Days float64               `json:"targetPrice30Days"`
+	SupportLevel      float64               `json:"supportLevel"`
+	ResistanceLevel   float64               `json:"resistanceLevel"`
 }
 
 // PredictInvestment generates AI-powered investment predictions

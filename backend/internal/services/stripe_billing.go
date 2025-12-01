@@ -54,12 +54,12 @@ func (s *StripeBillingService) CreateCheckoutSession(ctx context.Context, uid st
 	// Store session metadata
 	// This helps track checkout sessions for debugging
 	sessionData := map[string]interface{}{
-		"uid":         uid,
-		"sessionId":   session.ID,
-		"email":       userEmail,
-		"status":      "pending",
-		"createdAt":   time.Now(),
-		"expiresAt":   time.Unix(session.ExpiresAt, 0),
+		"uid":       uid,
+		"sessionId": session.ID,
+		"email":     userEmail,
+		"status":    "pending",
+		"createdAt": time.Now(),
+		"expiresAt": time.Unix(session.ExpiresAt, 0),
 	}
 
 	sessionPath := fmt.Sprintf("users/%s/checkoutSessions/%s", uid, session.ID)
@@ -411,15 +411,15 @@ func mapSubscriptionToStatus(subscription *stripe.Subscription) map[string]inter
 	}
 
 	status := map[string]interface{}{
-		"tier":                  tier,
-		"status":                string(subscription.Status),
-		"stripeCustomerId":      customerID,
-		"stripeSubscriptionId":  subscription.ID,
-		"priceId":               priceID,
-		"currentPeriodEnd":      time.Unix(subscription.CurrentPeriodEnd, 0),
-		"currentPeriodStart":    time.Unix(subscription.CurrentPeriodStart, 0),
-		"cancelAtPeriodEnd":     subscription.CancelAtPeriodEnd,
-		"updatedAt":             time.Now(),
+		"tier":                 tier,
+		"status":               string(subscription.Status),
+		"stripeCustomerId":     customerID,
+		"stripeSubscriptionId": subscription.ID,
+		"priceId":              priceID,
+		"currentPeriodEnd":     time.Unix(subscription.CurrentPeriodEnd, 0),
+		"currentPeriodStart":   time.Unix(subscription.CurrentPeriodStart, 0),
+		"cancelAtPeriodEnd":    subscription.CancelAtPeriodEnd,
+		"updatedAt":            time.Now(),
 	}
 
 	if subscription.CancelAt > 0 {

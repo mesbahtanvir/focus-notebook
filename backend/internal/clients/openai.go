@@ -43,10 +43,10 @@ func NewOpenAIClient(cfg *config.OpenAIConfig, logger *zap.Logger) (*OpenAIClien
 
 // ChatCompletionRequest represents a chat completion request
 type ChatCompletionRequest struct {
-	Model       string
-	Messages    []ChatMessage
-	MaxTokens   int
-	Temperature float32
+	Model          string
+	Messages       []ChatMessage
+	MaxTokens      int
+	Temperature    float32
 	ResponseFormat *ResponseFormat
 }
 
@@ -243,7 +243,7 @@ func isRetryableError(err error) bool {
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) &&
 		(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
-		findSubstring(s, substr)))
+			findSubstring(s, substr)))
 }
 
 func findSubstring(s, substr string) bool {

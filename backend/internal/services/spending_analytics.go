@@ -30,12 +30,12 @@ func NewSpendingAnalyticsService(repo *repository.FirestoreRepository, logger *z
 
 // SpendingAnalytics holds the complete spending analytics response
 type SpendingAnalytics struct {
-	Stats            SpendingStats              `json:"stats"`
-	CategoryBreakdown []CategoryItem            `json:"categoryBreakdown"`
-	AccountBreakdown  []AccountItem             `json:"accountBreakdown"`
-	TrendData        []TrendItem                `json:"trendData"`
-	TopMerchants     []MerchantItem             `json:"topMerchants"`
-	DateRange        DateRangeInfo              `json:"dateRange"`
+	Stats             SpendingStats  `json:"stats"`
+	CategoryBreakdown []CategoryItem `json:"categoryBreakdown"`
+	AccountBreakdown  []AccountItem  `json:"accountBreakdown"`
+	TrendData         []TrendItem    `json:"trendData"`
+	TopMerchants      []MerchantItem `json:"topMerchants"`
+	DateRange         DateRangeInfo  `json:"dateRange"`
 }
 
 // SpendingStats holds overall spending statistics

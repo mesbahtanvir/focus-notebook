@@ -80,9 +80,9 @@ type ImportData struct {
 type ConflictType string
 
 const (
-	ConflictTypeDuplicateID    ConflictType = "duplicate_id"
+	ConflictTypeDuplicateID     ConflictType = "duplicate_id"
 	ConflictTypeBrokenReference ConflictType = "broken_reference"
-	ConflictTypeInvalidData    ConflictType = "invalid_data"
+	ConflictTypeInvalidData     ConflictType = "invalid_data"
 )
 
 // Conflict represents a detected conflict
@@ -99,32 +99,32 @@ type ValidationResult struct {
 	Valid     bool       `json:"valid"`
 	Conflicts []Conflict `json:"conflicts"`
 	Summary   struct {
-		TotalItems    int                       `json:"totalItems"`
-		ItemsPerType  map[EntityType]int        `json:"itemsPerType"`
-		ConflictCount int                       `json:"conflictCount"`
-		NewItems      int                       `json:"newItems"`
-		ExistingItems int                       `json:"existingItems"`
-		Dependencies  map[string][]string       `json:"dependencies"`
+		TotalItems    int                 `json:"totalItems"`
+		ItemsPerType  map[EntityType]int  `json:"itemsPerType"`
+		ConflictCount int                 `json:"conflictCount"`
+		NewItems      int                 `json:"newItems"`
+		ExistingItems int                 `json:"existingItems"`
+		Dependencies  map[string][]string `json:"dependencies"`
 	} `json:"summary"`
 	ParsedData ImportData `json:"parsedData"`
 }
 
 // ImportOptions represents options for import execution
 type ImportOptions struct {
-	UpdateReferences bool                      `json:"updateReferences"`
-	SkipConflicts    bool                      `json:"skipConflicts"`
-	Selection        map[EntityType][]string   `json:"selection"` // Entity IDs to import per type
+	UpdateReferences   bool                    `json:"updateReferences"`
+	SkipConflicts      bool                    `json:"skipConflicts"`
+	Selection          map[EntityType][]string `json:"selection"`          // Entity IDs to import per type
 	ConflictResolution map[string]string       `json:"conflictResolution"` // Entity ID -> resolution action
 }
 
 // ImportResult represents the result of import execution
 type ImportResult struct {
-	Success       bool              `json:"success"`
-	ImportedCount int               `json:"importedCount"`
-	SkippedCount  int               `json:"skippedCount"`
-	ErrorCount    int               `json:"errorCount"`
+	Success       bool               `json:"success"`
+	ImportedCount int                `json:"importedCount"`
+	SkippedCount  int                `json:"skippedCount"`
+	ErrorCount    int                `json:"errorCount"`
 	ByType        map[EntityType]int `json:"byType"`
-	Errors        []string          `json:"errors,omitempty"`
+	Errors        []string           `json:"errors,omitempty"`
 }
 
 // ExportFilters represents filters for data export
@@ -134,15 +134,15 @@ type ExportFilters struct {
 	EndDate     *time.Time   `json:"endDate,omitempty"`
 
 	// Task filters
-	TaskStatus    []string `json:"taskStatus,omitempty"`
-	TaskCategory  []string `json:"taskCategory,omitempty"`
-	TaskTags      []string `json:"taskTags,omitempty"`
+	TaskStatus   []string `json:"taskStatus,omitempty"`
+	TaskCategory []string `json:"taskCategory,omitempty"`
+	TaskTags     []string `json:"taskTags,omitempty"`
 
 	// Project filters
 	ProjectStatus []string `json:"projectStatus,omitempty"`
 
 	// Goal filters
-	GoalStatus    []string `json:"goalStatus,omitempty"`
+	GoalStatus []string `json:"goalStatus,omitempty"`
 }
 
 // ExportSummary represents summary statistics for export preview
@@ -409,7 +409,7 @@ func (s *ImportExportService) validateEntityFields(
 				Message:    "Missing required field: title",
 			})
 		}
-	// Add more validations as needed
+		// Add more validations as needed
 	}
 }
 

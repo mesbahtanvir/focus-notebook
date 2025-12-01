@@ -161,11 +161,11 @@ func (s *SubscriptionService) IncrementUsage(ctx context.Context, uid string, to
 	usagePath := fmt.Sprintf("users/%s/usageStats/ai", uid)
 
 	updates := map[string]interface{}{
-		"totalRequests":      firestore.Increment(1),
-		"totalTokens":        firestore.Increment(tokensUsed),
-		"lastRequestAt":      time.Now(),
-		"monthlyRequests":    firestore.Increment(1),
-		"monthlyTokens":      firestore.Increment(tokensUsed),
+		"totalRequests":   firestore.Increment(1),
+		"totalTokens":     firestore.Increment(tokensUsed),
+		"lastRequestAt":   time.Now(),
+		"monthlyRequests": firestore.Increment(1),
+		"monthlyTokens":   firestore.Increment(tokensUsed),
 	}
 
 	err := s.repo.SetDocument(ctx, usagePath, updates)

@@ -31,9 +31,9 @@ func NewPlaidService(plaidClient *clients.PlaidClient, repo interfaces.Repositor
 
 // CreateLinkTokenRequest holds parameters for creating a link token
 type CreateLinkTokenRequest struct {
-	UID        string
-	Email      string
-	Platform   string
+	UID         string
+	Email       string
+	Platform    string
 	RedirectURI string
 }
 
@@ -185,12 +185,12 @@ func (s *PlaidService) ExchangePublicToken(ctx context.Context, req ExchangePubl
 	for _, account := range accounts {
 		accountPath := fmt.Sprintf("accounts/%s", account.AccountID)
 		accountData := map[string]interface{}{
-			"uid":      req.UID,
-			"itemId":   itemID,
-			"type":     account.Type,
-			"subtype":  account.Subtype,
-			"name":     account.Name,
-			"mask":     account.Mask,
+			"uid":     req.UID,
+			"itemId":  itemID,
+			"type":    account.Type,
+			"subtype": account.Subtype,
+			"name":    account.Name,
+			"mask":    account.Mask,
 			"balances": map[string]interface{}{
 				"current":     account.Balances.Current,
 				"available":   account.Balances.Available,
@@ -448,16 +448,16 @@ func (s *PlaidService) syncTransactions(ctx context.Context, itemID string, acce
 		for _, txn := range result.Added {
 			txnPath := fmt.Sprintf("transactions/%s", txn.TransactionID)
 			txnData := map[string]interface{}{
-				"uid":                 uid,
-				"itemId":              itemID,
-				"accountId":           txn.AccountID,
-				"plaidTransactionId":  txn.TransactionID,
-				"postedAt":            txn.Date,
-				"authorizedAt":        txn.AuthorizedDate,
-				"pending":             txn.Pending,
-				"amount":              txn.Amount,
-				"isoCurrency":         txn.IsoCurrency,
-				"merchant":            map[string]interface{}{
+				"uid":                uid,
+				"itemId":             itemID,
+				"accountId":          txn.AccountID,
+				"plaidTransactionId": txn.TransactionID,
+				"postedAt":           txn.Date,
+				"authorizedAt":       txn.AuthorizedDate,
+				"pending":            txn.Pending,
+				"amount":             txn.Amount,
+				"isoCurrency":        txn.IsoCurrency,
+				"merchant": map[string]interface{}{
 					"name":       txn.Name,
 					"normalized": normalizeMerchantName(txn.Name),
 				},

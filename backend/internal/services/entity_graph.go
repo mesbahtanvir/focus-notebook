@@ -42,40 +42,40 @@ const (
 type RelationshipType string
 
 const (
-	RelationshipTypeCreatedFrom      RelationshipType = "created-from"
-	RelationshipTypeLinkedTo         RelationshipType = "linked-to"
-	RelationshipTypeRelatedTo        RelationshipType = "related-to"
-	RelationshipTypeDependsOn        RelationshipType = "depends-on"
-	RelationshipTypeToolProcessing   RelationshipType = "tool-processing"
-	RelationshipTypeToolPending      RelationshipType = "tool-pending"
-	RelationshipTypeToolProcessed    RelationshipType = "tool-processed"
+	RelationshipTypeCreatedFrom    RelationshipType = "created-from"
+	RelationshipTypeLinkedTo       RelationshipType = "linked-to"
+	RelationshipTypeRelatedTo      RelationshipType = "related-to"
+	RelationshipTypeDependsOn      RelationshipType = "depends-on"
+	RelationshipTypeToolProcessing RelationshipType = "tool-processing"
+	RelationshipTypeToolPending    RelationshipType = "tool-pending"
+	RelationshipTypeToolProcessed  RelationshipType = "tool-processed"
 )
 
 // RelationshipFilters represents filters for querying relationships
 type RelationshipFilters struct {
-	SourceType       *EntityType         `json:"sourceType,omitempty"`
-	SourceID         *string             `json:"sourceId,omitempty"`
-	TargetType       *EntityType         `json:"targetType,omitempty"`
-	TargetID         *string             `json:"targetId,omitempty"`
-	RelationshipType *RelationshipType   `json:"relationshipType,omitempty"`
-	Status           *string             `json:"status,omitempty"` // active, archived, rejected
-	CreatedBy        *string             `json:"createdBy,omitempty"` // ai, user
-	MinStrength      *int                `json:"minStrength,omitempty"`
-	MaxStrength      *int                `json:"maxStrength,omitempty"`
-	Limit            int                 `json:"limit,omitempty"`
-	Offset           int                 `json:"offset,omitempty"`
-	SortBy           string              `json:"sortBy,omitempty"` // createdAt, strength
-	SortOrder        string              `json:"sortOrder,omitempty"` // asc, desc
+	SourceType       *EntityType       `json:"sourceType,omitempty"`
+	SourceID         *string           `json:"sourceId,omitempty"`
+	TargetType       *EntityType       `json:"targetType,omitempty"`
+	TargetID         *string           `json:"targetId,omitempty"`
+	RelationshipType *RelationshipType `json:"relationshipType,omitempty"`
+	Status           *string           `json:"status,omitempty"`    // active, archived, rejected
+	CreatedBy        *string           `json:"createdBy,omitempty"` // ai, user
+	MinStrength      *int              `json:"minStrength,omitempty"`
+	MaxStrength      *int              `json:"maxStrength,omitempty"`
+	Limit            int               `json:"limit,omitempty"`
+	Offset           int               `json:"offset,omitempty"`
+	SortBy           string            `json:"sortBy,omitempty"`    // createdAt, strength
+	SortOrder        string            `json:"sortOrder,omitempty"` // asc, desc
 }
 
 // LinkedEntitiesResponse represents linked entities for a given entity
 type LinkedEntitiesResponse struct {
-	Tasks     []map[string]interface{} `json:"tasks"`
-	Projects  []map[string]interface{} `json:"projects"`
-	Goals     []map[string]interface{} `json:"goals"`
-	Thoughts  []map[string]interface{} `json:"thoughts"`
-	People    []map[string]interface{} `json:"people"`
-	Count     struct {
+	Tasks    []map[string]interface{} `json:"tasks"`
+	Projects []map[string]interface{} `json:"projects"`
+	Goals    []map[string]interface{} `json:"goals"`
+	Thoughts []map[string]interface{} `json:"thoughts"`
+	People   []map[string]interface{} `json:"people"`
+	Count    struct {
 		Tasks    int `json:"tasks"`
 		Projects int `json:"projects"`
 		Goals    int `json:"goals"`
@@ -98,14 +98,14 @@ type ToolRelationshipsResponse struct {
 
 // RelationshipStats represents statistics about relationships
 type RelationshipStats struct {
-	TotalRelationships int                       `json:"totalRelationships"`
-	ByType             map[string]int            `json:"byType"`
-	BySourceType       map[string]int            `json:"bySourceType"`
-	ByTargetType       map[string]int            `json:"byTargetType"`
-	ByStatus           map[string]int            `json:"byStatus"`
-	ByCreator          map[string]int            `json:"byCreator"`
-	AverageStrength    float64                   `json:"averageStrength"`
-	ToolUsage          map[string]ToolUsageStat  `json:"toolUsage"`
+	TotalRelationships int                      `json:"totalRelationships"`
+	ByType             map[string]int           `json:"byType"`
+	BySourceType       map[string]int           `json:"bySourceType"`
+	ByTargetType       map[string]int           `json:"byTargetType"`
+	ByStatus           map[string]int           `json:"byStatus"`
+	ByCreator          map[string]int           `json:"byCreator"`
+	AverageStrength    float64                  `json:"averageStrength"`
+	ToolUsage          map[string]ToolUsageStat `json:"toolUsage"`
 }
 
 // ToolUsageStat represents usage statistics for a specific tool

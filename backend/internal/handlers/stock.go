@@ -125,9 +125,9 @@ func (h *StockHandler) GetStockHistory(w http.ResponseWriter, r *http.Request) {
 
 // PredictInvestmentRequest represents the request for investment prediction
 type PredictInvestmentRequest struct {
-	Symbol         string                                   `json:"symbol"`
-	HistoricalData []services.HistoricalDataPoint           `json:"historicalData"`
-	Model          string                                   `json:"model,omitempty"`
+	Symbol         string                         `json:"symbol"`
+	HistoricalData []services.HistoricalDataPoint `json:"historicalData"`
+	Model          string                         `json:"model,omitempty"`
 }
 
 // PredictInvestment handles POST /api/predict-investment

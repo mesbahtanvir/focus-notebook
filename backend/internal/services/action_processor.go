@@ -130,12 +130,12 @@ func (a *ActionProcessor) createGoal(ctx context.Context, uid, thoughtID string,
 	goalPath := fmt.Sprintf("users/%s/goals/%s", uid, goalID)
 
 	goalData := map[string]interface{}{
-		"id":         goalID,
-		"title":      getStringFieldFromMap(data, "title"),
-		"objective":  getStringFieldFromMap(data, "objective"),
-		"status":     "active",
-		"thoughtId":  thoughtID,
-		"createdBy":  "ai",
+		"id":        goalID,
+		"title":     getStringFieldFromMap(data, "title"),
+		"objective": getStringFieldFromMap(data, "objective"),
+		"status":    "active",
+		"thoughtId": thoughtID,
+		"createdBy": "ai",
 	}
 
 	err := a.repo.CreateDocument(ctx, goalPath, goalData)
@@ -158,11 +158,11 @@ func (a *ActionProcessor) createMood(ctx context.Context, uid, thoughtID string,
 	moodPath := fmt.Sprintf("users/%s/moods/%s", uid, moodID)
 
 	moodData := map[string]interface{}{
-		"id":         moodID,
-		"value":      getIntFieldFromMap(data, "value"),
-		"note":       getStringFieldFromMap(data, "note"),
-		"thoughtId":  thoughtID,
-		"createdBy":  "ai",
+		"id":        moodID,
+		"value":     getIntFieldFromMap(data, "value"),
+		"note":      getStringFieldFromMap(data, "note"),
+		"thoughtId": thoughtID,
+		"createdBy": "ai",
 	}
 
 	err := a.repo.CreateDocument(ctx, moodPath, moodData)

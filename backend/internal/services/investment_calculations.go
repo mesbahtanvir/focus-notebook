@@ -28,12 +28,12 @@ func NewInvestmentCalculationService(repo interfaces.Repository, logger *zap.Log
 
 // PortfolioMetrics represents calculated metrics for a portfolio
 type PortfolioMetrics struct {
-	TotalValue      float64 `json:"totalValue"`
-	TotalInvested   float64 `json:"totalInvested"`
-	TotalGain       float64 `json:"totalGain"`
-	ROI             float64 `json:"roi"`
-	InvestmentCount int     `json:"investmentCount"`
-	Currency        string  `json:"currency"`
+	TotalValue      float64            `json:"totalValue"`
+	TotalInvested   float64            `json:"totalInvested"`
+	TotalGain       float64            `json:"totalGain"`
+	ROI             float64            `json:"roi"`
+	InvestmentCount int                `json:"investmentCount"`
+	Currency        string             `json:"currency"`
 	ByInvestment    []InvestmentMetric `json:"byInvestment"`
 }
 
@@ -62,10 +62,10 @@ type ProjectionPoint struct {
 
 // ProjectionRequest represents a request for projection calculation
 type ProjectionRequest struct {
-	InitialAmount  float64        `json:"initialAmount"`
-	AnnualReturn   float64        `json:"annualReturn"`
-	Months         int            `json:"months"`
-	Contributions  []Contribution `json:"contributions"`
+	InitialAmount float64        `json:"initialAmount"`
+	AnnualReturn  float64        `json:"annualReturn"`
+	Months        int            `json:"months"`
+	Contributions []Contribution `json:"contributions"`
 }
 
 // Contribution represents a recurring contribution
@@ -88,15 +88,15 @@ type ProjectionResponse struct {
 
 // DashboardSummary represents aggregate summary across all portfolios
 type DashboardSummary struct {
-	TotalValue        float64                       `json:"totalValue"`
-	TotalInvested     float64                       `json:"totalInvested"`
-	TotalGain         float64                       `json:"totalGain"`
-	OverallROI        float64                       `json:"overallROI"`
-	PortfolioCount    int                           `json:"portfolioCount"`
-	InvestmentCount   int                           `json:"investmentCount"`
-	ByCurrency        map[string]CurrencySummary    `json:"byCurrency"`
-	TopPerformers     []InvestmentPerformance       `json:"topPerformers"`
-	BottomPerformers  []InvestmentPerformance       `json:"bottomPerformers"`
+	TotalValue       float64                    `json:"totalValue"`
+	TotalInvested    float64                    `json:"totalInvested"`
+	TotalGain        float64                    `json:"totalGain"`
+	OverallROI       float64                    `json:"overallROI"`
+	PortfolioCount   int                        `json:"portfolioCount"`
+	InvestmentCount  int                        `json:"investmentCount"`
+	ByCurrency       map[string]CurrencySummary `json:"byCurrency"`
+	TopPerformers    []InvestmentPerformance    `json:"topPerformers"`
+	BottomPerformers []InvestmentPerformance    `json:"bottomPerformers"`
 }
 
 // CurrencySummary represents summary for a specific currency
@@ -330,8 +330,8 @@ func (s *InvestmentCalculationService) CalculateDashboardSummary(
 	baseCurrency string,
 ) (*DashboardSummary, error) {
 	summary := &DashboardSummary{
-		ByCurrency: make(map[string]CurrencySummary),
-		TopPerformers: []InvestmentPerformance{},
+		ByCurrency:       make(map[string]CurrencySummary),
+		TopPerformers:    []InvestmentPerformance{},
 		BottomPerformers: []InvestmentPerformance{},
 	}
 

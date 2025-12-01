@@ -35,20 +35,20 @@ type PackingItem struct {
 
 // PackingGroup represents a group of packing items
 type PackingGroup struct {
-	ID          string         `json:"id" firestore:"id"`
-	Title       string         `json:"title" firestore:"title"`
-	Icon        string         `json:"icon,omitempty" firestore:"icon,omitempty"`
-	Description string         `json:"description,omitempty" firestore:"description,omitempty"`
-	Items       []PackingItem  `json:"items" firestore:"items"`
+	ID          string        `json:"id" firestore:"id"`
+	Title       string        `json:"title" firestore:"title"`
+	Icon        string        `json:"icon,omitempty" firestore:"icon,omitempty"`
+	Description string        `json:"description,omitempty" firestore:"description,omitempty"`
+	Items       []PackingItem `json:"items" firestore:"items"`
 }
 
 // PackingSection represents a section of the packing list
 type PackingSection struct {
-	ID      string          `json:"id" firestore:"id"`
-	Title   string          `json:"title" firestore:"title"`
-	Emoji   string          `json:"emoji,omitempty" firestore:"emoji,omitempty"`
-	Summary string          `json:"summary,omitempty" firestore:"summary,omitempty"`
-	Groups  []PackingGroup  `json:"groups" firestore:"groups"`
+	ID      string         `json:"id" firestore:"id"`
+	Title   string         `json:"title" firestore:"title"`
+	Emoji   string         `json:"emoji,omitempty" firestore:"emoji,omitempty"`
+	Summary string         `json:"summary,omitempty" firestore:"summary,omitempty"`
+	Groups  []PackingGroup `json:"groups" firestore:"groups"`
 }
 
 // CustomItemsState represents custom items per section

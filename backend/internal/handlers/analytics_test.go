@@ -25,11 +25,11 @@ func TestAnalyticsHandler_GetDashboardAnalytics(t *testing.T) {
 
 	// Add some test data
 	mockRepo.AddDocument("tasks", "task1", map[string]interface{}{
-		"id":        "task1",
-		"uid":       uid,
-		"title":     "Test Task",
-		"status":    "completed",
-		"category":  "work",
+		"id":       "task1",
+		"uid":      uid,
+		"title":    "Test Task",
+		"status":   "completed",
+		"category": "work",
 	})
 
 	tests := []struct {

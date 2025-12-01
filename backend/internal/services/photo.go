@@ -39,35 +39,35 @@ func NewPhotoService(
 
 // BattlePhoto represents a photo in a battle session
 type BattlePhoto struct {
-	ID           string  `json:"id" firestore:"id"`
-	URL          string  `json:"url" firestore:"url"`
-	StoragePath  string  `json:"storagePath" firestore:"storagePath"`
-	LibraryID    string  `json:"libraryId,omitempty" firestore:"libraryId,omitempty"`
-	ThumbnailURL string  `json:"thumbnailUrl,omitempty" firestore:"thumbnailUrl,omitempty"`
+	ID            string `json:"id" firestore:"id"`
+	URL           string `json:"url" firestore:"url"`
+	StoragePath   string `json:"storagePath" firestore:"storagePath"`
+	LibraryID     string `json:"libraryId,omitempty" firestore:"libraryId,omitempty"`
+	ThumbnailURL  string `json:"thumbnailUrl,omitempty" firestore:"thumbnailUrl,omitempty"`
 	ThumbnailPath string `json:"thumbnailPath,omitempty" firestore:"thumbnailPath,omitempty"`
-	Rating       int     `json:"rating" firestore:"rating"`
-	Wins         int     `json:"wins" firestore:"wins"`
-	Losses       int     `json:"losses" firestore:"losses"`
-	TotalVotes   int     `json:"totalVotes" firestore:"totalVotes"`
+	Rating        int    `json:"rating" firestore:"rating"`
+	Wins          int    `json:"wins" firestore:"wins"`
+	Losses        int    `json:"losses" firestore:"losses"`
+	TotalVotes    int    `json:"totalVotes" firestore:"totalVotes"`
 }
 
 // PhotoBattle represents a photo battle session
 type PhotoBattle struct {
-	ID           string                 `json:"id" firestore:"-"`
-	OwnerID      string                 `json:"ownerId" firestore:"ownerId"`
-	Photos       []BattlePhoto          `json:"photos" firestore:"photos"`
-	PhotoAliases map[string]string      `json:"photoAliases,omitempty" firestore:"photoAliases,omitempty"`
-	SecretKey    string                 `json:"secretKey" firestore:"secretKey"`
-	CreatedAt    time.Time              `json:"createdAt" firestore:"createdAt"`
-	UpdatedAt    time.Time              `json:"updatedAt,omitempty" firestore:"updatedAt,omitempty"`
+	ID           string            `json:"id" firestore:"-"`
+	OwnerID      string            `json:"ownerId" firestore:"ownerId"`
+	Photos       []BattlePhoto     `json:"photos" firestore:"photos"`
+	PhotoAliases map[string]string `json:"photoAliases,omitempty" firestore:"photoAliases,omitempty"`
+	SecretKey    string            `json:"secretKey" firestore:"secretKey"`
+	CreatedAt    time.Time         `json:"createdAt" firestore:"createdAt"`
+	UpdatedAt    time.Time         `json:"updatedAt,omitempty" firestore:"updatedAt,omitempty"`
 }
 
 // VoteHistory represents a vote history entry
 type VoteHistory struct {
-	WinnerID  string     `json:"winnerId" firestore:"winnerId"`
-	LoserID   string     `json:"loserId" firestore:"loserId"`
-	VoterID   string     `json:"voterId,omitempty" firestore:"voterId,omitempty"`
-	CreatedAt time.Time  `json:"createdAt" firestore:"createdAt"`
+	WinnerID  string    `json:"winnerId" firestore:"winnerId"`
+	LoserID   string    `json:"loserId" firestore:"loserId"`
+	VoterID   string    `json:"voterId,omitempty" firestore:"voterId,omitempty"`
+	CreatedAt time.Time `json:"createdAt" firestore:"createdAt"`
 }
 
 // SubmitVote processes a photo vote using Elo rating algorithm

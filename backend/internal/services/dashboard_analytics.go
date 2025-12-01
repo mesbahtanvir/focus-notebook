@@ -39,16 +39,16 @@ const (
 // TimeOfDayStats holds statistics for a time period
 type TimeOfDayStats struct {
 	Sessions       int     `json:"sessions"`
-	TotalTime      int     `json:"totalTime"`       // in seconds
+	TotalTime      int     `json:"totalTime"` // in seconds
 	CompletedTasks int     `json:"completedTasks"`
-	AvgCompletion  float64 `json:"avgCompletion"`   // percentage
+	AvgCompletion  float64 `json:"avgCompletion"` // percentage
 }
 
 // DashboardAnalytics holds the complete analytics response
 type DashboardAnalytics struct {
-	FocusData     []map[string]interface{} `json:"focusData"`
-	TaskData      []map[string]interface{} `json:"taskData"`
-	CategoryData  []map[string]interface{} `json:"categoryData"`
+	FocusData     []map[string]interface{}  `json:"focusData"`
+	TaskData      []map[string]interface{}  `json:"taskData"`
+	CategoryData  []map[string]interface{}  `json:"categoryData"`
 	TimeOfDayData map[string]TimeOfDayStats `json:"timeOfDayData"`
 	Stats         struct {
 		TotalFocusTime int     `json:"totalFocusTime"` // in minutes

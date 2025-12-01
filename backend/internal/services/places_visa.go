@@ -148,18 +148,18 @@ func NewVisaService(repo interfaces.Repository, logger *zap.Logger) *VisaService
 
 // VisaRequirement represents visa requirements for a destination
 type VisaRequirement struct {
-	ID                 string        `json:"id" firestore:"id"`
-	SourceCountry      CountryInfo   `json:"sourceCountry" firestore:"sourceCountry"`
-	DestinationCountry CountryInfo   `json:"destinationCountry" firestore:"destinationCountry"`
-	VisaType           string        `json:"visaType" firestore:"visaType"`
-	Duration           string        `json:"duration" firestore:"duration"`
-	Description        string        `json:"description" firestore:"description"`
-	Region             string        `json:"region" firestore:"region"`
-	Requirements       []string      `json:"requirements" firestore:"requirements"`
-	Notes              string        `json:"notes,omitempty" firestore:"notes,omitempty"`
-	LastUpdated        string        `json:"lastUpdated" firestore:"lastUpdated"`
-	Confidence         string        `json:"confidence" firestore:"confidence"`
-	Source             string        `json:"source" firestore:"source"`
+	ID                 string      `json:"id" firestore:"id"`
+	SourceCountry      CountryInfo `json:"sourceCountry" firestore:"sourceCountry"`
+	DestinationCountry CountryInfo `json:"destinationCountry" firestore:"destinationCountry"`
+	VisaType           string      `json:"visaType" firestore:"visaType"`
+	Duration           string      `json:"duration" firestore:"duration"`
+	Description        string      `json:"description" firestore:"description"`
+	Region             string      `json:"region" firestore:"region"`
+	Requirements       []string    `json:"requirements" firestore:"requirements"`
+	Notes              string      `json:"notes,omitempty" firestore:"notes,omitempty"`
+	LastUpdated        string      `json:"lastUpdated" firestore:"lastUpdated"`
+	Confidence         string      `json:"confidence" firestore:"confidence"`
+	Source             string      `json:"source" firestore:"source"`
 }
 
 // CountryInfo represents country information

@@ -197,11 +197,11 @@ func (s *ChatService) chatWithAnthropic(
 // isOpenAIModel checks if the model is an OpenAI model
 func isOpenAIModel(model string) bool {
 	openaiModels := map[string]bool{
-		"gpt-4o":            true,
-		"gpt-4o-mini":       true,
-		"gpt-4":             true,
-		"gpt-4-turbo":       true,
-		"gpt-3.5-turbo":     true,
+		"gpt-4o":             true,
+		"gpt-4o-mini":        true,
+		"gpt-4":              true,
+		"gpt-4-turbo":        true,
+		"gpt-3.5-turbo":      true,
 		"gpt-4-1106-preview": true,
 		"gpt-4-0125-preview": true,
 	}
@@ -211,13 +211,13 @@ func isOpenAIModel(model string) bool {
 // isAnthropicModel checks if the model is an Anthropic model
 func isAnthropicModel(model string) bool {
 	anthropicModels := map[string]bool{
-		"claude-3-5-sonnet-20241022":    true,
-		"claude-3-5-haiku-20241022":     true,
-		"claude-3-opus-20240229":        true,
-		"claude-3-sonnet-20240229":      true,
-		"claude-3-haiku-20240307":       true,
-		"claude-2.1":                    true,
-		"claude-2.0":                    true,
+		"claude-3-5-sonnet-20241022": true,
+		"claude-3-5-haiku-20241022":  true,
+		"claude-3-opus-20240229":     true,
+		"claude-3-sonnet-20240229":   true,
+		"claude-3-haiku-20240307":    true,
+		"claude-2.1":                 true,
+		"claude-2.0":                 true,
 	}
 	return anthropicModels[model]
 }

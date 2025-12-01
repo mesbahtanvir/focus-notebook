@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"firebase.google.com/go/v4/auth"
 	"cloud.google.com/go/firestore"
+	"firebase.google.com/go/v4/auth"
 
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/models"
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/utils"

@@ -58,10 +58,10 @@ func TestEntityGraphService_QueryRelationships(t *testing.T) {
 	})
 
 	tests := []struct {
-		name       string
-		filters    RelationshipFilters
-		wantCount  int
-		wantTotal  int
+		name      string
+		filters   RelationshipFilters
+		wantCount int
+		wantTotal int
 	}{
 		{
 			name: "filter by source type",

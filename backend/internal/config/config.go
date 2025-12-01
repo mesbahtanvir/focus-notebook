@@ -10,23 +10,23 @@ import (
 
 // Config holds the application configuration
 type Config struct {
-	Server     ServerConfig     `yaml:"server"`
-	Firebase   FirebaseConfig   `yaml:"firebase"`
-	OpenAI     OpenAIConfig     `yaml:"openai"`
-	Anthropic  AnthropicConfig  `yaml:"anthropic"`
-	Stripe       StripeConfig         `yaml:"stripe"`
-	Plaid        PlaidConfig          `yaml:"plaid"`
-	AlphaVantage AlphaVantageConfig   `yaml:"alpha_vantage"`
-	Anonymous    AnonymousConfig      `yaml:"anonymous"`
-	Logging    LoggingConfig    `yaml:"logging"`
-	Metrics    MetricsConfig    `yaml:"metrics"`
-	Workers    WorkersConfig    `yaml:"workers"`
-	RateLimit  RateLimitConfig  `yaml:"rate_limit"`
-	Upload     UploadConfig     `yaml:"upload"`
-	Cache      CacheConfig      `yaml:"cache"`
-	Retry      RetryConfig      `yaml:"retry"`
-	Health     HealthConfig     `yaml:"health"`
-	Development DevelopmentConfig `yaml:"development"`
+	Server       ServerConfig       `yaml:"server"`
+	Firebase     FirebaseConfig     `yaml:"firebase"`
+	OpenAI       OpenAIConfig       `yaml:"openai"`
+	Anthropic    AnthropicConfig    `yaml:"anthropic"`
+	Stripe       StripeConfig       `yaml:"stripe"`
+	Plaid        PlaidConfig        `yaml:"plaid"`
+	AlphaVantage AlphaVantageConfig `yaml:"alpha_vantage"`
+	Anonymous    AnonymousConfig    `yaml:"anonymous"`
+	Logging      LoggingConfig      `yaml:"logging"`
+	Metrics      MetricsConfig      `yaml:"metrics"`
+	Workers      WorkersConfig      `yaml:"workers"`
+	RateLimit    RateLimitConfig    `yaml:"rate_limit"`
+	Upload       UploadConfig       `yaml:"upload"`
+	Cache        CacheConfig        `yaml:"cache"`
+	Retry        RetryConfig        `yaml:"retry"`
+	Health       HealthConfig       `yaml:"health"`
+	Development  DevelopmentConfig  `yaml:"development"`
 }
 
 type ServerConfig struct {
@@ -111,11 +111,11 @@ type AnonymousConfig struct {
 }
 
 type LoggingConfig struct {
-	Level             string `yaml:"level"`
-	Format            string `yaml:"format"`
-	Output            string `yaml:"output"`
-	EnableStacktrace  bool   `yaml:"enable_stacktrace"`
-	Development       bool   `yaml:"development"`
+	Level            string `yaml:"level"`
+	Format           string `yaml:"format"`
+	Output           string `yaml:"output"`
+	EnableStacktrace bool   `yaml:"enable_stacktrace"`
+	Development      bool   `yaml:"development"`
 }
 
 type MetricsConfig struct {
@@ -125,12 +125,12 @@ type MetricsConfig struct {
 }
 
 type WorkersConfig struct {
-	Enabled            bool                     `yaml:"enabled"`
-	ThoughtQueue       WorkerConfig             `yaml:"thought_queue"`
-	AnonymousCleanup   WorkerConfig             `yaml:"anonymous_cleanup"`
-	StockPrices        WorkerConfig             `yaml:"stock_prices"`
-	PortfolioSnapshot  CronWorkerConfig         `yaml:"portfolio_snapshot"`
-	VisaDataUpdate     CronWorkerConfig         `yaml:"visa_data_update"`
+	Enabled           bool             `yaml:"enabled"`
+	ThoughtQueue      WorkerConfig     `yaml:"thought_queue"`
+	AnonymousCleanup  WorkerConfig     `yaml:"anonymous_cleanup"`
+	StockPrices       WorkerConfig     `yaml:"stock_prices"`
+	PortfolioSnapshot CronWorkerConfig `yaml:"portfolio_snapshot"`
+	VisaDataUpdate    CronWorkerConfig `yaml:"visa_data_update"`
 }
 
 type WorkerConfig struct {
@@ -146,10 +146,10 @@ type CronWorkerConfig struct {
 }
 
 type RateLimitConfig struct {
-	Enabled            bool `yaml:"enabled"`
-	RequestsPerMinute  int  `yaml:"requests_per_minute"`
-	Burst              int  `yaml:"burst"`
-	PerUser            struct {
+	Enabled           bool `yaml:"enabled"`
+	RequestsPerMinute int  `yaml:"requests_per_minute"`
+	Burst             int  `yaml:"burst"`
+	PerUser           struct {
 		FreeTier int `yaml:"free_tier"`
 		ProTier  int `yaml:"pro_tier"`
 	} `yaml:"per_user"`
@@ -161,9 +161,9 @@ type UploadConfig struct {
 }
 
 type CacheConfig struct {
-	Enabled     bool          `yaml:"enabled"`
-	TTL         time.Duration `yaml:"ttl"`
-	MaxEntries  int           `yaml:"max_entries"`
+	Enabled      bool          `yaml:"enabled"`
+	TTL          time.Duration `yaml:"ttl"`
+	MaxEntries   int           `yaml:"max_entries"`
 	Subscription struct {
 		TTL        time.Duration `yaml:"ttl"`
 		MaxEntries int           `yaml:"max_entries"`
@@ -191,10 +191,10 @@ type HealthConfig struct {
 }
 
 type DevelopmentConfig struct {
-	Enabled      bool `yaml:"enabled"`
-	DebugRoutes  bool `yaml:"debug_routes"`
-	PrettyLogs   bool `yaml:"pretty_logs"`
-	DisableAuth  bool `yaml:"disable_auth"`
+	Enabled     bool `yaml:"enabled"`
+	DebugRoutes bool `yaml:"debug_routes"`
+	PrettyLogs  bool `yaml:"pretty_logs"`
+	DisableAuth bool `yaml:"disable_auth"`
 }
 
 // Load reads and parses the configuration file

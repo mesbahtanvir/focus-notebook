@@ -32,7 +32,7 @@ type ThoughtProcessingResponse struct {
 
 // AIAction represents an action suggested by AI
 type AIAction struct {
-	Type       string                 `json:"type"` // createTask, createProject, createMood, createRelationship, etc.
+	Type       string                 `json:"type"`       // createTask, createProject, createMood, createRelationship, etc.
 	Confidence int                    `json:"confidence"` // 0-100
 	Data       map[string]interface{} `json:"data"`
 	Reasoning  string                 `json:"reasoning"`
@@ -41,12 +41,12 @@ type AIAction struct {
 // ThoughtProcessingJob represents a queued thought processing job
 type ThoughtProcessingJob struct {
 	BaseModel
-	ThoughtID   string   `firestore:"thoughtId" json:"thoughtId"`
-	Trigger     string   `firestore:"trigger" json:"trigger"` // auto, manual, reprocess
-	Status      string   `firestore:"status" json:"status"` // queued, processing, completed, failed, rate_limited
+	ThoughtID   string    `firestore:"thoughtId" json:"thoughtId"`
+	Trigger     string    `firestore:"trigger" json:"trigger"` // auto, manual, reprocess
+	Status      string    `firestore:"status" json:"status"`   // queued, processing, completed, failed, rate_limited
 	RequestedAt time.Time `firestore:"requestedAt" json:"requestedAt"`
-	RequestedBy string   `firestore:"requestedBy,omitempty" json:"requestedBy,omitempty"`
-	ToolSpecIds []string `firestore:"toolSpecIds,omitempty" json:"toolSpecIds,omitempty"`
-	Attempts    int      `firestore:"attempts" json:"attempts"`
-	Error       string   `firestore:"error,omitempty" json:"error,omitempty"`
+	RequestedBy string    `firestore:"requestedBy,omitempty" json:"requestedBy,omitempty"`
+	ToolSpecIds []string  `firestore:"toolSpecIds,omitempty" json:"toolSpecIds,omitempty"`
+	Attempts    int       `firestore:"attempts" json:"attempts"`
+	Error       string    `firestore:"error,omitempty" json:"error,omitempty"`
 }

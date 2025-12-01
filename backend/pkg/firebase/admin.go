@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/auth"
 	"firebase.google.com/go/v4/storage"
-	"cloud.google.com/go/firestore"
 	"google.golang.org/api/option"
 )
 

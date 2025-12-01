@@ -11,9 +11,9 @@ type RateLimiter struct {
 	requestsPerMinute int
 	tokensPerMinute   int
 
-	requestTokens     int
-	aiTokens          int
-	lastRefill        time.Time
+	requestTokens int
+	aiTokens      int
+	lastRefill    time.Time
 
 	mu sync.Mutex
 }

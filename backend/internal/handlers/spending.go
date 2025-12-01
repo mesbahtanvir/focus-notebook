@@ -260,11 +260,11 @@ func (h *SpendingHandler) LinkTransactionToTrip(w http.ResponseWriter, r *http.R
 
 // DeleteAllTransactionsResponse represents the response from deleting all transactions
 type DeleteAllTransactionsResponse struct {
-	Success                    bool `json:"success"`
-	TransactionsDeleted        int  `json:"transactionsDeleted"`
-	ProcessingStatusesDeleted  int  `json:"processingStatusesDeleted"`
-	StatementsDeleted          int  `json:"statementsDeleted"`
-	QueuedJobsDeleted          int  `json:"queuedJobsDeleted"`
+	Success                   bool `json:"success"`
+	TransactionsDeleted       int  `json:"transactionsDeleted"`
+	ProcessingStatusesDeleted int  `json:"processingStatusesDeleted"`
+	StatementsDeleted         int  `json:"statementsDeleted"`
+	QueuedJobsDeleted         int  `json:"queuedJobsDeleted"`
 }
 
 // DeleteAllTransactions handles POST /api/spending/delete-all
