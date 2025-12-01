@@ -6,9 +6,7 @@ import (
 	"math"
 	"time"
 
-	"cloud.google.com/go/firestore"
 	"go.uber.org/zap"
-	"google.golang.org/api/iterator"
 
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 )
@@ -125,42 +123,47 @@ func (s *InvestmentCalculationService) CalculatePortfolioMetrics(
 	uid string,
 	portfolioID string,
 ) (*PortfolioMetrics, error) {
-	// Fetch portfolio
-	portfolioDoc, err := s.repo.Collection("portfolios").Doc(portfolioID).Get(ctx)
+	// Fetch all portfolios and find the one with matching ID
+	allPortfolios, err := s.repo.List(ctx, "portfolios", 0)
 	if err != nil {
-		return nil, fmt.Errorf("portfolio not found: %w", err)
+		return nil, fmt.Errorf("failed to fetch portfolios: %w", err)
 	}
 
-	portfolio := portfolioDoc.Data()
-	if portfolio["uid"] != uid {
-		return nil, fmt.Errorf("unauthorized: portfolio does not belong to user")
+	var portfolio map[string]interface{}
+	for _, p := range allPortfolios {
+		if id, ok := p["id"].(string); ok && id == portfolioID {
+			if pUID, ok := p["uid"].(string); ok && pUID == uid {
+				portfolio = p
+				break
+			}
+		}
+	}
+
+	if portfolio == nil {
+		return nil, fmt.Errorf("portfolio not found")
 	}
 
 	// Fetch all investments for this portfolio
-	query := s.repo.Collection("investments").
-		Where("uid", "==", uid).
-		Where("portfolioId", "==", portfolioID)
-
-	iter := query.Documents(ctx)
-	defer iter.Stop()
+	allInvestments, err := s.repo.List(ctx, "investments", 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch investments: %w", err)
+	}
 
 	metrics := &PortfolioMetrics{
 		Currency:     s.getStringFromMap(portfolio, "baseCurrency", "USD"),
 		ByInvestment: []InvestmentMetric{},
 	}
 
-	// Calculate metrics for each investment
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
+	// Filter investments by uid and portfolioId, then calculate metrics
+	for _, investment := range allInvestments {
+		// Filter by uid and portfolioId
+		if invUID, ok := investment["uid"].(string); !ok || invUID != uid {
+			continue
 		}
-		if err != nil {
-			s.logger.Warn("Error fetching investment", zap.Error(err))
+		if portID, ok := investment["portfolioId"].(string); !ok || portID != portfolioID {
 			continue
 		}
 
-		investment := doc.Data()
 		invMetric := s.calculateInvestmentMetric(investment)
 		metrics.ByInvestment = append(metrics.ByInvestment, invMetric)
 
@@ -337,43 +340,32 @@ func (s *InvestmentCalculationService) CalculateDashboardSummary(
 	}
 
 	// Fetch all portfolios
-	portfoliosQuery := s.repo.Collection("portfolios").Where("uid", "==", uid)
-	portfoliosIter := portfoliosQuery.Documents(ctx)
-	defer portfoliosIter.Stop()
+	allPortfolios, err := s.repo.List(ctx, "portfolios", 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch portfolios: %w", err)
+	}
 
-	portfolioIDs := []string{}
-	for {
-		doc, err := portfoliosIter.Next()
-		if err == iterator.Done {
-			break
+	// Filter portfolios by uid
+	for _, p := range allPortfolios {
+		if pUID, ok := p["uid"].(string); ok && pUID == uid {
+			summary.PortfolioCount++
 		}
-		if err != nil {
-			s.logger.Warn("Error fetching portfolio", zap.Error(err))
-			continue
-		}
-
-		portfolioIDs = append(portfolioIDs, doc.Data()["id"].(string))
-		summary.PortfolioCount++
 	}
 
 	// Fetch all investments across all portfolios
-	investmentsQuery := s.repo.Collection("investments").Where("uid", "==", uid)
-	investmentsIter := investmentsQuery.Documents(ctx)
-	defer investmentsIter.Stop()
+	allInvestments, err := s.repo.List(ctx, "investments", 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch investments: %w", err)
+	}
 
 	allPerformances := []InvestmentPerformance{}
 
-	for {
-		doc, err := investmentsIter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			s.logger.Warn("Error fetching investment", zap.Error(err))
+	// Filter investments by uid
+	for _, investment := range allInvestments {
+		if invUID, ok := investment["uid"].(string); !ok || invUID != uid {
 			continue
 		}
 
-		investment := doc.Data()
 		metric := s.calculateInvestmentMetric(investment)
 
 		// Aggregate totals
@@ -453,33 +445,35 @@ func (s *InvestmentCalculationService) GetPortfolioSnapshots(
 	startDate *time.Time,
 	endDate *time.Time,
 ) ([]map[string]interface{}, error) {
-	query := s.repo.Collection("portfolioSnapshots").
-		Where("uid", "==", uid).
-		Where("portfolioId", "==", portfolioID).
-		OrderBy("date", firestore.Asc)
-
-	if startDate != nil {
-		query = query.Where("date", ">=", startDate.Format("2006-01-02"))
+	// Fetch all portfolio snapshots
+	allSnapshots, err := s.repo.List(ctx, "portfolioSnapshots", 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch snapshots: %w", err)
 	}
-	if endDate != nil {
-		query = query.Where("date", "<=", endDate.Format("2006-01-02"))
-	}
-
-	iter := query.Documents(ctx)
-	defer iter.Stop()
 
 	snapshots := []map[string]interface{}{}
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
+
+	// Filter snapshots by uid, portfolioId, and date range
+	for _, snapshot := range allSnapshots {
+		// Filter by uid and portfolioId
+		if snapUID, ok := snapshot["uid"].(string); !ok || snapUID != uid {
+			continue
 		}
-		if err != nil {
-			s.logger.Warn("Error fetching snapshot", zap.Error(err))
+		if snapPortID, ok := snapshot["portfolioId"].(string); !ok || snapPortID != portfolioID {
 			continue
 		}
 
-		snapshots = append(snapshots, doc.Data())
+		// Filter by date range if provided
+		if dateStr, ok := snapshot["date"].(string); ok {
+			if startDate != nil && dateStr < startDate.Format("2006-01-02") {
+				continue
+			}
+			if endDate != nil && dateStr > endDate.Format("2006-01-02") {
+				continue
+			}
+		}
+
+		snapshots = append(snapshots, snapshot)
 	}
 
 	return snapshots, nil
