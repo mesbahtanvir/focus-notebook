@@ -7,9 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"cloud.google.com/go/firestore"
 	"go.uber.org/zap"
-	"google.golang.org/api/iterator"
 
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 )
@@ -147,33 +145,43 @@ func (s *SpendingAnalyticsService) ComputeSpendingAnalytics(ctx context.Context,
 
 // fetchTransactions fetches transactions for a user in date range
 func (s *SpendingAnalyticsService) fetchTransactions(ctx context.Context, uid string, startDate, endDate time.Time, accountIDs []string) ([]map[string]interface{}, error) {
-	// Start with base query
-	query := s.repo.Client().Collection(fmt.Sprintf("users/%s/transactions", uid)).
-		Where("postedAt", ">=", startDate.Format("2006-01-02")).
-		Where("postedAt", "<=", endDate.Format("2006-01-02"))
-
-	// Filter by account IDs if provided
-	if len(accountIDs) > 0 {
-		query = query.Where("accountId", "in", accountIDs)
+	collectionPath := fmt.Sprintf("users/%s/transactions", uid)
+	allTransactions, err := s.repo.List(ctx, collectionPath, 0)
+	if err != nil {
+		return nil, err
 	}
 
-	query = query.OrderBy("postedAt", firestore.Desc)
-
-	iter := query.Documents(ctx)
-	defer iter.Stop()
-
+	// Filter by date range and account IDs client-side
 	var transactions []map[string]interface{}
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return nil, err
+	startDateStr := startDate.Format("2006-01-02")
+	endDateStr := endDate.Format("2006-01-02")
+
+	for _, txn := range allTransactions {
+		// Filter by date range
+		if postedAt, ok := txn["postedAt"].(string); ok {
+			if postedAt < startDateStr || postedAt > endDateStr {
+				continue
+			}
 		}
 
-		txn := doc.Data()
-		txn["id"] = doc.Ref.ID
+		// Filter by account IDs if provided
+		if len(accountIDs) > 0 {
+			accountID, ok := txn["accountId"].(string)
+			if !ok {
+				continue
+			}
+			found := false
+			for _, id := range accountIDs {
+				if accountID == id {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
 		transactions = append(transactions, txn)
 	}
 

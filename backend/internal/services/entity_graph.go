@@ -134,66 +134,58 @@ func (s *EntityGraphService) QueryRelationships(
 	uid string,
 	filters RelationshipFilters,
 ) ([]map[string]interface{}, int, error) {
-	// Build base query
-	query := s.repo.Collection("entityRelationships").Where("uid", "==", uid)
-
-	// Apply filters
-	if filters.SourceType != nil {
-		query = query.Where("sourceType", "==", string(*filters.SourceType))
-	}
-	if filters.SourceID != nil {
-		query = query.Where("sourceId", "==", *filters.SourceID)
-	}
-	if filters.TargetType != nil {
-		query = query.Where("targetType", "==", string(*filters.TargetType))
-	}
-	if filters.TargetID != nil {
-		query = query.Where("targetId", "==", *filters.TargetID)
-	}
-	if filters.RelationshipType != nil {
-		query = query.Where("relationshipType", "==", string(*filters.RelationshipType))
-	}
-	if filters.Status != nil {
-		query = query.Where("status", "==", *filters.Status)
-	}
-	if filters.CreatedBy != nil {
-		query = query.Where("createdBy", "==", *filters.CreatedBy)
+	// Fetch all relationships for the user
+	allRelationships, err := s.repo.List(ctx, "entityRelationships", 0)
+	if err != nil {
+		return nil, 0, err
 	}
 
-	// Apply sorting
-	sortBy := "createdAt"
-	if filters.SortBy != "" {
-		sortBy = filters.SortBy
-	}
-	sortOrder := "desc"
-	if filters.SortOrder != "" {
-		sortOrder = filters.SortOrder
-	}
-
-	if sortOrder == "asc" {
-		query = query.OrderBy(sortBy, firestore.Asc)
-	} else {
-		query = query.OrderBy(sortBy, firestore.Desc)
-	}
-
-	// Get total count (before pagination)
-	iter := query.Documents(ctx)
-	defer iter.Stop()
-
+	// Apply all filters client-side
 	allResults := []map[string]interface{}{}
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			s.logger.Warn("Error fetching relationship", zap.Error(err))
+	for _, relationship := range allRelationships {
+		// Filter by uid
+		if relUID, ok := relationship["uid"].(string); !ok || relUID != uid {
 			continue
 		}
 
-		relationship := doc.Data()
+		// Apply filters
+		if filters.SourceType != nil {
+			if sourceType, ok := relationship["sourceType"].(string); !ok || sourceType != string(*filters.SourceType) {
+				continue
+			}
+		}
+		if filters.SourceID != nil {
+			if sourceID, ok := relationship["sourceId"].(string); !ok || sourceID != *filters.SourceID {
+				continue
+			}
+		}
+		if filters.TargetType != nil {
+			if targetType, ok := relationship["targetType"].(string); !ok || targetType != string(*filters.TargetType) {
+				continue
+			}
+		}
+		if filters.TargetID != nil {
+			if targetID, ok := relationship["targetId"].(string); !ok || targetID != *filters.TargetID {
+				continue
+			}
+		}
+		if filters.RelationshipType != nil {
+			if relType, ok := relationship["relationshipType"].(string); !ok || relType != string(*filters.RelationshipType) {
+				continue
+			}
+		}
+		if filters.Status != nil {
+			if status, ok := relationship["status"].(string); !ok || status != *filters.Status {
+				continue
+			}
+		}
+		if filters.CreatedBy != nil {
+			if createdBy, ok := relationship["createdBy"].(string); !ok || createdBy != *filters.CreatedBy {
+				continue
+			}
+		}
 
-		// Apply strength filters (client-side since Firestore doesn't support range queries with other filters)
+		// Apply strength filters (client-side)
 		if filters.MinStrength != nil || filters.MaxStrength != nil {
 			strength := int(s.getFloatFromMap(relationship, "strength", 0))
 			if filters.MinStrength != nil && strength < *filters.MinStrength {
@@ -249,19 +241,11 @@ func (s *EntityGraphService) GetLinkedEntities(
 		People:   []map[string]interface{}{},
 	}
 
-	// Query relationships where this entity is the source
-	sourceQuery := s.repo.Collection("entityRelationships").
-		Where("uid", "==", uid).
-		Where("sourceType", "==", string(entityType)).
-		Where("sourceId", "==", entityID).
-		Where("status", "==", "active")
-
-	// Query relationships where this entity is the target
-	targetQuery := s.repo.Collection("entityRelationships").
-		Where("uid", "==", uid).
-		Where("targetType", "==", string(entityType)).
-		Where("targetId", "==", entityID).
-		Where("status", "==", "active")
+	// Fetch all relationships for the user
+	allRelationships, err := s.repo.List(ctx, "entityRelationships", 0)
+	if err != nil {
+		return nil, err
+	}
 
 	// Collect all linked entity IDs by type
 	linkedIDs := map[EntityType]map[string]bool{
@@ -272,11 +256,40 @@ func (s *EntityGraphService) GetLinkedEntities(
 		EntityTypePerson:  {},
 	}
 
-	// Process source relationships
-	s.collectLinkedIDs(ctx, sourceQuery, entityType, "target", linkedIDs)
+	// Process relationships (both as source and target)
+	for _, rel := range allRelationships {
+		// Filter by uid and status
+		if relUID, ok := rel["uid"].(string); !ok || relUID != uid {
+			continue
+		}
+		if status, ok := rel["status"].(string); !ok || status != "active" {
+			continue
+		}
 
-	// Process target relationships
-	s.collectLinkedIDs(ctx, targetQuery, entityType, "source", linkedIDs)
+		// Check if this entity is the source
+		if sourceType, ok := rel["sourceType"].(string); ok && sourceType == string(entityType) {
+			if sourceID, ok := rel["sourceId"].(string); ok && sourceID == entityID {
+				// Add target entity to linkedIDs
+				if targetType, ok := rel["targetType"].(string); ok {
+					if targetID, ok := rel["targetId"].(string); ok {
+						linkedIDs[EntityType(targetType)][targetID] = true
+					}
+				}
+			}
+		}
+
+		// Check if this entity is the target
+		if targetType, ok := rel["targetType"].(string); ok && targetType == string(entityType) {
+			if targetID, ok := rel["targetId"].(string); ok && targetID == entityID {
+				// Add source entity to linkedIDs
+				if sourceType, ok := rel["sourceType"].(string); ok {
+					if sourceID, ok := rel["sourceId"].(string); ok {
+						linkedIDs[EntityType(sourceType)][sourceID] = true
+					}
+				}
+			}
+		}
+	}
 
 	// Fetch actual entity data for linked IDs
 	response.Tasks = s.fetchEntitiesByIDs(ctx, uid, "tasks", linkedIDs[EntityTypeTask])

@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"context"
+	"strings"
 
 	"cloud.google.com/go/firestore"
 
@@ -127,4 +128,47 @@ func (m *MockRepository) QueryCollection(ctx context.Context, collectionPath str
 // AddDocument is a helper for tests to add mock data
 func (m *MockRepository) AddDocument(path string, data map[string]interface{}) {
 	m.Documents[path] = data
+}
+
+// GetCollectionDocuments retrieves documents matching a collection path pattern
+func (m *MockRepository) GetCollectionDocuments(collectionPath string) []map[string]interface{} {
+	var results []map[string]interface{}
+	for path, data := range m.Documents {
+		if len(path) > len(collectionPath) && path[:len(collectionPath)] == collectionPath {
+			// Add the document with its ID
+			docData := make(map[string]interface{})
+			for k, v := range data {
+				docData[k] = v
+			}
+			// Extract ID from path (last segment)
+			parts := strings.Split(path, "/")
+			if len(parts) > 0 {
+				docData["id"] = parts[len(parts)-1]
+			}
+			results = append(results, docData)
+		}
+	}
+	return results
+}
+
+// GetCollectionDocumentsFiltered retrieves documents matching filters
+func (m *MockRepository) GetCollectionDocumentsFiltered(collectionPath string, filters map[string]interface{}, order string) []map[string]interface{} {
+	docs := m.GetCollectionDocuments(collectionPath)
+
+	// Apply filters
+	filtered := []map[string]interface{}{}
+	for _, doc := range docs {
+		match := true
+		for key, filterValue := range filters {
+			if docValue, ok := doc[key]; !ok || docValue != filterValue {
+				match = false
+				break
+			}
+		}
+		if match {
+			filtered = append(filtered, doc)
+		}
+	}
+
+	return filtered
 }

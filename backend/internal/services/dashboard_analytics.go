@@ -6,9 +6,7 @@ import (
 	"math"
 	"time"
 
-	"cloud.google.com/go/firestore"
 	"go.uber.org/zap"
-	"google.golang.org/api/iterator"
 
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 )
@@ -240,25 +238,12 @@ func (s *DashboardAnalyticsService) resolvePeriodRange(period SummaryPeriod, ref
 
 // fetchTasks fetches tasks for a user
 func (s *DashboardAnalyticsService) fetchTasks(ctx context.Context, uid string, startDate, endDate time.Time) ([]map[string]interface{}, error) {
-	query := s.repo.Client().Collection(fmt.Sprintf("users/%s/tasks", uid))
+	collectionPath := fmt.Sprintf("users/%s/tasks", uid)
 
-	// Fetch all tasks (we need to check done status and completedAt)
-	iter := query.Documents(ctx)
-	defer iter.Stop()
-
-	var tasks []map[string]interface{}
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		task := doc.Data()
-		task["id"] = doc.Ref.ID
-		tasks = append(tasks, task)
+	// Use the repository's List method instead of direct Firestore client access
+	tasks, err := s.repo.List(ctx, collectionPath, 0)
+	if err != nil {
+		return nil, err
 	}
 
 	return tasks, nil
@@ -266,27 +251,34 @@ func (s *DashboardAnalyticsService) fetchTasks(ctx context.Context, uid string, 
 
 // fetchSessions fetches focus sessions for a user in date range
 func (s *DashboardAnalyticsService) fetchSessions(ctx context.Context, uid string, startDate, endDate time.Time) ([]map[string]interface{}, error) {
-	query := s.repo.Client().Collection(fmt.Sprintf("users/%s/focusSessions", uid)).
-		Where("startTime", ">=", startDate).
-		Where("startTime", "<=", endDate).
-		OrderBy("startTime", firestore.Asc)
+	collectionPath := fmt.Sprintf("users/%s/focusSessions", uid)
 
-	iter := query.Documents(ctx)
-	defer iter.Stop()
+	// Use the repository's List method instead of direct Firestore client access
+	allSessions, err := s.repo.List(ctx, collectionPath, 0)
+	if err != nil {
+		return nil, err
+	}
 
+	// Filter by date range client-side
 	var sessions []map[string]interface{}
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
+	for _, session := range allSessions {
+		// Check if session has startTime field
+		if startTimeVal, ok := session["startTime"]; ok {
+			// Convert to time.Time for comparison
+			var sessionTime time.Time
+			switch v := startTimeVal.(type) {
+			case time.Time:
+				sessionTime = v
+			default:
+				// Skip if can't convert to time
+				continue
+			}
 
-		session := doc.Data()
-		session["id"] = doc.Ref.ID
-		sessions = append(sessions, session)
+			// Include if within date range
+			if !sessionTime.Before(startDate) && !sessionTime.After(endDate) {
+				sessions = append(sessions, session)
+			}
+		}
 	}
 
 	return sessions, nil
@@ -294,24 +286,12 @@ func (s *DashboardAnalyticsService) fetchSessions(ctx context.Context, uid strin
 
 // fetchGoals fetches all goals for a user
 func (s *DashboardAnalyticsService) fetchGoals(ctx context.Context, uid string) ([]map[string]interface{}, error) {
-	query := s.repo.Client().Collection(fmt.Sprintf("users/%s/goals", uid))
+	collectionPath := fmt.Sprintf("users/%s/goals", uid)
 
-	iter := query.Documents(ctx)
-	defer iter.Stop()
-
-	var goals []map[string]interface{}
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		goal := doc.Data()
-		goal["id"] = doc.Ref.ID
-		goals = append(goals, goal)
+	// Use the repository's List method instead of direct Firestore client access
+	goals, err := s.repo.List(ctx, collectionPath, 0)
+	if err != nil {
+		return nil, err
 	}
 
 	return goals, nil
@@ -319,24 +299,12 @@ func (s *DashboardAnalyticsService) fetchGoals(ctx context.Context, uid string) 
 
 // fetchProjects fetches all projects for a user
 func (s *DashboardAnalyticsService) fetchProjects(ctx context.Context, uid string) ([]map[string]interface{}, error) {
-	query := s.repo.Client().Collection(fmt.Sprintf("users/%s/projects", uid))
+	collectionPath := fmt.Sprintf("users/%s/projects", uid)
 
-	iter := query.Documents(ctx)
-	defer iter.Stop()
-
-	var projects []map[string]interface{}
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		project := doc.Data()
-		project["id"] = doc.Ref.ID
-		projects = append(projects, project)
+	// Use the repository's List method instead of direct Firestore client access
+	projects, err := s.repo.List(ctx, collectionPath, 0)
+	if err != nil {
+		return nil, err
 	}
 
 	return projects, nil
@@ -552,28 +520,20 @@ func (s *DashboardAnalyticsService) getTimeOfDayCategory(t time.Time) string {
 // calculateStreak calculates consecutive days with focus sessions
 func (s *DashboardAnalyticsService) calculateStreak(ctx context.Context, uid string, referenceDate time.Time) int {
 	// Fetch ALL sessions to calculate streak (we need historical data)
-	query := s.repo.Client().Collection(fmt.Sprintf("users/%s/focusSessions", uid)).
-		OrderBy("startTime", firestore.Desc).
-		Limit(1000) // Limit to recent 1000 sessions for performance
-
-	iter := query.Documents(ctx)
-	defer iter.Stop()
+	collectionPath := fmt.Sprintf("users/%s/focusSessions", uid)
+	sessions, err := s.repo.List(ctx, collectionPath, 0)
+	if err != nil {
+		s.logger.Error("Error fetching sessions for streak", zap.Error(err))
+		return 0
+	}
 
 	sessionsByDate := make(map[string]bool)
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			s.logger.Error("Error fetching sessions for streak", zap.Error(err))
-			return 0
-		}
-
-		session := doc.Data()
-		if startTime, ok := session["startTime"].(time.Time); ok {
-			dateStr := s.startOfDay(startTime).Format("2006-01-02")
-			sessionsByDate[dateStr] = true
+	for _, session := range sessions {
+		if startTimeVal, ok := session["startTime"]; ok {
+			if startTime, ok := startTimeVal.(time.Time); ok {
+				dateStr := s.startOfDay(startTime).Format("2006-01-02")
+				sessionsByDate[dateStr] = true
+			}
 		}
 	}
 
@@ -595,25 +555,13 @@ func (s *DashboardAnalyticsService) calculateStreak(ctx context.Context, uid str
 
 // countAllTasks counts all tasks (for completion rate)
 func (s *DashboardAnalyticsService) countAllTasks(ctx context.Context, uid string) (int, error) {
-	query := s.repo.Client().Collection(fmt.Sprintf("users/%s/tasks", uid))
-
-	// Use aggregation query for count (more efficient)
-	count := 0
-	iter := query.Documents(ctx)
-	defer iter.Stop()
-
-	for {
-		_, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return 0, err
-		}
-		count++
+	collectionPath := fmt.Sprintf("users/%s/tasks", uid)
+	tasks, err := s.repo.List(ctx, collectionPath, 0)
+	if err != nil {
+		return 0, err
 	}
 
-	return count, nil
+	return len(tasks), nil
 }
 
 // countCompletedTasks counts completed tasks
