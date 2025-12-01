@@ -200,6 +200,7 @@ type DevelopmentConfig struct {
 // Load reads and parses the configuration file
 func Load(path string) (*Config, error) {
 	// Read file
+	// #nosec G304 -- path comes from command-line arg, not user input
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)

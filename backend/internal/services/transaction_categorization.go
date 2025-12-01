@@ -7,9 +7,10 @@ import (
 	"regexp"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/clients"
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/models"
-	"go.uber.org/zap"
 )
 
 // TransactionCategorizationService handles AI-powered transaction categorization

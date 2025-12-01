@@ -116,8 +116,8 @@ func (s *ThoughtProcessingService) ProcessThought(ctx context.Context, thoughtID
 	}
 
 	if err != nil {
-		// Mark as failed
-		s.repo.UpdateDocument(ctx, thoughtPath, map[string]interface{}{
+		// Mark as failed (ignore error since we're already in error path)
+		_ = s.repo.UpdateDocument(ctx, thoughtPath, map[string]interface{}{
 			"aiProcessingStatus": "failed",
 			"aiProcessingError":  err.Error(),
 		})
@@ -126,9 +126,9 @@ func (s *ThoughtProcessingService) ProcessThought(ctx context.Context, thoughtID
 
 	// 7. Parse AI response
 	var aiResponse models.ThoughtProcessingResponse
-	if err := json.Unmarshal([]byte(response.Content), &aiResponse); err != nil {
-		s.logger.Error("Failed to parse AI response", zap.Error(err), zap.String("content", response.Content))
-		return fmt.Errorf("failed to parse AI response: %w", err)
+	if parseErr := json.Unmarshal([]byte(response.Content), &aiResponse); parseErr != nil {
+		s.logger.Error("Failed to parse AI response", zap.Error(parseErr), zap.String("content", response.Content))
+		return fmt.Errorf("failed to parse AI response: %w", parseErr)
 	}
 
 	// 8. Execute actions
@@ -136,10 +136,10 @@ func (s *ThoughtProcessingService) ProcessThought(ctx context.Context, thoughtID
 	for _, action := range aiResponse.Actions {
 		// Only auto-execute high confidence actions
 		if action.Confidence >= 95 {
-			err := s.actionProcessor.ExecuteAction(ctx, uid, thoughtID, action)
-			if err != nil {
+			actionErr := s.actionProcessor.ExecuteAction(ctx, uid, thoughtID, action)
+			if actionErr != nil {
 				s.logger.Warn("Failed to execute action",
-					zap.Error(err),
+					zap.Error(actionErr),
 					zap.String("actionType", action.Type),
 				)
 			} else {
@@ -172,8 +172,8 @@ func (s *ThoughtProcessingService) ProcessThought(ctx context.Context, thoughtID
 		return fmt.Errorf("failed to update thought: %w", err)
 	}
 
-	// 10. Increment usage stats
-	s.subscriptionSvc.IncrementUsage(ctx, uid, response.TokensUsed)
+	// 10. Increment usage stats (error not critical)
+	_ = s.subscriptionSvc.IncrementUsage(ctx, uid, response.TokensUsed)
 
 	s.logger.Info("Thought processing completed",
 		zap.String("uid", uid),

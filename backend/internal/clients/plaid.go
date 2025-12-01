@@ -171,7 +171,7 @@ func (c *PlaidClient) CreateLinkToken(ctx context.Context, req CreateLinkTokenRe
 		)
 		return nil, fmt.Errorf("failed to create link token: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	expiration := response.GetExpiration()
 
@@ -211,7 +211,7 @@ func (c *PlaidClient) ExchangePublicToken(ctx context.Context, req ExchangePubli
 		c.logger.Error("Failed to exchange public token", zap.Error(err))
 		return nil, fmt.Errorf("failed to exchange public token: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	c.logger.Info("Public token exchanged",
 		zap.String("itemId", response.GetItemId()),
@@ -246,7 +246,7 @@ func (c *PlaidClient) GetItem(ctx context.Context, accessToken string) (*GetItem
 		c.logger.Error("Failed to get item", zap.Error(err))
 		return nil, fmt.Errorf("failed to get item: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	item := response.GetItem()
 	result := &GetItemResponse{
@@ -307,7 +307,7 @@ func (c *PlaidClient) GetInstitution(ctx context.Context, institutionID string) 
 		c.logger.Error("Failed to get institution", zap.Error(err))
 		return nil, fmt.Errorf("failed to get institution: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	inst := response.GetInstitution()
 	result := &InstitutionInfo{
@@ -362,7 +362,7 @@ func (c *PlaidClient) GetAccounts(ctx context.Context, accessToken string) ([]Ac
 		c.logger.Error("Failed to get accounts", zap.Error(err))
 		return nil, fmt.Errorf("failed to get accounts: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	accounts := []Account{}
 	for _, acc := range response.GetAccounts() {
@@ -443,7 +443,7 @@ func (c *PlaidClient) SyncTransactions(ctx context.Context, req SyncTransactions
 		c.logger.Error("Failed to sync transactions", zap.Error(err))
 		return nil, fmt.Errorf("failed to sync transactions: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	result := &SyncTransactionsResponse{
 		Added:      []Transaction{},
@@ -532,7 +532,7 @@ func (c *PlaidClient) RemoveItem(ctx context.Context, accessToken string) error 
 		c.logger.Error("Failed to remove item", zap.Error(err))
 		return fmt.Errorf("failed to remove item: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	c.logger.Info("Item removed")
 
@@ -540,7 +540,7 @@ func (c *PlaidClient) RemoveItem(ctx context.Context, accessToken string) error 
 }
 
 // VerifyWebhook verifies a Plaid webhook signature
-func (c *PlaidClient) VerifyWebhook(payload []byte, signature string) (bool, error) {
+func (c *PlaidClient) VerifyWebhook(_ []byte, _ string) (bool, error) {
 	// Note: Plaid webhook verification is done via JWT validation
 	// This is a placeholder - actual implementation would use plaid.VerifyWebhookSignature
 	c.logger.Debug("Verifying webhook signature")

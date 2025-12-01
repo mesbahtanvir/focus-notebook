@@ -48,6 +48,6 @@ func RespondSuccess(w http.ResponseWriter, data interface{}, message string) {
 
 // ParseJSON parses JSON request body
 func ParseJSON(r *http.Request, v interface{}) error {
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 	return json.NewDecoder(r.Body).Decode(v)
 }

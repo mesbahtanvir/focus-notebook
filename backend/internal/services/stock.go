@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"go.uber.org/zap"
+
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/clients"
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
-	"go.uber.org/zap"
 )
 
 // StockService handles stock-related operations
@@ -125,8 +126,8 @@ func (s *StockService) parseTickerData(ticker string, tickerData, parentData map
 	// Extract price (required)
 	price, ok := tickerData["price"].(float64)
 	if !ok {
-		priceInt, ok := tickerData["price"].(int64)
-		if !ok {
+		priceInt, okInt := tickerData["price"].(int64)
+		if !okInt {
 			return nil, fmt.Errorf("invalid or missing price for ticker %s", ticker)
 		}
 		price = float64(priceInt)
@@ -147,12 +148,12 @@ func (s *StockService) parseTickerData(ticker string, tickerData, parentData map
 	}
 
 	// Extract timestamp
-	timestamp, ok := tickerData["timestamp"].(string)
-	if !ok {
-		fetchedAt, ok := tickerData["fetchedAt"].(string)
-		if !ok {
-			refreshedAt, ok := parentData["refreshedAt"].(string)
-			if ok {
+	timestamp, tsOk := tickerData["timestamp"].(string)
+	if !tsOk {
+		fetchedAt, faOk := tickerData["fetchedAt"].(string)
+		if !faOk {
+			refreshedAt, raOk := parentData["refreshedAt"].(string)
+			if raOk {
 				timestamp = refreshedAt
 			}
 		} else {

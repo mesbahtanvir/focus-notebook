@@ -143,9 +143,9 @@ func (s *PlaidService) ExchangePublicToken(ctx context.Context, req ExchangePubl
 	// Get institution info
 	var institutionName string
 	if item.InstitutionID != "" {
-		institution, err := s.plaidClient.GetInstitution(ctx, item.InstitutionID)
-		if err != nil {
-			s.logger.Warn("Could not fetch institution name", zap.Error(err))
+		institution, instErr := s.plaidClient.GetInstitution(ctx, item.InstitutionID)
+		if instErr != nil {
+			s.logger.Warn("Could not fetch institution name", zap.Error(instErr))
 			institutionName = "Unknown Institution"
 		} else {
 			institutionName = institution.Name
@@ -169,8 +169,8 @@ func (s *PlaidService) ExchangePublicToken(ctx context.Context, req ExchangePubl
 		"createdAt":       time.Now(),
 	}
 
-	if err := s.repo.SetDocument(ctx, itemPath, itemData); err != nil {
-		return nil, fmt.Errorf("failed to store item: %w", err)
+	if storeErr := s.repo.SetDocument(ctx, itemPath, itemData); storeErr != nil {
+		return nil, fmt.Errorf("failed to store item: %w", storeErr)
 	}
 
 	// Get accounts
@@ -265,8 +265,8 @@ func (s *PlaidService) MarkRelinking(ctx context.Context, req MarkRelinkingReque
 	}
 
 	// Update status to ok
-	if err := s.updateItemStatus(ctx, req.ItemID, "ok"); err != nil {
-		return err
+	if updateErr := s.updateItemStatus(ctx, req.ItemID, "ok"); updateErr != nil {
+		return updateErr
 	}
 
 	// Get access token and trigger sync

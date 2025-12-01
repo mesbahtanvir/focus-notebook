@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"go.uber.org/zap"
+
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/services"
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/utils"
-	"go.uber.org/zap"
 )
 
 // PackingListHandler handles packing list requests

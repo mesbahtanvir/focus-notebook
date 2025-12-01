@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/mesbahtanvir/focus-notebook/backend/internal/clients"
 	"go.uber.org/zap"
+
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/clients"
 )
 
 // ChatService handles AI chat conversations

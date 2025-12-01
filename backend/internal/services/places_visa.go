@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"go.uber.org/zap"
+
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/clients"
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
-	"go.uber.org/zap"
 )
 
 // PlaceInsightsService handles place insights generation

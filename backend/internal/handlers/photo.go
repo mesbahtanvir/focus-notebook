@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/services"
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/utils"
-	"go.uber.org/zap"
 )
 
 // PhotoHandler handles photo-related requests

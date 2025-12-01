@@ -8,10 +8,11 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/models"
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/utils"
-	"go.uber.org/zap"
 )
 
 const (
@@ -166,7 +167,7 @@ func (s *CSVProcessingService) downloadFile(ctx context.Context, objectPath stri
 	if err != nil {
 		return "", fmt.Errorf("failed to create reader: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	data, err := io.ReadAll(reader)
 	if err != nil {

@@ -181,6 +181,7 @@ func (c *OpenAIClient) retryWithBackoff(ctx context.Context, operation func() er
 	for attempt := 0; attempt < maxRetries; attempt++ {
 		if attempt > 0 {
 			// Calculate delay with exponential backoff
+			// #nosec G115 -- attempt is guaranteed to be >= 1 here, so attempt-1 >= 0
 			delay := time.Duration(1<<uint(attempt-1)) * baseDelay
 			if delay > maxDelay {
 				delay = maxDelay

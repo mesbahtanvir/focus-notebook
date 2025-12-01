@@ -47,7 +47,7 @@ func (h *ImportExportHandler) ValidateImport(w http.ResponseWriter, r *http.Requ
 		utils.RespondError(w, "No file provided", http.StatusBadRequest)
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Read file contents
 	data, err := io.ReadAll(file)

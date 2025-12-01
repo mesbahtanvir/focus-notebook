@@ -9,8 +9,9 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 	"go.uber.org/zap"
+
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 )
 
 // PhotoService handles photo voting, Elo ratings, and signed URLs
@@ -314,6 +315,7 @@ func (s *PhotoService) choosePairForRanking(photos []BattlePhoto) (BattlePhoto, 
 		rand.Shuffle(len(newPhotos), func(i, j int) {
 			newPhotos[i], newPhotos[j] = newPhotos[j], newPhotos[i]
 		})
+		// #nosec G404 -- non-cryptographic random is fine for UI photo ordering
 		if rand.Float64() > 0.5 {
 			return newPhotos[0].BattlePhoto, newPhotos[1].BattlePhoto
 		}
@@ -341,8 +343,10 @@ func (s *PhotoService) choosePairForRanking(photos []BattlePhoto) (BattlePhoto, 
 			if len(established) < poolSize {
 				poolSize = len(established)
 			}
+			// #nosec G404 -- non-cryptographic random is fine for opponent selection
 			opponent := established[rand.Intn(poolSize)]
 
+			// #nosec G404 -- non-cryptographic random is fine for UI photo ordering
 			if rand.Float64() > 0.5 {
 				return newPhoto.BattlePhoto, opponent.BattlePhoto
 			}
@@ -357,6 +361,7 @@ func (s *PhotoService) choosePairForRanking(photos []BattlePhoto) (BattlePhoto, 
 
 	// Select anchor from top 30%
 	anchorPoolSize := int(math.Max(2, math.Ceil(float64(len(enriched))*0.3)))
+	// #nosec G404 -- non-cryptographic random is fine for anchor selection
 	anchor := enriched[rand.Intn(anchorPoolSize)]
 
 	// Find best opponents by information gain
@@ -406,6 +411,7 @@ func (s *PhotoService) choosePairForRanking(photos []BattlePhoto) (BattlePhoto, 
 		totalWeight += candidates[i].gain
 	}
 
+	// #nosec G404 -- non-cryptographic random is fine for weighted selection
 	random := rand.Float64() * totalWeight
 	chosen := candidates[0]
 	for i := 0; i < opponentPoolSize; i++ {
@@ -417,6 +423,7 @@ func (s *PhotoService) choosePairForRanking(photos []BattlePhoto) (BattlePhoto, 
 	}
 
 	// Randomize order
+	// #nosec G404 -- non-cryptographic random is fine for UI photo ordering
 	if rand.Float64() > 0.5 {
 		return anchor.BattlePhoto, chosen.photo.BattlePhoto
 	}

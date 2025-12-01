@@ -38,7 +38,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
-	defer logger.Sync()
+	defer func() {
+		_ = logger.Sync()
+	}()
 
 	logger.Info("Starting Focus Notebook Backend",
 		zap.String("version", "1.0.0"),
@@ -56,7 +58,11 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to initialize Firebase", zap.Error(err))
 	}
-	defer fbAdmin.Close()
+	defer func() {
+		if closeErr := fbAdmin.Close(); closeErr != nil {
+			logger.Error("Failed to close Firebase", zap.Error(closeErr))
+		}
+	}()
 
 	logger.Info("Firebase initialized successfully")
 
@@ -69,8 +75,8 @@ func main() {
 	}
 	defer func() {
 		if storageClient != nil {
-			if err := storageClient.Close(); err != nil {
-				logger.Error("Failed to close Cloud Storage client", zap.Error(err))
+			if closeErr := storageClient.Close(); closeErr != nil {
+				logger.Error("Failed to close Cloud Storage client", zap.Error(closeErr))
 			}
 		}
 	}()
@@ -554,7 +560,7 @@ func main() {
 // countRoutes counts the number of registered routes
 func countRoutes(router *mux.Router) int {
 	count := 0
-	router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+	_ = router.Walk(func(_ *mux.Route, _ *mux.Router, _ []*mux.Route) error {
 		count++
 		return nil
 	})
