@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"cloud.google.com/go/firestore"
 	"go.uber.org/zap"
-	"google.golang.org/api/iterator"
 
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 )
@@ -309,54 +307,6 @@ func (s *EntityGraphService) GetLinkedEntities(
 		response.Count.Goals + response.Count.Thoughts + response.Count.People
 
 	return response, nil
-}
-
-// collectLinkedIDs collects linked entity IDs from relationships
-func (s *EntityGraphService) collectLinkedIDs(
-	ctx context.Context,
-	query firestore.Query,
-	excludeEntityType EntityType,
-	direction string, // "source" or "target"
-	linkedIDs map[EntityType]map[string]bool,
-) {
-	iter := query.Documents(ctx)
-	defer iter.Stop()
-
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			s.logger.Warn("Error fetching relationship", zap.Error(err))
-			continue
-		}
-
-		relationship := doc.Data()
-
-		var linkedType, linkedID string
-		if direction == "target" {
-			linkedType = s.getStringFromMap(relationship, "targetType", "")
-			linkedID = s.getStringFromMap(relationship, "targetId", "")
-		} else {
-			linkedType = s.getStringFromMap(relationship, "sourceType", "")
-			linkedID = s.getStringFromMap(relationship, "sourceId", "")
-		}
-
-		if linkedType == "" || linkedID == "" {
-			continue
-		}
-
-		// Don't include relationships to the same entity type (avoid self-loops)
-		if linkedType == string(excludeEntityType) {
-			continue
-		}
-
-		entityType := EntityType(linkedType)
-		if _, ok := linkedIDs[entityType]; ok {
-			linkedIDs[entityType][linkedID] = true
-		}
-	}
 }
 
 // fetchEntitiesByIDs fetches entity data for a set of IDs

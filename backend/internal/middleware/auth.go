@@ -77,8 +77,16 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 // RequireAI middleware checks if user has AI access
 func (m *AuthMiddleware) RequireAI(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		uid := r.Context().Value("uid").(string)
-		isAnonymous := r.Context().Value("isAnonymous").(bool)
+		uid, ok := r.Context().Value("uid").(string)
+		if !ok {
+			utils.RespondError(w, "Missing user ID", http.StatusUnauthorized)
+			return
+		}
+		isAnonymous, ok := r.Context().Value("isAnonymous").(bool)
+		if !ok {
+			utils.RespondError(w, "Missing anonymous flag", http.StatusUnauthorized)
+			return
+		}
 
 		// Non-anonymous users always have access (checked by subscription middleware)
 		if !isAnonymous {
@@ -105,8 +113,16 @@ func (m *AuthMiddleware) RequireAI(next http.Handler) http.Handler {
 // RequireSubscription middleware checks if user has active Pro subscription
 func (m *AuthMiddleware) RequireSubscription(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		uid := r.Context().Value("uid").(string)
-		isAnonymous := r.Context().Value("isAnonymous").(bool)
+		uid, ok := r.Context().Value("uid").(string)
+		if !ok {
+			utils.RespondError(w, "Missing user ID", http.StatusUnauthorized)
+			return
+		}
+		isAnonymous, ok := r.Context().Value("isAnonymous").(bool)
+		if !ok {
+			utils.RespondError(w, "Missing anonymous flag", http.StatusUnauthorized)
+			return
+		}
 
 		// Anonymous users are handled by RequireAI middleware
 		if isAnonymous {

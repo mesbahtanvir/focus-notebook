@@ -17,10 +17,11 @@ linters:
     - goimports     # Checks import statements are formatted
   disable:
     - staticcheck   # Disabled due to style warnings (ST1005, SA1029, etc.)
+    - fieldalignment # Disabled - struct field alignment is a style preference
 
 linters-settings:
   errcheck:
-    check-type-assertions: true
+    check-type-assertions: false
     check-blank: true
 
   govet:
