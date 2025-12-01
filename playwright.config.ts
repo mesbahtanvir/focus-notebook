@@ -9,11 +9,11 @@ import { defineConfig, devices } from '@playwright/test';
  * - Firebase Local Emulator Suite for realistic data
  */
 export default defineConfig({
-  testDir: './e2e',
+  testDir: './frontend/e2e',
 
   // Global setup/teardown for Firebase emulators
-  globalSetup: require.resolve('./e2e/setup/emulator-setup'),
-  globalTeardown: require.resolve('./e2e/setup/emulator-teardown'),
+  globalSetup: require.resolve('./frontend/e2e/setup/emulator-setup'),
+  globalTeardown: require.resolve('./frontend/e2e/setup/emulator-teardown'),
 
   // Timeout for each test
   timeout: 30 * 1000,

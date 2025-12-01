@@ -63,7 +63,7 @@ npx tsc
 From the repository root:
 
 ```bash
-cd functions
+cd frontend/functions
 npm install
 npm run build
 npm test
@@ -87,23 +87,29 @@ npm run lint && npm test && npm run build
 
 ```
 /focus-notebook/
-├── src/                    # Main Next.js application
-├── functions/              # Firebase Cloud Functions
-├── e2e/                    # Playwright end-to-end tests
-├── docs/                   # Documentation
-├── public/                 # Static assets
-├── shared/                 # Shared types/utilities
-├── .github/                # GitHub workflows
-├── firebase.json           # Firebase configuration
-├── firestore.rules         # Firestore security rules
-├── storage.rules           # Firebase Storage rules
-└── [config files]          # tsconfig, jest, playwright, tailwind, etc.
+├── frontend/               # All TypeScript/JavaScript code
+│   ├── web/               # Next.js application
+│   │   └── public/        # Static assets
+│   ├── functions/         # Firebase Cloud Functions
+│   ├── shared/            # Shared types/utilities
+│   ├── mobile/            # Capacitor mobile components
+│   └── e2e/               # Playwright end-to-end tests
+├── backend/               # Go API server
+├── prompts/               # LLM prompt templates (YAML)
+├── scripts/               # Utility scripts
+├── docs/                  # Documentation
+│   └── architecture/      # Architecture docs & analysis
+├── .github/               # GitHub workflows
+├── firebase.json          # Firebase configuration
+├── firestore.rules        # Firestore security rules
+├── storage.rules          # Firebase Storage rules
+└── [config files]         # tsconfig, jest, playwright, tailwind, etc.
 ```
 
-### `/src` Directory Structure
+### `/frontend/web` Directory Structure (Next.js App)
 
 ```
-/src/
+/frontend/web/
 ├── app/                    # Next.js App Router (pages & routes)
 │   ├── api/               # API routes (/api/*)
 │   ├── tools/             # Tool pages (30 different tools)
@@ -204,8 +210,8 @@ npm run lint && npm test && npm run build
 ### `/functions` Directory (Cloud Functions)
 
 ```
-/functions/
-├── src/
+/frontend/functions/
+├── frontend/web/
 │   ├── index.ts                      # Entry point, exports all functions
 │   ├── processThought.ts             # AI-powered thought processing
 │   ├── stripeBilling.ts              # Stripe billing integration
@@ -328,7 +334,7 @@ interface StoreState {
 
 ### 2. Firebase Resilience Layer
 
-Located in `src/lib/firebase/`, provides production-grade reliability:
+Located in `frontend/web/lib/firebase/`, provides production-grade reliability:
 
 #### Circuit Breaker (`circuit-breaker.ts`)
 - Prevents cascading failures
@@ -470,7 +476,7 @@ export function MyModal({ isOpen, onClose }) {
 npm run dev                # Start Next.js dev server (port 3000)
 
 # Cloud Functions (separate terminal)
-cd functions
+cd frontend/functions
 npm run serve              # Start functions emulator
 
 # Full Firebase emulators (separate terminal)
@@ -487,7 +493,7 @@ npm run lint               # ESLint check
 npx tsc --noEmit          # TypeScript check
 
 # Cloud Functions
-cd functions
+cd frontend/functions
 npm run build              # Compile TypeScript
 ```
 
@@ -508,7 +514,7 @@ npm run test:screenshots:debug    # Debug mode
 npm run test:screenshots:update   # Update snapshots
 
 # Functions tests
-cd functions
+cd frontend/functions
 npm test                   # Run all function tests
 npm run test:watch        # Watch mode
 npm run test:coverage     # With coverage
@@ -541,7 +547,7 @@ ALPHA_VANTAGE_API_KEY=
 
 ### Unit Tests (Jest)
 
-**Location**: `src/__tests__/` and `functions/src/__tests__/`
+**Location**: `frontend/web/__tests__/` and `functions/frontend/web/__tests__/`
 
 **Key test files**:
 - `useTrips.test.ts` - Trip store logic
@@ -571,7 +577,7 @@ describe('Component/Feature Name', () => {
 });
 ```
 
-**Test helpers**: Located in `src/__tests__/utils/`
+**Test helpers**: Located in `frontend/web/__tests__/utils/`
 - `builders/` - Data builders for test fixtures
 - `testHelpers/` - Common test utilities
 
@@ -622,7 +628,6 @@ npx playwright test --headed
 **For major features (optional)**:
 - Integration tests with Firebase emulators
 - Manual testing in multiple browsers
-- Lighthouse performance audits
 
 **Important**: Screenshot tests are time-consuming and UI changes frequently. Run them only when preparing for a release, not for every PR or commit.
 
@@ -779,20 +784,20 @@ import { TaskCard } from './TaskCard';
 
 ### Adding a New Tool
 
-1. **Create page**: `src/app/tools/<tool-name>/page.tsx`
-2. **Create store**: `src/store/use<ToolName>.ts`
-3. **Create components**: `src/components/<tool-name>/`
+1. **Create page**: `frontend/web/app/tools/<tool-name>/page.tsx`
+2. **Create store**: `frontend/web/store/use<ToolName>.ts`
+3. **Create components**: `frontend/web/components/<tool-name>/`
 4. **Add to navigation**: Update navigation components
 5. **Integrate entity graph** (if relationships needed)
 6. **Add analytics**: Use `useToolUsage` hook
-7. **Write tests**: `src/__tests__/<tool-name>.test.ts`
+7. **Write tests**: `frontend/web/__tests__/<tool-name>.test.ts`
 8. **Update documentation**
 
 ### Adding AI Features
 
-1. **Create prompt**: `functions/src/prompts/<feature>.yaml`
-2. **Implement service**: `functions/src/services/<feature>Service.ts`
-3. **Create API route**: `src/app/api/<feature>/route.ts`
+1. **Create prompt**: `functions/frontend/web/prompts/<feature>.yaml`
+2. **Implement service**: `functions/frontend/web/services/<feature>Service.ts`
+3. **Create API route**: `frontend/web/app/api/<feature>/route.ts`
 4. **Add verification**: Use `verifyAiRequest` in API route
 5. **Handle rate limiting**: Track token usage
 6. **Queue operations**: Use LLM queue if batch needed
@@ -802,10 +807,10 @@ import { TaskCard } from './TaskCard';
 ### Modifying Data Schema
 
 1. **Update Firestore rules**: `firestore.rules`
-2. **Update TypeScript types**: `src/types/`
+2. **Update TypeScript types**: `frontend/web/types/`
 3. **Update stores**: Add new fields to stores
 4. **Update components**: Use new fields
-5. **Write migration** (if needed): `src/lib/migrations/`
+5. **Write migration** (if needed): `frontend/web/lib/migrations/`
 6. **Test thoroughly**: Especially existing data
 7. **Deploy rules**: `firebase deploy --only firestore:rules`
 
@@ -813,7 +818,7 @@ import { TaskCard } from './TaskCard';
 
 1. **Add dependency**: `npm install <package>`
 2. **Add types**: `npm install -D @types/<package>` (if needed)
-3. **Create service wrapper**: `src/lib/services/<service>.ts`
+3. **Create service wrapper**: `frontend/web/lib/services/<service>.ts`
 4. **Add environment variables**: `.env.local` and `.env.local.example`
 5. **Add security rules** (if Firebase involved)
 6. **Document setup**: Add to `docs/guides/setup.md`

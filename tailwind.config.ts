@@ -2,9 +2,9 @@ import type { Config } from 'tailwindcss'
 
 const config: Config = {
   content: [
-    './src/app/**/*.{js,ts,jsx,tsx}',
-    './src/components/**/*.{js,ts,jsx,tsx}',
-    './src/**/*.{js,ts,jsx,tsx}',
+    './frontend/web/app/**/*.{js,ts,jsx,tsx}',
+    './frontend/web/components/**/*.{js,ts,jsx,tsx}',
+    './frontend/web/**/*.{js,ts,jsx,tsx}',
   ],
   darkMode: ['class', 'class'],
   theme: {

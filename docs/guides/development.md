@@ -129,33 +129,6 @@ npx eslint . --fix
 
 ---
 
-## 📊 Performance Audits (Optional)
-
-### Lighthouse (No Installation Needed)
-
-**Option 1: Chrome DevTools (Recommended)**
-1. Open your app in Chrome
-2. Open DevTools (F12)
-3. Go to "Lighthouse" tab
-4. Click "Generate report"
-
-**Option 2: CLI (If Needed)**
-```bash
-# Install temporarily (not saved to package.json)
-npx lighthouse https://localhost:3000 --view
-
-# Or test production
-npx lighthouse https://focus.yourthoughts.ca --view
-```
-
-**When to run Lighthouse:**
-- ✅ Before performance-related releases
-- ✅ After major UI refactors
-- ✅ Quarterly performance checks
-- ❌ Not needed for every PR
-
----
-
 ## 🤖 What GitHub Actions Does
 
 GitHub Actions now runs ONLY fast validation checks:
@@ -181,7 +154,6 @@ GitHub Actions now runs ONLY fast validation checks:
 **Total: ~15 minutes**
 
 ### Never (Removed)
-- ❌ Lighthouse CI (now run locally)
 - ❌ Duplicate Node version testing (now only 22.x)
 - ❌ Redundant push triggers
 
@@ -192,11 +164,10 @@ GitHub Actions now runs ONLY fast validation checks:
 The audit of GitHub Actions usage surfaced ~3,150 minutes/month of runtime. The current setup trims that to ~750 minutes by following these rules:
 
 - **Single Node version**: Run validation on Node 22.x only; dual-node matrices doubled runtime with no benefit.
-- **Screenshot/Lighthouse locally**: Keep Playwright and Lighthouse runs on developer machines unless a PR explicitly touches UI (use `[update-screenshots]` when you need CI to refresh baselines).
+- **Screenshot tests locally**: Keep Playwright runs on developer machines unless a PR explicitly touches UI (use `[update-screenshots]` when you need CI to refresh baselines).
 - **Path filters**: Skip CI for documentation-only commits (`[skip ci]` still works for absolute skips).
 - **Short-lived artifacts**: Store screenshot diffs for 7 days max to cut storage churn.
 - **Cache expensive tooling**: Cache Playwright browsers and `node_modules` between runs to shave 1–2 minutes.
-- **Manual-only Lighthouse**: Trigger `lighthouse.yml` via workflow dispatch instead of on every push/schedule.
 
 Result: quick PRs finish in ~8 minutes, UI-heavy ones in ~20, and main pushes in ~15 without burning through Actions credits.
 
@@ -263,10 +234,7 @@ firebase emulators:start --only auth,firestore,functions
 # 5. Verify production build
 npm run build
 
-# 6. Optional: Run Lighthouse
-npx lighthouse https://localhost:3000 --view
-
-# 7. Push
+# 6. Push
 git push
 ```
 
@@ -376,7 +344,6 @@ npm test -- --maxWorkers=4
 - [Jest Documentation](https://jestjs.io/docs/getting-started)
 - [Playwright Documentation](https://playwright.dev/)
 - [Firebase Emulator Suite](https://firebase.google.com/docs/emulator-suite)
-- [Lighthouse Documentation](https://developer.chrome.com/docs/lighthouse/)
 
 ---
 

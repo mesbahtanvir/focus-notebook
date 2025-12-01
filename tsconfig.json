@@ -18,14 +18,15 @@
     "baseUrl": ".",
     "paths": {
       "@/*": [
-        "src/*"
+        "frontend/web/*"
       ],
       "@/mobile/*": [
-        "mobile/*"
+        "frontend/mobile/*"
       ]
     },
     "types": [
       "jest",
+      "@testing-library/jest-dom",
       "node"
     ],
     "esModuleInterop": true,
@@ -37,13 +38,14 @@
     ]
   },
   "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts"
+    "frontend/web/next-env.d.ts",
+    "frontend/web/**/*.ts",
+    "frontend/web/**/*.tsx",
+    "frontend/web/.next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
-    "functions"
+    "frontend/functions",
+    "backend"
   ]
 }
