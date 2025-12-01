@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -369,41 +370,20 @@ func (s *EntityGraphService) fetchEntitiesByIDs(
 		return []map[string]interface{}{}
 	}
 
-	// Convert map to slice
-	idSlice := make([]string, 0, len(ids))
-	for id := range ids {
-		idSlice = append(idSlice, id)
+	// Fetch all entities for the user from the collection
+	userCollectionPath := fmt.Sprintf("users/%s/%s", uid, collection)
+	allEntities, err := s.repo.List(ctx, userCollectionPath, 0)
+	if err != nil {
+		s.logger.Warn("Error fetching entities", zap.Error(err))
+		return []map[string]interface{}{}
 	}
 
-	// Firestore 'in' query supports max 10 items, so batch if needed
+	// Filter to only include entities with IDs in our set
 	results := []map[string]interface{}{}
-	batchSize := 10
-
-	for i := 0; i < len(idSlice); i += batchSize {
-		end := i + batchSize
-		if end > len(idSlice) {
-			end = len(idSlice)
+	for _, entity := range allEntities {
+		if id, ok := entity["id"].(string); ok && ids[id] {
+			results = append(results, entity)
 		}
-
-		batch := idSlice[i:end]
-		query := s.repo.Collection(collection).
-			Where("uid", "==", uid).
-			Where("id", "in", toInterfaceSlice(batch))
-
-		iter := query.Documents(ctx)
-		for {
-			doc, err := iter.Next()
-			if err == iterator.Done {
-				break
-			}
-			if err != nil {
-				s.logger.Warn("Error fetching entity", zap.Error(err))
-				continue
-			}
-
-			results = append(results, doc.Data())
-		}
-		iter.Stop()
 	}
 
 	return results
@@ -420,56 +400,52 @@ func (s *EntityGraphService) GetToolRelationships(
 		Processed: []map[string]interface{}{},
 	}
 
-	// Query pending tool processing
-	pendingQuery := s.repo.Collection("entityRelationships").
-		Where("uid", "==", uid).
-		Where("relationshipType", "==", "tool-pending").
-		Where("status", "==", "active")
-
-	if toolType != nil {
-		pendingQuery = pendingQuery.Where("sourceType", "==", "tool").
-			Where("metadata.createdByTool", "==", *toolType)
+	// Fetch all relationships for the user
+	allRelationships, err := s.repo.List(ctx, "entityRelationships", 0)
+	if err != nil {
+		return nil, err
 	}
 
-	// Query processed tool processing
-	processedQuery := s.repo.Collection("entityRelationships").
-		Where("uid", "==", uid).
-		Where("relationshipType", "==", "tool-processed").
-		Where("status", "==", "active")
-
-	if toolType != nil {
-		processedQuery = processedQuery.Where("sourceType", "==", "tool").
-			Where("metadata.createdByTool", "==", *toolType)
-	}
-
-	// Fetch pending
-	pendingIter := pendingQuery.Documents(ctx)
-	defer pendingIter.Stop()
-	for {
-		doc, err := pendingIter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			s.logger.Warn("Error fetching pending relationship", zap.Error(err))
+	// Filter for tool relationships client-side
+	for _, rel := range allRelationships {
+		// Filter by uid and status
+		if relUID, ok := rel["uid"].(string); !ok || relUID != uid {
 			continue
 		}
-		response.Pending = append(response.Pending, doc.Data())
-	}
-
-	// Fetch processed
-	processedIter := processedQuery.Documents(ctx)
-	defer processedIter.Stop()
-	for {
-		doc, err := processedIter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			s.logger.Warn("Error fetching processed relationship", zap.Error(err))
+		if status, ok := rel["status"].(string); !ok || status != "active" {
 			continue
 		}
-		response.Processed = append(response.Processed, doc.Data())
+
+		// Filter by relationship type
+		relType, ok := rel["relationshipType"].(string)
+		if !ok {
+			continue
+		}
+
+		// Filter by tool type if provided
+		if toolType != nil {
+			sourceType, ok := rel["sourceType"].(string)
+			if !ok || sourceType != "tool" {
+				continue
+			}
+
+			// Check metadata.createdByTool
+			metadata, ok := rel["metadata"].(map[string]interface{})
+			if !ok {
+				continue
+			}
+			createdByTool, ok := metadata["createdByTool"].(string)
+			if !ok || createdByTool != *toolType {
+				continue
+			}
+		}
+
+		// Add to appropriate list based on relationship type
+		if relType == "tool-pending" {
+			response.Pending = append(response.Pending, rel)
+		} else if relType == "tool-processed" {
+			response.Processed = append(response.Processed, rel)
+		}
 	}
 
 	// Calculate counts
@@ -491,25 +467,21 @@ func (s *EntityGraphService) GetRelationshipStats(ctx context.Context, uid strin
 		ToolUsage:    make(map[string]ToolUsageStat),
 	}
 
-	// Query all relationships
-	query := s.repo.Collection("entityRelationships").Where("uid", "==", uid)
-	iter := query.Documents(ctx)
-	defer iter.Stop()
+	// Fetch all relationships for the user
+	allRelationships, err := s.repo.List(ctx, "entityRelationships", 0)
+	if err != nil {
+		return nil, err
+	}
 
 	totalStrength := 0.0
 	strengthCount := 0
 
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			s.logger.Warn("Error fetching relationship", zap.Error(err))
+	for _, relationship := range allRelationships {
+		// Filter by uid
+		if relUID, ok := relationship["uid"].(string); !ok || relUID != uid {
 			continue
 		}
 
-		relationship := doc.Data()
 		stats.TotalRelationships++
 
 		// Count by type

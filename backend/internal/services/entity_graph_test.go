@@ -161,14 +161,14 @@ func TestEntityGraphService_GetLinkedEntities(t *testing.T) {
 	})
 
 	// Add entity data
-	mockRepo.AddDocument("tasks/task1", map[string]interface{}{
+	mockRepo.AddDocument("users/test-user-123/tasks/task1", map[string]interface{}{
 		"id":     "task1",
 		"uid":    uid,
 		"title":  "Test Task",
 		"status": "active",
 	})
 
-	mockRepo.AddDocument("goals/goal1", map[string]interface{}{
+	mockRepo.AddDocument("users/test-user-123/goals/goal1", map[string]interface{}{
 		"id":     "goal1",
 		"uid":    uid,
 		"title":  "Test Goal",

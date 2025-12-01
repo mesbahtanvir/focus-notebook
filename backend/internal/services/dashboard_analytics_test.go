@@ -133,12 +133,12 @@ func TestDashboardAnalyticsService_CalculateStreak(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		date := now.Add(-time.Duration(i) * 24 * time.Hour)
 		sessionID := "session-" + string(rune('0'+i))
-		mockRepo.AddDocument("focusSessions/"+sessionID, map[string]interface{}{
+		mockRepo.AddDocument("users/test-user-123/focusSessions/"+sessionID, map[string]interface{}{
 			"id":        sessionID,
 			"uid":       uid,
 			"duration":  25,
-			"startedAt": date,
-			"endedAt":   date.Add(25 * time.Minute),
+			"startTime": date,
+			"endTime":   date.Add(25 * time.Minute),
 		})
 	}
 
