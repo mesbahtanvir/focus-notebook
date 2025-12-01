@@ -105,21 +105,14 @@ func (s *ChatService) chatWithOpenAI(
 		return nil, fmt.Errorf("OpenAI API error: %w", err)
 	}
 
-	// Extract response
-	if len(response.Choices) == 0 {
-		return nil, fmt.Errorf("no response from OpenAI")
-	}
-
-	choice := response.Choices[0]
-
 	return &ChatResponse{
 		Message: ChatMessage{
-			Role:    choice.Message.Role,
-			Content: choice.Message.Content,
+			Role:    "assistant",
+			Content: response.Content,
 		},
 		Model:        response.Model,
-		TokensUsed:   response.Usage.TotalTokens,
-		FinishReason: choice.FinishReason,
+		TokensUsed:   response.TokensUsed,
+		FinishReason: response.FinishReason,
 	}, nil
 }
 
@@ -139,27 +132,19 @@ func (s *ChatService) chatWithAnthropic(
 		return nil, fmt.Errorf("messages array cannot be empty")
 	}
 
-	// Separate system message if present
-	var systemMessage string
-	anthropicMessages := make([]clients.AnthropicMessage, 0, len(messages))
-
+	// Convert messages to Anthropic format (using the shared ChatMessage type)
+	anthropicMessages := make([]clients.ChatMessage, 0, len(messages))
 	for _, msg := range messages {
-		if msg.Role == "system" {
-			// Anthropic uses a separate system parameter
-			systemMessage = msg.Content
-		} else {
-			anthropicMessages = append(anthropicMessages, clients.AnthropicMessage{
-				Role:    msg.Role,
-				Content: msg.Content,
-			})
-		}
+		anthropicMessages = append(anthropicMessages, clients.ChatMessage{
+			Role:    msg.Role,
+			Content: msg.Content,
+		})
 	}
 
-	// Make request to Anthropic
-	response, err := s.anthropicClient.CreateMessage(ctx, clients.AnthropicRequest{
+	// Make request to Anthropic using ChatCompletion (same interface as OpenAI)
+	response, err := s.anthropicClient.ChatCompletion(ctx, clients.ChatCompletionRequest{
 		Model:       model,
 		Messages:    anthropicMessages,
-		System:      systemMessage,
 		MaxTokens:   2000,
 		Temperature: temperature,
 	})
@@ -168,29 +153,14 @@ func (s *ChatService) chatWithAnthropic(
 		return nil, fmt.Errorf("Anthropic API error: %w", err)
 	}
 
-	// Extract text content from response
-	var content string
-	if len(response.Content) > 0 {
-		if textContent, ok := response.Content[0].(map[string]interface{}); ok {
-			if text, ok := textContent["text"].(string); ok {
-				content = text
-			}
-		}
-	}
-
-	tokensUsed := 0
-	if response.Usage != nil {
-		tokensUsed = response.Usage.InputTokens + response.Usage.OutputTokens
-	}
-
 	return &ChatResponse{
 		Message: ChatMessage{
 			Role:    "assistant",
-			Content: content,
+			Content: response.Content,
 		},
 		Model:        response.Model,
-		TokensUsed:   tokensUsed,
-		FinishReason: response.StopReason,
+		TokensUsed:   response.TokensUsed,
+		FinishReason: response.FinishReason,
 	}, nil
 }
 

@@ -69,11 +69,11 @@ func (s *TransactionCategorizationService) EnhanceTransactions(
 		return nil, fmt.Errorf("failed to call OpenAI: %w", err)
 	}
 
-	if len(response.Choices) == 0 {
+	if response.Content == "" {
 		return nil, fmt.Errorf("no response from OpenAI")
 	}
 
-	aiResponse := response.Choices[0].Message.Content
+	aiResponse := response.Content
 
 	// Parse the response
 	result, err := s.parseAIResponse(aiResponse, len(transactions))

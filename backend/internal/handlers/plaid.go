@@ -236,8 +236,6 @@ func (h *PlaidHandler) TriggerSync(w http.ResponseWriter, r *http.Request) {
 // HandleWebhook processes Plaid webhook events
 // POST /api/plaid/webhook
 func (h *PlaidHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
 	// Read raw body for signature verification
 	body, err := io.ReadAll(r.Body)
 	if err != nil {

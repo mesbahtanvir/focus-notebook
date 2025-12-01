@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/clients"
 	"go.uber.org/zap"
@@ -173,13 +172,13 @@ Generate predictions for the next 30 days (every 3 days for efficiency).`,
 		return nil, fmt.Errorf("OpenAI API error: %w", err)
 	}
 
-	if len(response.Choices) == 0 {
+	if response.Content == "" {
 		return nil, fmt.Errorf("no response from OpenAI")
 	}
 
 	// Parse JSON response
 	var prediction InvestmentPrediction
-	if err := json.Unmarshal([]byte(response.Choices[0].Message.Content), &prediction); err != nil {
+	if err := json.Unmarshal([]byte(response.Content), &prediction); err != nil {
 		return nil, fmt.Errorf("failed to parse AI response: %w", err)
 	}
 

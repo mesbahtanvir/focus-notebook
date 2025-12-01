@@ -27,7 +27,7 @@ func TestInvestmentHandler_GetPortfolioMetrics(t *testing.T) {
 	portfolioID := "portfolio-1"
 
 	// Add test portfolio
-	mockRepo.AddDocument("portfolios", portfolioID, map[string]interface{}{
+	mockRepo.AddDocument("portfolios/"+portfolioID, map[string]interface{}{
 		"id":           portfolioID,
 		"uid":          uid,
 		"name":         "Test Portfolio",
@@ -35,7 +35,7 @@ func TestInvestmentHandler_GetPortfolioMetrics(t *testing.T) {
 	})
 
 	// Add test investment
-	mockRepo.AddDocument("investments", "inv1", map[string]interface{}{
+	mockRepo.AddDocument("investments/inv1", map[string]interface{}{
 		"id":            "inv1",
 		"uid":           uid,
 		"portfolioId":   portfolioID,
@@ -190,13 +190,13 @@ func TestInvestmentHandler_GetDashboardSummary(t *testing.T) {
 	uid := "test-user-123"
 
 	// Add test data
-	mockRepo.AddDocument("portfolios", "p1", map[string]interface{}{
+	mockRepo.AddDocument("portfolios/p1", map[string]interface{}{
 		"id":   "p1",
 		"uid":  uid,
 		"name": "Portfolio 1",
 	})
 
-	mockRepo.AddDocument("investments", "i1", map[string]interface{}{
+	mockRepo.AddDocument("investments/i1", map[string]interface{}{
 		"id":            "i1",
 		"uid":           uid,
 		"portfolioId":   "p1",

@@ -118,8 +118,13 @@ func main() {
 	// Initialize Stripe client
 	var stripeClient *clients.StripeClient
 	if cfg.Stripe.SecretKey != "" {
-		stripeClient = clients.NewStripeClient(&cfg.Stripe, logger)
-		logger.Info("Stripe client initialized")
+		var err error
+		stripeClient, err = clients.NewStripeClient(&cfg.Stripe, logger)
+		if err != nil {
+			logger.Error("Failed to initialize Stripe client", zap.Error(err))
+		} else {
+			logger.Info("Stripe client initialized")
+		}
 	} else {
 		logger.Warn("Stripe not configured - billing features will not work")
 	}

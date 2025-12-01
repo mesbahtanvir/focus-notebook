@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -124,7 +125,7 @@ func (s *StripeBillingService) HandleWebhookEvent(ctx context.Context, event str
 // handleSubscriptionCreated handles subscription.created event
 func (s *StripeBillingService) handleSubscriptionCreated(ctx context.Context, event stripe.Event) error {
 	var subscription stripe.Subscription
-	if err := event.Data.Object.UnmarshalJSON(&subscription); err != nil {
+	if err := json.Unmarshal(event.Data.Raw, &subscription); err != nil {
 		return fmt.Errorf("failed to parse subscription: %w", err)
 	}
 
@@ -134,7 +135,7 @@ func (s *StripeBillingService) handleSubscriptionCreated(ctx context.Context, ev
 // handleSubscriptionUpdated handles subscription.updated event
 func (s *StripeBillingService) handleSubscriptionUpdated(ctx context.Context, event stripe.Event) error {
 	var subscription stripe.Subscription
-	if err := event.Data.Object.UnmarshalJSON(&subscription); err != nil {
+	if err := json.Unmarshal(event.Data.Raw, &subscription); err != nil {
 		return fmt.Errorf("failed to parse subscription: %w", err)
 	}
 
@@ -144,7 +145,7 @@ func (s *StripeBillingService) handleSubscriptionUpdated(ctx context.Context, ev
 // handleSubscriptionDeleted handles subscription.deleted event
 func (s *StripeBillingService) handleSubscriptionDeleted(ctx context.Context, event stripe.Event) error {
 	var subscription stripe.Subscription
-	if err := event.Data.Object.UnmarshalJSON(&subscription); err != nil {
+	if err := json.Unmarshal(event.Data.Raw, &subscription); err != nil {
 		return fmt.Errorf("failed to parse subscription: %w", err)
 	}
 
@@ -175,7 +176,7 @@ func (s *StripeBillingService) handleSubscriptionDeleted(ctx context.Context, ev
 // handleCheckoutCompleted handles checkout.session.completed event
 func (s *StripeBillingService) handleCheckoutCompleted(ctx context.Context, event stripe.Event) error {
 	var session stripe.CheckoutSession
-	if err := event.Data.Object.UnmarshalJSON(&session); err != nil {
+	if err := json.Unmarshal(event.Data.Raw, &session); err != nil {
 		return fmt.Errorf("failed to parse checkout session: %w", err)
 	}
 
@@ -211,7 +212,7 @@ func (s *StripeBillingService) handleCheckoutCompleted(ctx context.Context, even
 // handleInvoicePaid handles invoice.paid event
 func (s *StripeBillingService) handleInvoicePaid(ctx context.Context, event stripe.Event) error {
 	var invoice stripe.Invoice
-	if err := event.Data.Object.UnmarshalJSON(&invoice); err != nil {
+	if err := json.Unmarshal(event.Data.Raw, &invoice); err != nil {
 		return fmt.Errorf("failed to parse invoice: %w", err)
 	}
 
@@ -238,7 +239,7 @@ func (s *StripeBillingService) handleInvoicePaid(ctx context.Context, event stri
 // handleInvoicePaymentFailed handles invoice.payment_failed event
 func (s *StripeBillingService) handleInvoicePaymentFailed(ctx context.Context, event stripe.Event) error {
 	var invoice stripe.Invoice
-	if err := event.Data.Object.UnmarshalJSON(&invoice); err != nil {
+	if err := json.Unmarshal(event.Data.Raw, &invoice); err != nil {
 		return fmt.Errorf("failed to parse invoice: %w", err)
 	}
 
@@ -360,29 +361,14 @@ func getCustomerID(subscription *stripe.Subscription) string {
 	if subscription.Customer == nil {
 		return ""
 	}
-
-	if cust, ok := subscription.Customer.(*stripe.Customer); ok {
-		return cust.ID
-	}
-
-	return ""
+	return subscription.Customer.ID
 }
 
 func getSubscriptionIDFromSession(session *stripe.CheckoutSession) string {
 	if session.Subscription == nil {
 		return ""
 	}
-
-	if sub, ok := session.Subscription.(*stripe.Subscription); ok {
-		return sub.ID
-	}
-
-	// Fallback: subscription might be just an ID string
-	if id, ok := session.Subscription.(string); ok {
-		return id
-	}
-
-	return ""
+	return session.Subscription.ID
 }
 
 // mapSubscriptionToStatus converts Stripe subscription to Firestore status

@@ -11,7 +11,6 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 	"go.uber.org/zap"
-	"google.golang.org/api/option"
 )
 
 // PhotoService handles photo voting, Elo ratings, and signed URLs
@@ -506,9 +505,8 @@ func (s *PhotoService) GetSignedURL(
 
 	// Generate signed URL
 	bucket := s.storageClient.Bucket(s.storageBucket)
-	file := bucket.Object(path)
 
-	url, err := file.SignedURL(&storage.SignedURLOptions{
+	url, err := bucket.SignedURL(path, &storage.SignedURLOptions{
 		Method:  "GET",
 		Expires: expires,
 	})

@@ -11,17 +11,17 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
 
-	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 )
 
 // SpendingAnalyticsService handles spending analytics computations
 type SpendingAnalyticsService struct {
-	repo   *repository.FirestoreRepository
+	repo   interfaces.Repository
 	logger *zap.Logger
 }
 
 // NewSpendingAnalyticsService creates a new spending analytics service
-func NewSpendingAnalyticsService(repo *repository.FirestoreRepository, logger *zap.Logger) *SpendingAnalyticsService {
+func NewSpendingAnalyticsService(repo interfaces.Repository, logger *zap.Logger) *SpendingAnalyticsService {
 	return &SpendingAnalyticsService{
 		repo:   repo,
 		logger: logger,

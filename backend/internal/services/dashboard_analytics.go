@@ -10,17 +10,17 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
 
-	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/interfaces"
 )
 
 // DashboardAnalyticsService handles dashboard analytics computations
 type DashboardAnalyticsService struct {
-	repo   *repository.FirestoreRepository
+	repo   interfaces.Repository
 	logger *zap.Logger
 }
 
 // NewDashboardAnalyticsService creates a new dashboard analytics service
-func NewDashboardAnalyticsService(repo *repository.FirestoreRepository, logger *zap.Logger) *DashboardAnalyticsService {
+func NewDashboardAnalyticsService(repo interfaces.Repository, logger *zap.Logger) *DashboardAnalyticsService {
 	return &DashboardAnalyticsService{
 		repo:   repo,
 		logger: logger,

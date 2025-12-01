@@ -24,7 +24,7 @@ func TestDashboardAnalyticsService_ComputeAnalytics(t *testing.T) {
 	yesterday := now.Add(-24 * time.Hour)
 	lastWeek := now.Add(-7 * 24 * time.Hour)
 
-	mockRepo.AddDocument("tasks", "task1", map[string]interface{}{
+	mockRepo.AddDocument("tasks/task1", map[string]interface{}{
 		"id":          "task1",
 		"uid":         uid,
 		"title":       "Test Task 1",
@@ -34,7 +34,7 @@ func TestDashboardAnalyticsService_ComputeAnalytics(t *testing.T) {
 		"createdAt":   yesterday,
 	})
 
-	mockRepo.AddDocument("tasks", "task2", map[string]interface{}{
+	mockRepo.AddDocument("tasks/task2", map[string]interface{}{
 		"id":        "task2",
 		"uid":       uid,
 		"title":     "Test Task 2",
@@ -44,7 +44,7 @@ func TestDashboardAnalyticsService_ComputeAnalytics(t *testing.T) {
 	})
 
 	// Add test data - focus sessions
-	mockRepo.AddDocument("focusSessions", "session1", map[string]interface{}{
+	mockRepo.AddDocument("focusSessions/session1", map[string]interface{}{
 		"id":        "session1",
 		"uid":       uid,
 		"duration":  25,
@@ -52,7 +52,7 @@ func TestDashboardAnalyticsService_ComputeAnalytics(t *testing.T) {
 		"endedAt":   now.Add(-5 * time.Minute),
 	})
 
-	mockRepo.AddDocument("focusSessions", "session2", map[string]interface{}{
+	mockRepo.AddDocument("focusSessions/session2", map[string]interface{}{
 		"id":        "session2",
 		"uid":       uid,
 		"duration":  50,
@@ -132,8 +132,9 @@ func TestDashboardAnalyticsService_CalculateStreak(t *testing.T) {
 	// Add sessions for consecutive days
 	for i := 0; i < 5; i++ {
 		date := now.Add(-time.Duration(i) * 24 * time.Hour)
-		mockRepo.AddDocument("focusSessions", "session-"+string(rune(i)), map[string]interface{}{
-			"id":        "session-" + string(rune(i)),
+		sessionID := "session-" + string(rune('0'+i))
+		mockRepo.AddDocument("focusSessions/"+sessionID, map[string]interface{}{
+			"id":        sessionID,
 			"uid":       uid,
 			"duration":  25,
 			"startedAt": date,
@@ -187,17 +188,18 @@ func TestDashboardAnalyticsService_ResolvePeriodRange(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			startDate, endDate, dateOffsets := service.resolvePeriodRange(tt.period)
+			now := time.Now()
+			startDate, endDate, days := service.resolvePeriodRange(tt.period, now)
 
 			// Verify date range
 			if startDate.After(endDate) {
 				t.Error("Start date should be before or equal to end date")
 			}
 
-			// Verify date offsets length
+			// Verify days
 			expectedDays := tt.want.minDays
-			if len(dateOffsets) < expectedDays {
-				t.Errorf("Expected at least %d date offsets, got %d", expectedDays, len(dateOffsets))
+			if days < expectedDays {
+				t.Errorf("Expected at least %d days, got %d", expectedDays, days)
 			}
 		})
 	}

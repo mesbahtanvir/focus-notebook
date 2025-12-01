@@ -6,6 +6,7 @@ import (
 	"math"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
 
@@ -455,7 +456,7 @@ func (s *InvestmentCalculationService) GetPortfolioSnapshots(
 	query := s.repo.Collection("portfolioSnapshots").
 		Where("uid", "==", uid).
 		Where("portfolioId", "==", portfolioID).
-		OrderBy("date", "asc")
+		OrderBy("date", firestore.Asc)
 
 	if startDate != nil {
 		query = query.Where("date", ">=", startDate.Format("2006-01-02"))

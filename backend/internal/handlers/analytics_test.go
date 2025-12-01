@@ -24,7 +24,7 @@ func TestAnalyticsHandler_GetDashboardAnalytics(t *testing.T) {
 	uid := "test-user-123"
 
 	// Add some test data
-	mockRepo.AddDocument("tasks", "task1", map[string]interface{}{
+	mockRepo.AddDocument("tasks/task1", map[string]interface{}{
 		"id":       "task1",
 		"uid":      uid,
 		"title":    "Test Task",
@@ -107,7 +107,7 @@ func TestAnalyticsHandler_GetSpendingAnalytics(t *testing.T) {
 	uid := "test-user-123"
 
 	// Add test transaction data
-	mockRepo.AddDocument("transactions", "txn1", map[string]interface{}{
+	mockRepo.AddDocument("transactions/txn1", map[string]interface{}{
 		"id":     "txn1",
 		"uid":    uid,
 		"amount": -50.0,

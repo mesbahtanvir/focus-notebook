@@ -151,7 +151,7 @@ func TestInvestmentCalculationService_CalculatePortfolioMetrics(t *testing.T) {
 	ctx := context.Background()
 
 	// Add test portfolio
-	mockRepo.AddDocument("portfolios", portfolioID, map[string]interface{}{
+	mockRepo.AddDocument("portfolios/"+portfolioID, map[string]interface{}{
 		"id":           portfolioID,
 		"uid":          uid,
 		"name":         "Test Portfolio",
@@ -159,7 +159,7 @@ func TestInvestmentCalculationService_CalculatePortfolioMetrics(t *testing.T) {
 	})
 
 	// Add test investments
-	mockRepo.AddDocument("investments", "inv1", map[string]interface{}{
+	mockRepo.AddDocument("investments/inv1", map[string]interface{}{
 		"id":            "inv1",
 		"uid":           uid,
 		"portfolioId":   portfolioID,
@@ -169,7 +169,7 @@ func TestInvestmentCalculationService_CalculatePortfolioMetrics(t *testing.T) {
 		"currency":      "USD",
 	})
 
-	mockRepo.AddDocument("investments", "inv2", map[string]interface{}{
+	mockRepo.AddDocument("investments/inv2", map[string]interface{}{
 		"id":            "inv2",
 		"uid":           uid,
 		"portfolioId":   portfolioID,
@@ -226,20 +226,20 @@ func TestInvestmentCalculationService_CalculateDashboardSummary(t *testing.T) {
 	ctx := context.Background()
 
 	// Add test portfolios
-	mockRepo.AddDocument("portfolios", "p1", map[string]interface{}{
+	mockRepo.AddDocument("portfolios/p1", map[string]interface{}{
 		"id":   "p1",
 		"uid":  uid,
 		"name": "Portfolio 1",
 	})
 
-	mockRepo.AddDocument("portfolios", "p2", map[string]interface{}{
+	mockRepo.AddDocument("portfolios/p2", map[string]interface{}{
 		"id":   "p2",
 		"uid":  uid,
 		"name": "Portfolio 2",
 	})
 
 	// Add test investments
-	mockRepo.AddDocument("investments", "i1", map[string]interface{}{
+	mockRepo.AddDocument("investments/i1", map[string]interface{}{
 		"id":            "i1",
 		"uid":           uid,
 		"portfolioId":   "p1",
@@ -249,7 +249,7 @@ func TestInvestmentCalculationService_CalculateDashboardSummary(t *testing.T) {
 		"currency":      "USD",
 	})
 
-	mockRepo.AddDocument("investments", "i2", map[string]interface{}{
+	mockRepo.AddDocument("investments/i2", map[string]interface{}{
 		"id":            "i2",
 		"uid":           uid,
 		"portfolioId":   "p1",
@@ -259,7 +259,7 @@ func TestInvestmentCalculationService_CalculateDashboardSummary(t *testing.T) {
 		"currency":      "USD",
 	})
 
-	mockRepo.AddDocument("investments", "i3", map[string]interface{}{
+	mockRepo.AddDocument("investments/i3", map[string]interface{}{
 		"id":            "i3",
 		"uid":           uid,
 		"portfolioId":   "p2",

@@ -26,7 +26,7 @@ func TestEntityGraphHandler_QueryRelationships(t *testing.T) {
 	uid := "test-user-123"
 
 	// Add test relationships
-	mockRepo.AddDocument("entityRelationships", "rel1", map[string]interface{}{
+	mockRepo.AddDocument("entityRelationships/rel1", map[string]interface{}{
 		"id":               "rel1",
 		"uid":              uid,
 		"sourceType":       "task",
@@ -110,7 +110,7 @@ func TestEntityGraphHandler_GetLinkedEntities(t *testing.T) {
 	uid := "test-user-123"
 
 	// Add test relationship
-	mockRepo.AddDocument("entityRelationships", "rel1", map[string]interface{}{
+	mockRepo.AddDocument("entityRelationships/rel1", map[string]interface{}{
 		"id":               "rel1",
 		"uid":              uid,
 		"sourceType":       "project",
@@ -122,7 +122,7 @@ func TestEntityGraphHandler_GetLinkedEntities(t *testing.T) {
 	})
 
 	// Add entity data
-	mockRepo.AddDocument("tasks", "task1", map[string]interface{}{
+	mockRepo.AddDocument("tasks/task1", map[string]interface{}{
 		"id":     "task1",
 		"uid":    uid,
 		"title":  "Test Task",
@@ -195,7 +195,7 @@ func TestEntityGraphHandler_GetToolRelationships(t *testing.T) {
 	uid := "test-user-123"
 
 	// Add test tool relationships
-	mockRepo.AddDocument("entityRelationships", "tool1", map[string]interface{}{
+	mockRepo.AddDocument("entityRelationships/tool1", map[string]interface{}{
 		"id":               "tool1",
 		"uid":              uid,
 		"sourceType":       "tool",
@@ -203,7 +203,7 @@ func TestEntityGraphHandler_GetToolRelationships(t *testing.T) {
 		"status":           "active",
 	})
 
-	mockRepo.AddDocument("entityRelationships", "tool2", map[string]interface{}{
+	mockRepo.AddDocument("entityRelationships/tool2", map[string]interface{}{
 		"id":               "tool2",
 		"uid":              uid,
 		"sourceType":       "tool",
@@ -266,7 +266,7 @@ func TestEntityGraphHandler_GetRelationshipStats(t *testing.T) {
 	uid := "test-user-123"
 
 	// Add test relationships
-	mockRepo.AddDocument("entityRelationships", "rel1", map[string]interface{}{
+	mockRepo.AddDocument("entityRelationships/rel1", map[string]interface{}{
 		"id":               "rel1",
 		"uid":              uid,
 		"sourceType":       "task",

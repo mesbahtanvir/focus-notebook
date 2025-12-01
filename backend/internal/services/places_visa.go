@@ -74,13 +74,13 @@ func (s *PlaceInsightsService) GeneratePlaceInsights(
 		return nil, fmt.Errorf("failed to generate insights: %w", err)
 	}
 
-	if len(response.Choices) == 0 || response.Choices[0].Message.Content == "" {
+	if response.Content == "" {
 		return nil, fmt.Errorf("empty response from OpenAI")
 	}
 
 	// Parse JSON response
 	var insights PlaceInsights
-	if err := json.Unmarshal([]byte(response.Choices[0].Message.Content), &insights); err != nil {
+	if err := json.Unmarshal([]byte(response.Content), &insights); err != nil {
 		return nil, fmt.Errorf("failed to parse insights JSON: %w", err)
 	}
 

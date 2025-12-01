@@ -75,7 +75,7 @@ func (s *PackingListService) CreatePackingList(
 ) (*PackingList, error) {
 	// Verify trip ownership
 	tripPath := fmt.Sprintf("users/%s/trips/%s", userID, tripID)
-	tripData, err := s.repo.Get(ctx, tripPath)
+	_, err := s.repo.Get(ctx, tripPath)
 	if err != nil {
 		return nil, fmt.Errorf("trip not found: %w", err)
 	}

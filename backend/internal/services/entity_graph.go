@@ -36,6 +36,19 @@ const (
 	EntityTypeMood    EntityType = "mood"
 	EntityTypeTool    EntityType = "tool"
 	EntityTypePerson  EntityType = "person"
+
+	// Plural aliases for collection names (used by import/export)
+	EntityTypeTasks         EntityType = "tasks"
+	EntityTypeProjects      EntityType = "projects"
+	EntityTypeGoals         EntityType = "goals"
+	EntityTypeThoughts      EntityType = "thoughts"
+	EntityTypeMoods         EntityType = "moods"
+	EntityTypeFocusSessions EntityType = "focusSessions"
+	EntityTypePeople        EntityType = "people"
+	EntityTypePortfolios    EntityType = "portfolios"
+	EntityTypeSpending      EntityType = "spending"
+	EntityTypeRelationships EntityType = "relationships"
+	EntityTypeLLMLogs       EntityType = "llmLogs"
 )
 
 // RelationshipType represents the type of relationship
@@ -158,9 +171,9 @@ func (s *EntityGraphService) QueryRelationships(
 	}
 
 	if sortOrder == "asc" {
-		query = query.OrderBy(sortBy, "asc")
+		query = query.OrderBy(sortBy, firestore.Asc)
 	} else {
-		query = query.OrderBy(sortBy, "desc")
+		query = query.OrderBy(sortBy, firestore.Desc)
 	}
 
 	// Get total count (before pagination)

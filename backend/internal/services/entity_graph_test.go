@@ -18,7 +18,7 @@ func TestEntityGraphService_QueryRelationships(t *testing.T) {
 	ctx := context.Background()
 
 	// Add test relationships
-	mockRepo.AddDocument("entityRelationships", "rel1", map[string]interface{}{
+	mockRepo.AddDocument("entityRelationships/rel1", map[string]interface{}{
 		"id":               "rel1",
 		"uid":              uid,
 		"sourceType":       "task",
@@ -31,7 +31,7 @@ func TestEntityGraphService_QueryRelationships(t *testing.T) {
 		"createdBy":        "ai",
 	})
 
-	mockRepo.AddDocument("entityRelationships", "rel2", map[string]interface{}{
+	mockRepo.AddDocument("entityRelationships/rel2", map[string]interface{}{
 		"id":               "rel2",
 		"uid":              uid,
 		"sourceType":       "task",
@@ -44,7 +44,7 @@ func TestEntityGraphService_QueryRelationships(t *testing.T) {
 		"createdBy":        "user",
 	})
 
-	mockRepo.AddDocument("entityRelationships", "rel3", map[string]interface{}{
+	mockRepo.AddDocument("entityRelationships/rel3", map[string]interface{}{
 		"id":               "rel3",
 		"uid":              uid,
 		"sourceType":       "project",
@@ -138,7 +138,7 @@ func TestEntityGraphService_GetLinkedEntities(t *testing.T) {
 	ctx := context.Background()
 
 	// Add relationships
-	mockRepo.AddDocument("entityRelationships", "rel1", map[string]interface{}{
+	mockRepo.AddDocument("entityRelationships/rel1", map[string]interface{}{
 		"id":               "rel1",
 		"uid":              uid,
 		"sourceType":       "project",
@@ -149,7 +149,7 @@ func TestEntityGraphService_GetLinkedEntities(t *testing.T) {
 		"status":           "active",
 	})
 
-	mockRepo.AddDocument("entityRelationships", "rel2", map[string]interface{}{
+	mockRepo.AddDocument("entityRelationships/rel2", map[string]interface{}{
 		"id":               "rel2",
 		"uid":              uid,
 		"sourceType":       "project",
@@ -161,14 +161,14 @@ func TestEntityGraphService_GetLinkedEntities(t *testing.T) {
 	})
 
 	// Add entity data
-	mockRepo.AddDocument("tasks", "task1", map[string]interface{}{
+	mockRepo.AddDocument("tasks/task1", map[string]interface{}{
 		"id":     "task1",
 		"uid":    uid,
 		"title":  "Test Task",
 		"status": "active",
 	})
 
-	mockRepo.AddDocument("goals", "goal1", map[string]interface{}{
+	mockRepo.AddDocument("goals/goal1", map[string]interface{}{
 		"id":     "goal1",
 		"uid":    uid,
 		"title":  "Test Goal",
@@ -213,7 +213,7 @@ func TestEntityGraphService_GetToolRelationships(t *testing.T) {
 	ctx := context.Background()
 
 	// Add tool relationships
-	mockRepo.AddDocument("entityRelationships", "tool1", map[string]interface{}{
+	mockRepo.AddDocument("entityRelationships/tool1", map[string]interface{}{
 		"id":               "tool1",
 		"uid":              uid,
 		"sourceType":       "tool",
@@ -221,7 +221,7 @@ func TestEntityGraphService_GetToolRelationships(t *testing.T) {
 		"status":           "active",
 	})
 
-	mockRepo.AddDocument("entityRelationships", "tool2", map[string]interface{}{
+	mockRepo.AddDocument("entityRelationships/tool2", map[string]interface{}{
 		"id":               "tool2",
 		"uid":              uid,
 		"sourceType":       "tool",
@@ -229,7 +229,7 @@ func TestEntityGraphService_GetToolRelationships(t *testing.T) {
 		"status":           "active",
 	})
 
-	mockRepo.AddDocument("entityRelationships", "tool3", map[string]interface{}{
+	mockRepo.AddDocument("entityRelationships/tool3", map[string]interface{}{
 		"id":               "tool3",
 		"uid":              uid,
 		"sourceType":       "tool",
@@ -266,7 +266,7 @@ func TestEntityGraphService_GetRelationshipStats(t *testing.T) {
 	ctx := context.Background()
 
 	// Add relationships with various attributes
-	mockRepo.AddDocument("entityRelationships", "rel1", map[string]interface{}{
+	mockRepo.AddDocument("entityRelationships/rel1", map[string]interface{}{
 		"id":               "rel1",
 		"uid":              uid,
 		"sourceType":       "task",
@@ -277,7 +277,7 @@ func TestEntityGraphService_GetRelationshipStats(t *testing.T) {
 		"createdBy":        "ai",
 	})
 
-	mockRepo.AddDocument("entityRelationships", "rel2", map[string]interface{}{
+	mockRepo.AddDocument("entityRelationships/rel2", map[string]interface{}{
 		"id":               "rel2",
 		"uid":              uid,
 		"sourceType":       "task",
@@ -288,7 +288,7 @@ func TestEntityGraphService_GetRelationshipStats(t *testing.T) {
 		"createdBy":        "user",
 	})
 
-	mockRepo.AddDocument("entityRelationships", "rel3", map[string]interface{}{
+	mockRepo.AddDocument("entityRelationships/rel3", map[string]interface{}{
 		"id":               "rel3",
 		"uid":              uid,
 		"sourceType":       "project",

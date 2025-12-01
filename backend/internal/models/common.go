@@ -68,7 +68,7 @@ type ErrorResponse struct {
 
 // SuccessResponse represents a successful API response
 type SuccessResponse struct {
-	Success bool                   `json:"success"`
-	Data    map[string]interface{} `json:"data,omitempty"`
-	Message string                 `json:"message,omitempty"`
+	Success bool        `json:"success"`
+	Data    interface{} `json:"data,omitempty"`
+	Message string      `json:"message,omitempty"`
 }
