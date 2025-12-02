@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+
 func TestNewHealthHandler(t *testing.T) {
 	handler := NewHealthHandler(nil)
 
@@ -70,3 +71,4 @@ func TestHealthHandler_FirebaseCanBeNil(t *testing.T) {
 
 	assert.Nil(t, handler.firebase)
 }
+
