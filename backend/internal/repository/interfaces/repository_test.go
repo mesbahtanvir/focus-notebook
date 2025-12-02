@@ -8,20 +8,20 @@ import (
 
 // MockRepository is a mock implementation for testing
 type MockRepository struct {
-	GetFunc            func(ctx interface{}, path string) (map[string]interface{}, error)
-	CreateFunc         func(ctx interface{}, path string, data map[string]interface{}) error
-	UpdateFunc         func(ctx interface{}, path string, data map[string]interface{}) error
-	DeleteFunc         func(ctx interface{}, path string) error
-	ListFunc           func(ctx interface{}, collectionPath string, limit int) ([]map[string]interface{}, error)
-	GetDocumentFunc    func(ctx interface{}, path string) (interface{}, error)
-	SetDocumentFunc    func(ctx interface{}, path string, data map[string]interface{}) error
-	UpdateDocumentFunc func(ctx interface{}, path string, updates map[string]interface{}) error
-	DeleteDocumentFunc func(ctx interface{}, path string) error
-	CreateDocumentFunc func(ctx interface{}, path string, data map[string]interface{}) error
+	GetFunc             func(ctx interface{}, path string) (map[string]interface{}, error)
+	CreateFunc          func(ctx interface{}, path string, data map[string]interface{}) error
+	UpdateFunc          func(ctx interface{}, path string, data map[string]interface{}) error
+	DeleteFunc          func(ctx interface{}, path string) error
+	ListFunc            func(ctx interface{}, collectionPath string, limit int) ([]map[string]interface{}, error)
+	GetDocumentFunc     func(ctx interface{}, path string) (interface{}, error)
+	SetDocumentFunc     func(ctx interface{}, path string, data map[string]interface{}) error
+	UpdateDocumentFunc  func(ctx interface{}, path string, updates map[string]interface{}) error
+	DeleteDocumentFunc  func(ctx interface{}, path string) error
+	CreateDocumentFunc  func(ctx interface{}, path string, data map[string]interface{}) error
 	QueryCollectionFunc func(ctx interface{}, collectionPath string, opts ...interface{}) ([]interface{}, error)
-	CollectionFunc     func(path string) interface{}
-	BatchFunc          func() interface{}
-	ClientFunc         func() interface{}
+	CollectionFunc      func(path string) interface{}
+	BatchFunc           func() interface{}
+	ClientFunc          func() interface{}
 }
 
 func TestQueryOptionInterface(t *testing.T) {

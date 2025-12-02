@@ -81,12 +81,12 @@ func TestAnonymousSession_Expired(t *testing.T) {
 func TestAnonymousSession_WithOverrideKey(t *testing.T) {
 	key := "ci-override-key-123"
 	session := AnonymousSession{
-		UID:            "anon-789",
-		CiOverrideKey:  &key,
-		Status:         "active",
-		CreatedAt:      time.Now(),
-		ExpiresAt:      time.Now().Add(2 * time.Hour),
-		UpdatedAt:      time.Now(),
+		UID:           "anon-789",
+		CiOverrideKey: &key,
+		Status:        "active",
+		CreatedAt:     time.Now(),
+		ExpiresAt:     time.Now().Add(2 * time.Hour),
+		UpdatedAt:     time.Now(),
 	}
 
 	assert.NotNil(t, session.CiOverrideKey)
@@ -95,9 +95,9 @@ func TestAnonymousSession_WithOverrideKey(t *testing.T) {
 
 func TestSubscriptionStatus_FreeTier(t *testing.T) {
 	sub := SubscriptionStatus{
-		ID:       "sub-123",
-		Tier:     "free",
-		Status:   "active",
+		ID:        "sub-123",
+		Tier:      "free",
+		Status:    "active",
 		UpdatedAt: time.Now(),
 	}
 
@@ -154,11 +154,11 @@ func TestSubscriptionStatus_CancelAtPeriodEnd(t *testing.T) {
 	cancel := true
 
 	sub := SubscriptionStatus{
-		ID:               "sub-cancel-123",
-		Tier:             "pro",
-		Status:           "active",
+		ID:                "sub-cancel-123",
+		Tier:              "pro",
+		Status:            "active",
 		CancelAtPeriodEnd: &cancel,
-		UpdatedAt:        now,
+		UpdatedAt:         now,
 	}
 
 	assert.NotNil(t, sub.CancelAtPeriodEnd)
@@ -226,7 +226,7 @@ func TestErrorResponse_WithDetails(t *testing.T) {
 	resp := ErrorResponse{
 		Error: "Validation failed",
 		Details: map[string]interface{}{
-			"field": "email",
+			"field":  "email",
 			"reason": "invalid format",
 		},
 		Code: "VALIDATION_ERROR",

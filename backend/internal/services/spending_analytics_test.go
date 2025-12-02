@@ -320,9 +320,9 @@ func TestCategoryItem_MultipleCategories(t *testing.T) {
 
 func TestSpendingStats_LargeValues(t *testing.T) {
 	stats := SpendingStats{
-		TotalSpend:       1000000.0,
-		TotalIncome:      5000000.0,
-		AvgDailySpend:    33333.33,
+		TotalSpend:        1000000.0,
+		TotalIncome:       5000000.0,
+		AvgDailySpend:     33333.33,
 		SubscriptionSpend: 5000.0,
 	}
 

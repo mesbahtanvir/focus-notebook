@@ -6,13 +6,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mesbahtanvir/focus-notebook/backend/internal/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/config"
 )
 
 func TestCORS_Disabled(t *testing.T) {
 	cfg := &config.CORSConfig{
-		Enabled: false,
+		Enabled:        false,
 		AllowedOrigins: []string{"http://localhost:3000"},
 	}
 
@@ -32,7 +33,7 @@ func TestCORS_Disabled(t *testing.T) {
 
 func TestCORS_AllowedOrigin(t *testing.T) {
 	cfg := &config.CORSConfig{
-		Enabled: true,
+		Enabled:        true,
 		AllowedOrigins: []string{"http://localhost:3000", "https://example.com"},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
 		AllowedHeaders: []string{"Content-Type", "Authorization"},
@@ -57,7 +58,7 @@ func TestCORS_AllowedOrigin(t *testing.T) {
 
 func TestCORS_DisallowedOrigin(t *testing.T) {
 	cfg := &config.CORSConfig{
-		Enabled: true,
+		Enabled:        true,
 		AllowedOrigins: []string{"http://localhost:3000"},
 	}
 
@@ -77,7 +78,7 @@ func TestCORS_DisallowedOrigin(t *testing.T) {
 
 func TestCORS_Wildcard(t *testing.T) {
 	cfg := &config.CORSConfig{
-		Enabled: true,
+		Enabled:        true,
 		AllowedOrigins: []string{"*"},
 	}
 
@@ -97,7 +98,7 @@ func TestCORS_Wildcard(t *testing.T) {
 
 func TestCORS_PreflightRequest(t *testing.T) {
 	cfg := &config.CORSConfig{
-		Enabled: true,
+		Enabled:        true,
 		AllowedOrigins: []string{"http://localhost:3000"},
 		AllowedMethods: []string{"GET", "POST", "OPTIONS"},
 		AllowedHeaders: []string{"Content-Type"},
@@ -122,8 +123,8 @@ func TestCORS_PreflightRequest(t *testing.T) {
 
 func TestCORS_AllowCredentials(t *testing.T) {
 	cfg := &config.CORSConfig{
-		Enabled: true,
-		AllowedOrigins: []string{"http://localhost:3000"},
+		Enabled:          true,
+		AllowedOrigins:   []string{"http://localhost:3000"},
 		AllowCredentials: true,
 	}
 
@@ -143,9 +144,9 @@ func TestCORS_AllowCredentials(t *testing.T) {
 
 func TestCORS_ExposeHeaders(t *testing.T) {
 	cfg := &config.CORSConfig{
-		Enabled: true,
+		Enabled:        true,
 		AllowedOrigins: []string{"http://localhost:3000"},
-		ExposeHeaders: []string{"X-Total-Count", "X-Page-Number"},
+		ExposeHeaders:  []string{"X-Total-Count", "X-Page-Number"},
 	}
 
 	middleware := CORS(cfg)
@@ -166,9 +167,9 @@ func TestCORS_ExposeHeaders(t *testing.T) {
 
 func TestCORS_MaxAge(t *testing.T) {
 	cfg := &config.CORSConfig{
-		Enabled: true,
+		Enabled:        true,
 		AllowedOrigins: []string{"http://localhost:3000"},
-		MaxAge: 7200,
+		MaxAge:         7200,
 	}
 
 	middleware := CORS(cfg)
@@ -187,7 +188,7 @@ func TestCORS_MaxAge(t *testing.T) {
 
 func TestCORS_NoOriginHeader(t *testing.T) {
 	cfg := &config.CORSConfig{
-		Enabled: true,
+		Enabled:        true,
 		AllowedOrigins: []string{"http://localhost:3000"},
 	}
 
@@ -207,7 +208,7 @@ func TestCORS_NoOriginHeader(t *testing.T) {
 
 func TestCORS_EmptyAllowedOrigins(t *testing.T) {
 	cfg := &config.CORSConfig{
-		Enabled: true,
+		Enabled:        true,
 		AllowedOrigins: []string{},
 	}
 
@@ -227,7 +228,7 @@ func TestCORS_EmptyAllowedOrigins(t *testing.T) {
 
 func TestCORS_RequestPassthrough(t *testing.T) {
 	cfg := &config.CORSConfig{
-		Enabled: true,
+		Enabled:        true,
 		AllowedOrigins: []string{"http://localhost:3000"},
 	}
 
@@ -251,7 +252,7 @@ func TestCORS_RequestPassthrough(t *testing.T) {
 
 func TestCORS_MultipleHeaders(t *testing.T) {
 	cfg := &config.CORSConfig{
-		Enabled: true,
+		Enabled:        true,
 		AllowedOrigins: []string{"http://localhost:3000"},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "PATCH"},
 		AllowedHeaders: []string{"Content-Type", "Authorization", "X-Custom-Header"},
@@ -310,7 +311,7 @@ func TestIsOriginAllowed_CaseSensitive(t *testing.T) {
 
 func TestCORS_GetRequest(t *testing.T) {
 	cfg := &config.CORSConfig{
-		Enabled: true,
+		Enabled:        true,
 		AllowedOrigins: []string{"*"},
 		AllowedMethods: []string{"GET", "POST"},
 	}
@@ -331,7 +332,7 @@ func TestCORS_GetRequest(t *testing.T) {
 
 func TestCORS_PostRequest(t *testing.T) {
 	cfg := &config.CORSConfig{
-		Enabled: true,
+		Enabled:        true,
 		AllowedOrigins: []string{"*"},
 		AllowedMethods: []string{"GET", "POST"},
 	}

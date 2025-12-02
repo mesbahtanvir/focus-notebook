@@ -208,7 +208,7 @@ func TestPlaidConfig_Structure(t *testing.T) {
 
 func TestAlphaVantageConfig_Structure(t *testing.T) {
 	av := AlphaVantageConfig{
-		APIKey: "test_key",
+		APIKey:  "test_key",
 		Timeout: 10 * time.Second,
 	}
 
@@ -245,8 +245,8 @@ func TestLoggingConfig_ProductionMode(t *testing.T) {
 func TestConfigStructure_Complete(t *testing.T) {
 	cfg := &Config{
 		Server: ServerConfig{
-			Port:   8080,
-			Host:   "0.0.0.0",
+			Port: 8080,
+			Host: "0.0.0.0",
 		},
 		Firebase: FirebaseConfig{
 			ProjectID: "test",

@@ -161,8 +161,8 @@ func TestFirestoreRepository_ReturnsRepository(t *testing.T) {
 	client := NewFirestoreRepository(nil)
 
 	assert.NotNil(t, client)
-	assert.Nil(t, client.Client())  // Returns nil client
-	assert.Nil(t, client.client)  // client is nil
+	assert.Nil(t, client.Client()) // Returns nil client
+	assert.Nil(t, client.client)   // client is nil
 }
 
 func TestFirestoreRepository_Constructor(t *testing.T) {
@@ -214,10 +214,10 @@ func TestRemoveUndefinedValues(t *testing.T) {
 
 func TestRemoveUndefinedValues_WithMap(t *testing.T) {
 	data := map[string]interface{}{
-		"name":    "test",
-		"value":   123,
-		"empty":   "",
-		"nil":     nil,
+		"name":  "test",
+		"value": 123,
+		"empty": "",
+		"nil":   nil,
 	}
 
 	result := RemoveUndefinedValues(data)
@@ -236,7 +236,7 @@ func TestRemoveUndefinedValues_WithEmptyMap(t *testing.T) {
 
 func TestRemoveUndefinedValues_RemovesNil(t *testing.T) {
 	data := map[string]interface{}{
-		"valid":  "value",
+		"valid":   "value",
 		"invalid": nil,
 	}
 
@@ -304,11 +304,11 @@ func TestGetUIDFromContext_WithEmptyValue(t *testing.T) {
 
 func TestRemoveUndefinedValues_ComplexData(t *testing.T) {
 	data := map[string]interface{}{
-		"name":    "John",
-		"age":     30,
-		"active":  true,
-		"empty":   "",
-		"nil":     nil,
+		"name":   "John",
+		"age":    30,
+		"active": true,
+		"empty":  "",
+		"nil":    nil,
 		"nested": map[string]interface{}{
 			"key": "value",
 		},

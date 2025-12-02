@@ -116,9 +116,9 @@ func TestRepository_BulkCreateAndQuery(t *testing.T) {
 	// Create batch of documents
 	for i := 1; i <= 5; i++ {
 		data := map[string]interface{}{
-			"id":    i,
-			"name":  "Task " + string(rune(i+'0')),
-			"done":  i%2 == 0,
+			"id":   i,
+			"name": "Task " + string(rune(i+'0')),
+			"done": i%2 == 0,
 		}
 		err := repo.Create(ctx, "tasks/task"+string(rune(i+'0')), data)
 		require.NoError(t, err)
