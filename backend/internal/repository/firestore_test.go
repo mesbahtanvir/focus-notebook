@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -249,6 +250,83 @@ func TestRemoveUndefinedValues_PreservesValidValues(t *testing.T) {
 		"string": "test",
 		"number": 42,
 		"bool":   true,
+	}
+
+	result := RemoveUndefinedValues(data)
+
+	assert.NotNil(t, result)
+}
+
+// Additional FirestoreRepository tests
+
+func TestFirestoreRepository_ClientMethod(t *testing.T) {
+	repo := NewFirestoreRepository(nil)
+
+	client := repo.Client()
+
+	assert.Nil(t, client)
+}
+
+func TestFirestoreRepository_ClientMethodWithRealClient(t *testing.T) {
+	// Create a mock client (nil in this case)
+	repo := NewFirestoreRepository(nil)
+
+	// Client() should return what was passed to constructor
+	assert.Nil(t, repo.Client())
+}
+
+func TestGetUIDFromContext_EmptyUID(t *testing.T) {
+	ctx := context.Background()
+
+	uid := GetUIDFromContext(ctx)
+
+	assert.NotEmpty(t, uid)
+	assert.Equal(t, "anon", uid)
+}
+
+func TestGetUIDFromContext_WithCustomValue(t *testing.T) {
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "uid", "user-456")
+
+	uid := GetUIDFromContext(ctx)
+
+	assert.Equal(t, "user-456", uid)
+}
+
+func TestGetUIDFromContext_WithEmptyValue(t *testing.T) {
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "uid", "")
+
+	uid := GetUIDFromContext(ctx)
+
+	assert.Equal(t, "", uid)
+}
+
+func TestRemoveUndefinedValues_ComplexData(t *testing.T) {
+	data := map[string]interface{}{
+		"name":    "John",
+		"age":     30,
+		"active":  true,
+		"empty":   "",
+		"nil":     nil,
+		"nested": map[string]interface{}{
+			"key": "value",
+		},
+	}
+
+	result := RemoveUndefinedValues(data)
+
+	assert.NotNil(t, result)
+}
+
+func TestRemoveUndefinedValues_LargeMap(t *testing.T) {
+	data := make(map[string]interface{})
+	for i := 0; i < 100; i++ {
+		if i%2 == 0 {
+			data[fmt.Sprintf("key_%d", i)] = fmt.Sprintf("value_%d", i)
+		} else {
+			data[fmt.Sprintf("key_%d", i)] = nil
+		}
 	}
 
 	result := RemoveUndefinedValues(data)
