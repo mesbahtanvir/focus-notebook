@@ -361,3 +361,87 @@ func TestRateLimitConfig_Structure(t *testing.T) {
 
 	assert.True(t, rl.Enabled)
 }
+
+func TestConfig_GetServerAddr(t *testing.T) {
+	cfg := &Config{
+		Server: ServerConfig{
+			Host: "localhost",
+			Port: 8080,
+		},
+	}
+
+	addr := cfg.GetServerAddr()
+
+	assert.Equal(t, "localhost:8080", addr)
+}
+
+func TestConfig_GetServerAddr_WithDifferentPort(t *testing.T) {
+	cfg := &Config{
+		Server: ServerConfig{
+			Host: "0.0.0.0",
+			Port: 3000,
+		},
+	}
+
+	addr := cfg.GetServerAddr()
+
+	assert.Equal(t, "0.0.0.0:3000", addr)
+}
+
+func TestConfig_GetServerAddr_WithHostname(t *testing.T) {
+	cfg := &Config{
+		Server: ServerConfig{
+			Host: "api.example.com",
+			Port: 443,
+		},
+	}
+
+	addr := cfg.GetServerAddr()
+
+	assert.Equal(t, "api.example.com:443", addr)
+}
+
+func TestConfig_GetMetricsAddr(t *testing.T) {
+	cfg := &Config{
+		Server: ServerConfig{
+			Host: "localhost",
+		},
+		Metrics: MetricsConfig{
+			Port: 9090,
+		},
+	}
+
+	addr := cfg.GetMetricsAddr()
+
+	assert.Equal(t, "localhost:9090", addr)
+}
+
+func TestConfig_GetMetricsAddr_WithDifferentPort(t *testing.T) {
+	cfg := &Config{
+		Server: ServerConfig{
+			Host: "0.0.0.0",
+		},
+		Metrics: MetricsConfig{
+			Port: 8888,
+		},
+	}
+
+	addr := cfg.GetMetricsAddr()
+
+	assert.Equal(t, "0.0.0.0:8888", addr)
+}
+
+func TestConfig_GetMetricsAddr_WithHostname(t *testing.T) {
+	cfg := &Config{
+		Server: ServerConfig{
+			Host: "metrics.internal",
+		},
+		Metrics: MetricsConfig{
+			Port: 2112,
+		},
+	}
+
+	addr := cfg.GetMetricsAddr()
+
+	assert.Equal(t, "metrics.internal:2112", addr)
+}
