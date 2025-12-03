@@ -1,72 +1,40 @@
 run:
   timeout: 5m
   tests: true
-  modules-download-mode: readonly
 
 linters:
   enable:
-    - errcheck      # Check for unchecked errors
-    - govet         # Examines Go source code and reports suspicious constructs
-    - ineffassign   # Detects ineffectual assignments
-    - unused        # Checks for unused constants, variables, functions and types
-    - misspell      # Finds commonly misspelled words
-    - gosec         # Security problems
-    - bodyclose     # Checks HTTP response body is closed
-    - noctx         # Finds sending HTTP request without context.Context
-    - gofmt         # Checks if code is gofmt-ed
-    - goimports     # Checks import statements are formatted
+    - errcheck
+    - govet
+    - ineffassign
+    - unused
+    - misspell
+    - gosec
+    - bodyclose
+    - noctx
+    - gofmt
+    - goimports
   disable:
-    - staticcheck   # Disabled due to style warnings (ST1005, SA1029, etc.)
+    - staticcheck
 
 linters-settings:
   errcheck:
     check-type-assertions: false
     check-blank: false
 
-  govet:
-    enable-all: true
-    disable:
-      - fieldalignment
-
-  gosec:
-    excludes:
-      - G104 # Audit errors not checked (covered by errcheck)
-      - G304 # File path provided as taint input (we validate paths)
-
   goimports:
     local-prefixes: github.com/mesbahtanvir/focus-notebook/backend
 
 issues:
   exclude-rules:
-    # Exclude test files from certain linters
     - path: _test\.go
       linters:
         - errcheck
         - gosec
 
-    # Exclude mock files
     - path: mocks/
       linters:
-        - staticcheck
-
-    # G304 - File path provided as taint input (we validate paths in config loading)
-    - path: internal/config/config\.go
-      text: "G304"
-
-    # Exclude intentionally unchecked errors (already handled with _)
-    - linters:
         - errcheck
-      text: "Error return value is not checked"
-
-  # Exclude specific staticcheck issues using text patterns
-  exclude:
-    - "ST1005"         # error strings should not be capitalized
-    - "SA1019"         # deprecated API (WriteBatch is widely used)
-    - "QF1003"         # tagged switch suggestions
-    - "S1040"          # type assertion to same type
-    - "SA4010"         # unused append result
-    - "SA1029"         # context key type
-    - "ST1023"         # omit type from declaration
 
   max-issues-per-linter: 0
   max-same-issues: 0

@@ -292,9 +292,9 @@ func TestGetStringFieldFromMap_MultipleKeys(t *testing.T) {
 
 func TestGetIntFieldFromMap_MultipleKeys(t *testing.T) {
 	m := map[string]interface{}{
-		"count":  42.0,
-		"value":  100,
-		"score":  5.5,
+		"count": 42.0,
+		"value": 100,
+		"score": 5.5,
 	}
 
 	assert.Equal(t, 42, getIntFieldFromMap(m, "count"))

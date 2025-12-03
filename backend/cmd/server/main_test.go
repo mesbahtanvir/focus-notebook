@@ -12,9 +12,9 @@ import (
 // TestCountRoutes tests the countRoutes function
 func TestCountRoutes(t *testing.T) {
 	tests := []struct {
-		name           string
-		setupRouter    func() *mux.Router
-		expectedCount  int
+		name          string
+		setupRouter   func() *mux.Router
+		expectedCount int
 	}{
 		{
 			name: "empty router",

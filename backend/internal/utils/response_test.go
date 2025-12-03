@@ -8,9 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mesbahtanvir/focus-notebook/backend/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/models"
 )
 
 func TestRespondJSON_WithData(t *testing.T) {

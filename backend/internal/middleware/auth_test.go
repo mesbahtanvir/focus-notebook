@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"firebase.google.com/go/v4/auth"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewAuthMiddleware(t *testing.T) {
@@ -111,7 +111,6 @@ func TestAuthMiddleware_OptionalAuth_NoToken(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
-
 func TestGetSignInProvider_NoProvider(t *testing.T) {
 	token := &auth.Token{
 		Claims: make(map[string]interface{}),
@@ -157,7 +156,6 @@ func TestGetSignInProvider_MissingFirebaseClaims(t *testing.T) {
 	provider := getSignInProvider(token)
 	assert.Equal(t, "unknown", provider)
 }
-
 
 func TestAuthMiddleware_OverrideKey(t *testing.T) {
 	middleware := NewAuthMiddleware(nil, nil, "secret-override-key")

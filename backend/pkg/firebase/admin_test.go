@@ -2,6 +2,7 @@ package firebase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -417,35 +418,35 @@ func TestFirebaseConfig_AllFieldsPopulated(t *testing.T) {
 
 func TestIsNotFoundError_ErrorMessageFormats(t *testing.T) {
 	tests := []struct {
-		name         string
-		errorMsg     string
-		shouldMatch  bool
+		name        string
+		errorMsg    string
+		shouldMatch bool
 	}{
 		{
-			name:         "exact not found",
-			errorMsg:     "not found",
-			shouldMatch:  true,
+			name:        "exact not found",
+			errorMsg:    "not found",
+			shouldMatch: true,
 		},
 		{
-			name:         "rpc not found",
-			errorMsg:     "rpc error: code = NotFound",
-			shouldMatch:  true,
+			name:        "rpc not found",
+			errorMsg:    "rpc error: code = NotFound",
+			shouldMatch: true,
 		},
 		{
-			name:         "different error",
-			errorMsg:     "internal error",
-			shouldMatch:  false,
+			name:        "different error",
+			errorMsg:    "internal error",
+			shouldMatch: false,
 		},
 		{
-			name:         "case sensitive not found",
-			errorMsg:     "Not Found",
-			shouldMatch:  false,
+			name:        "case sensitive not found",
+			errorMsg:    "Not Found",
+			shouldMatch: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := fmt.Errorf(tt.errorMsg)
+			err := errors.New(tt.errorMsg)
 			result := isNotFoundError(err)
 			assert.Equal(t, tt.shouldMatch, result)
 		})

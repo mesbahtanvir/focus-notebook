@@ -4,15 +4,16 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mesbahtanvir/focus-notebook/backend/internal/config"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/config"
 )
 
 func TestNewLogger_DevelopmentMode(t *testing.T) {
 	cfg := &config.LoggingConfig{
-		Development:     true,
-		Level:           "debug",
-		Format:          "console",
+		Development:      true,
+		Level:            "debug",
+		Format:           "console",
 		EnableStacktrace: true,
 	}
 
@@ -25,9 +26,9 @@ func TestNewLogger_DevelopmentMode(t *testing.T) {
 
 func TestNewLogger_ProductionMode(t *testing.T) {
 	cfg := &config.LoggingConfig{
-		Development:     false,
-		Level:           "info",
-		Format:          "json",
+		Development:      false,
+		Level:            "info",
+		Format:           "json",
 		EnableStacktrace: false,
 	}
 

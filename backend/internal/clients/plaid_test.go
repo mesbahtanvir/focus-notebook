@@ -133,9 +133,9 @@ func TestNewPlaidClient_WithProducts(t *testing.T) {
 
 func TestNewPlaidClient_WithCountryCodes(t *testing.T) {
 	cfg := &config.PlaidConfig{
-		ClientID:    "test_client_id",
-		Secret:      "test_secret",
-		Environment: "sandbox",
+		ClientID:     "test_client_id",
+		Secret:       "test_secret",
+		Environment:  "sandbox",
 		CountryCodes: []string{"US", "GB", "CA"},
 	}
 	logger := zap.NewNop()
@@ -174,7 +174,6 @@ func TestNewPlaidClient_LoggerStored(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, logger, client.logger)
 }
-
 
 func TestNewPlaidClient_MultipleInstances(t *testing.T) {
 	cfg := &config.PlaidConfig{
