@@ -335,3 +335,232 @@ func TestActionProcessor_ConstructorVariations(t *testing.T) {
 	assert.NotNil(t, p4.repo)
 	assert.NotNil(t, p4.logger)
 }
+
+// Additional comprehensive tests for helper functions
+
+func TestGetStringFieldFromMap_AllEdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     map[string]interface{}
+		key      string
+		expected string
+	}{
+		{"normal string", map[string]interface{}{"key": "value"}, "key", "value"},
+		{"empty string", map[string]interface{}{"key": ""}, "key", ""},
+		{"missing key", map[string]interface{}{}, "key", ""},
+		{"nil map value", map[string]interface{}{"key": nil}, "key", ""},
+		{"int value", map[string]interface{}{"key": 123}, "key", ""},
+		{"float value", map[string]interface{}{"key": 12.34}, "key", ""},
+		{"bool value", map[string]interface{}{"key": true}, "key", ""},
+		{"array value", map[string]interface{}{"key": []string{"a", "b"}}, "key", ""},
+		{"map value", map[string]interface{}{"key": map[string]string{"nested": "value"}}, "key", ""},
+		{"unicode string", map[string]interface{}{"key": "日本語"}, "key", "日本語"},
+		{"special chars", map[string]interface{}{"key": "!@#$%^&*()"}, "key", "!@#$%^&*()"},
+		{"whitespace", map[string]interface{}{"key": "  spaces  "}, "key", "  spaces  "},
+		{"newlines", map[string]interface{}{"key": "line1\nline2"}, "key", "line1\nline2"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getStringFieldFromMap(tt.data, tt.key)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestGetIntFieldFromMap_AllEdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     map[string]interface{}
+		key      string
+		expected int
+	}{
+		{"positive float", map[string]interface{}{"key": float64(42)}, "key", 42},
+		{"negative float", map[string]interface{}{"key": float64(-42)}, "key", -42},
+		{"zero float", map[string]interface{}{"key": float64(0)}, "key", 0},
+		{"large float", map[string]interface{}{"key": float64(1000000)}, "key", 1000000},
+		{"positive int", map[string]interface{}{"key": 42}, "key", 42},
+		{"negative int", map[string]interface{}{"key": -42}, "key", -42},
+		{"zero int", map[string]interface{}{"key": 0}, "key", 0},
+		{"missing key", map[string]interface{}{}, "key", 0},
+		{"nil value", map[string]interface{}{"key": nil}, "key", 0},
+		{"string value", map[string]interface{}{"key": "42"}, "key", 0},
+		{"bool value", map[string]interface{}{"key": true}, "key", 0},
+		{"fractional float truncates", map[string]interface{}{"key": float64(42.9)}, "key", 42},
+		{"negative fractional", map[string]interface{}{"key": float64(-42.9)}, "key", -42},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getIntFieldFromMap(tt.data, tt.key)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestGenerateID_Uniqueness(t *testing.T) {
+	// Generate 100 IDs and ensure they're all unique
+	ids := make(map[string]struct{})
+	iterations := 100
+
+	for i := 0; i < iterations; i++ {
+		id := generateID()
+		if _, exists := ids[id]; exists {
+			t.Errorf("Duplicate ID generated: %s", id)
+		}
+		ids[id] = struct{}{}
+	}
+
+	assert.Equal(t, iterations, len(ids))
+}
+
+func TestGenerateID_LengthConsistency(t *testing.T) {
+	// All generated IDs should have reasonable length
+	for i := 0; i < 10; i++ {
+		id := generateID()
+		assert.GreaterOrEqual(t, len(id), 10, "ID should have minimum length")
+		assert.LessOrEqual(t, len(id), 50, "ID should not be excessively long")
+	}
+}
+
+func TestActionData_TaskCreation(t *testing.T) {
+	data := map[string]interface{}{
+		"title":    "Complete unit tests",
+		"category": "mastery",
+		"priority": "high",
+		"notes":    "Need to reach 50% coverage",
+	}
+
+	title := getStringFieldFromMap(data, "title")
+	category := getStringFieldFromMap(data, "category")
+	priority := getStringFieldFromMap(data, "priority")
+	notes := getStringFieldFromMap(data, "notes")
+
+	assert.Equal(t, "Complete unit tests", title)
+	assert.Equal(t, "mastery", category)
+	assert.Equal(t, "high", priority)
+	assert.Equal(t, "Need to reach 50% coverage", notes)
+}
+
+func TestActionData_ProjectCreation(t *testing.T) {
+	data := map[string]interface{}{
+		"title":       "Backend Testing Initiative",
+		"description": "Improve test coverage across all services",
+	}
+
+	title := getStringFieldFromMap(data, "title")
+	description := getStringFieldFromMap(data, "description")
+
+	assert.Equal(t, "Backend Testing Initiative", title)
+	assert.Equal(t, "Improve test coverage across all services", description)
+}
+
+func TestActionData_GoalCreation(t *testing.T) {
+	data := map[string]interface{}{
+		"title":     "Improve Code Quality",
+		"objective": "Maintain 80%+ test coverage",
+	}
+
+	title := getStringFieldFromMap(data, "title")
+	objective := getStringFieldFromMap(data, "objective")
+
+	assert.Equal(t, "Improve Code Quality", title)
+	assert.Equal(t, "Maintain 80%+ test coverage", objective)
+}
+
+func TestActionData_MoodCreation(t *testing.T) {
+	data := map[string]interface{}{
+		"value": float64(8),
+		"note":  "Feeling productive after writing tests",
+	}
+
+	value := getIntFieldFromMap(data, "value")
+	note := getStringFieldFromMap(data, "note")
+
+	assert.Equal(t, 8, value)
+	assert.Equal(t, "Feeling productive after writing tests", note)
+}
+
+func TestActionData_RelationshipCreation(t *testing.T) {
+	data := map[string]interface{}{
+		"targetType":       "tool",
+		"targetId":         "tasks",
+		"relationshipType": "should-be-processed-by",
+		"reasoning":        "Contains actionable items that should become tasks",
+	}
+
+	targetType := getStringFieldFromMap(data, "targetType")
+	targetId := getStringFieldFromMap(data, "targetId")
+	relationshipType := getStringFieldFromMap(data, "relationshipType")
+	reasoning := getStringFieldFromMap(data, "reasoning")
+
+	assert.Equal(t, "tool", targetType)
+	assert.Equal(t, "tasks", targetId)
+	assert.Equal(t, "should-be-processed-by", relationshipType)
+	assert.Contains(t, reasoning, "actionable items")
+}
+
+func TestActionData_EnhanceTask(t *testing.T) {
+	data := map[string]interface{}{
+		"taskId":   "task-123-456",
+		"notes":    "Additional context from thought",
+		"priority": "high",
+		"category": "health",
+	}
+
+	taskId := getStringFieldFromMap(data, "taskId")
+	notes := getStringFieldFromMap(data, "notes")
+	priority := getStringFieldFromMap(data, "priority")
+	category := getStringFieldFromMap(data, "category")
+
+	assert.Equal(t, "task-123-456", taskId)
+	assert.Equal(t, "Additional context from thought", notes)
+	assert.Equal(t, "high", priority)
+	assert.Equal(t, "health", category)
+}
+
+func TestActionData_MissingOptionalFields(t *testing.T) {
+	// Test that missing optional fields return defaults
+	data := map[string]interface{}{
+		"title": "Task with minimal data",
+	}
+
+	title := getStringFieldFromMap(data, "title")
+	category := getStringFieldFromMap(data, "category")
+	priority := getStringFieldFromMap(data, "priority")
+	notes := getStringFieldFromMap(data, "notes")
+
+	assert.Equal(t, "Task with minimal data", title)
+	assert.Empty(t, category)
+	assert.Empty(t, priority)
+	assert.Empty(t, notes)
+}
+
+func TestActionData_AllCategories(t *testing.T) {
+	categories := []string{"health", "wealth", "mastery", "connection"}
+
+	for _, cat := range categories {
+		data := map[string]interface{}{"category": cat}
+		result := getStringFieldFromMap(data, "category")
+		assert.Equal(t, cat, result)
+	}
+}
+
+func TestActionData_AllPriorities(t *testing.T) {
+	priorities := []string{"low", "medium", "high", "urgent"}
+
+	for _, priority := range priorities {
+		data := map[string]interface{}{"priority": priority}
+		result := getStringFieldFromMap(data, "priority")
+		assert.Equal(t, priority, result)
+	}
+}
+
+func TestActionData_MoodValues(t *testing.T) {
+	// Test mood values from 1-10
+	for i := 1; i <= 10; i++ {
+		data := map[string]interface{}{"value": float64(i)}
+		result := getIntFieldFromMap(data, "value")
+		assert.Equal(t, i, result)
+	}
+}
