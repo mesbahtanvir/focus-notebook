@@ -52,7 +52,7 @@ func (h *StripeHandler) CreateCheckoutSession(w http.ResponseWriter, r *http.Req
 
 	// Get user email from token (if available)
 	userEmail := ""
-	if decodedToken, ok := r.Context().Value("decodedToken").(interface{}); ok {
+	if decodedToken := r.Context().Value("decodedToken"); decodedToken != nil {
 		if claims, ok := decodedToken.(map[string]interface{}); ok {
 			if email, ok := claims["email"].(string); ok {
 				userEmail = email
