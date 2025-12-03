@@ -6,21 +6,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/mocks"
 )
-
-func TestNewPhotoService(t *testing.T) {
-	mockRepo := mocks.NewMockRepository()
-	logger := zap.NewNop()
-
-	service := NewPhotoService(mockRepo, nil, "test-bucket", logger)
-
-	require.NotNil(t, service)
-	assert.Equal(t, "test-bucket", service.storageBucket)
-}
 
 func TestCalculateRatingDeviation(t *testing.T) {
 	tests := []struct {

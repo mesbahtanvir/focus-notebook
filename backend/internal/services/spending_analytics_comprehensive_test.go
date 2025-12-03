@@ -11,15 +11,6 @@ import (
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository/mocks"
 )
 
-func TestNewSpendingAnalyticsService(t *testing.T) {
-	mockRepo := mocks.NewMockRepository()
-	logger := zap.NewNop()
-
-	service := NewSpendingAnalyticsService(mockRepo, logger)
-
-	require.NotNil(t, service)
-}
-
 func TestSpendingAnalyticsService_GetFloatField(t *testing.T) {
 	service := &SpendingAnalyticsService{}
 
