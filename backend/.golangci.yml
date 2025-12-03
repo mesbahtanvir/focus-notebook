@@ -1,5 +1,3 @@
-version: "2"
-
 run:
   timeout: 5m
   tests: true
@@ -15,38 +13,10 @@ linters:
     - gosec         # Security problems
     - bodyclose     # Checks HTTP response body is closed
     - noctx         # Finds sending HTTP request without context.Context
-  disable:
-    - staticcheck   # Disabled due to style warnings (ST1005, SA1029, etc.)
-  exclusions:
-    generated: lax
-    presets:
-      - comments
-      - std-error-handling
-    rules:
-      # Exclude test files from certain linters
-      - path: "_test\\.go"
-        linters:
-          - errcheck
-          - gosec
-
-      # Exclude mock files
-      - path: "mocks/"
-        linters:
-          - staticcheck
-          - errcheck
-
-      # G304 - File path provided as taint input (we validate paths in config loading)
-      - path: "internal/config/config\\.go"
-        text: "G304"
-
-formatters:
-  enable:
     - gofmt         # Checks if code is gofmt-ed
     - goimports     # Checks import statements are formatted
-  settings:
-    goimports:
-      local-prefixes:
-        - github.com/mesbahtanvir/focus-notebook/backend
+  disable:
+    - staticcheck   # Disabled due to style warnings (ST1005, SA1029, etc.)
 
 linters-settings:
   errcheck:
@@ -63,6 +33,26 @@ linters-settings:
       - G104 # Audit errors not checked (covered by errcheck)
       - G304 # File path provided as taint input (we validate paths)
 
+  goimports:
+    local-prefixes: github.com/mesbahtanvir/focus-notebook/backend
+
 issues:
+  exclude-rules:
+    # Exclude test files from certain linters
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+
+    # Exclude mock files
+    - path: mocks/
+      linters:
+        - staticcheck
+        - errcheck
+
+    # G304 - File path provided as taint input (we validate paths in config loading)
+    - path: internal/config/config\.go
+      text: "G304"
+
   max-issues-per-linter: 0
   max-same-issues: 0
