@@ -719,11 +719,6 @@ func (s *PhotoService) MergePhotos(
 		}
 	}
 
-	// Update target library stats
-	if err := s.updateLibraryStats(ctx, userID, targetLibraryID); err != nil {
-		s.logger.Warn("Failed to update target library stats", zap.Error(err))
-	}
-
 	// Optionally delete source library
 	if deleteSource {
 		sourceLibraryPath := fmt.Sprintf("users/%s/photoLibraries/%s", userID, sourceLibraryID)

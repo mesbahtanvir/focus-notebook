@@ -714,14 +714,14 @@ func (h *StorageHandler) userOwnsPath(uid, path string) bool {
 	return false
 }
 
-// GetSignedURLRequest represents a signed URL request
-type GetSignedURLRequest struct {
+// StorageSignedURLRequest represents a signed URL request for storage
+type StorageSignedURLRequest struct {
 	Path      string `json:"path"`
 	ExpiresAt string `json:"expiresAt,omitempty"`
 }
 
-// GetSignedURLResponse represents a signed URL response
-type GetSignedURLResponse struct {
+// StorageSignedURLResponse represents a signed URL response for storage
+type StorageSignedURLResponse struct {
 	URL       string `json:"url"`
 	ExpiresAt string `json:"expiresAt"`
 }
@@ -731,7 +731,7 @@ func (h *StorageHandler) GetSignedURL(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	uid := ctx.Value("uid").(string)
 
-	var req GetSignedURLRequest
+	var req StorageSignedURLRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		utils.RespondError(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -773,7 +773,7 @@ func (h *StorageHandler) GetSignedURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := GetSignedURLResponse{
+	response := StorageSignedURLResponse{
 		URL:       url,
 		ExpiresAt: expires.Format(time.RFC3339),
 	}
