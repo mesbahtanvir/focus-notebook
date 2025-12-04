@@ -23,6 +23,7 @@ import (
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository"
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/services"
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/utils"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/workers"
 	"github.com/mesbahtanvir/focus-notebook/backend/pkg/firebase"
 )
 
@@ -351,6 +352,18 @@ func main() {
 	visaHandler := handlers.NewVisaHandler(visaService, logger)
 	logger.Info("Visa handler initialized")
 
+	// Storage handler (for file uploads)
+	var storageHandler *handlers.StorageHandler
+	if storageClient != nil {
+		storageHandler = handlers.NewStorageHandler(
+			storageClient,
+			repo,
+			cfg.Firebase.StorageBucket,
+			logger,
+		)
+		logger.Info("Storage handler initialized")
+	}
+
 	// CRUD handler (always available) - generic CRUD for all collections
 	crudHandler := handlers.NewCRUDHandler(repo, logger)
 	logger.Info("CRUD handler initialized with collections",
@@ -360,6 +373,63 @@ func main() {
 	// Subscribe handler (always available) - SSE for real-time updates
 	subscribeHandler := handlers.NewSubscribeHandler(repo, crudHandler.GetCollectionConfigs(), logger)
 	logger.Info("Subscribe handler initialized")
+
+	// Initialize background worker manager
+	workerManager := workers.NewManager(
+		&workers.ManagerConfig{
+			Enabled: cfg.Workers.Enabled,
+			Workers: cfg.Workers,
+		},
+		&workers.Dependencies{
+			Repo:             repo,
+			StorageClient:    storageClient,
+			OpenAIClient:     openaiClient,
+			CSVProcessingSvc: csvProcessingSvc,
+			BucketName:       cfg.Firebase.StorageBucket,
+		},
+		logger.With(zap.String("component", "workers")),
+	)
+
+	// Start workers if enabled
+	if cfg.Workers.Enabled && workerManager.WorkerCount() > 0 {
+		if err := workerManager.Start(); err != nil {
+			logger.Error("Failed to start worker manager", zap.Error(err))
+		} else {
+			logger.Info("Background workers started",
+				zap.Int("workerCount", workerManager.WorkerCount()),
+			)
+		}
+	}
+
+	// Initialize and start scheduler for recurring jobs
+	scheduler := workers.SetupScheduledJobs(
+		&workers.ScheduledJobsConfig{
+			PortfolioSnapshotEnabled: cfg.Workers.PortfolioSnapshot.Enabled,
+			PortfolioSnapshotCron:    cfg.Workers.PortfolioSnapshot.Cron,
+			StockPricesEnabled:       cfg.Workers.StockPrices.Enabled,
+			StockPricesInterval:      cfg.Workers.StockPrices.Interval,
+			AnonymousCleanupEnabled:  cfg.Workers.AnonymousCleanup.Enabled,
+			AnonymousCleanupInterval: cfg.Workers.AnonymousCleanup.Interval,
+			VisaDataEnabled:          cfg.Workers.VisaDataUpdate.Enabled,
+			VisaDataCron:             cfg.Workers.VisaDataUpdate.Cron,
+		},
+		&workers.ScheduledJobsDeps{
+			Repo:         repo,
+			StockService: stockService,
+			AnonymousTTL: cfg.Anonymous.SessionDuration,
+			Logger:       logger.With(zap.String("component", "scheduler")),
+		},
+	)
+
+	if scheduler.JobCount() > 0 {
+		if err := scheduler.Start(); err != nil {
+			logger.Error("Failed to start scheduler", zap.Error(err))
+		} else {
+			logger.Info("Scheduler started",
+				zap.Int("jobCount", scheduler.JobCount()),
+			)
+		}
+	}
 
 	// Create router
 	router := mux.NewRouter()
@@ -524,6 +594,22 @@ func main() {
 	api.HandleFunc("/visa-requirements", visaHandler.GetVisaRequirements).Methods("GET")
 	logger.Info("Visa requirements endpoint registered")
 
+	// Storage routes (authenticated)
+	if storageHandler != nil {
+		storageRoutes := api.PathPrefix("/storage").Subrouter()
+		storageRoutes.HandleFunc("/photos", storageHandler.UploadPhoto).Methods("POST")
+		storageRoutes.HandleFunc("/csv", storageHandler.UploadCSV).Methods("POST")
+		storageRoutes.HandleFunc("/csv/{fileName}/status", storageHandler.GetCSVProcessingStatus).Methods("GET")
+		storageRoutes.HandleFunc("/dexa", storageHandler.UploadDexaScan).Methods("POST")
+		storageRoutes.HandleFunc("/dexa/{fileName}/status", storageHandler.GetDexaProcessingStatus).Methods("GET")
+		storageRoutes.HandleFunc("/file", storageHandler.DeleteFile).Methods("DELETE")
+		storageRoutes.HandleFunc("/signed-url", storageHandler.GetSignedURL).Methods("POST")
+		storageRoutes.HandleFunc("/signed-urls", storageHandler.GetBatchSignedURLs).Methods("POST")
+		logger.Info("Storage endpoints registered (8 endpoints)")
+	} else {
+		logger.Warn("Storage endpoints disabled (Cloud Storage not available)")
+	}
+
 	// Generic CRUD routes (authenticated) - must be registered last due to wildcard pattern
 	api.HandleFunc("/collections", crudHandler.GetCollections).Methods("GET")
 	api.HandleFunc("/{collection}", crudHandler.List).Methods("GET")
@@ -571,6 +657,22 @@ func main() {
 	<-quit
 
 	logger.Info("Shutting down server...")
+
+	// Stop scheduler first
+	if scheduler.IsRunning() {
+		logger.Info("Stopping scheduler...")
+		if err := scheduler.Stop(); err != nil {
+			logger.Error("Failed to stop scheduler", zap.Error(err))
+		}
+	}
+
+	// Stop background workers
+	if workerManager.IsRunning() {
+		logger.Info("Stopping background workers...")
+		if err := workerManager.Stop(); err != nil {
+			logger.Error("Failed to stop worker manager", zap.Error(err))
+		}
+	}
 
 	// Give server 30 seconds to finish processing requests
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

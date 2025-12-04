@@ -34,6 +34,9 @@ export {
   apiRequest,
   APIError,
 
+  // Storage API
+  storageApi,
+
   // SSE subscriptions
   subscribeToCollection,
   subscribeToMultipleCollections,

@@ -2,7 +2,10 @@ package clients
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/sashabaranov/go-openai"
@@ -254,4 +257,157 @@ func findSubstring(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// ImageAnalysisResult represents the result of image analysis
+type ImageAnalysisResult struct {
+	Content      string
+	TokensUsed   int
+	Model        string
+	FinishReason string
+}
+
+// ParseJSON attempts to parse the content as JSON into the provided target
+func (r *ImageAnalysisResult) ParseJSON(target interface{}) error {
+	return parseJSONFromString(r.Content, target)
+}
+
+// parseJSONFromString attempts to parse JSON from a string that may contain markdown formatting
+func parseJSONFromString(content string, target interface{}) error {
+	// Try direct parse first
+	if err := json.Unmarshal([]byte(content), target); err == nil {
+		return nil
+	}
+
+	// Try to extract JSON from markdown code blocks
+	trimmed := strings.TrimSpace(content)
+
+	// Remove markdown code block if present
+	if strings.HasPrefix(trimmed, "```json") {
+		trimmed = strings.TrimPrefix(trimmed, "```json")
+		if idx := strings.LastIndex(trimmed, "```"); idx >= 0 {
+			trimmed = trimmed[:idx]
+		}
+		trimmed = strings.TrimSpace(trimmed)
+	} else if strings.HasPrefix(trimmed, "```") {
+		trimmed = strings.TrimPrefix(trimmed, "```")
+		if idx := strings.LastIndex(trimmed, "```"); idx >= 0 {
+			trimmed = trimmed[:idx]
+		}
+		trimmed = strings.TrimSpace(trimmed)
+	}
+
+	// Try to find JSON object boundaries
+	start := strings.Index(trimmed, "{")
+	end := strings.LastIndex(trimmed, "}")
+	if start >= 0 && end > start {
+		trimmed = trimmed[start : end+1]
+	}
+
+	return json.Unmarshal([]byte(trimmed), target)
+}
+
+// AnalyzeImage sends an image to OpenAI vision for analysis
+func (c *OpenAIClient) AnalyzeImage(
+	ctx context.Context,
+	systemPrompt string,
+	userPrompt string,
+	imageData []byte,
+	contentType string,
+) (*ImageAnalysisResult, error) {
+	// Use GPT-4o for vision
+	model := "gpt-4o"
+
+	// Wait for rate limit
+	if err := c.rateLimiter.WaitForRequest(ctx); err != nil {
+		return nil, fmt.Errorf("rate limit wait failed: %w", err)
+	}
+
+	// Convert image to base64
+	base64Image := base64.StdEncoding.EncodeToString(imageData)
+	dataURL := fmt.Sprintf("data:%s;base64,%s", contentType, base64Image)
+
+	// Build request with image
+	messages := []openai.ChatCompletionMessage{
+		{
+			Role:    openai.ChatMessageRoleSystem,
+			Content: systemPrompt,
+		},
+		{
+			Role: openai.ChatMessageRoleUser,
+			MultiContent: []openai.ChatMessagePart{
+				{
+					Type: openai.ChatMessagePartTypeText,
+					Text: userPrompt,
+				},
+				{
+					Type: openai.ChatMessagePartTypeImageURL,
+					ImageURL: &openai.ChatMessageImageURL{
+						URL:    dataURL,
+						Detail: openai.ImageURLDetailHigh,
+					},
+				},
+			},
+		},
+	}
+
+	openaiReq := openai.ChatCompletionRequest{
+		Model:       model,
+		Messages:    messages,
+		MaxTokens:   c.config.MaxTokens,
+		Temperature: 0.2, // Lower temperature for structured extraction
+	}
+
+	// Set timeout
+	reqCtx, cancel := context.WithTimeout(ctx, c.config.Timeout)
+	defer cancel()
+
+	c.logger.Debug("Sending OpenAI vision request",
+		zap.String("model", model),
+		zap.String("contentType", contentType),
+		zap.Int("imageSize", len(imageData)),
+	)
+
+	startTime := time.Now()
+
+	var resp openai.ChatCompletionResponse
+	var err error
+
+	err = c.retryWithBackoff(reqCtx, func() error {
+		resp, err = c.client.CreateChatCompletion(reqCtx, openaiReq)
+		return err
+	})
+
+	if err != nil {
+		c.logger.Error("OpenAI vision request failed",
+			zap.Error(err),
+			zap.String("model", model),
+		)
+		return nil, fmt.Errorf("OpenAI vision request failed: %w", err)
+	}
+
+	duration := time.Since(startTime)
+
+	if len(resp.Choices) == 0 {
+		return nil, fmt.Errorf("no response choices returned")
+	}
+
+	choice := resp.Choices[0]
+	tokensUsed := resp.Usage.TotalTokens
+
+	c.rateLimiter.RecordTokens(tokensUsed)
+
+	c.logger.Info("OpenAI vision request completed",
+		zap.String("model", resp.Model),
+		zap.Int("tokens_used", tokensUsed),
+		zap.Duration("duration", duration),
+		zap.String("finish_reason", string(choice.FinishReason)),
+	)
+
+	return &ImageAnalysisResult{
+		Content:      choice.Message.Content,
+		TokensUsed:   tokensUsed,
+		Model:        resp.Model,
+		FinishReason: string(choice.FinishReason),
+	}, nil
 }

@@ -498,4 +498,170 @@ export function subscribeToMultipleCollections<T>(
   };
 }
 
+/**
+ * Storage API helper object for file uploads
+ */
+export const storageApi = {
+  /**
+   * Upload a photo file
+   */
+  uploadPhoto: async (file: File): Promise<{
+    id: string;
+    originalPath: string;
+    thumbnailPath: string;
+    originalUrl: string;
+    thumbnailUrl: string;
+    contentType: string;
+    size: number;
+  }> => {
+    const token = await getIdToken();
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/api/storage/photos`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+      throw new APIError(response.status, error.error || 'Upload failed', error, false);
+    }
+
+    const data = await response.json();
+    return data.data;
+  },
+
+  /**
+   * Upload a CSV file for transaction processing
+   */
+  uploadCSV: async (file: File): Promise<{
+    id: string;
+    fileName: string;
+    storagePath: string;
+    status: string;
+    size: number;
+    processingId: string;
+  }> => {
+    const token = await getIdToken();
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/api/storage/csv`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+      throw new APIError(response.status, error.error || 'Upload failed', error, false);
+    }
+
+    const data = await response.json();
+    return data.data;
+  },
+
+  /**
+   * Get CSV processing status
+   */
+  getCSVProcessingStatus: async (fileName: string): Promise<{
+    id: string;
+    fileName: string;
+    storagePath: string;
+    status: string;
+    processedCount?: number;
+    processedBatches?: number;
+    totalBatches?: number;
+    error?: string;
+    createdAt: string;
+    updatedAt: string;
+  }> =>
+    apiRequest(`/api/storage/csv/${encodeURIComponent(fileName)}/status`, {
+      method: 'GET',
+    }),
+
+  /**
+   * Upload a DEXA scan file (PDF or image)
+   */
+  uploadDexaScan: async (file: File): Promise<{
+    id: string;
+    fileName: string;
+    storagePath: string;
+    status: string;
+    contentType: string;
+    size: number;
+    processingId: string;
+  }> => {
+    const token = await getIdToken();
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/api/storage/dexa`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+      throw new APIError(response.status, error.error || 'Upload failed', error, false);
+    }
+
+    const data = await response.json();
+    return data.data;
+  },
+
+  /**
+   * Get DEXA scan processing status
+   */
+  getDexaProcessingStatus: async (fileName: string): Promise<{
+    id: string;
+    fileName: string;
+    storagePath: string;
+    status: string;
+    scanId?: string;
+    error?: string;
+    createdAt: string;
+    updatedAt: string;
+  }> =>
+    apiRequest(`/api/storage/dexa/${encodeURIComponent(fileName)}/status`, {
+      method: 'GET',
+    }),
+
+  /**
+   * Delete a file from storage
+   */
+  deleteFile: async (path: string): Promise<{ deleted: boolean }> =>
+    apiRequest('/api/storage/file', {
+      method: 'DELETE',
+      body: { path },
+    }),
+
+  /**
+   * Get a signed URL for a storage path
+   */
+  getSignedURL: async (
+    path: string,
+    expiresAt?: string
+  ): Promise<{
+    url: string;
+    expiresAt: string;
+  }> =>
+    apiRequest('/api/storage/signed-url', {
+      method: 'POST',
+      body: { path, expiresAt },
+    }),
+
+  /**
+   * Get signed URLs for multiple storage paths
+   */
+  getBatchSignedURLs: async (paths: string[]): Promise<{ urls: Record<string, string> }> =>
+    apiRequest('/api/storage/signed-urls', {
+      method: 'POST',
+      body: { paths },
+    }),
+};
+
 export default api;
