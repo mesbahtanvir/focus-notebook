@@ -63,7 +63,7 @@ jobs:
 
       - name: Verify build output
         run: |
-          if [ ! -d "frontend/web/.next" ]; then
+          if [ ! -d "frontend/.next" ]; then
             echo "Build failed - .next directory not found"
             exit 1
           fi
@@ -192,7 +192,7 @@ jobs:
       - name: Verify build output
         if: matrix.node-version == '22.x'
         run: |
-          if [ ! -d "frontend/web/.next" ]; then
+          if [ ! -d "frontend/.next" ]; then
             echo "Build failed - .next directory not found"
             exit 1
           fi
@@ -202,7 +202,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: web-build
-          path: frontend/web/.next/
+          path: frontend/.next/
           retention-days: 7
 
   validate_functions:

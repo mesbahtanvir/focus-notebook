@@ -2,6 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Output .next to parent directory for Vercel deployment (Root Directory: frontend)
+  distDir: '../.next',
   // output: 'export', // Temporarily disabled to enable dynamic routes
   // Note: For Capacitor deployment with dynamic routes, you have two options:
   // 1. Use a server (Vercel, etc.) and point Capacitor to the URL
