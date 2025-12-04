@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/services"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/utils"
 )
 
 func TestNewImportExportHandler(t *testing.T) {
@@ -55,169 +56,169 @@ func TestNewImportExportHandler_MultipleInstances(t *testing.T) {
 }
 
 func TestSplitAndTrim_EmptyString(t *testing.T) {
-	result := splitAndTrim("", ",")
+	result := utils.SplitAndTrim("", ",")
 
 	assert.Equal(t, []string{}, result)
 }
 
 func TestSplitAndTrim_SingleValue(t *testing.T) {
-	result := splitAndTrim("tasks", ",")
+	result := utils.SplitAndTrim("tasks", ",")
 
 	assert.Equal(t, []string{"tasks"}, result)
 }
 
 func TestSplitAndTrim_MultipleValues(t *testing.T) {
-	result := splitAndTrim("tasks,projects,goals", ",")
+	result := utils.SplitAndTrim("tasks,projects,goals", ",")
 
 	assert.Equal(t, []string{"tasks", "projects", "goals"}, result)
 }
 
 func TestSplitAndTrim_WithSpaces(t *testing.T) {
-	result := splitAndTrim("tasks , projects , goals", ",")
+	result := utils.SplitAndTrim("tasks , projects , goals", ",")
 
 	assert.Equal(t, []string{"tasks", "projects", "goals"}, result)
 }
 
 func TestSplitAndTrim_WithLeadingTrailingSpaces(t *testing.T) {
-	result := splitAndTrim("  tasks  ,  projects  ,  goals  ", ",")
+	result := utils.SplitAndTrim("  tasks  ,  projects  ,  goals  ", ",")
 
 	assert.Equal(t, []string{"tasks", "projects", "goals"}, result)
 }
 
 func TestSplitAndTrim_EmptyParts(t *testing.T) {
-	result := splitAndTrim("tasks,,projects", ",")
+	result := utils.SplitAndTrim("tasks,,projects", ",")
 
 	assert.Equal(t, []string{"tasks", "projects"}, result)
 }
 
 func TestSplitAndTrim_OnlyWhitespace(t *testing.T) {
-	result := splitAndTrim("  ,  ,  ", ",")
+	result := utils.SplitAndTrim("  ,  ,  ", ",")
 
 	assert.Equal(t, []string{}, result)
 }
 
 func TestSplitAndTrim_DifferentDelimiter(t *testing.T) {
-	result := splitAndTrim("tasks;projects;goals", ";")
+	result := utils.SplitAndTrim("tasks;projects;goals", ";")
 
 	assert.Equal(t, []string{"tasks", "projects", "goals"}, result)
 }
 
 func TestSplitAndTrim_TabAndNewline(t *testing.T) {
-	result := splitAndTrim("tasks\t,\nprojects\n,\rgoals\r", ",")
+	result := utils.SplitAndTrim("tasks\t,\nprojects\n,\rgoals\r", ",")
 
 	assert.Equal(t, []string{"tasks", "projects", "goals"}, result)
 }
 
 func TestSplitString_EmptyString(t *testing.T) {
-	result := splitString("", ",")
+	result := utils.SplitString("", ",")
 
 	assert.Equal(t, []string{}, result)
 }
 
 func TestSplitString_SingleValue(t *testing.T) {
-	result := splitString("tasks", ",")
+	result := utils.SplitString("tasks", ",")
 
 	assert.Equal(t, []string{"tasks"}, result)
 }
 
 func TestSplitString_MultipleValues(t *testing.T) {
-	result := splitString("tasks,projects,goals", ",")
+	result := utils.SplitString("tasks,projects,goals", ",")
 
 	assert.Equal(t, []string{"tasks", "projects", "goals"}, result)
 }
 
 func TestSplitString_ConsecutiveDelimiters(t *testing.T) {
-	result := splitString("tasks,,goals", ",")
+	result := utils.SplitString("tasks,,goals", ",")
 
 	assert.Equal(t, []string{"tasks", "", "goals"}, result)
 }
 
 func TestSplitString_DifferentDelimiter(t *testing.T) {
-	result := splitString("tasks;projects;goals", ";")
+	result := utils.SplitString("tasks;projects;goals", ";")
 
 	assert.Equal(t, []string{"tasks", "projects", "goals"}, result)
 }
 
 func TestSplitString_SingleCharacter(t *testing.T) {
-	result := splitString("a", ",")
+	result := utils.SplitString("a", ",")
 
 	assert.Equal(t, []string{"a"}, result)
 }
 
 func TestSplitString_OnlyDelimiter(t *testing.T) {
-	result := splitString(",", ",")
+	result := utils.SplitString(",", ",")
 
 	assert.Equal(t, []string{""}, result)
 }
 
 func TestTrimSpace_EmptyString(t *testing.T) {
-	result := trimSpace("")
+	result := utils.TrimString("")
 
 	assert.Equal(t, "", result)
 }
 
 func TestTrimSpace_NoWhitespace(t *testing.T) {
-	result := trimSpace("tasks")
+	result := utils.TrimString("tasks")
 
 	assert.Equal(t, "tasks", result)
 }
 
 func TestTrimSpace_LeadingSpaces(t *testing.T) {
-	result := trimSpace("  tasks")
+	result := utils.TrimString("  tasks")
 
 	assert.Equal(t, "tasks", result)
 }
 
 func TestTrimSpace_TrailingSpaces(t *testing.T) {
-	result := trimSpace("tasks  ")
+	result := utils.TrimString("tasks  ")
 
 	assert.Equal(t, "tasks", result)
 }
 
 func TestTrimSpace_BothSides(t *testing.T) {
-	result := trimSpace("  tasks  ")
+	result := utils.TrimString("  tasks  ")
 
 	assert.Equal(t, "tasks", result)
 }
 
 func TestTrimSpace_OnlyWhitespace(t *testing.T) {
-	result := trimSpace("   ")
+	result := utils.TrimString("   ")
 
 	assert.Equal(t, "", result)
 }
 
 func TestTrimSpace_Tabs(t *testing.T) {
-	result := trimSpace("\ttasks\t")
+	result := utils.TrimString("\ttasks\t")
 
 	assert.Equal(t, "tasks", result)
 }
 
 func TestTrimSpace_Newlines(t *testing.T) {
-	result := trimSpace("\ntasks\n")
+	result := utils.TrimString("\ntasks\n")
 
 	assert.Equal(t, "tasks", result)
 }
 
 func TestTrimSpace_CarriageReturns(t *testing.T) {
-	result := trimSpace("\rtasks\r")
+	result := utils.TrimString("\rtasks\r")
 
 	assert.Equal(t, "tasks", result)
 }
 
 func TestTrimSpace_MixedWhitespace(t *testing.T) {
-	result := trimSpace("\t\n\r  tasks  \r\n\t")
+	result := utils.TrimString("\t\n\r  tasks  \r\n\t")
 
 	assert.Equal(t, "tasks", result)
 }
 
 func TestTrimSpace_WhitespaceInMiddle(t *testing.T) {
-	result := trimSpace("  hello world  ")
+	result := utils.TrimString("  hello world  ")
 
 	assert.Equal(t, "hello world", result)
 }
 
 func TestTrimSpace_SingleCharacter(t *testing.T) {
-	result := trimSpace("a")
+	result := utils.TrimString("a")
 
 	assert.Equal(t, "a", result)
 }

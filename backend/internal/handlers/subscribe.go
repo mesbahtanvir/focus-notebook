@@ -117,7 +117,7 @@ func (h *SubscribeHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	defer heartbeat.Stop()
 
 	// Channel for snapshot changes
-	changes := make(chan []*firestore.DocumentChange, 10)
+	changes := make(chan []firestore.DocumentChange, 10)
 	errors := make(chan error, 1)
 
 	// Start snapshot listener in goroutine
@@ -224,8 +224,8 @@ func (h *SubscribeHandler) SubscribeMultiple(w http.ResponseWriter, r *http.Requ
 	// Parse collections
 	var collections []string
 	if err := json.Unmarshal([]byte(collectionsStr), &collections); err != nil {
-		// Try comma-separated format
-		collections = splitAndTrim(collectionsStr, ",")
+		// Try comma-separated format using utils.SplitAndTrim
+		collections = utils.SplitAndTrim(collectionsStr, ",")
 	}
 
 	if len(collections) == 0 {
@@ -276,7 +276,7 @@ func (h *SubscribeHandler) SubscribeMultiple(w http.ResponseWriter, r *http.Requ
 	// Channel for all changes
 	type collectionChange struct {
 		Collection string
-		Changes    []*firestore.DocumentChange
+		Changes    []firestore.DocumentChange
 	}
 	changes := make(chan collectionChange, 10*len(collections))
 	errors := make(chan error, len(collections))
@@ -409,47 +409,4 @@ func (h *SubscribeHandler) GetActiveConnectionCount() int {
 		return true
 	})
 	return count
-}
-
-// splitAndTrim splits a string and trims whitespace from each part
-func splitAndTrim(s string, sep string) []string {
-	parts := make([]string, 0)
-	for _, part := range splitString(s, sep) {
-		trimmed := trimString(part)
-		if trimmed != "" {
-			parts = append(parts, trimmed)
-		}
-	}
-	return parts
-}
-
-// splitString splits a string by separator
-func splitString(s string, sep string) []string {
-	if s == "" {
-		return nil
-	}
-	result := make([]string, 0)
-	start := 0
-	for i := 0; i <= len(s)-len(sep); i++ {
-		if s[i:i+len(sep)] == sep {
-			result = append(result, s[start:i])
-			start = i + len(sep)
-			i += len(sep) - 1
-		}
-	}
-	result = append(result, s[start:])
-	return result
-}
-
-// trimString trims whitespace from a string
-func trimString(s string) string {
-	start := 0
-	end := len(s)
-	for start < end && (s[start] == ' ' || s[start] == '\t' || s[start] == '\n' || s[start] == '\r') {
-		start++
-	}
-	for end > start && (s[end-1] == ' ' || s[end-1] == '\t' || s[end-1] == '\n' || s[end-1] == '\r') {
-		end--
-	}
-	return s[start:end]
 }

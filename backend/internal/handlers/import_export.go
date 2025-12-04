@@ -125,7 +125,7 @@ func (h *ImportExportHandler) ExportData(w http.ResponseWriter, r *http.Request)
 
 	// Parse entity types
 	if entityTypesStr := r.URL.Query().Get("entityTypes"); entityTypesStr != "" {
-		entityTypeStrs := splitAndTrim(entityTypesStr, ",")
+		entityTypeStrs := utils.SplitAndTrim(entityTypesStr, ",")
 		filters.EntityTypes = make([]services.EntityType, 0, len(entityTypeStrs))
 		for _, etStr := range entityTypeStrs {
 			filters.EntityTypes = append(filters.EntityTypes, services.EntityType(etStr))
@@ -146,23 +146,23 @@ func (h *ImportExportHandler) ExportData(w http.ResponseWriter, r *http.Request)
 
 	// Parse task filters
 	if taskStatusStr := r.URL.Query().Get("taskStatus"); taskStatusStr != "" {
-		filters.TaskStatus = splitAndTrim(taskStatusStr, ",")
+		filters.TaskStatus = utils.SplitAndTrim(taskStatusStr, ",")
 	}
 	if taskCategoryStr := r.URL.Query().Get("taskCategory"); taskCategoryStr != "" {
-		filters.TaskCategory = splitAndTrim(taskCategoryStr, ",")
+		filters.TaskCategory = utils.SplitAndTrim(taskCategoryStr, ",")
 	}
 	if taskTagsStr := r.URL.Query().Get("taskTags"); taskTagsStr != "" {
-		filters.TaskTags = splitAndTrim(taskTagsStr, ",")
+		filters.TaskTags = utils.SplitAndTrim(taskTagsStr, ",")
 	}
 
 	// Parse project filters
 	if projectStatusStr := r.URL.Query().Get("projectStatus"); projectStatusStr != "" {
-		filters.ProjectStatus = splitAndTrim(projectStatusStr, ",")
+		filters.ProjectStatus = utils.SplitAndTrim(projectStatusStr, ",")
 	}
 
 	// Parse goal filters
 	if goalStatusStr := r.URL.Query().Get("goalStatus"); goalStatusStr != "" {
-		filters.GoalStatus = splitAndTrim(goalStatusStr, ",")
+		filters.GoalStatus = utils.SplitAndTrim(goalStatusStr, ",")
 	}
 
 	h.logger.Debug("ExportData request",
@@ -216,53 +216,4 @@ func (h *ImportExportHandler) GetExportSummary(w http.ResponseWriter, r *http.Re
 	}
 
 	utils.RespondSuccess(w, summary, "Export summary retrieved")
-}
-
-// splitAndTrim splits a string by delimiter and trims whitespace
-func splitAndTrim(s, delim string) []string {
-	parts := make([]string, 0)
-	for _, part := range splitString(s, delim) {
-		trimmed := trimSpace(part)
-		if trimmed != "" {
-			parts = append(parts, trimmed)
-		}
-	}
-	return parts
-}
-
-func splitString(s, delim string) []string {
-	if s == "" {
-		return []string{}
-	}
-	result := []string{}
-	current := ""
-	for _, ch := range s {
-		if string(ch) == delim {
-			result = append(result, current)
-			current = ""
-		} else {
-			current += string(ch)
-		}
-	}
-	if current != "" {
-		result = append(result, current)
-	}
-	return result
-}
-
-func trimSpace(s string) string {
-	start := 0
-	end := len(s)
-
-	// Trim leading spaces
-	for start < end && (s[start] == ' ' || s[start] == '\t' || s[start] == '\n' || s[start] == '\r') {
-		start++
-	}
-
-	// Trim trailing spaces
-	for end > start && (s[end-1] == ' ' || s[end-1] == '\t' || s[end-1] == '\n' || s[end-1] == '\r') {
-		end--
-	}
-
-	return s[start:end]
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
 
@@ -245,7 +246,8 @@ func runStockPriceUpdates(ctx context.Context, repo *repository.FirestoreReposit
 	errorCount := 0
 
 	for symbol := range symbols {
-		price, err := stockSvc.GetStockPrice(ctx, symbol)
+		// Get price for this symbol - use a dummy userID since we're just fetching price
+		price, err := stockSvc.GetStockPrice(ctx, "system", symbol)
 		if err != nil {
 			logger.Warn("Failed to fetch stock price",
 				zap.String("symbol", symbol),
@@ -281,9 +283,9 @@ func runStockPriceUpdates(ctx context.Context, repo *repository.FirestoreReposit
 					continue
 				}
 
-				_, err = invDoc.Ref.Update(ctx, []interface{}{
-					map[string]interface{}{"Path": "currentPrice", "Value": price},
-					map[string]interface{}{"Path": "priceUpdatedAt", "Value": time.Now().UTC().Format(time.RFC3339)},
+				_, err = invDoc.Ref.Update(ctx, []firestore.Update{
+					{Path: "currentPrice", Value: price.Price},
+					{Path: "priceUpdatedAt", Value: time.Now().UTC().Format(time.RFC3339)},
 				})
 				if err != nil {
 					errorCount++
@@ -381,11 +383,13 @@ func runAnonymousCleanup(ctx context.Context, repo *repository.FirestoreReposito
 }
 
 // deleteUserData deletes all data for a user
-func deleteUserData(ctx context.Context, client interface{ Collection(string) interface{} }, userID string) error {
+func deleteUserData(ctx context.Context, client *firestore.Client, userID string) error {
 	// This is a simplified implementation
 	// In production, you would delete all subcollections
-	// For now, we just log that we would delete the user
-	return nil
+	// For now, we just delete the user document
+	// A full implementation would recursively delete all subcollections
+	_, err := client.Collection("users").Doc(userID).Delete(ctx)
+	return err
 }
 
 // runVisaDataUpdate updates visa requirement data
