@@ -502,3 +502,29 @@ func (s *CSVProcessingService) deleteCollectionInBatches(
 
 	return deleted, nil
 }
+
+// DismissTripSuggestion dismisses an AI-suggested trip link for a transaction
+func (s *CSVProcessingService) DismissTripSuggestion(
+	ctx context.Context,
+	userID string,
+	transactionID string,
+) error {
+	s.logger.Info("Dismissing trip suggestion",
+		zap.String("uid", userID),
+		zap.String("transactionId", transactionID),
+	)
+
+	txPath := fmt.Sprintf("users/%s/transactions/%s", userID, transactionID)
+
+	updateData := map[string]interface{}{
+		"tripLinkStatus":    "dismissed",
+		"tripLinkUpdatedAt": time.Now().UnixMilli(),
+		"tripLink":          nil, // Clear any existing trip link
+	}
+
+	if err := s.repo.Update(ctx, txPath, updateData); err != nil {
+		return fmt.Errorf("failed to dismiss trip suggestion: %w", err)
+	}
+
+	return nil
+}

@@ -199,3 +199,100 @@ func (h *PhotoHandler) GetSignedURL(w http.ResponseWriter, r *http.Request) {
 
 	utils.WriteJSON(w, response, http.StatusOK)
 }
+
+// GetNextPairsRequest represents the request to get multiple photo pairs
+type GetNextPairsRequest struct {
+	SessionID string `json:"sessionId"`
+	Count     int    `json:"count,omitempty"`
+}
+
+// GetNextPairsResponse represents the response with multiple photo pairs
+type GetNextPairsResponse struct {
+	Pairs []services.PhotoPair `json:"pairs"`
+}
+
+// GetNextPairs handles POST /api/photo/next-pairs
+func (h *PhotoHandler) GetNextPairs(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var req GetNextPairsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Warn("Invalid request body", zap.Error(err))
+		utils.WriteError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.SessionID == "" {
+		utils.WriteError(w, "sessionId is required", http.StatusBadRequest)
+		return
+	}
+
+	h.logger.Info("Getting next photo pairs",
+		zap.String("sessionId", req.SessionID),
+		zap.Int("count", req.Count),
+	)
+
+	pairs, err := h.photoService.GetNextPairs(ctx, req.SessionID, req.Count)
+	if err != nil {
+		h.logger.Error("Failed to get next pairs",
+			zap.String("sessionId", req.SessionID),
+			zap.Error(err),
+		)
+		utils.WriteError(w, "Failed to get next photo pairs", http.StatusInternalServerError)
+		return
+	}
+
+	response := GetNextPairsResponse{
+		Pairs: pairs,
+	}
+
+	utils.WriteJSON(w, response, http.StatusOK)
+}
+
+// MergePhotosRequest represents the request to merge photos
+type MergePhotosRequest struct {
+	SourceLibraryID string `json:"sourceLibraryId"`
+	TargetLibraryID string `json:"targetLibraryId"`
+	DeleteSource    bool   `json:"deleteSource,omitempty"`
+}
+
+// MergePhotos handles POST /api/photo/merge
+func (h *PhotoHandler) MergePhotos(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userID := ctx.Value("userID").(string)
+
+	var req MergePhotosRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Warn("Invalid request body", zap.Error(err))
+		utils.WriteError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.SourceLibraryID == "" || req.TargetLibraryID == "" {
+		utils.WriteError(w, "sourceLibraryId and targetLibraryId are required", http.StatusBadRequest)
+		return
+	}
+
+	if req.SourceLibraryID == req.TargetLibraryID {
+		utils.WriteError(w, "source and target libraries must be different", http.StatusBadRequest)
+		return
+	}
+
+	h.logger.Info("Merging photos",
+		zap.String("uid", userID),
+		zap.String("source", req.SourceLibraryID),
+		zap.String("target", req.TargetLibraryID),
+	)
+
+	err := h.photoService.MergePhotos(ctx, userID, req.SourceLibraryID, req.TargetLibraryID, req.DeleteSource)
+	if err != nil {
+		h.logger.Error("Failed to merge photos",
+			zap.String("uid", userID),
+			zap.Error(err),
+		)
+		utils.WriteError(w, "Failed to merge photos", http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteJSON(w, map[string]bool{"success": true}, http.StatusOK)
+}

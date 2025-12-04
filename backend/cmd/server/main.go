@@ -23,6 +23,7 @@ import (
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/repository"
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/services"
 	"github.com/mesbahtanvir/focus-notebook/backend/internal/utils"
+	"github.com/mesbahtanvir/focus-notebook/backend/internal/workers"
 	"github.com/mesbahtanvir/focus-notebook/backend/pkg/firebase"
 )
 
@@ -351,6 +352,85 @@ func main() {
 	visaHandler := handlers.NewVisaHandler(visaService, logger)
 	logger.Info("Visa handler initialized")
 
+	// Storage handler (for file uploads)
+	var storageHandler *handlers.StorageHandler
+	if storageClient != nil {
+		storageHandler = handlers.NewStorageHandler(
+			storageClient,
+			repo,
+			cfg.Firebase.StorageBucket,
+			logger,
+		)
+		logger.Info("Storage handler initialized")
+	}
+
+	// CRUD handler (always available) - generic CRUD for all collections
+	crudHandler := handlers.NewCRUDHandler(repo, logger)
+	logger.Info("CRUD handler initialized with collections",
+		zap.Int("collectionCount", len(crudHandler.GetCollectionConfigs())),
+	)
+
+	// Subscribe handler (always available) - SSE for real-time updates
+	subscribeHandler := handlers.NewSubscribeHandler(repo, crudHandler.GetCollectionConfigs(), logger)
+	logger.Info("Subscribe handler initialized")
+
+	// Initialize background worker manager
+	workerManager := workers.NewManager(
+		&workers.ManagerConfig{
+			Enabled: cfg.Workers.Enabled,
+			Workers: cfg.Workers,
+		},
+		&workers.Dependencies{
+			Repo:             repo,
+			StorageClient:    storageClient,
+			OpenAIClient:     openaiClient,
+			CSVProcessingSvc: csvProcessingSvc,
+			BucketName:       cfg.Firebase.StorageBucket,
+		},
+		logger.With(zap.String("component", "workers")),
+	)
+
+	// Start workers if enabled
+	if cfg.Workers.Enabled && workerManager.WorkerCount() > 0 {
+		if err := workerManager.Start(); err != nil {
+			logger.Error("Failed to start worker manager", zap.Error(err))
+		} else {
+			logger.Info("Background workers started",
+				zap.Int("workerCount", workerManager.WorkerCount()),
+			)
+		}
+	}
+
+	// Initialize and start scheduler for recurring jobs
+	scheduler := workers.SetupScheduledJobs(
+		&workers.ScheduledJobsConfig{
+			PortfolioSnapshotEnabled: cfg.Workers.PortfolioSnapshot.Enabled,
+			PortfolioSnapshotCron:    cfg.Workers.PortfolioSnapshot.Cron,
+			StockPricesEnabled:       cfg.Workers.StockPrices.Enabled,
+			StockPricesInterval:      cfg.Workers.StockPrices.Interval,
+			AnonymousCleanupEnabled:  cfg.Workers.AnonymousCleanup.Enabled,
+			AnonymousCleanupInterval: cfg.Workers.AnonymousCleanup.Interval,
+			VisaDataEnabled:          cfg.Workers.VisaDataUpdate.Enabled,
+			VisaDataCron:             cfg.Workers.VisaDataUpdate.Cron,
+		},
+		&workers.ScheduledJobsDeps{
+			Repo:         repo,
+			StockService: stockService,
+			AnonymousTTL: cfg.Anonymous.SessionDuration,
+			Logger:       logger.With(zap.String("component", "scheduler")),
+		},
+	)
+
+	if scheduler.JobCount() > 0 {
+		if err := scheduler.Start(); err != nil {
+			logger.Error("Failed to start scheduler", zap.Error(err))
+		} else {
+			logger.Info("Scheduler started",
+				zap.Int("jobCount", scheduler.JobCount()),
+			)
+		}
+	}
+
 	// Create router
 	router := mux.NewRouter()
 
@@ -467,8 +547,9 @@ func main() {
 		spendingRoutes.HandleFunc("/delete-csv", spendingHandler.DeleteCSV).Methods("POST")
 		spendingRoutes.HandleFunc("/categorize", spendingHandler.CategorizeTransaction).Methods("POST")
 		spendingRoutes.HandleFunc("/link-trip", spendingHandler.LinkTransactionToTrip).Methods("POST")
+		spendingRoutes.HandleFunc("/dismiss-trip-suggestion", spendingHandler.DismissTripSuggestion).Methods("POST")
 		spendingRoutes.HandleFunc("/delete-all", spendingHandler.DeleteAllTransactions).Methods("POST")
-		logger.Info("Spending endpoints registered (5 endpoints)")
+		logger.Info("Spending endpoints registered (6 endpoints)")
 	} else {
 		logger.Warn("Spending endpoints disabled (CSV processing service not available)")
 	}
@@ -488,9 +569,13 @@ func main() {
 		photoRoutes.HandleFunc("/vote", photoHandler.SubmitVote).Methods("POST")
 		// Next pair can be fetched anonymously
 		photoRoutes.HandleFunc("/next-pair", photoHandler.GetNextPair).Methods("POST")
+		// Batch next pairs
+		photoRoutes.HandleFunc("/next-pairs", photoHandler.GetNextPairs).Methods("POST")
+		// Merge photos requires authentication
+		photoRoutes.HandleFunc("/merge", photoHandler.MergePhotos).Methods("POST")
 		// Signed URL requires authentication
 		photoRoutes.HandleFunc("/signed-url", photoHandler.GetSignedURL).Methods("POST")
-		logger.Info("Photo endpoints registered (3 endpoints)")
+		logger.Info("Photo endpoints registered (5 endpoints)")
 	} else {
 		logger.Warn("Photo endpoints disabled (Cloud Storage not available)")
 	}
@@ -500,7 +585,10 @@ func main() {
 	packingRoutes.HandleFunc("/create", packingListHandler.CreatePackingList).Methods("POST")
 	packingRoutes.HandleFunc("/update", packingListHandler.UpdatePackingList).Methods("POST")
 	packingRoutes.HandleFunc("/toggle-item", packingListHandler.SetItemStatus).Methods("POST")
-	logger.Info("Packing list endpoints registered (3 endpoints)")
+	packingRoutes.HandleFunc("/add-custom-item", packingListHandler.AddCustomItem).Methods("POST")
+	packingRoutes.HandleFunc("/delete-custom-item", packingListHandler.DeleteCustomItem).Methods("POST")
+	packingRoutes.HandleFunc("/delete", packingListHandler.DeletePackingList).Methods("POST")
+	logger.Info("Packing list endpoints registered (6 endpoints)")
 
 	// Place insights routes (authenticated, requires AI access)
 	if placeInsightsHandler != nil {
@@ -513,6 +601,38 @@ func main() {
 	// Visa routes (authenticated)
 	api.HandleFunc("/visa-requirements", visaHandler.GetVisaRequirements).Methods("GET")
 	logger.Info("Visa requirements endpoint registered")
+
+	// Storage routes (authenticated)
+	if storageHandler != nil {
+		storageRoutes := api.PathPrefix("/storage").Subrouter()
+		storageRoutes.HandleFunc("/photos", storageHandler.UploadPhoto).Methods("POST")
+		storageRoutes.HandleFunc("/csv", storageHandler.UploadCSV).Methods("POST")
+		storageRoutes.HandleFunc("/csv/{fileName}/status", storageHandler.GetCSVProcessingStatus).Methods("GET")
+		storageRoutes.HandleFunc("/dexa", storageHandler.UploadDexaScan).Methods("POST")
+		storageRoutes.HandleFunc("/dexa/{fileName}/status", storageHandler.GetDexaProcessingStatus).Methods("GET")
+		storageRoutes.HandleFunc("/file", storageHandler.DeleteFile).Methods("DELETE")
+		storageRoutes.HandleFunc("/signed-url", storageHandler.GetSignedURL).Methods("POST")
+		storageRoutes.HandleFunc("/signed-urls", storageHandler.GetBatchSignedURLs).Methods("POST")
+		logger.Info("Storage endpoints registered (8 endpoints)")
+	} else {
+		logger.Warn("Storage endpoints disabled (Cloud Storage not available)")
+	}
+
+	// Generic CRUD routes (authenticated) - must be registered last due to wildcard pattern
+	api.HandleFunc("/collections", crudHandler.GetCollections).Methods("GET")
+	api.HandleFunc("/{collection}", crudHandler.List).Methods("GET")
+	api.HandleFunc("/{collection}", crudHandler.Create).Methods("POST")
+	api.HandleFunc("/{collection}/batch", crudHandler.BatchCreate).Methods("POST")
+	api.HandleFunc("/{collection}/batch", crudHandler.BatchDelete).Methods("DELETE")
+	api.HandleFunc("/{collection}/{id}", crudHandler.Get).Methods("GET")
+	api.HandleFunc("/{collection}/{id}", crudHandler.Update).Methods("PUT")
+	api.HandleFunc("/{collection}/{id}", crudHandler.Delete).Methods("DELETE")
+	logger.Info("Generic CRUD endpoints registered (8 endpoints)")
+
+	// SSE subscription routes (authenticated)
+	api.HandleFunc("/subscribe", subscribeHandler.SubscribeMultiple).Methods("GET")
+	api.HandleFunc("/subscribe/{collection}", subscribeHandler.Subscribe).Methods("GET")
+	logger.Info("SSE subscription endpoints registered (2 endpoints)")
 
 	// Log registered routes
 	logger.Info("Routes registered",
@@ -545,6 +665,22 @@ func main() {
 	<-quit
 
 	logger.Info("Shutting down server...")
+
+	// Stop scheduler first
+	if scheduler.IsRunning() {
+		logger.Info("Stopping scheduler...")
+		if err := scheduler.Stop(); err != nil {
+			logger.Error("Failed to stop scheduler", zap.Error(err))
+		}
+	}
+
+	// Stop background workers
+	if workerManager.IsRunning() {
+		logger.Info("Stopping background workers...")
+		if err := workerManager.Stop(); err != nil {
+			logger.Error("Failed to stop worker manager", zap.Error(err))
+		}
+	}
 
 	// Give server 30 seconds to finish processing requests
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
