@@ -215,3 +215,171 @@ func (h *PackingListHandler) SetItemStatus(w http.ResponseWriter, r *http.Reques
 
 	utils.WriteJSON(w, response, http.StatusOK)
 }
+
+// AddCustomItemRequest represents the request to add a custom item
+type AddCustomItemRequest struct {
+	TripID      string `json:"tripId"`
+	SectionID   string `json:"sectionId"`
+	ItemID      string `json:"itemId"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Quantity    string `json:"quantity,omitempty"`
+}
+
+// AddCustomItem handles POST /api/packing-list/add-custom-item
+func (h *PackingListHandler) AddCustomItem(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userID := ctx.Value("userID").(string)
+
+	var req AddCustomItemRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Warn("Invalid request body", zap.Error(err))
+		utils.WriteError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.TripID == "" || req.SectionID == "" || req.ItemID == "" || req.Name == "" {
+		utils.WriteError(w, "tripId, sectionId, itemId, and name are required", http.StatusBadRequest)
+		return
+	}
+
+	h.logger.Info("Adding custom item",
+		zap.String("uid", userID),
+		zap.String("tripId", req.TripID),
+		zap.String("sectionId", req.SectionID),
+		zap.String("itemId", req.ItemID),
+	)
+
+	item := services.PackingItem{
+		ID:          req.ItemID,
+		Name:        req.Name,
+		Description: req.Description,
+		Quantity:    req.Quantity,
+		Custom:      true,
+	}
+
+	err := h.packingListService.AddCustomItem(ctx, userID, req.TripID, req.SectionID, item)
+	if err != nil {
+		h.logger.Error("Failed to add custom item",
+			zap.String("uid", userID),
+			zap.String("tripId", req.TripID),
+			zap.Error(err),
+		)
+
+		if err.Error() == "trip not found" || err.Error() == "trip not found: not found" {
+			utils.WriteError(w, "Trip not found", http.StatusNotFound)
+			return
+		}
+		if err.Error() == "packing list not found" || err.Error() == "packing list not found: not found" {
+			utils.WriteError(w, "Packing list not found", http.StatusNotFound)
+			return
+		}
+
+		utils.WriteError(w, "Failed to add custom item", http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteJSON(w, map[string]bool{"success": true}, http.StatusOK)
+}
+
+// DeleteCustomItemRequest represents the request to delete a custom item
+type DeleteCustomItemRequest struct {
+	TripID    string `json:"tripId"`
+	SectionID string `json:"sectionId"`
+	ItemID    string `json:"itemId"`
+}
+
+// DeleteCustomItem handles POST /api/packing-list/delete-custom-item
+func (h *PackingListHandler) DeleteCustomItem(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userID := ctx.Value("userID").(string)
+
+	var req DeleteCustomItemRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Warn("Invalid request body", zap.Error(err))
+		utils.WriteError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.TripID == "" || req.SectionID == "" || req.ItemID == "" {
+		utils.WriteError(w, "tripId, sectionId, and itemId are required", http.StatusBadRequest)
+		return
+	}
+
+	h.logger.Info("Deleting custom item",
+		zap.String("uid", userID),
+		zap.String("tripId", req.TripID),
+		zap.String("sectionId", req.SectionID),
+		zap.String("itemId", req.ItemID),
+	)
+
+	err := h.packingListService.DeleteCustomItem(ctx, userID, req.TripID, req.SectionID, req.ItemID)
+	if err != nil {
+		h.logger.Error("Failed to delete custom item",
+			zap.String("uid", userID),
+			zap.String("tripId", req.TripID),
+			zap.Error(err),
+		)
+
+		if err.Error() == "trip not found" || err.Error() == "trip not found: not found" {
+			utils.WriteError(w, "Trip not found", http.StatusNotFound)
+			return
+		}
+		if err.Error() == "packing list not found" || err.Error() == "packing list not found: not found" {
+			utils.WriteError(w, "Packing list not found", http.StatusNotFound)
+			return
+		}
+
+		utils.WriteError(w, "Failed to delete custom item", http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteJSON(w, map[string]bool{"success": true}, http.StatusOK)
+}
+
+// DeletePackingListRequest represents the request to delete a packing list
+type DeletePackingListRequest struct {
+	TripID string `json:"tripId"`
+}
+
+// DeletePackingList handles POST /api/packing-list/delete
+func (h *PackingListHandler) DeletePackingList(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userID := ctx.Value("userID").(string)
+
+	var req DeletePackingListRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Warn("Invalid request body", zap.Error(err))
+		utils.WriteError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.TripID == "" {
+		utils.WriteError(w, "tripId is required", http.StatusBadRequest)
+		return
+	}
+
+	h.logger.Info("Deleting packing list",
+		zap.String("uid", userID),
+		zap.String("tripId", req.TripID),
+	)
+
+	err := h.packingListService.DeletePackingList(ctx, userID, req.TripID)
+	if err != nil {
+		h.logger.Error("Failed to delete packing list",
+			zap.String("uid", userID),
+			zap.String("tripId", req.TripID),
+			zap.Error(err),
+		)
+
+		if err.Error() == "trip not found" || err.Error() == "trip not found: not found" {
+			utils.WriteError(w, "Trip not found", http.StatusNotFound)
+			return
+		}
+
+		utils.WriteError(w, "Failed to delete packing list", http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteJSON(w, map[string]bool{"success": true}, http.StatusOK)
+}

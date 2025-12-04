@@ -547,8 +547,9 @@ func main() {
 		spendingRoutes.HandleFunc("/delete-csv", spendingHandler.DeleteCSV).Methods("POST")
 		spendingRoutes.HandleFunc("/categorize", spendingHandler.CategorizeTransaction).Methods("POST")
 		spendingRoutes.HandleFunc("/link-trip", spendingHandler.LinkTransactionToTrip).Methods("POST")
+		spendingRoutes.HandleFunc("/dismiss-trip-suggestion", spendingHandler.DismissTripSuggestion).Methods("POST")
 		spendingRoutes.HandleFunc("/delete-all", spendingHandler.DeleteAllTransactions).Methods("POST")
-		logger.Info("Spending endpoints registered (5 endpoints)")
+		logger.Info("Spending endpoints registered (6 endpoints)")
 	} else {
 		logger.Warn("Spending endpoints disabled (CSV processing service not available)")
 	}
@@ -568,9 +569,13 @@ func main() {
 		photoRoutes.HandleFunc("/vote", photoHandler.SubmitVote).Methods("POST")
 		// Next pair can be fetched anonymously
 		photoRoutes.HandleFunc("/next-pair", photoHandler.GetNextPair).Methods("POST")
+		// Batch next pairs
+		photoRoutes.HandleFunc("/next-pairs", photoHandler.GetNextPairs).Methods("POST")
+		// Merge photos requires authentication
+		photoRoutes.HandleFunc("/merge", photoHandler.MergePhotos).Methods("POST")
 		// Signed URL requires authentication
 		photoRoutes.HandleFunc("/signed-url", photoHandler.GetSignedURL).Methods("POST")
-		logger.Info("Photo endpoints registered (3 endpoints)")
+		logger.Info("Photo endpoints registered (5 endpoints)")
 	} else {
 		logger.Warn("Photo endpoints disabled (Cloud Storage not available)")
 	}
@@ -580,7 +585,10 @@ func main() {
 	packingRoutes.HandleFunc("/create", packingListHandler.CreatePackingList).Methods("POST")
 	packingRoutes.HandleFunc("/update", packingListHandler.UpdatePackingList).Methods("POST")
 	packingRoutes.HandleFunc("/toggle-item", packingListHandler.SetItemStatus).Methods("POST")
-	logger.Info("Packing list endpoints registered (3 endpoints)")
+	packingRoutes.HandleFunc("/add-custom-item", packingListHandler.AddCustomItem).Methods("POST")
+	packingRoutes.HandleFunc("/delete-custom-item", packingListHandler.DeleteCustomItem).Methods("POST")
+	packingRoutes.HandleFunc("/delete", packingListHandler.DeletePackingList).Methods("POST")
+	logger.Info("Packing list endpoints registered (6 endpoints)")
 
 	// Place insights routes (authenticated, requires AI access)
 	if placeInsightsHandler != nil {
