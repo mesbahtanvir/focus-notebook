@@ -351,6 +351,16 @@ func main() {
 	visaHandler := handlers.NewVisaHandler(visaService, logger)
 	logger.Info("Visa handler initialized")
 
+	// CRUD handler (always available) - generic CRUD for all collections
+	crudHandler := handlers.NewCRUDHandler(repo, logger)
+	logger.Info("CRUD handler initialized with collections",
+		zap.Int("collectionCount", len(crudHandler.GetCollectionConfigs())),
+	)
+
+	// Subscribe handler (always available) - SSE for real-time updates
+	subscribeHandler := handlers.NewSubscribeHandler(repo, crudHandler.GetCollectionConfigs(), logger)
+	logger.Info("Subscribe handler initialized")
+
 	// Create router
 	router := mux.NewRouter()
 
@@ -513,6 +523,22 @@ func main() {
 	// Visa routes (authenticated)
 	api.HandleFunc("/visa-requirements", visaHandler.GetVisaRequirements).Methods("GET")
 	logger.Info("Visa requirements endpoint registered")
+
+	// Generic CRUD routes (authenticated) - must be registered last due to wildcard pattern
+	api.HandleFunc("/collections", crudHandler.GetCollections).Methods("GET")
+	api.HandleFunc("/{collection}", crudHandler.List).Methods("GET")
+	api.HandleFunc("/{collection}", crudHandler.Create).Methods("POST")
+	api.HandleFunc("/{collection}/batch", crudHandler.BatchCreate).Methods("POST")
+	api.HandleFunc("/{collection}/batch", crudHandler.BatchDelete).Methods("DELETE")
+	api.HandleFunc("/{collection}/{id}", crudHandler.Get).Methods("GET")
+	api.HandleFunc("/{collection}/{id}", crudHandler.Update).Methods("PUT")
+	api.HandleFunc("/{collection}/{id}", crudHandler.Delete).Methods("DELETE")
+	logger.Info("Generic CRUD endpoints registered (8 endpoints)")
+
+	// SSE subscription routes (authenticated)
+	api.HandleFunc("/subscribe", subscribeHandler.SubscribeMultiple).Methods("GET")
+	api.HandleFunc("/subscribe/{collection}", subscribeHandler.Subscribe).Methods("GET")
+	logger.Info("SSE subscription endpoints registered (2 endpoints)")
 
 	// Log registered routes
 	logger.Info("Routes registered",
