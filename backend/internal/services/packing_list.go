@@ -555,3 +555,164 @@ func parseItem(data map[string]interface{}) PackingItem {
 
 	return item
 }
+
+// AddCustomItem adds a custom item to a packing list section
+func (s *PackingListService) AddCustomItem(
+	ctx context.Context,
+	userID string,
+	tripID string,
+	sectionID string,
+	item PackingItem,
+) error {
+	// Verify trip ownership
+	tripPath := fmt.Sprintf("users/%s/trips/%s", userID, tripID)
+	if _, err := s.repo.Get(ctx, tripPath); err != nil {
+		return fmt.Errorf("trip not found: %w", err)
+	}
+
+	// Get packing list
+	packingListPath := fmt.Sprintf("%s/packingList/data", tripPath)
+	data, err := s.repo.Get(ctx, packingListPath)
+	if err != nil {
+		return fmt.Errorf("packing list not found: %w", err)
+	}
+
+	// Parse existing custom items
+	customItems := make(CustomItemsState)
+	if customRaw, ok := data["customItems"].(map[string]interface{}); ok {
+		for secID, itemsRaw := range customRaw {
+			if items, ok := itemsRaw.([]interface{}); ok {
+				customItems[secID] = []PackingItem{}
+				for _, itemRaw := range items {
+					if itemMap, ok := itemRaw.(map[string]interface{}); ok {
+						customItems[secID] = append(customItems[secID], parseItem(itemMap))
+					}
+				}
+			}
+		}
+	}
+
+	// Add new item
+	item.Custom = true
+	if customItems[sectionID] == nil {
+		customItems[sectionID] = []PackingItem{}
+	}
+	customItems[sectionID] = append(customItems[sectionID], item)
+
+	// Update
+	updates := map[string]interface{}{
+		"customItems": customItems,
+		"updatedAt":   time.Now(),
+	}
+
+	if err := s.repo.Update(ctx, packingListPath, updates); err != nil {
+		return fmt.Errorf("failed to add custom item: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteCustomItem removes a custom item from a packing list section
+func (s *PackingListService) DeleteCustomItem(
+	ctx context.Context,
+	userID string,
+	tripID string,
+	sectionID string,
+	itemID string,
+) error {
+	// Verify trip ownership
+	tripPath := fmt.Sprintf("users/%s/trips/%s", userID, tripID)
+	if _, err := s.repo.Get(ctx, tripPath); err != nil {
+		return fmt.Errorf("trip not found: %w", err)
+	}
+
+	// Get packing list
+	packingListPath := fmt.Sprintf("%s/packingList/data", tripPath)
+	data, err := s.repo.Get(ctx, packingListPath)
+	if err != nil {
+		return fmt.Errorf("packing list not found: %w", err)
+	}
+
+	// Parse existing custom items
+	customItems := make(CustomItemsState)
+	if customRaw, ok := data["customItems"].(map[string]interface{}); ok {
+		for secID, itemsRaw := range customRaw {
+			if items, ok := itemsRaw.([]interface{}); ok {
+				customItems[secID] = []PackingItem{}
+				for _, itemRaw := range items {
+					if itemMap, ok := itemRaw.(map[string]interface{}); ok {
+						customItems[secID] = append(customItems[secID], parseItem(itemMap))
+					}
+				}
+			}
+		}
+	}
+
+	// Remove item from section
+	if items, ok := customItems[sectionID]; ok {
+		newItems := []PackingItem{}
+		for _, item := range items {
+			if item.ID != itemID {
+				newItems = append(newItems, item)
+			}
+		}
+		customItems[sectionID] = newItems
+	}
+
+	// Also remove from item statuses
+	itemStatuses := make(map[string]string)
+	if statusesRaw, ok := data["itemStatuses"].(map[string]interface{}); ok {
+		for k, v := range statusesRaw {
+			if k != itemID {
+				if vStr, ok := v.(string); ok {
+					itemStatuses[k] = vStr
+				}
+			}
+		}
+	}
+
+	// Remove from packed items
+	packedItemIDs := []string{}
+	if idsRaw, ok := data["packedItemIds"].([]interface{}); ok {
+		for _, id := range idsRaw {
+			if idStr, ok := id.(string); ok && idStr != itemID {
+				packedItemIDs = append(packedItemIDs, idStr)
+			}
+		}
+	}
+
+	// Update
+	updates := map[string]interface{}{
+		"customItems":   customItems,
+		"itemStatuses":  itemStatuses,
+		"packedItemIds": packedItemIDs,
+		"updatedAt":     time.Now(),
+	}
+
+	if err := s.repo.Update(ctx, packingListPath, updates); err != nil {
+		return fmt.Errorf("failed to delete custom item: %w", err)
+	}
+
+	return nil
+}
+
+// DeletePackingList deletes a packing list for a trip
+func (s *PackingListService) DeletePackingList(
+	ctx context.Context,
+	userID string,
+	tripID string,
+) error {
+	// Verify trip ownership
+	tripPath := fmt.Sprintf("users/%s/trips/%s", userID, tripID)
+	if _, err := s.repo.Get(ctx, tripPath); err != nil {
+		return fmt.Errorf("trip not found: %w", err)
+	}
+
+	// Delete packing list
+	packingListPath := fmt.Sprintf("%s/packingList/data", tripPath)
+	if err := s.repo.Delete(ctx, packingListPath); err != nil {
+		return fmt.Errorf("failed to delete packing list: %w", err)
+	}
+
+	return nil
+}

@@ -295,3 +295,45 @@ func (h *SpendingHandler) DeleteAllTransactions(w http.ResponseWriter, r *http.R
 
 	utils.WriteJSON(w, response, http.StatusOK)
 }
+
+// DismissTripSuggestionRequest represents the request to dismiss a trip suggestion
+type DismissTripSuggestionRequest struct {
+	TransactionID string `json:"transactionId"`
+}
+
+// DismissTripSuggestion handles POST /api/spending/dismiss-trip-suggestion
+// Dismisses an AI-suggested trip link for a transaction
+func (h *SpendingHandler) DismissTripSuggestion(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userID := ctx.Value("userID").(string)
+
+	var req DismissTripSuggestionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Warn("Invalid request body", zap.Error(err))
+		utils.WriteError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.TransactionID == "" {
+		utils.WriteError(w, "transactionId is required", http.StatusBadRequest)
+		return
+	}
+
+	h.logger.Info("Dismissing trip suggestion",
+		zap.String("uid", userID),
+		zap.String("transactionId", req.TransactionID),
+	)
+
+	err := h.csvProcessingService.DismissTripSuggestion(ctx, userID, req.TransactionID)
+	if err != nil {
+		h.logger.Error("Failed to dismiss trip suggestion",
+			zap.String("uid", userID),
+			zap.String("transactionId", req.TransactionID),
+			zap.Error(err),
+		)
+		utils.WriteError(w, "Failed to dismiss trip suggestion", http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteJSON(w, map[string]bool{"success": true}, http.StatusOK)
+}

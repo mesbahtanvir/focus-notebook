@@ -613,3 +613,123 @@ func parseBattlePhoto(data map[string]interface{}) BattlePhoto {
 
 	return photo
 }
+
+// PhotoPair represents a pair of photos for comparison
+type PhotoPair struct {
+	Left  *BattlePhoto `json:"left"`
+	Right *BattlePhoto `json:"right"`
+}
+
+// GetNextPairs returns multiple photo pairs for batch comparison
+func (s *PhotoService) GetNextPairs(ctx context.Context, sessionID string, count int) ([]PhotoPair, error) {
+	if count <= 0 {
+		count = 5 // Default to 5 pairs
+	}
+	if count > 10 {
+		count = 10 // Max 10 pairs at once
+	}
+
+	pairs := make([]PhotoPair, 0, count)
+	for i := 0; i < count; i++ {
+		left, right, err := s.GetNextPair(ctx, sessionID)
+		if err != nil {
+			s.logger.Warn("Failed to get pair",
+				zap.Int("index", i),
+				zap.Error(err),
+			)
+			// Continue with available pairs
+			break
+		}
+		if left == nil || right == nil {
+			break
+		}
+		pairs = append(pairs, PhotoPair{Left: left, Right: right})
+	}
+
+	return pairs, nil
+}
+
+// MergePhotos merges photos from one library into another
+func (s *PhotoService) MergePhotos(
+	ctx context.Context,
+	userID string,
+	sourceLibraryID string,
+	targetLibraryID string,
+	deleteSource bool,
+) error {
+	s.logger.Info("Merging photos",
+		zap.String("uid", userID),
+		zap.String("source", sourceLibraryID),
+		zap.String("target", targetLibraryID),
+	)
+
+	// Get source photos
+	sourcePath := fmt.Sprintf("users/%s/photoLibraries/%s/photos", userID, sourceLibraryID)
+	sourcePhotos, err := s.repo.List(ctx, sourcePath, 500)
+	if err != nil {
+		return fmt.Errorf("failed to list source photos: %w", err)
+	}
+
+	if len(sourcePhotos) == 0 {
+		s.logger.Info("No photos to merge")
+		return nil
+	}
+
+	// Move each photo to target library
+	for _, photo := range sourcePhotos {
+		photoID := ""
+		if id, ok := photo["id"].(string); ok {
+			photoID = id
+		} else {
+			continue
+		}
+
+		// Update photo's libraryId
+		sourcePhotoPath := fmt.Sprintf("%s/%s", sourcePath, photoID)
+		updates := map[string]interface{}{
+			"libraryId": targetLibraryID,
+		}
+		if err := s.repo.Update(ctx, sourcePhotoPath, updates); err != nil {
+			s.logger.Warn("Failed to update photo libraryId",
+				zap.String("photoId", photoID),
+				zap.Error(err),
+			)
+			continue
+		}
+
+		// Copy to target library
+		targetPhotoPath := fmt.Sprintf("users/%s/photoLibraries/%s/photos/%s", userID, targetLibraryID, photoID)
+		photo["libraryId"] = targetLibraryID
+		if err := s.repo.Create(ctx, targetPhotoPath, photo); err != nil {
+			s.logger.Warn("Failed to copy photo to target",
+				zap.String("photoId", photoID),
+				zap.Error(err),
+			)
+			continue
+		}
+
+		// Delete from source if copy succeeded
+		if deleteSource {
+			if err := s.repo.Delete(ctx, sourcePhotoPath); err != nil {
+				s.logger.Warn("Failed to delete source photo",
+					zap.String("photoId", photoID),
+					zap.Error(err),
+				)
+			}
+		}
+	}
+
+	// Optionally delete source library
+	if deleteSource {
+		sourceLibraryPath := fmt.Sprintf("users/%s/photoLibraries/%s", userID, sourceLibraryID)
+		if err := s.repo.Delete(ctx, sourceLibraryPath); err != nil {
+			s.logger.Warn("Failed to delete source library", zap.Error(err))
+		}
+	}
+
+	s.logger.Info("Photos merged successfully",
+		zap.Int("count", len(sourcePhotos)),
+	)
+
+	return nil
+}

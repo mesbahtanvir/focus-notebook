@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"go.uber.org/zap"
@@ -275,6 +276,6 @@ func getIntFieldFromMap(m map[string]interface{}, key string) int {
 
 // generateID generates a unique ID (similar to Firestore auto-ID)
 func generateID() string {
-	// Use timestamp + random component
-	return fmt.Sprintf("%d-%d", time.Now().UnixNano(), time.Now().Unix()%1000000)
+	// Use timestamp + random component (16 bits of randomness)
+	return fmt.Sprintf("%d-%d", time.Now().UnixNano(), rand.Intn(65536))
 }

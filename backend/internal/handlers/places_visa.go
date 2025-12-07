@@ -51,8 +51,8 @@ func (h *PlaceInsightsHandler) GenerateInsights(w http.ResponseWriter, r *http.R
 	}
 
 	// Trim and validate
-	destinationName := trimString(req.DestinationName)
-	country := trimString(req.Country)
+	destinationName := utils.TrimString(req.DestinationName)
+	country := utils.TrimString(req.Country)
 
 	if destinationName == "" {
 		utils.WriteError(w, "destinationName is required", http.StatusBadRequest)
@@ -81,23 +81,6 @@ func (h *PlaceInsightsHandler) GenerateInsights(w http.ResponseWriter, r *http.R
 	}
 
 	utils.WriteJSON(w, response, http.StatusOK)
-}
-
-// trimString trims whitespace from a string
-func trimString(s string) string {
-	// Simple trim implementation
-	start := 0
-	end := len(s)
-
-	for start < end && (s[start] == ' ' || s[start] == '\t' || s[start] == '\n' || s[start] == '\r') {
-		start++
-	}
-
-	for end > start && (s[end-1] == ' ' || s[end-1] == '\t' || s[end-1] == '\n' || s[end-1] == '\r') {
-		end--
-	}
-
-	return s[start:end]
 }
 
 // VisaHandler handles visa requirements requests
