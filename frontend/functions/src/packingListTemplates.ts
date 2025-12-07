@@ -504,6 +504,98 @@ export const ACTIVITY_ENHANCEMENTS: Record<ActivityId, Enhancement> = {
       },
     ],
   },
+  "snow-sports": {
+    sectionId: "extras",
+    group: {
+      id: "snow-sports-gear",
+      title: "Snow sports essentials",
+      icon: "⛷️",
+      description: "Gear for skiing, snowboarding, or winter activities.",
+      items: [
+        { id: "snow-goggles", name: "Snow goggles", tip: "Anti-fog with UV protection." },
+        { id: "snow-gloves", name: "Insulated gloves", description: "Waterproof with wrist straps." },
+        { id: "snow-layers", name: "Base layers", quantity: "2-3", tip: "Moisture-wicking materials." },
+        { id: "snow-helmet", name: "Helmet", description: "Rent or bring your own." },
+      ],
+    },
+    timeline: [
+      {
+        phaseId: "before",
+        tasks: [
+          { id: "timeline-lift-pass", title: "Book lift passes or lessons", relativeTo: "start", daysOffset: -14 },
+        ],
+      },
+    ],
+  },
+  diving: {
+    sectionId: "extras",
+    group: {
+      id: "diving-gear",
+      title: "Diving essentials",
+      icon: "🤿",
+      description: "Scuba and snorkeling gear.",
+      items: [
+        { id: "diving-cert", name: "Dive certification card", tip: "Digital backup on phone." },
+        { id: "diving-mask", name: "Mask and snorkel", description: "Personal fit is important." },
+        { id: "diving-rash", name: "Rash guard", tip: "Sun and jellyfish protection." },
+        { id: "diving-log", name: "Dive logbook", description: "Record your dives." },
+      ],
+    },
+    timeline: [
+      {
+        phaseId: "before",
+        tasks: [
+          { id: "timeline-dive-shop", title: "Contact dive shops", relativeTo: "start", daysOffset: -7 },
+        ],
+      },
+    ],
+  },
+  photography: {
+    sectionId: "tech",
+    group: {
+      id: "photography-gear",
+      title: "Photography kit",
+      icon: "📷",
+      description: "Capture your trip memories.",
+      items: [
+        { id: "photo-camera", name: "Camera with lenses", description: "Charged batteries, clean sensor." },
+        { id: "photo-cards", name: "Memory cards", quantity: "2+", tip: "Format before trip." },
+        { id: "photo-tripod", name: "Travel tripod", description: "Lightweight for stability." },
+        { id: "photo-cleaning", name: "Lens cleaning kit", tip: "Microfiber cloth, blower." },
+      ],
+    },
+    timeline: [
+      {
+        phaseId: "before",
+        tasks: [
+          { id: "timeline-photo-backup", title: "Set up cloud backup", relativeTo: "start", daysOffset: -3 },
+        ],
+      },
+    ],
+  },
+  camping: {
+    sectionId: "extras",
+    group: {
+      id: "camping-gear",
+      title: "Camping essentials",
+      icon: "⛺",
+      description: "Outdoor overnight gear.",
+      items: [
+        { id: "camp-tent", name: "Tent with stakes", description: "Check for damage before trip." },
+        { id: "camp-sleeping", name: "Sleeping bag and pad", tip: "Temperature rating for climate." },
+        { id: "camp-light", name: "Headlamp and lantern", description: "Extra batteries." },
+        { id: "camp-cookware", name: "Camp cookware", tip: "Lightweight stove, utensils." },
+      ],
+    },
+    timeline: [
+      {
+        phaseId: "before",
+        tasks: [
+          { id: "timeline-campsite", title: "Reserve campsite", relativeTo: "start", daysOffset: -30 },
+        ],
+      },
+    ],
+  },
 };
 
 export const TRIP_LENGTH_ENHANCEMENTS: Record<TripLength, Enhancement[]> = {
@@ -573,6 +665,62 @@ export const TRIP_LENGTH_ENHANCEMENTS: Record<TripLength, Enhancement[]> = {
         items: [
           { id: "two-week-laundry-kit", name: "Travel laundry kit", description: "Detergent sheets, sink stopper, clothesline." },
           { id: "two-week-meds", name: "Prescription meds (full supply)", description: "Pack copies of prescriptions." },
+        ],
+      },
+    },
+  ],
+  extended: [
+    {
+      sectionId: "clothing",
+      group: {
+        id: "extended-capsule",
+        title: "Extended stay capsule wardrobe",
+        icon: "🧳",
+        description: "Minimalist wardrobe for 30+ day trips.",
+        items: [
+          { id: "extended-base", name: "Capsule basics", quantity: "5-6 pieces", tip: "Focus on mix-and-match neutral colors." },
+          { id: "extended-layers", name: "Layering pieces", quantity: "2-3", description: "Adapt to weather changes." },
+          { id: "extended-laundry", name: "Laundry supplies", description: "Detergent sheets, travel clothesline." },
+        ],
+      },
+      timeline: [
+        {
+          phaseId: "before",
+          tasks: [
+            { id: "timeline-extended-laundry-research", title: "Research local laundromats", relativeTo: "start", daysOffset: -7 },
+          ],
+        },
+        {
+          phaseId: "during",
+          tasks: [
+            { id: "timeline-extended-weekly-laundry", title: "Weekly laundry day", description: "Schedule regular laundry to maintain wardrobe rotation." },
+          ],
+        },
+      ],
+    },
+    {
+      sectionId: "personal",
+      group: {
+        id: "extended-supplies",
+        title: "Long-term supplies",
+        icon: "📦",
+        description: "Consider buying basics at destination.",
+        items: [
+          { id: "extended-toiletries", name: "Travel-size toiletries", tip: "Buy full-size at destination to save luggage space." },
+          { id: "extended-meds", name: "Full medication supply", description: "90-day supply with prescription copies." },
+        ],
+      },
+    },
+    {
+      sectionId: "tech",
+      group: {
+        id: "extended-work",
+        title: "Remote work essentials",
+        icon: "💻",
+        description: "Stay productive on the road.",
+        items: [
+          { id: "extended-laptop", name: "Laptop with charger", description: "International adapter if needed." },
+          { id: "extended-wifi", name: "Portable WiFi or local SIM", tip: "Research data plans before arrival." },
         ],
       },
     },

@@ -5,6 +5,10 @@
 import * as functions from 'firebase-functions/v2';
 import * as admin from 'firebase-admin';
 import { HttpsError } from 'firebase-functions/v2/https';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as yaml from 'yaml';
+import { CONFIG } from './config';
 
 const db = admin.firestore();
 
@@ -44,6 +48,10 @@ import type {
   TripPurpose,
   TripLength,
   ActivityId,
+  AccommodationType,
+  DestinationInsights,
+  GenerateAIPackingListRequest,
+  GenerateAIPackingListResponse,
 } from './types/packingList';
 
 interface Trip {
@@ -56,10 +64,209 @@ interface Trip {
   currency: string;
   status: 'planning' | 'in-progress' | 'completed';
   notes?: string;
-  // Inferred from packing list tool
+  // Packing list context
   purpose?: TripPurpose;
   length?: TripLength;
   activities?: ActivityId[];
+  accommodation?: AccommodationType;
+}
+
+// Prompt configuration interface
+interface PromptConfig {
+  name: string;
+  model: string;
+  modelParameters: {
+    temperature: number;
+    max_tokens: number;
+  };
+  messages: Array<{
+    role: string;
+    content: string;
+  }>;
+}
+
+// AI Response interface
+interface AIPackingListResponse {
+  sections: PackingSection[];
+  destinationInsights?: DestinationInsights;
+  durationStrategy?: string;
+}
+
+const PROMPT_FILE_NAME = 'generate-packing-list.prompt.yml';
+
+/**
+ * Helper: Resolve prompt file path
+ */
+function resolvePromptPath(): string {
+  const candidatePaths = [
+    path.join(__dirname, '../../prompts', PROMPT_FILE_NAME),
+    path.join(__dirname, '../../../../prompts', PROMPT_FILE_NAME),
+    path.join(process.cwd(), 'prompts', PROMPT_FILE_NAME),
+  ];
+
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(`Prompt file "${PROMPT_FILE_NAME}" not found. Checked: ${candidatePaths.join(', ')}`);
+}
+
+/**
+ * Helper: Load prompt configuration from YAML file
+ */
+function loadPromptConfig(): PromptConfig {
+  const promptPath = resolvePromptPath();
+  const fileContents = fs.readFileSync(promptPath, 'utf8');
+  return yaml.parse(fileContents);
+}
+
+/**
+ * Helper: Render template with variable substitution
+ */
+function renderTemplate(template: string, variables: Record<string, string>): string {
+  let result = template;
+  Object.entries(variables).forEach(([key, value]) => {
+    const regex = new RegExp(`{{${key}}}`, 'g');
+    result = result.replace(regex, value ?? '');
+  });
+  return result;
+}
+
+/**
+ * Helper: Calculate trip duration in days
+ */
+function calculateDurationDays(startDate: string, endDate: string): number {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+}
+
+/**
+ * Helper: Determine season based on date and destination
+ */
+function determineSeason(startDate: string, destination: string): string {
+  const date = new Date(startDate);
+  const month = date.getMonth(); // 0-11
+
+  // Simple hemisphere detection based on common destination patterns
+  const southernHemisphere = /australia|new zealand|argentina|chile|south africa|brazil|indonesia|bali/i.test(destination);
+
+  // Determine season
+  if (southernHemisphere) {
+    if (month >= 11 || month <= 1) return 'summer';
+    if (month >= 2 && month <= 4) return 'fall';
+    if (month >= 5 && month <= 7) return 'winter';
+    return 'spring';
+  } else {
+    if (month >= 11 || month <= 1) return 'winter';
+    if (month >= 2 && month <= 4) return 'spring';
+    if (month >= 5 && month <= 7) return 'summer';
+    return 'fall';
+  }
+}
+
+/**
+ * Helper: Extract JSON from AI response
+ */
+function extractJsonBlock(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // Handle code fences
+  const codeFenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (codeFenceMatch && codeFenceMatch[1]) {
+    return codeFenceMatch[1].trim();
+  }
+
+  // Already JSON
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    return trimmed;
+  }
+
+  // Extract JSON object
+  const firstBrace = trimmed.indexOf('{');
+  const lastBrace = trimmed.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    return trimmed.slice(firstBrace, lastBrace + 1).trim();
+  }
+
+  return null;
+}
+
+/**
+ * Helper: Call OpenAI to generate packing list
+ */
+async function callOpenAIForPackingList(trip: Trip): Promise<AIPackingListResponse> {
+  const promptConfig = loadPromptConfig();
+
+  const durationDays = calculateDurationDays(trip.startDate, trip.endDate);
+  const season = determineSeason(trip.startDate, trip.destination);
+
+  const variables: Record<string, string> = {
+    destination: trip.destination,
+    startDate: trip.startDate,
+    endDate: trip.endDate,
+    durationDays: String(durationDays),
+    season,
+    purpose: trip.purpose || 'leisure',
+    activities: trip.activities?.join(', ') || 'general sightseeing',
+    accommodation: trip.accommodation || 'hotel',
+    notes: trip.notes || 'None',
+  };
+
+  // Render messages with variables
+  const messages = promptConfig.messages.map(msg => ({
+    role: msg.role,
+    content: renderTemplate(msg.content, variables),
+  }));
+
+  // Extract model name (remove provider prefix if present)
+  const modelName = promptConfig.model.includes('/')
+    ? promptConfig.model.split('/')[1]
+    : promptConfig.model;
+
+  // Call OpenAI API
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${CONFIG.OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: modelName,
+      messages,
+      temperature: promptConfig.modelParameters.temperature,
+      max_tokens: promptConfig.modelParameters.max_tokens,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`);
+  }
+
+  const data = await response.json();
+  const aiResponse = data.choices[0]?.message?.content;
+
+  if (!aiResponse) {
+    throw new Error('No response from OpenAI');
+  }
+
+  // Parse JSON response
+  const jsonCandidate = extractJsonBlock(aiResponse);
+
+  if (!jsonCandidate) {
+    throw new Error('No JSON block detected in AI response');
+  }
+
+  try {
+    return JSON.parse(jsonCandidate) as AIPackingListResponse;
+  } catch (error) {
+    console.error('Failed to parse OpenAI response:', aiResponse);
+    throw new Error('Invalid JSON response from OpenAI');
+  }
 }
 
 /**
@@ -151,7 +358,8 @@ function inferTripLength(startDate: string, endDate: string): TripLength {
 
   if (days <= 4) return 'weekend';
   if (days <= 10) return 'one-week';
-  return 'two-week';
+  if (days <= 21) return 'two-week';
+  return 'extended';
 }
 
 /**
@@ -571,4 +779,106 @@ export const deletePackingList = functions.https.onCall<
   await packingListRef.delete();
 
   return { success: true };
+});
+
+/**
+ * Cloud Function: Generate AI-powered packing list
+ * Uses OpenAI to create a personalized packing list based on trip details
+ */
+export const generatePackingListAI = functions.https.onCall<
+  GenerateAIPackingListRequest,
+  Promise<GenerateAIPackingListResponse>
+>(async (request) => {
+  const userId = request.auth?.uid;
+  if (!userId) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const { tripId, forceRegenerate } = request.data;
+
+  if (!tripId) {
+    throw new HttpsError('invalid-argument', 'tripId is required');
+  }
+
+  // Verify trip ownership and get trip data
+  const trip = await verifyTripOwnership(userId, tripId);
+
+  // Check if packing list already exists
+  const packingListRef = db.doc(`users/${userId}/trips/${tripId}/packingList/data`);
+  const existing = await packingListRef.get();
+
+  if (existing.exists && !forceRegenerate) {
+    // Return existing list
+    return { packingList: existing.data() as PackingList };
+  }
+
+  // Preserve user data if regenerating
+  let preservedData: Partial<PackingList> = {};
+  if (existing.exists && forceRegenerate) {
+    const existingData = existing.data() as PackingList;
+    preservedData = {
+      packedItemIds: existingData.packedItemIds,
+      itemStatuses: existingData.itemStatuses,
+      customItems: existingData.customItems,
+      timelineCompleted: existingData.timelineCompleted,
+    };
+  }
+
+  try {
+    // Call OpenAI to generate packing list
+    const aiResponse = await callOpenAIForPackingList(trip);
+
+    // Build timeline phases (use template-based for now)
+    const timelinePhases = buildTimelinePhases(trip);
+
+    const packingList: PackingList = {
+      id: tripId,
+      tripId,
+      userId,
+      sections: aiResponse.sections,
+      packedItemIds: preservedData.packedItemIds || [],
+      itemStatuses: preservedData.itemStatuses || {},
+      customItems: preservedData.customItems || createEmptyCustomItems(),
+      timelinePhases,
+      timelineCompleted: preservedData.timelineCompleted || [],
+      aiSuggestions: [],
+      lastAiGeneratedAt: new Date().toISOString(),
+      generatedWithAI: true,
+      destinationInsights: aiResponse.destinationInsights,
+      durationStrategy: aiResponse.durationStrategy,
+      createdAt: existing.exists ? (existing.data() as PackingList).createdAt : new Date().toISOString(),
+      updatedAt: Date.now(),
+    };
+
+    // Save to Firestore
+    await packingListRef.set(packingList);
+
+    return { packingList, insights: aiResponse.destinationInsights };
+  } catch (error) {
+    console.error('AI packing list generation failed, falling back to templates:', error);
+
+    // Fall back to template-based generation
+    const sections = buildPackingSections(trip);
+    const timelinePhases = buildTimelinePhases(trip);
+
+    const packingList: PackingList = {
+      id: tripId,
+      tripId,
+      userId,
+      sections,
+      packedItemIds: preservedData.packedItemIds || [],
+      itemStatuses: preservedData.itemStatuses || {},
+      customItems: preservedData.customItems || createEmptyCustomItems(),
+      timelinePhases,
+      timelineCompleted: preservedData.timelineCompleted || [],
+      aiSuggestions: [],
+      createdAt: existing.exists ? (existing.data() as PackingList).createdAt : new Date().toISOString(),
+      updatedAt: Date.now(),
+    };
+
+    // Save to Firestore
+    await packingListRef.set(packingList);
+
+    return { packingList };
+  }
 });

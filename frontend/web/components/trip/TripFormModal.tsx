@@ -1,14 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { X } from 'lucide-react';
-import { Trip, useTrips } from '@/store/useTrips';
+import { useForm, Controller } from 'react-hook-form';
+import { X, Briefcase, Palmtree, Mountain, Users, Laptop, Check } from 'lucide-react';
+import { Trip, useTrips, TripPurpose, TripActivity, AccommodationType } from '@/store/useTrips';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toastError, toastSuccess } from '@/lib/toast-presets';
+import { cn } from '@/lib/utils';
 
 interface TripFormData {
   name: string;
@@ -18,7 +19,37 @@ interface TripFormData {
   budget: number;
   currency: string;
   notes?: string;
+  purpose?: TripPurpose;
+  activities?: TripActivity[];
+  accommodation?: AccommodationType;
 }
+
+const PURPOSE_OPTIONS: { value: TripPurpose; label: string; icon: React.ReactNode; description: string }[] = [
+  { value: 'leisure', label: 'Leisure', icon: <Palmtree className="w-4 h-4" />, description: 'Vacation & relaxation' },
+  { value: 'business', label: 'Business', icon: <Briefcase className="w-4 h-4" />, description: 'Work travel' },
+  { value: 'adventure', label: 'Adventure', icon: <Mountain className="w-4 h-4" />, description: 'Outdoor activities' },
+  { value: 'family', label: 'Family', icon: <Users className="w-4 h-4" />, description: 'Traveling with family' },
+  { value: 'digital-nomad', label: 'Digital Nomad', icon: <Laptop className="w-4 h-4" />, description: 'Work + travel' },
+];
+
+const ACTIVITY_OPTIONS: { value: TripActivity; label: string; emoji: string }[] = [
+  { value: 'beach', label: 'Beach', emoji: '\u{1F3D6}' },
+  { value: 'hiking', label: 'Hiking', emoji: '\u{1F6B6}' },
+  { value: 'city', label: 'City', emoji: '\u{1F3D9}' },
+  { value: 'formal', label: 'Formal Events', emoji: '\u{1F454}' },
+  { value: 'snow-sports', label: 'Snow Sports', emoji: '\u{26F7}' },
+  { value: 'diving', label: 'Diving', emoji: '\u{1F93F}' },
+  { value: 'photography', label: 'Photography', emoji: '\u{1F4F7}' },
+  { value: 'camping', label: 'Camping', emoji: '\u{1F3D5}' },
+];
+
+const ACCOMMODATION_OPTIONS: { value: AccommodationType; label: string; emoji: string }[] = [
+  { value: 'hotel', label: 'Hotel', emoji: '\u{1F3E8}' },
+  { value: 'airbnb', label: 'Airbnb/Rental', emoji: '\u{1F3E0}' },
+  { value: 'hostel', label: 'Hostel', emoji: '\u{1F6CF}' },
+  { value: 'camping', label: 'Camping', emoji: '\u{26FA}' },
+  { value: 'mixed', label: 'Mixed', emoji: '\u{1F500}' },
+];
 
 interface TripFormModalProps {
   isOpen: boolean;
@@ -33,6 +64,9 @@ export function TripFormModal({ isOpen, onClose, trip }: TripFormModalProps) {
   const {
     register,
     handleSubmit,
+    control,
+    watch,
+    setValue,
     formState: { errors },
     reset,
   } = useForm<TripFormData>({
@@ -45,38 +79,53 @@ export function TripFormModal({ isOpen, onClose, trip }: TripFormModalProps) {
           budget: trip.budget,
           currency: trip.currency,
           notes: trip.notes || '',
+          purpose: trip.purpose || 'leisure',
+          activities: trip.activities || [],
+          accommodation: trip.accommodation,
         }
       : {
           currency: 'USD',
           startDate: new Date().toISOString().split('T')[0],
           endDate: new Date().toISOString().split('T')[0],
+          purpose: 'leisure',
+          activities: [],
         },
   });
+
+  const selectedActivities = watch('activities') || [];
+  const selectedPurpose = watch('purpose');
+  const selectedAccommodation = watch('accommodation');
+
+  const toggleActivity = (activity: TripActivity) => {
+    const current = selectedActivities;
+    if (current.includes(activity)) {
+      setValue('activities', current.filter((a) => a !== activity));
+    } else {
+      setValue('activities', [...current, activity]);
+    }
+  };
 
   const onSubmit = async (data: TripFormData) => {
     setIsSubmitting(true);
     try {
+      const tripData = {
+        name: data.name,
+        destination: data.destination,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        budget: Number(data.budget),
+        currency: data.currency,
+        notes: data.notes,
+        purpose: data.purpose,
+        activities: data.activities?.length ? data.activities : undefined,
+        accommodation: data.accommodation,
+      };
+
       if (trip) {
-        await updateTrip(trip.id, {
-          name: data.name,
-          destination: data.destination,
-          startDate: data.startDate,
-          endDate: data.endDate,
-          budget: Number(data.budget),
-          currency: data.currency,
-          notes: data.notes,
-        });
+        await updateTrip(trip.id, tripData);
         toastSuccess({ title: 'Success', description: 'Trip updated successfully!' });
       } else {
-        await addTrip({
-          name: data.name,
-          destination: data.destination,
-          startDate: data.startDate,
-          endDate: data.endDate,
-          budget: Number(data.budget),
-          currency: data.currency,
-          notes: data.notes,
-        });
+        await addTrip(tripData);
         toastSuccess({ title: 'Success', description: 'Trip created successfully!' });
       }
       reset();
@@ -93,7 +142,7 @@ export function TripFormModal({ isOpen, onClose, trip }: TripFormModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-semibold">
             {trip ? 'Edit Trip' : 'Plan New Trip'}
@@ -209,6 +258,101 @@ export function TripFormModal({ isOpen, onClose, trip }: TripFormModalProps) {
               placeholder="Any notes about this trip"
               rows={2}
             />
+          </div>
+
+          {/* Packing List Context - helps generate smart packing lists */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Packing List Context
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                (helps generate smart packing lists)
+              </span>
+            </div>
+
+            {/* Trip Purpose */}
+            <div className="mb-4">
+              <Label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">
+                Trip Purpose
+              </Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {PURPOSE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setValue('purpose', option.value)}
+                    className={cn(
+                      'flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition-all',
+                      selectedPurpose === option.value
+                        ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    )}
+                  >
+                    <div className="flex items-center gap-1">
+                      {option.icon}
+                      <span className="font-medium">{option.label}</span>
+                    </div>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                      {option.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Activities */}
+            <div className="mb-4">
+              <Label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">
+                Planned Activities
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {ACTIVITY_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => toggleActivity(option.value)}
+                    className={cn(
+                      'flex items-center gap-1 px-3 py-1.5 rounded-full border text-sm transition-all',
+                      selectedActivities.includes(option.value)
+                        ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    )}
+                  >
+                    <span>{option.emoji}</span>
+                    <span>{option.label}</span>
+                    {selectedActivities.includes(option.value) && (
+                      <Check className="w-3 h-3 ml-1" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Accommodation */}
+            <div>
+              <Label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">
+                Accommodation Type
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {ACCOMMODATION_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setValue('accommodation', selectedAccommodation === option.value ? undefined : option.value)}
+                    className={cn(
+                      'flex items-center gap-1 px-3 py-1.5 rounded-full border text-sm transition-all',
+                      selectedAccommodation === option.value
+                        ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    )}
+                  >
+                    <span>{option.emoji}</span>
+                    <span>{option.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">

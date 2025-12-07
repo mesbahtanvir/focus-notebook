@@ -7,11 +7,31 @@ export const SECTION_IDS = ["essentials", "clothing", "personal", "tech", "extra
 
 export type PackingSectionId = (typeof SECTION_IDS)[number];
 
-export type TripPurpose = "leisure" | "business" | "adventure" | "family";
+export type TripPurpose = "leisure" | "business" | "adventure" | "family" | "digital-nomad";
 
-export type TripLength = "weekend" | "one-week" | "two-week";
+export type TripLength = "weekend" | "one-week" | "two-week" | "extended";
 
-export type ActivityId = "beach" | "hiking" | "city" | "formal";
+export type ActivityId = "beach" | "hiking" | "city" | "formal" | "snow-sports" | "diving" | "photography" | "camping";
+
+export type AccommodationType = "hotel" | "airbnb" | "hostel" | "camping" | "mixed";
+
+// AI-generated destination insights
+export interface DestinationInsights {
+  weather: string;
+  culturalNotes: string;
+  practicalTips: string[];
+}
+
+// Request for AI-based packing list generation
+export interface GenerateAIPackingListRequest {
+  tripId: string;
+  forceRegenerate?: boolean;
+}
+
+export interface GenerateAIPackingListResponse {
+  packingList: PackingList;
+  insights?: DestinationInsights;
+}
 
 export type PackingItemStatus = 'unpacked' | 'packed' | 'later' | 'no-need';
 
@@ -84,6 +104,10 @@ export interface PackingList {
   timelineCompleted: string[];
   aiSuggestions: AISuggestion[];
   lastAiGeneratedAt?: string;
+  // AI generation context
+  generatedWithAI?: boolean;
+  destinationInsights?: DestinationInsights;
+  durationStrategy?: string;
   createdAt: string;
   updatedAt?: number;
 }

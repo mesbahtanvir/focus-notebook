@@ -62,6 +62,7 @@ import {
   addCustomPackingItem,
   deleteCustomPackingItem,
   deletePackingList,
+  generatePackingListAI,
 } from './packingList';
 
 // Export cloud functions
@@ -123,4 +124,5 @@ export {
   addCustomPackingItem,
   deleteCustomPackingItem,
   deletePackingList,
+  generatePackingListAI,
 };

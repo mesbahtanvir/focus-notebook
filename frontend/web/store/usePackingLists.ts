@@ -15,6 +15,7 @@ import type {
   PackingItemStatus,
   CustomItemsState,
   AISuggestion,
+  DestinationInsights,
   CreatePackingListRequest,
   CreatePackingListResponse,
   UpdatePackingListRequest,
@@ -29,6 +30,8 @@ import type {
   DeleteCustomItemResponse,
   DeletePackingListRequest,
   DeletePackingListResponse,
+  GenerateAIPackingListRequest,
+  GenerateAIPackingListResponse,
 } from '@/types/packing-list';
 
 interface PackingListsState {
@@ -41,6 +44,7 @@ interface PackingListsState {
   subscribe: (userId: string, tripId: string) => () => void;
   unsubscribe: (tripId: string) => void;
   createPackingList: (tripId: string) => Promise<PackingList>;
+  generatePackingListAI: (tripId: string, forceRegenerate?: boolean) => Promise<{ packingList: PackingList; insights?: DestinationInsights }>;
   deletePackingList: (tripId: string) => Promise<void>;
   togglePacked: (tripId: string, itemId: string, packed: boolean) => Promise<void>;
   setItemStatus: (tripId: string, itemId: string, status: PackingItemStatus) => Promise<void>;
@@ -152,6 +156,16 @@ export const usePackingLists = create<PackingListsState>((set, get) => ({
 
     const result = await createFn({ tripId });
     return result.data.packingList;
+  },
+
+  generatePackingListAI: async (tripId: string, forceRegenerate?: boolean) => {
+    const generateFn = httpsCallable<GenerateAIPackingListRequest, GenerateAIPackingListResponse>(
+      functionsClient,
+      'generatePackingListAI'
+    );
+
+    const result = await generateFn({ tripId, forceRegenerate });
+    return { packingList: result.data.packingList, insights: result.data.insights };
   },
 
   deletePackingList: async (tripId: string) => {

@@ -1,0 +1,144 @@
+name: Generate Packing List
+description: Generates a personalized packing list based on trip details including destination, dates, purpose, activities, and accommodation
+
+model: openai/gpt-4o
+
+modelParameters:
+  temperature: 0.3
+  max_tokens: 4000
+
+messages:
+  - role: system
+    content: |
+      You are a travel packing expert. Generate comprehensive, personalized packing lists based on trip details.
+
+      Consider these factors when generating the list:
+      1. DESTINATION & WEATHER: Research typical weather for the destination during travel dates. Consider cultural norms (dress codes, customs).
+      2. DURATION: Adjust quantities based on trip length. For longer trips, include laundry considerations.
+      3. PURPOSE: Business trips need formal attire, adventure trips need outdoor gear, family trips need entertainment items.
+      4. ACTIVITIES: Include specific gear for planned activities (beach, hiking, diving, etc.).
+      5. ACCOMMODATION: Hotels provide towels/toiletries, hostels may not, camping requires specific gear.
+
+      Always return valid JSON matching the exact schema specified.
+
+  - role: user
+    content: |
+      Generate a personalized packing list for this trip:
+
+      TRIP DETAILS:
+      - Destination: {{destination}}
+      - Start Date: {{startDate}}
+      - End Date: {{endDate}}
+      - Duration: {{durationDays}} days
+      - Season at destination: {{season}}
+      - Purpose: {{purpose}}
+      - Planned Activities: {{activities}}
+      - Accommodation: {{accommodation}}
+      - Additional Notes: {{notes}}
+
+      Return a JSON object with this exact structure:
+      {
+        "sections": [
+          {
+            "id": "essentials" | "clothing" | "personal" | "tech" | "extras",
+            "title": "Section Title",
+            "emoji": "emoji",
+            "summary": "Brief description",
+            "groups": [
+              {
+                "id": "unique-group-id",
+                "title": "Group Title",
+                "icon": "optional-icon-name",
+                "description": "Optional description",
+                "items": [
+                  {
+                    "id": "unique-item-id",
+                    "name": "Item Name",
+                    "quantity": "optional quantity (e.g., '3-4', '1 pair')",
+                    "description": "Optional description",
+                    "tip": "Optional pro tip"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "destinationInsights": {
+          "weather": "Expected weather description",
+          "culturalNotes": "Cultural considerations for packing",
+          "practicalTips": ["Tip 1", "Tip 2"]
+        },
+        "durationStrategy": "Brief explanation of packing strategy for this trip length"
+      }
+
+      REQUIREMENTS:
+      1. Include all 5 section types: essentials, clothing, personal, tech, extras
+      2. Essentials must include: travel documents, money prep, home prep items
+      3. Clothing must be weather-appropriate and purpose-appropriate
+      4. For trips 14+ days, include laundry planning items
+      5. Include destination-specific items (power adapters, voltage considerations, local customs)
+      6. For activities, include specific gear needed
+      7. Make quantities realistic for the duration
+      8. Include practical tips based on destination knowledge
+
+      Generate the packing list now:
+
+testData:
+  - destination: "Tokyo, Japan"
+    startDate: "2025-01-15"
+    endDate: "2025-02-14"
+    durationDays: 30
+    season: "winter"
+    purpose: "digital-nomad"
+    activities: "city, photography"
+    accommodation: "airbnb"
+    notes: "Will be working remotely"
+    expected: |
+      Response should include:
+      - Winter clothing (coat, layers, thermal wear)
+      - Japan-specific items (Type A/B adapter, cash emphasis)
+      - Long-term stay items (laundry supplies, capsule wardrobe)
+      - Digital nomad gear (laptop, chargers, portable wifi)
+      - Photography gear if specified
+
+  - destination: "Bali, Indonesia"
+    startDate: "2025-07-01"
+    endDate: "2025-07-10"
+    durationDays: 9
+    season: "winter (dry season)"
+    purpose: "leisure"
+    activities: "beach, diving"
+    accommodation: "hotel"
+    notes: ""
+    expected: |
+      Response should include:
+      - Light, breathable clothing
+      - Beach gear (swimwear, sunscreen, reef-safe)
+      - Diving certification if applicable
+      - Indonesia-specific (Type C/F adapter, modest temple attire)
+      - Tropical essentials (insect repellent, quick-dry items)
+
+evaluators:
+  - name: Response is valid JSON
+    string:
+      matchesRegex: '^\{.*\}$'
+
+  - name: Contains sections array
+    string:
+      contains: '"sections":'
+
+  - name: Has essentials section
+    string:
+      contains: '"id": "essentials"'
+
+  - name: Has clothing section
+    string:
+      contains: '"id": "clothing"'
+
+  - name: Has groups with items
+    string:
+      contains: '"items":'
+
+  - name: Items have required fields
+    string:
+      matchesRegex: '"id":\s*"[^"]+".*"name":\s*"[^"]+"'

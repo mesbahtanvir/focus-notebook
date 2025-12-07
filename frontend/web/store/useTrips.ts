@@ -17,6 +17,11 @@ export type ExpenseCategory =
   | 'misc'
   | 'other';
 
+// Packing list context types
+export type TripPurpose = 'leisure' | 'business' | 'adventure' | 'family' | 'digital-nomad';
+export type TripActivity = 'beach' | 'hiking' | 'city' | 'formal' | 'snow-sports' | 'diving' | 'photography' | 'camping';
+export type AccommodationType = 'hotel' | 'airbnb' | 'hostel' | 'camping' | 'mixed';
+
 export interface Expense {
   id: string;
   tripId?: string;
@@ -42,6 +47,10 @@ export interface Trip {
   expenses: Expense[];
   budgetBreakdown?: Partial<Record<ExpenseCategory, number>>; // Planned budgets per category
   notes?: string;
+  // Packing list context fields
+  purpose?: TripPurpose;
+  activities?: TripActivity[];
+  accommodation?: AccommodationType;
   createdAt: string;
   updatedAt?: number;
 }
